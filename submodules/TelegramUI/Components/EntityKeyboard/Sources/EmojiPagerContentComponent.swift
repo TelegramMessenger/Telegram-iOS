@@ -2728,6 +2728,15 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
+        public func layerForItem(groupId: AnyHashable, item: EmojiPagerContentComponent.Item) -> CALayer? {
+            let itemKey = EmojiPagerContentComponent.View.ItemLayer.Key(groupId: groupId, itemId: item.content.id)
+            if let itemLayer = self.visibleItemLayers[itemKey] {
+                return itemLayer
+            } else {
+                return nil
+            }
+        }
+        
         public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?) {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
@@ -4593,6 +4602,7 @@ public final class EmojiPagerContentComponent: Component {
                 var isPremiumLocked: Bool
                 var isFeatured: Bool
                 var isExpandable: Bool
+                var isClearable: Bool
                 var headerItem: EntityKeyboardAnimationData?
                 var items: [EmojiPagerContentComponent.Item]
             }
@@ -4628,7 +4638,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: true, headerItem: nil, items: [resultItem]))
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: true, isClearable: false, headerItem: nil, items: [resultItem]))
                 }
                 
                 var existingIds = Set<MediaId>()
@@ -4706,56 +4716,107 @@ public final class EmojiPagerContentComponent: Component {
                     let groupId = "recent"
                     if let groupIndex = itemGroupIndexById[groupId] {
                         itemGroups[groupIndex].items.append(resultItem)
+                        
+                        if itemGroups[groupIndex].items.count >= 16 {
+                            break
+                        }
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
                 
-                if let recentReactions = recentReactions {
-                    for item in recentReactions.items {
-                        guard let item = item.contents.get(RecentReactionItem.self) else {
-                            continue
-                        }
-                        
-                        let animationFile: TelegramMediaFile
-                        switch item.content {
-                        case let .builtin(value):
-                            if existingIds.contains(.builtin(value)) {
+                if hasPremium {
+                    var hasRecent = false
+                    if let recentReactions = recentReactions, !recentReactions.items.isEmpty {
+                        hasRecent = true
+                    }
+                    
+                    let maxRecentLineCount = 4
+                    
+                    //TODO:localize
+                    let popularTitle = hasRecent ? "Recently Used" : "Popular"
+                    
+                    if let availableReactions = availableReactions {
+                        for reactionItem in availableReactions.reactions {
+                            if !reactionItem.isEnabled {
                                 continue
                             }
-                            existingIds.insert(.builtin(value))
-                            if let availableReactions = availableReactions, let availableReaction = availableReactions.reactions.first(where: { $0.value == .builtin(value) }) {
-                                if let centerAnimation = availableReaction.centerAnimation {
-                                    animationFile = centerAnimation
+                            if existingIds.contains(reactionItem.value) {
+                                continue
+                            }
+                            existingIds.insert(reactionItem.value)
+                            
+                            let animationFile = reactionItem.selectAnimation
+                            let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
+                            let resultItem = EmojiPagerContentComponent.Item(
+                                animationData: animationData,
+                                content: .animation(animationData),
+                                itemFile: animationFile,
+                                subgroupId: nil
+                            )
+                            
+                            let groupId = "popular"
+                            if let groupIndex = itemGroupIndexById[groupId] {
+                                itemGroups[groupIndex].items.append(resultItem)
+                            } else {
+                                itemGroupIndexById[groupId] = itemGroups.count
+                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: hasRecent, headerItem: nil, items: [resultItem]))
+                            }
+                        }
+                    }
+                    
+                    if let recentReactions = recentReactions {
+                        var popularInsertIndex = 0
+                        for item in recentReactions.items {
+                            guard let item = item.contents.get(RecentReactionItem.self) else {
+                                continue
+                            }
+                            
+                            let animationFile: TelegramMediaFile
+                            switch item.content {
+                            case let .builtin(value):
+                                if existingIds.contains(.builtin(value)) {
+                                    continue
+                                }
+                                existingIds.insert(.builtin(value))
+                                if let availableReactions = availableReactions, let availableReaction = availableReactions.reactions.first(where: { $0.value == .builtin(value) }) {
+                                    if let centerAnimation = availableReaction.centerAnimation {
+                                        animationFile = centerAnimation
+                                    } else {
+                                        continue
+                                    }
                                 } else {
                                     continue
                                 }
+                            case let .custom(file):
+                                if existingIds.contains(.custom(file.fileId.id)) {
+                                    continue
+                                }
+                                existingIds.insert(.custom(file.fileId.id))
+                                animationFile = file
+                            }
+                            
+                            let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
+                            let resultItem = EmojiPagerContentComponent.Item(
+                                animationData: animationData,
+                                content: .animation(animationData),
+                                itemFile: animationFile,
+                                subgroupId: nil
+                            )
+                            
+                            let groupId = "popular"
+                            if let groupIndex = itemGroupIndexById[groupId] {
+                                if itemGroups[groupIndex].items.count + 1 >= maxRecentLineCount * 8 {
+                                    break
+                                }
+                                
+                                itemGroups[groupIndex].items.insert(resultItem, at: popularInsertIndex)
+                                popularInsertIndex += 1
                             } else {
-                                continue
+                                itemGroupIndexById[groupId] = itemGroups.count
+                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: hasRecent, headerItem: nil, items: [resultItem]))
                             }
-                        case let .custom(file):
-                            if existingIds.contains(.custom(file.fileId.id)) {
-                                continue
-                            }
-                            existingIds.insert(.custom(file.fileId.id))
-                            animationFile = file
-                        }
-                        
-                        let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
-                        let resultItem = EmojiPagerContentComponent.Item(
-                            animationData: animationData,
-                            content: .animation(animationData),
-                            itemFile: animationFile,
-                            subgroupId: nil
-                        )
-                        
-                        let groupId = "recent"
-                        if let groupIndex = itemGroupIndexById[groupId] {
-                            itemGroups[groupIndex].items.append(resultItem)
-                        } else {
-                            itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }
@@ -4799,7 +4860,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Emoji_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Emoji_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: true, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -4819,7 +4880,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemGroups[groupIndex].items.append(resultItem)
                         } else {
                             itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, headerItem: nil, items: [resultItem]))
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: false, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }
@@ -4883,7 +4944,7 @@ public final class EmojiPagerContentComponent: Component {
                                 break inner
                             }
                         }
-                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, headerItem: headerItem, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, isClearable: false, headerItem: headerItem, items: [resultItem]))
                     }
                 }
                 
@@ -4937,7 +4998,7 @@ public final class EmojiPagerContentComponent: Component {
                                     )
                                 }
                                 
-                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, headerItem: headerItem, items: [resultItem]))
+                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, isClearable: false, headerItem: headerItem, items: [resultItem]))
                             }
                         }
                     }
@@ -4952,11 +5013,6 @@ public final class EmojiPagerContentComponent: Component {
                 animationRenderer: animationRenderer,
                 inputInteractionHolder: EmojiPagerContentComponent.InputInteractionHolder(),
                 itemGroups: itemGroups.map { group -> EmojiPagerContentComponent.ItemGroup in
-                    var hasClear = false
-                    if group.id == AnyHashable("recent") {
-                        hasClear = true
-                    }
-                    
                     var headerItem = group.headerItem
                     
                     if let groupId = group.id.base as? ItemCollectionId {
@@ -4983,7 +5039,7 @@ public final class EmojiPagerContentComponent: Component {
                         isFeatured: group.isFeatured,
                         isPremiumLocked: group.isPremiumLocked,
                         isEmbedded: false,
-                        hasClear: hasClear,
+                        hasClear: group.isClearable,
                         isExpandable: group.isExpandable,
                         displayPremiumBadges: false,
                         headerItem: headerItem,

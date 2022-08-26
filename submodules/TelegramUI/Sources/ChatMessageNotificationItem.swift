@@ -113,12 +113,7 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     func setupItem(_ item: ChatMessageNotificationItem, compact: Bool) {
         self.item = item
         
-        if self.animationCache == nil {
-            self.animationCache = AnimationCacheImpl(basePath: item.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                return TempBox.shared.tempFile(fileName: "file").path
-            })
-            self.multiAnimationRenderer = MultiAnimationRendererImpl()
-        }
+        self.animationCache = item.context.animationCache
         
         self.compact = compact
         if compact {

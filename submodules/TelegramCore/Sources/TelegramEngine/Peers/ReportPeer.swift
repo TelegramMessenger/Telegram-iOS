@@ -171,20 +171,20 @@ func _internal_reportPeerMessages(account: Account, messageIds: [MessageId], rea
 }
 
 func _internal_reportPeerReaction(account: Account, authorId: PeerId, messageId: MessageId) -> Signal<Never, NoError> {
-    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputUser)? in
+    return account.postbox.transaction { transaction -> (Api.InputPeer, Api.InputPeer)? in
         guard let peer = transaction.getPeer(messageId.peerId).flatMap(apiInputPeer) else {
             return nil
         }
-        guard let author = transaction.getPeer(authorId).flatMap(apiInputUser) else {
+        guard let author = transaction.getPeer(authorId).flatMap(apiInputPeer) else {
             return nil
         }
         return (peer, author)
     }
     |> mapToSignal { inputData -> Signal<Never, NoError> in
-        guard let (inputPeer, inputUser) = inputData else {
+        guard let (inputPeer, authorPeer) = inputData else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.reportReaction(peer: inputPeer, id: messageId.id, userId: inputUser))
+        return account.network.request(Api.functions.messages.reportReaction(peer: inputPeer, id: messageId.id, reactionPeer: authorPeer))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

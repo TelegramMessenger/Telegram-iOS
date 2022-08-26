@@ -127,10 +127,8 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         self.context = context
         self.theme = theme
         
-        self.animationCache = AnimationCacheImpl(basePath: self.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         var reactionMap: [MessageReaction.Reaction: AvailableReactions.Reaction] = [:]
         for reaction in reactions {
@@ -362,7 +360,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
                 applicationAnimation: aroundAnimation,
                 largeApplicationAnimation: reaction.effectAnimation,
                 isCustom: false
-            ), animationCache: self.animationCache, animationRenderer: self.animationRenderer, hasAppearAnimation: false, useDirectRendering: false)
+            ), animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: false, hasAppearAnimation: false, useDirectRendering: false)
             containerNode.isUserInteractionEnabled = false
             containerNode.addSubnode(itemNode)
             self.addSubnode(containerNode)

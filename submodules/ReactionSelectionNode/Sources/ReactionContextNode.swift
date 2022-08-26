@@ -193,6 +193,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var animateInInfo: (centerX: CGFloat, width: CGFloat)?
     
+    private var availableReactions: AvailableReactions?
+    private var availableReactionsDisposable: Disposable?
+    
     public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
@@ -294,10 +297,20 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             self.view.addGestureRecognizer(horizontalExpandRecognizer)
             self.horizontalExpandRecognizer = horizontalExpandRecognizer
         }
+        
+        self.availableReactionsDisposable = (context.engine.stickers.availableReactions()
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] availableReactions in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.availableReactions = availableReactions
+        })
     }
     
     deinit {
         self.emojiContentDisposable?.dispose()
+        self.availableReactionsDisposable?.dispose()
     }
     
     override public func didLoad() {
@@ -371,7 +384,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         contentSize.width = max(46.0, contentSize.width)
         contentSize.height = self.currentContentHeight
         
-        let sideInset: CGFloat = 11.0
+        let sideInset: CGFloat = 11.0 + insets.left
         let backgroundOffset: CGPoint = CGPoint(x: 22.0, y: -7.0)
         
         var rect: CGRect
@@ -459,12 +472,21 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         var topVisibleItems: Int
         if self.getEmojiContent != nil {
-            topVisibleItems = min(self.items.count, visibleItemCount - 1)
-            if compressionFactor >= 0.6 {
-                topVisibleItems = min(self.items.count, visibleItemCount)
-            }
+            topVisibleItems = min(self.items.count, visibleItemCount)
         } else {
             topVisibleItems = self.items.count
+        }
+        
+        var loopIdle = false
+        for i in 0 ..< min(self.items.count, visibleItemCount) {
+            if let reaction = self.items[i].reaction {
+                switch reaction.rawValue {
+                case .builtin:
+                    break
+                case .custom:
+                    loopIdle = true
+                }
+            }
         }
         
         var validIndices = Set<Int>()
@@ -519,7 +541,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if appearBounds.intersects(baseItemFrame) || (self.visibleItemNodes[i] != nil && visibleBounds.intersects(baseItemFrame)) {
                 validIndices.insert(i)
                 
-                let itemFrame = baseItemFrame
+                var itemFrame = baseItemFrame
                 
                 var isPreviewing = false
                 if let highlightedReaction = self.highlightedReaction, highlightedReaction == self.items[i].reaction {
@@ -540,7 +562,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     itemTransition = .immediate
                     
                     if case let .reaction(item) = self.items[i] {
-                        itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: item, animationCache: self.animationCache, animationRenderer: self.animationRenderer)
+                        itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: loopIdle)
                         maskNode = nil
                     } else {
                         itemNode = PremiumReactionsNode(theme: self.presentationData.theme)
@@ -570,6 +592,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
+                    if self.getEmojiContent != nil && i == visibleItemCount - 1 {
+                        itemFrame.origin.x -= (1.0 - compressionFactor) * itemFrame.width * 0.5
+                        itemNode.isUserInteractionEnabled = false
+                    } else {
+                        itemNode.isUserInteractionEnabled = true
+                    }
+                    
                     itemTransition.updateFrame(node: itemNode, frame: itemFrame, beginWithCurrentState: true, completion: { [weak self, weak itemNode] completed in
                         guard let strongSelf = self, let itemNode = itemNode else {
                             return
@@ -587,6 +616,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     
                     if animateIn {
                         itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion)
+                    }
+                    
+                    if self.getEmojiContent != nil && i == visibleItemCount - 1 {
+                        transition.updateSublayerTransformScale(node: itemNode, scale: 0.001 * (1.0 - compressionFactor) + 1.0 * compressionFactor)
                     }
                 }
             }
@@ -907,25 +940,44 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self] groupId, item, sourceView, sourceRect, sourceLayer, isLongPress in
-                guard let strongSelf = self, let itemFile = item.itemFile else {
+                guard let strongSelf = self, let availableReactions = strongSelf.availableReactions, let itemFile = item.itemFile else {
                     return
                 }
                 
                 strongSelf.didTriggerExpandedReaction = isLongPress
                 
                 var found = false
-                if let groupId = groupId.base as? String, groupId == "recent" {
-                    for reactionItem in strongSelf.items {
-                        if case let .reaction(reactionItem) = reactionItem {
-                            if reactionItem.stillAnimation.fileId == itemFile.fileId {
-                                found = true
-                                
-                                strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
-                                strongSelf.reactionSelected?(reactionItem.updateMessageReaction, isLongPress)
-                                
-                                break
-                            }
+                for reaction in availableReactions.reactions {
+                    guard let centerAnimation = reaction.centerAnimation, let aroundAnimation = reaction.aroundAnimation else {
+                        continue
+                    }
+                    
+                    if reaction.selectAnimation.fileId == itemFile.fileId {
+                        found = true
+                        
+                        let updateReaction: UpdateMessageReaction
+                        switch reaction.value {
+                        case let .builtin(value):
+                            updateReaction = .builtin(value)
+                        case let .custom(fileId):
+                            updateReaction = .custom(fileId: fileId, file: nil)
                         }
+                        
+                        let reactionItem = ReactionItem(
+                            reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                            appearAnimation: reaction.appearAnimation,
+                            stillAnimation: reaction.selectAnimation,
+                            listAnimation: centerAnimation,
+                            largeListAnimation: reaction.activateAnimation,
+                            applicationAnimation: aroundAnimation,
+                            largeApplicationAnimation: reaction.effectAnimation,
+                            isCustom: false
+                        )
+                        
+                        strongSelf.customReactionSource = (sourceView, sourceRect, sourceLayer, reactionItem)
+                        strongSelf.reactionSelected?(updateReaction, isLongPress)
+                        
+                        break
                     }
                 }
                 if !found {
@@ -978,7 +1030,26 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     }
                 })
             },
-            clearGroup: { _ in
+            clearGroup: { [weak self] groupId in
+                guard let strongSelf = self else {
+                    return
+                }
+                if groupId == AnyHashable("popular") {
+                    let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                    let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                    var items: [ActionSheetItem] = []
+                    let context = strongSelf.context
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                        let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                    }))
+                    actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])])
+                    context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                }
             },
             pushController: { _ in
             },
@@ -1159,7 +1230,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let customReactionSource = self.customReactionSource {
-            let itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: customReactionSource.item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, useDirectRendering: false)
+            let itemNode = ReactionNode(context: self.context, theme: self.presentationData.theme, item: customReactionSource.item, animationCache: self.animationCache, animationRenderer: self.animationRenderer, loopIdle: false, useDirectRendering: false)
             if let contents = customReactionSource.layer.contents {
                 itemNode.setCustomContents(contents: contents)
             }
@@ -1176,7 +1247,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         let switchToInlineImmediately: Bool
-        if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker {
+        if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
             switch itemNode.item.reaction.rawValue {
             case .builtin:
                 switchToInlineImmediately = false
@@ -1196,11 +1267,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 targetView.isHidden = true
             } else {
                 targetView.alpha = 0.0
-                targetView.layer.animateAlpha(from: targetView.alpha, to: 0.0, duration: 0.2, completion: { [weak targetView] completed in
-                    if completed {
-                        targetView?.isHidden = true
-                    }
-                })
+                targetView.layer.animateAlpha(from: targetView.alpha, to: 0.0, duration: 0.2)
             }
         }
         
@@ -1216,7 +1283,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         var expandedSize: CGSize = selfTargetRect.size
         if self.didTriggerExpandedReaction {
-            if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker {
+            if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isStaticEmoji {
                 expandedSize = CGSize(width: 80.0, height: 80.0)
             } else {
                 expandedSize = CGSize(width: 120.0, height: 120.0)
@@ -1267,7 +1334,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         } else if itemNode.item.isCustom {
             additionalAnimationNode = nil
             
-            if let url = getAppBundle().url(forResource: "generic_reaction_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            if let url = getAppBundle().url(forResource: self.didTriggerExpandedReaction ? "generic_reaction_effect" : "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
                 let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = 1.0
                 view.backgroundColor = nil
@@ -1279,36 +1346,40 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 genericAnimationView = view
                 
-                let animationCache = AnimationCacheImpl(basePath: itemNode.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                    return TempBox.shared.tempFile(fileName: "file").path
-                })
-                let animationRenderer = MultiAnimationRendererImpl()
+                let animationCache = itemNode.context.animationCache
+                let animationRenderer = itemNode.context.animationRenderer
                 
-                let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "BODY 1 Precomp"))
-                for animationLayer in allLayers {
-                    let baseItemLayer = InlineStickerItemLayer(
-                        context: itemNode.context,
-                        attemptSynchronousLoad: false,
-                        emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
-                        file: itemNode.item.listAnimation,
-                        cache: animationCache,
-                        renderer: animationRenderer,
-                        placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                        pointSize: CGSize(width: self.didTriggerExpandedReaction ? 64.0 : 32.0, height: self.didTriggerExpandedReaction ? 64.0 : 32.0)
-                    )
-                    
-                    if let sublayers = animationLayer.sublayers {
-                        for sublayer in sublayers {
-                            sublayer.isHidden = true
+                for i in 1 ... 32 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: itemNode.context,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            file: itemNode.item.listAnimation,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: self.didTriggerExpandedReaction ? 64.0 : 32.0, height: self.didTriggerExpandedReaction ? 64.0 : 32.0)
+                        )
+                        
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
+                            }
                         }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
                     }
-                    
-                    baseItemLayer.isVisibleForAnimations = true
-                    baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
-                    animationLayer.addSublayer(baseItemLayer)
                 }
                 
-                view.frame = effectFrame.insetBy(dx: -10.0, dy: -10.0).offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
+                if self.didTriggerExpandedReaction {
+                    view.frame = effectFrame.insetBy(dx: -10.0, dy: -10.0).offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
+                } else {
+                    view.frame = effectFrame.insetBy(dx: -20.0, dy: -20.0)
+                }
                 self.view.addSubview(view)
             }
         } else {
@@ -1348,14 +1419,19 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 guard let itemNode = itemNode else {
                     return
                 }
-                guard let targetView = targetView as? ReactionIconView else {
-                    return
-                }
                 if let animateTargetContainer = animateTargetContainer {
                     animateTargetContainer.isHidden = false
                 }
-                targetView.isHidden = false
-                targetView.alpha = 1.0
+                
+                if let targetView = targetView {
+                    targetView.isHidden = false
+                    targetView.alpha = 1.0
+                    targetView.layer.removeAnimation(forKey: "opacity")
+                }
+                
+                guard let targetView = targetView as? ReactionIconView else {
+                    return
+                }
                 
                 if switchToInlineImmediately {
                     targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
@@ -1619,6 +1695,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if itemNode.supernode === self.scrollNode && !self.scrollNode.bounds.intersects(itemNode.frame) {
                     continue
                 }
+                if !itemNode.isUserInteractionEnabled {
+                    continue
+                }
                 let itemPoint = self.view.convert(point, to: itemNode.view)
                 if itemNode.bounds.insetBy(dx: -touchInset, dy: -touchInset).contains(itemPoint) {
                     return itemNode
@@ -1704,7 +1783,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
             itemNode = currentItemNode
         } else {
             let animationRenderer = MultiAnimationRendererImpl()
-            itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer)
+            itemNode = ReactionNode(context: context, theme: theme, item: reaction, animationCache: animationCache, animationRenderer: animationRenderer, loopIdle: false)
         }
         self.itemNode = itemNode
         
@@ -1812,7 +1891,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         } else if itemNode.item.isCustom {
             additionalAnimationNode = nil
             
-            if let url = getAppBundle().url(forResource: "generic_reaction_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
                 let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = 1.0
                 view.backgroundColor = nil
@@ -1824,36 +1903,36 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                 
                 genericAnimationView = view
                 
-                let animationCache = AnimationCacheImpl(basePath: itemNode.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                    return TempBox.shared.tempFile(fileName: "file").path
-                })
-                let animationRenderer = MultiAnimationRendererImpl()
+                let animationCache = itemNode.context.animationCache
+                let animationRenderer = itemNode.context.animationRenderer
                 
-                let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "BODY 1 Precomp"))
-                for animationLayer in allLayers {
-                    let baseItemLayer = InlineStickerItemLayer(
-                        context: itemNode.context,
-                        attemptSynchronousLoad: false,
-                        emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
-                        file: itemNode.item.listAnimation,
-                        cache: animationCache,
-                        renderer: animationRenderer,
-                        placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                        pointSize: CGSize(width: 32.0, height: 32.0)
-                    )
+                for i in 1 ... 7 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: itemNode.context,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            file: itemNode.item.listAnimation,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: 32.0, height: 32.0)
+                        )
                     
-                    if let sublayers = animationLayer.sublayers {
-                        for sublayer in sublayers {
-                            sublayer.isHidden = true
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
+                            }
                         }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
                     }
-                    
-                    baseItemLayer.isVisibleForAnimations = true
-                    baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
-                    animationLayer.addSublayer(baseItemLayer)
                 }
                 
-                view.frame = effectFrame.insetBy(dx: -10.0, dy: -10.0).offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
+                view.frame = effectFrame.insetBy(dx: -20.0, dy: -20.0)//.offsetBy(dx: incomingMessage ? 22.0 : -22.0, dy: 0.0)
                 self.view.addSubview(view)
             }
         } else {

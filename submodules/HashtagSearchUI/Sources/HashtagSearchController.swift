@@ -36,10 +36,8 @@ public final class HashtagSearchController: TelegramBaseController {
         self.peer = peer
         self.query = query
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         

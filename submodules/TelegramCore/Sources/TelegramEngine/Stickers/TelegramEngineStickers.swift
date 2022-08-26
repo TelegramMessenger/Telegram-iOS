@@ -140,6 +140,18 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func clearRecentlyUsedReactions() -> Signal<Never, NoError> {
+            let _ = self.account.postbox.transaction({ transaction -> Void in
+                transaction.replaceOrderedItemListItems(collectionId: Namespaces.OrderedItemList.CloudRecentReactions, items: [])
+            }).start()
+            
+            return self.account.network.request(Api.functions.messages.clearRecentReactions())
+            |> `catch` { _ -> Signal<Api.Bool, NoError> in
+                return .single(.boolFalse)
+            }
+            |> ignoreValues
+        }
+        
         public func reorderStickerPacks(namespace: ItemCollectionId.Namespace, itemIds: [ItemCollectionId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 let infos = transaction.getItemCollectionsInfos(namespace: namespace)

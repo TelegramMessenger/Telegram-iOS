@@ -19,7 +19,7 @@ func updatePremiumPromoConfigurationOnce(postbox: Postbox, network: Network) -> 
             return .complete()
         }
         return postbox.transaction { transaction -> Void in
-            if case let .premiumPromo(_, _, _, _, _, _, apiUsers) = result {
+            if case let .premiumPromo(_, _, _, _, _, apiUsers) = result {
                 let users = apiUsers.map { TelegramUser(user: $0) }
                 updatePeers(transaction: transaction, peers: users, update: { current, updated -> Peer in
                     if let updated = updated as? TelegramUser {
@@ -65,11 +65,14 @@ private func updatePremiumPromoConfiguration(transaction: Transaction, _ f: (Pre
 private extension PremiumPromoConfiguration {
     init(apiPremiumPromo: Api.help.PremiumPromo) {
         switch apiPremiumPromo {
-            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, currency, monthlyAmount, _):
+            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, periodOptions, _):
                 self.status = statusText
                 self.statusEntities = messageTextEntitiesFromApiEntities(statusEntities)
-                self.currency = currency
-                self.monthlyAmount = monthlyAmount
+                let _ = periodOptions
+                self.currency = "USD"
+                self.monthlyAmount = 500
+                //self.currency = currency
+                //self.monthlyAmount = monthlyAmount
                 var videos: [String: TelegramMediaFile] = [:]
                 for (key, document) in zip(videoSections, videoFiles) {
                     if let file = telegramMediaFileFromApiDocument(document) {

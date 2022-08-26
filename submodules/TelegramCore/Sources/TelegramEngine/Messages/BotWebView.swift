@@ -22,7 +22,7 @@ func _internal_requestSimpleWebView(postbox: Postbox, network: Network, botId: P
         if let _ = serializedThemeParams {
             flags |= (1 << 0)
         }
-        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, themeParams: serializedThemeParams))
+        return network.request(Api.functions.messages.requestSimpleWebView(flags: flags, bot: inputUser, url: url, themeParams: serializedThemeParams, platform: ""))
         |> mapError { _ -> RequestSimpleWebViewError in
             return .generic
         }
@@ -125,7 +125,7 @@ func _internal_requestWebView(postbox: Postbox, network: Network, stateManager: 
 //        if _ {
 //            flags |= (1 << 13)
 //        }
-        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, replyToMsgId: replyToMsgId, sendAs: nil))
+        return network.request(Api.functions.messages.requestWebView(flags: flags, peer: inputPeer, bot: inputBot, url: url, startParam: payload, themeParams: serializedThemeParams, platform: "", replyToMsgId: replyToMsgId, sendAs: nil))
         |> mapError { _ -> RequestWebViewError in
             return .generic
         }

@@ -1547,19 +1547,9 @@ public final class StickerPackScreenImpl: ViewController {
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
         self.actionPerformed = actionPerformed
-        
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        
-        let animationRenderer: MultiAnimationRenderer
-        /*if #available(iOS 13.0, *) {
-            animationRenderer = MultiAnimationMetalRendererImpl()
-        } else {*/
-            animationRenderer = MultiAnimationRendererImpl()
-        //}
-        
-        self.animationRenderer = animationRenderer
+
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         super.init(navigationBarPresentationData: nil)
         

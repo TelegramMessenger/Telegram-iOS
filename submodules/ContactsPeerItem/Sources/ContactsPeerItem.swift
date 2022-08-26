@@ -974,7 +974,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.frame = statusFrame
                             transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
-                            if let credibilityIcon = credibilityIcon, let animationCache = item.animationCache, let animationRenderer = item.animationRenderer {
+                            if let credibilityIcon = credibilityIcon {
+                                let animationCache = item.context.animationCache
+                                let animationRenderer = item.context.animationRenderer
+                                
                                 let credibilityIconView: ComponentHostView<Empty>
                                 if let current = strongSelf.credibilityIconView {
                                     credibilityIconView = current
