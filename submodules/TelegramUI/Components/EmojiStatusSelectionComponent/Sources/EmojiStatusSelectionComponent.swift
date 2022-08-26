@@ -363,6 +363,45 @@ public final class EmojiStatusSelectionController: ViewController {
                 strongSelf.controller?.dismissNow()
             }
             
+            var effectView: AnimationView?
+            if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                let animationCache = self.context.animationCache
+                let animationRenderer = self.context.animationRenderer
+                
+                for i in 1 ... 7 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: self.context,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemFile.fileId.id, file: itemFile),
+                            file: item.itemFile,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: 32.0, height: 32.0)
+                        )
+                        
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
+                            }
+                        }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
+                    }
+                }
+                
+                effectView = view
+            }
+            
             if let sourceCopyLayer = sourceLayer.snapshotContentTree() {
                 self.layer.addSublayer(sourceCopyLayer)
                 sourceCopyLayer.frame = sourceLayer.convert(sourceLayer.bounds, to: self.layer)
@@ -387,49 +426,15 @@ public final class EmojiStatusSelectionController: ViewController {
                     sourceCopyLayer?.isHidden = true
                     if let destinationView = destinationView {
                         destinationView.isHidden = false
-                        destinationView.layer.animateScale(from: 0.5, to: 1.0, duration: 0.1)
+                        destinationView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                     
                     hapticFeedback.tap()
                     
-                    if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
-                        let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
-                        view.animationSpeed = 1.0
-                        view.backgroundColor = nil
-                        view.isOpaque = false
-                        
-                        let animationCache = strongSelf.context.animationCache
-                        let animationRenderer = strongSelf.context.animationRenderer
-                        
-                        for i in 1 ... 7 {
-                            let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
-                            for animationLayer in allLayers {
-                                let baseItemLayer = InlineStickerItemLayer(
-                                    context: strongSelf.context,
-                                    attemptSynchronousLoad: false,
-                                    emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemFile.fileId.id, file: itemFile),
-                                    file: item.itemFile,
-                                    cache: animationCache,
-                                    renderer: animationRenderer,
-                                    placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                                    pointSize: CGSize(width: 32.0, height: 32.0)
-                                )
-                                
-                                if let sublayers = animationLayer.sublayers {
-                                    for sublayer in sublayers {
-                                        sublayer.isHidden = true
-                                    }
-                                }
-                                
-                                baseItemLayer.isVisibleForAnimations = true
-                                baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
-                                animationLayer.addSublayer(baseItemLayer)
-                            }
-                        }
-                        
-                        view.frame = effectFrame
-                        strongSelf.view.addSubview(view)
-                        view.play(completion: { _ in
+                    if let effectView = effectView {
+                        effectView.frame = effectFrame
+                        strongSelf.view.addSubview(effectView)
+                        effectView.play(completion: { _ in
                             effectCompleted = true
                             completion()
                         })
@@ -443,7 +448,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     1.0,
                     1.4,
                     1.0,
-                    destinationNormalScale * 0.5
+                    destinationNormalScale * 0.3
                 ]
                 sourceCopyLayer.transform = CATransform3DMakeScale(scaleKeyframes[scaleKeyframes.count - 1], scaleKeyframes[scaleKeyframes.count - 1], 1.0)
                 sourceCopyLayer.animateKeyframes(values: scaleKeyframes.map({ $0 as NSNumber }), duration: 0.2, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue)
