@@ -548,7 +548,13 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 let cloudOffset0: CGFloat = 30.0
                 let cloudSize0: CGFloat = 16.0
-                let cloudFrame0 = CGRect(origin: CGPoint(x: floor(sourceOrigin.x + cloudOffset0 - cloudSize0 / 2.0), y: componentFrame.minY - cloudSize0 / 2.0), size: CGSize(width: cloudSize0, height: cloudSize0))
+                var cloudFrame0 = CGRect(origin: CGPoint(x: floor(sourceOrigin.x + cloudOffset0 - cloudSize0 / 2.0), y: componentFrame.minY - cloudSize0 / 2.0), size: CGSize(width: cloudSize0, height: cloudSize0))
+                var invertX = false
+                if cloudFrame0.maxX >= layout.size.width - layout.safeInsets.right - 32.0 {
+                    cloudFrame0.origin.x = floor(sourceOrigin.x - cloudSize0 - cloudOffset0 + cloudSize0 / 2.0)
+                    invertX = true
+                }
+                
                 transition.setFrame(layer: self.cloudLayer0, frame: cloudFrame0)
                 if self.cloudShadowLayer0.bounds.size != cloudFrame0.size {
                     let cloudShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: cloudFrame0.size), cornerRadius: 24.0).cgPath
@@ -559,7 +565,10 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 let cloudOffset1 = CGPoint(x: -9.0, y: -14.0)
                 let cloudSize1: CGFloat = 8.0
-                let cloudFrame1 = CGRect(origin: CGPoint(x: floor(cloudFrame0.midX + cloudOffset1.x - cloudSize1 / 2.0), y: floor(cloudFrame0.midY + cloudOffset1.y - cloudSize1 / 2.0)), size: CGSize(width: cloudSize1, height: cloudSize1))
+                var cloudFrame1 = CGRect(origin: CGPoint(x: floor(cloudFrame0.midX + cloudOffset1.x - cloudSize1 / 2.0), y: floor(cloudFrame0.midY + cloudOffset1.y - cloudSize1 / 2.0)), size: CGSize(width: cloudSize1, height: cloudSize1))
+                if invertX {
+                    cloudFrame1.origin.x = floor(cloudFrame0.midX - cloudSize1 - cloudOffset1.x + cloudSize1 / 2.0)
+                }
                 transition.setFrame(layer: self.cloudLayer1, frame: cloudFrame1)
                 if self.cloudShadowLayer1.bounds.size != cloudFrame1.size {
                     let cloudShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: cloudFrame1.size), cornerRadius: 24.0).cgPath
@@ -621,9 +630,35 @@ public final class EmojiStatusSelectionController: ViewController {
             guard let controller = self.controller else {
                 return
             }
-
-            let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
-            |> deliverOnMainQueue).start()
+            
+            switch controller.mode {
+            case .statusSelection:
+                let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
+                |> deliverOnMainQueue).start()
+            case let .quickReactionSelection(completion):
+                if let item = item, let itemFile = item.itemFile {
+                    var selectedReaction: MessageReaction.Reaction?
+                    
+                    if let availableReactions = self.availableReactions {
+                        for reaction in availableReactions.reactions {
+                            if reaction.selectAnimation.fileId == itemFile.fileId {
+                                selectedReaction = reaction.value
+                                break
+                            }
+                        }
+                    }
+                    
+                    if selectedReaction == nil {
+                        selectedReaction = .custom(itemFile.fileId.id)
+                    }
+                    
+                    if let selectedReaction = selectedReaction {
+                        let _ = context.engine.stickers.updateQuickReaction(reaction: selectedReaction).start()
+                    }
+                }
+                
+                completion()
+            }
             
             if let item = item, let destinationView = controller.destinationItemView() {
                 self.animateOutToStatus(groupId: groupId, item: item, destinationView: destinationView)
@@ -633,9 +668,15 @@ public final class EmojiStatusSelectionController: ViewController {
         }
     }
     
+    public enum Mode {
+        case statusSelection
+        case quickReactionSelection(completion: () -> Void)
+    }
+    
     private let context: AccountContext
     private weak var sourceView: UIView?
     private let emojiContent: Signal<EmojiPagerContentComponent, NoError>
+    private let mode: Mode
     private let destinationItemView: () -> UIView?
     
     fileprivate let _ready = Promise<Bool>()
@@ -643,8 +684,9 @@ public final class EmojiStatusSelectionController: ViewController {
         return self._ready
     }
     
-    public init(context: AccountContext, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, destinationItemView: @escaping () -> UIView?) {
+    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, destinationItemView: @escaping () -> UIView?) {
         self.context = context
+        self.mode = mode
         self.sourceView = sourceView
         self.emojiContent = emojiContent
         self.destinationItemView = destinationItemView

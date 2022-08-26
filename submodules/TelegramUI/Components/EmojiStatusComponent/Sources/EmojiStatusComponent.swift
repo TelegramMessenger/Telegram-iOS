@@ -15,13 +15,27 @@ import TextFormat
 public final class EmojiStatusComponent: Component {
     public typealias EnvironmentType = Empty
     
+    public enum AnimationContent: Equatable {
+        case file(file: TelegramMediaFile)
+        case customEmoji(fileId: Int64)
+        
+        var fileId: MediaId {
+            switch self {
+            case let .file(file):
+                return file.fileId
+            case let .customEmoji(fileId):
+                return MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)
+            }
+        }
+    }
+    
     public enum Content: Equatable {
         case none
         case premium(color: UIColor)
         case verified(fillColor: UIColor, foregroundColor: UIColor)
         case fake(color: UIColor)
         case scam(color: UIColor)
-        case emojiStatus(status: PeerEmojiStatus, size: CGSize, placeholderColor: UIColor)
+        case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor)
     }
     
     public let context: AccountContext
@@ -153,14 +167,14 @@ public final class EmojiStatusComponent: Component {
                     iconImage = nil
                 case .scam:
                     iconImage = nil
-                case let .emojiStatus(emojiStatus, size, placeholderColor):
+                case let .animation(animationContent, size, placeholderColor):
                     iconImage = nil
-                    emojiFileId = emojiStatus.fileId
+                    emojiFileId = animationContent.fileId.id
                     emojiPlaceholderColor = placeholderColor
                     emojiSize = size
                     
-                    if case let .emojiStatus(previousEmojiStatus, _, _) = self.component?.content {
-                        if previousEmojiStatus.fileId != emojiStatus.fileId {
+                    if case let .animation(previousAnimationContent, _, _) = self.component?.content {
+                        if previousAnimationContent.fileId != animationContent.fileId {
                             self.emojiFileDisposable?.dispose()
                             self.emojiFileDisposable = nil
                             
@@ -180,11 +194,18 @@ public final class EmojiStatusComponent: Component {
                             }
                         }
                     }
+                    
+                    switch animationContent {
+                    case let .file(file):
+                        self.emojiFile = file
+                    case .customEmoji:
+                        break
+                    }
                 }
             } else {
                 iconImage = self.iconView?.image
-                if case let .emojiStatus(status, size, placeholderColor) = component.content {
-                    emojiFileId = status.fileId
+                if case let .animation(animationContent, size, placeholderColor) = component.content {
+                    emojiFileId = animationContent.fileId.id
                     emojiPlaceholderColor = placeholderColor
                     emojiSize = size
                 }

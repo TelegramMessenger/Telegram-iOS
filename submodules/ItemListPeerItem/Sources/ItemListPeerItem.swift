@@ -614,7 +614,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                 } else if item.peer.isFake {
                     credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
                 } else if case let .user(user) = item.peer, let emojiStatus = user.emojiStatus {
-                    credibilityIcon = .emojiStatus(status: emojiStatus, size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                    credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
                 } else if item.peer.isVerified {
                     credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                 } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {

@@ -3097,6 +3097,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 strongSelf.controller?.present(EmojiStatusSelectionController(
                     context: strongSelf.context,
+                    mode: .statusSelection,
                     sourceView: sourceView,
                     emojiContent: EmojiPagerContentComponent.emojiInputData(
                         context: strongSelf.context,

@@ -849,6 +849,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func openStatusSetup(sourceView: UIView) {
         self.present(EmojiStatusSelectionController(
             context: self.context,
+            mode: .statusSelection,
             sourceView: sourceView,
             emojiContent: EmojiPagerContentComponent.emojiInputData(
                 context: self.context,

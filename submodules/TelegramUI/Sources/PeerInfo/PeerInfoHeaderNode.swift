@@ -2354,8 +2354,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
-                emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
             }
             
             let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty

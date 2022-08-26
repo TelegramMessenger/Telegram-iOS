@@ -678,7 +678,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: textStatusType,
-                        layoutInput: .trailingContent(contentWidth: trailingContentWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
+                        layoutInput: .trailingContent(contentWidth: trailingContentWidth, reactionSettings: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,

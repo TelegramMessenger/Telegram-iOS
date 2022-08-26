@@ -103,6 +103,7 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/HorizontalPeerItem:HorizontalPeerItem",
+        "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
     ],
     visibility = [
         "//visibility:public",

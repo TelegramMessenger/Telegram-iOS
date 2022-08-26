@@ -499,7 +499,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 },
                 itemLayoutType: .detailed,
                 warpContentsOnEdges: false,
-                enableLongPress: false
+                enableLongPress: false,
+                selectedItems: Set()
             )
         }
         
