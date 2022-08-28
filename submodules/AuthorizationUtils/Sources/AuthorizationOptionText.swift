@@ -29,10 +29,17 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         return NSAttributedString(string: "", font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center)
     case let .email(emailPattern, _, _, _, _):
         let mutableString = NSAttributedString(string: strings.Login_EnterCodeEmailText(email ?? emailPattern).string, font: Font.regular(fontSize), textColor: primaryColor, paragraphAlignment: .center).mutableCopy() as! NSMutableAttributedString
-        let range = (mutableString.string as NSString).range(of: "*******")
-        if range.location != NSNotFound {
-            mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
+        
+        let string = mutableString.string
+        let nsString = string as NSString
+
+        if let regex = try? NSRegularExpression(pattern: "\\*", options: []) {
+            let matches = regex.matches(in: string, options: [], range: NSMakeRange(0, nsString.length))
+            if let first = matches.first {
+                mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: NSRange(location: first.range.location, length: matches.count))
+            }
         }
+
         return mutableString
     }
 }

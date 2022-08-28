@@ -2563,6 +2563,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
+    func frameForEmojiButton() -> CGRect? {
+        if let textInputPanelNode = self.textInputPanelNode, self.inputPanelNode === textInputPanelNode {
+            return textInputPanelNode.frameForEmojiButton().flatMap {
+                return $0.offsetBy(dx: textInputPanelNode.frame.minX, dy: textInputPanelNode.frame.minY)
+            }
+        }
+        return nil
+    }
+    
     var isTextInputPanelActive: Bool {
         return self.inputPanelNode is ChatTextInputPanelNode
     }

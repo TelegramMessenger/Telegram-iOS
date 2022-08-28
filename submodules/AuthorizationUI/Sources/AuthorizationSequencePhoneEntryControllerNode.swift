@@ -6,7 +6,6 @@ import TelegramCore
 import TelegramPresentationData
 import PhoneInputNode
 import CountrySelectionUI
-import AuthorizationUI
 import QrCode
 import SwiftSignalKit
 import Postbox
@@ -14,6 +13,8 @@ import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
+import AuthorizationUtils
+import ManagedAnimationNode
 
 private final class PhoneAndCountryNode: ASDisplayNode {
     let strings: PresentationStrings
@@ -23,8 +24,12 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     
     var selectCountryCode: (() -> Void)?
     var checkPhone: (() -> Void)?
+    var hasNumberUpdated: ((Bool) -> Void)?
+    var numberUpdated: (() -> Void)?
     
     var preferredCountryIdForCode: [String: String] = [:]
+    
+    var hasCountry = false
     
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
@@ -122,6 +127,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                 let flagString = emojiFlagForISOCountryCode(country.id)
                 let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.strings) ?? country.name
                 strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                strongSelf.hasCountry = true
                 
                 let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
                 if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: theme.list.itemPlaceholderTextColor) }) {
@@ -140,6 +146,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.numberTextUpdated = { [weak self] number in
             if let strongSelf = self {
                 let _ = processNumberChange(strongSelf.phoneInputNode.number)
+                
+                strongSelf.numberUpdated?()
+                
+                if strongSelf.hasCountry {
+                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
+                } else {
+                    strongSelf.hasNumberUpdated?(false)
+                }
             }
         }
         
@@ -149,11 +163,14 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.preferredCountryIdForCode[code] = name
                 }
                 
+                strongSelf.numberUpdated?()
+                
                 if processNumberChange(strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
                         strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
@@ -162,14 +179,22 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     let flagString = emojiFlagForISOCountryCode(countryId)
                     let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
+                    strongSelf.hasCountry = true
                     
                     if strongSelf.phoneInputNode.mask == nil {
                         strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
                     }
                 } else {
+                    strongSelf.hasCountry = false
                     strongSelf.countryButton.setTitle(strings.Login_SelectCountry, with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                     strongSelf.phoneInputNode.mask = nil
                     strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
+                }
+                
+                if strongSelf.hasCountry {
+                    strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
+                } else {
+                    strongSelf.hasNumberUpdated?(false)
                 }
             }
         }
@@ -253,6 +278,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let hasOtherAccounts: Bool
     
     private let animationNode: AnimatedStickerNode
+    private let managedAnimationNode: ManagedPhoneAnimationNode
     private let titleNode: ASTextNode
     private let noticeNode: ASTextNode
     private let phoneAndCountryNode: PhoneAndCountryNode
@@ -276,6 +302,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         } set(value) {
             self.phoneAndCountryNode.phoneInputNode.codeAndNumber = value
         }
+    }
+    
+    var formattedCodeAndNumber: (String, String) {
+        return self.phoneAndCountryNode.phoneInputNode.formattedCodeAndNumber
     }
     
     var syncContacts: Bool {
@@ -307,6 +337,18 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
     }
     
+    var codeNode: ASDisplayNode {
+        return self.phoneAndCountryNode.phoneInputNode.countryCodeField
+    }
+    
+    var numberNode: ASDisplayNode {
+        return self.phoneAndCountryNode.phoneInputNode.numberField
+    }
+    
+    var buttonNode: ASDisplayNode {
+        return self.proceedNode
+    }
+    
     init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void, hasOtherAccounts: Bool) {
         self.sharedContext = sharedContext
         self.account = account
@@ -319,6 +361,9 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationNode.visibility = true
+        
+        self.managedAnimationNode = ManagedPhoneAnimationNode()
+        self.managedAnimationNode.isHidden = true
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = true
@@ -338,6 +383,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
         self.proceedNode.progressType = .embedded
+        self.proceedNode.isEnabled = false
         
         super.init()
         
@@ -353,6 +399,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.addSubnode(self.contactSyncNode)
         self.addSubnode(self.proceedNode)
         self.addSubnode(self.animationNode)
+        self.addSubnode(self.managedAnimationNode)
         self.contactSyncNode.isHidden = true
         
         self.phoneAndCountryNode.selectCountryCode = { [weak self] in
@@ -360,6 +407,16 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         self.phoneAndCountryNode.checkPhone = { [weak self] in
             self?.checkPhone?()
+        }
+        self.phoneAndCountryNode.hasNumberUpdated = { [weak self] hasNumber in
+            self?.proceedNode.isEnabled = hasNumber
+        }
+        self.phoneAndCountryNode.numberUpdated = { [weak self] in
+            if let strongSelf = self, !strongSelf.managedAnimationNode.isHidden {
+                if let state = ManagedPhoneAnimationState.allCases.randomElement() {
+                    strongSelf.managedAnimationNode.enqueue(state)
+                }
+            }
         }
         
         self.tokenEventsDisposable.set((account.updateLoginTokenEvents
@@ -369,6 +426,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.proceedNode.pressed = { [weak self] in
             self?.checkPhone?()
+        }
+        
+        self.animationNode.completed = { [weak self] _ in
+            self?.animationNode.isHidden = true
+            self?.managedAnimationNode.isHidden = false
         }
     }
     
@@ -390,9 +452,11 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private var textSnapshotView: UIView?
     private var forcedButtonFrame: CGRect?
     
-    func willAnimateIn(buttonFrame: CGRect, animationSnapshot: UIView, textSnapshot: UIView) {
+    func willAnimateIn(buttonFrame: CGRect, buttonTitle: String, animationSnapshot: UIView, textSnapshot: UIView) {
         self.proceedNode.frame = buttonFrame
-        self.proceedNode.title = "Start Messaging"
+        
+        self.proceedNode.isEnabled = true
+        self.proceedNode.title = buttonTitle
         
         self.animationSnapshotView = animationSnapshot
         self.view.insertSubview(animationSnapshot, at: 0)
@@ -413,7 +477,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
     }
     
-    func animateIn(buttonFrame: CGRect, animationSnapshot: UIView, textSnapshot: UIView) {
+    func animateIn(buttonFrame: CGRect, buttonTitle: String, animationSnapshot: UIView, textSnapshot: UIView) {
         self.proceedNode.animateTitle(to: self.strings.Login_Continue)
         
         let duration: Double = 0.3
@@ -423,6 +487,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             self?.animationSnapshotView = nil
         })
         self.animationSnapshotView?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -100.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        self.animationSnapshotView?.layer.animateScale(from: 1.0, to: 0.3, duration: 0.4)
        
         self.textSnapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
             self?.textSnapshotView?.removeFromSuperview()
@@ -437,6 +502,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             self.phoneAndCountryNode,
             self.contactSyncNode
         ]
+        
+        self.animationNode.layer.animateScale(from: 0.3, to: 1.0, duration: 0.3)
 
         for node in nodes {
             node.alpha = 1.0
@@ -492,6 +559,8 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.animationNode.updateLayout(size: animationSize)
         
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        
+        transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
     }
     
     func activateInput() {
@@ -599,5 +668,368 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
                 strongSelf.exportTokenDisposable.set(nil)
             }
         }))
+    }
+}
+
+final class PhoneConfirmationController: ViewController {
+    private var controllerNode: Node {
+        return self.displayNode as! Node
+    }
+    
+    private let theme: PresentationTheme
+    private let strings: PresentationStrings
+    private let code: String
+    private let number: String
+    private weak var sourceController: AuthorizationSequencePhoneEntryController?
+    
+    var inProgress: Bool = false {
+        didSet {
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.controllerNode.proceedNode.transitionToProgress()
+                } else {
+                    self.controllerNode.proceedNode.transitionFromProgress()
+                }
+            }
+        }
+    }
+    
+    var proceed: () -> Void = {}
+    
+    class Node: ASDisplayNode {        
+        private let dimNode: ASDisplayNode
+        private let backgroundNode: ASDisplayNode
+        
+        private let codeSourceNode: ImmediateTextNode
+        private let phoneSourceNode: ImmediateTextNode
+        
+        private let codeTargetNode: ImmediateTextNode
+        private let phoneTargetNode: ImmediateTextNode
+        
+        private let textNode: ImmediateTextNode
+        
+        private let cancelButton: HighlightableButtonNode
+        fileprivate let proceedNode: SolidRoundedButtonNode
+        
+        var proceed: () -> Void = {}
+        var cancel: () -> Void = {}
+        
+        init(theme: PresentationTheme, strings: PresentationStrings, code: String, number: String) {
+            self.dimNode = ASDisplayNode()
+            self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
+            
+            self.backgroundNode = ASDisplayNode()
+            self.backgroundNode.backgroundColor = theme.list.plainBackgroundColor
+            self.backgroundNode.cornerRadius = 11.0
+            
+            self.textNode = ImmediateTextNode()
+            self.textNode.displaysAsynchronously = false
+            self.textNode.attributedText = NSAttributedString(string: strings.Login_PhoneNumberConfirmation, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor)
+            self.textNode.textAlignment = .center
+            
+            self.cancelButton = HighlightableButtonNode()
+            self.cancelButton.setTitle(strings.Login_Edit, with: Font.regular(19.0), with: theme.list.itemAccentColor, for: .normal)
+            
+            self.proceedNode = SolidRoundedButtonNode(title: strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: theme), height: 50.0, cornerRadius: 11.0, gloss: false)
+            self.proceedNode.progressType = .embedded
+            
+            let font = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
+            let largeFont = Font.with(size: 34.0, design: .regular, weight: .bold, traits: [.monospacedNumbers])
+            
+            self.codeSourceNode = ImmediateTextNode()
+            self.codeSourceNode.alpha = 0.0
+            self.codeSourceNode.displaysAsynchronously = false
+            self.codeSourceNode.attributedText = NSAttributedString(string: code, font: font, textColor: theme.list.itemPrimaryTextColor)
+            
+            self.phoneSourceNode = ImmediateTextNode()
+            self.phoneSourceNode.alpha = 0.0
+            self.phoneSourceNode.displaysAsynchronously = false
+            
+            let sourceString = NSMutableAttributedString(string: number, font: font, textColor: theme.list.itemPrimaryTextColor)
+            sourceString.addAttribute(NSAttributedString.Key.kern, value: 1.6, range: NSRange(location: 0, length: sourceString.length))
+            self.phoneSourceNode.attributedText = sourceString
+            
+            self.codeTargetNode = ImmediateTextNode()
+            self.codeTargetNode.displaysAsynchronously = false
+            self.codeTargetNode.attributedText = NSAttributedString(string: code, font: largeFont, textColor: theme.list.itemPrimaryTextColor)
+            
+            
+            self.phoneTargetNode = ImmediateTextNode()
+            self.phoneTargetNode.displaysAsynchronously = false
+            
+            let targetString = NSMutableAttributedString(string: number, font: largeFont, textColor: theme.list.itemPrimaryTextColor)
+            targetString.addAttribute(NSAttributedString.Key.kern, value: 1.6, range: NSRange(location: 0, length: sourceString.length))
+            self.phoneTargetNode.attributedText = targetString
+            
+            super.init()
+            
+            self.clipsToBounds = false
+            
+            self.addSubnode(self.dimNode)
+            self.addSubnode(self.backgroundNode)
+            
+            self.addSubnode(self.codeSourceNode)
+            self.addSubnode(self.phoneSourceNode)
+            
+            self.addSubnode(self.codeTargetNode)
+            self.addSubnode(self.phoneTargetNode)
+            
+            self.addSubnode(self.textNode)
+            
+            self.addSubnode(self.cancelButton)
+            self.addSubnode(self.proceedNode)
+            
+            self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), forControlEvents: .touchUpInside)
+            self.proceedNode.pressed = { [weak self] in
+                self?.proceed()
+            }
+        }
+        
+        override func didLoad() {
+            super.didLoad()
+            
+            self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapped)))
+        }
+        
+        @objc private func dimTapped() {
+            self.cancelPressed()
+        }
+        
+        @objc private func cancelPressed() {
+            self.dimNode.isUserInteractionEnabled = false
+            self.cancel()
+        }
+        
+        func animateIn(codeNode: ASDisplayNode, numberNode: ASDisplayNode, buttonNode: ASDisplayNode) {
+            let codeFrame = codeNode.convert(codeNode.bounds, to: nil)
+            let numberFrame = numberNode.convert(numberNode.bounds, to: nil)
+            let buttonFrame = buttonNode.convert(buttonNode.bounds, to: nil)
+            
+            codeNode.isHidden = true
+            numberNode.isHidden = true
+            buttonNode.isHidden = true
+            
+            self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            
+            let codeSize = self.codeSourceNode.updateLayout(self.frame.size)
+            self.codeSourceNode.frame = CGRect(origin: CGPoint(x: codeFrame.midX - codeSize.width / 2.0, y: codeFrame.midY - codeSize.height / 2.0), size: codeSize)
+            
+            let numberSize = self.phoneSourceNode.updateLayout(self.frame.size)
+            self.phoneSourceNode.frame = CGRect(origin: CGPoint(x: numberFrame.minX, y: numberFrame.midY - numberSize.height / 2.0), size: numberSize)
+            
+            let targetScale = codeSize.height / self.codeTargetNode.frame.height
+            let sourceScale = self.codeTargetNode.frame.height / codeSize.height
+            
+            self.codeSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: 0.3)
+            self.codeSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            self.codeSourceNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: 0.3)
+            
+            self.phoneSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: 0.3)
+            self.phoneSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            self.phoneSourceNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: 0.3)
+            
+            self.codeTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: 0.3)
+            self.codeTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.codeTargetNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: 0.3)
+            
+            self.phoneTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: 0.3)
+            self.phoneTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.phoneTargetNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: 0.3)
+            
+            self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+            self.backgroundNode.layer.animateFrame(from: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), to: self.backgroundNode.frame, duration: 0.3)
+            
+            self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.textNode.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3)
+            self.textNode.layer.animatePosition(from: CGPoint(x: -100.0, y: -45.0), to: CGPoint(), duration: 0.3, additive: true)
+            
+            self.cancelButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.cancelButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3)
+            self.cancelButton.layer.animatePosition(from: CGPoint(x: -100.0, y: -70.0), to: CGPoint(), duration: 0.3, additive: true)
+            
+            self.proceedNode.layer.animatePosition(from: buttonFrame.center, to: self.proceedNode.position, duration: 0.3)
+        }
+        
+        func animateOut(codeNode: ASDisplayNode, numberNode: ASDisplayNode, buttonNode: ASDisplayNode, completion: @escaping () -> Void) {
+            let codeFrame = codeNode.convert(codeNode.bounds, to: nil)
+            let numberFrame = numberNode.convert(numberNode.bounds, to: nil)
+            let buttonFrame = buttonNode.convert(buttonNode.bounds, to: nil)
+            
+            self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            
+            let codeSize = self.codeSourceNode.updateLayout(self.frame.size)
+            self.codeSourceNode.frame = CGRect(origin: CGPoint(x: codeFrame.midX - codeSize.width / 2.0, y: codeFrame.midY - codeSize.height / 2.0), size: codeSize)
+            
+            let numberSize = self.phoneSourceNode.updateLayout(self.frame.size)
+            self.phoneSourceNode.frame = CGRect(origin: CGPoint(x: numberFrame.minX, y: numberFrame.midY - numberSize.height / 2.0), size: numberSize)
+            
+            let targetScale = codeSize.height / self.codeTargetNode.frame.height
+            let sourceScale = self.codeTargetNode.frame.height / codeSize.height
+            
+            self.codeSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3)
+            self.codeSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.codeSourceNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: 0.3)
+            
+            self.phoneSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3)
+            self.phoneSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+            self.phoneSourceNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: 0.3)
+            
+            self.codeTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3)
+            self.codeTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
+            self.codeTargetNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: 0.3)
+            
+            Queue.mainQueue().after(0.25) {
+                codeNode.isHidden = false
+                numberNode.isHidden = false
+                buttonNode.isHidden = false
+            }
+            
+            self.phoneTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3)
+            self.phoneTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+                completion()
+            })
+            self.phoneTargetNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: 0.3)
+            
+            self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.1, removeOnCompletion: false)
+            self.backgroundNode.layer.animateFrame(from: self.backgroundNode.frame, to: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), duration: 0.3)
+                        
+            self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            self.textNode.layer.animateScale(from: 1.0, to: 0.5, duration: 0.3, removeOnCompletion: false)
+            self.textNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -45.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            
+            self.cancelButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
+            self.cancelButton.layer.animateScale(from: 1.0, to: 0.5, duration: 0.3, removeOnCompletion: false)
+            self.cancelButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -70.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            
+            self.proceedNode.layer.animatePosition(from: self.proceedNode.position, to: buttonFrame.center, duration: 0.3, removeOnCompletion: false)
+        }
+        
+        func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+            let sideInset: CGFloat = 8.0
+            let innerInset: CGFloat = 18.0
+            
+            transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: -layout.size.width, y: 0.0), size: CGSize(width: layout.size.width * 3.0, height: layout.size.height)))
+            
+            let backgroundSize = CGSize(width: layout.size.width - sideInset * 2.0, height: 243.0)
+            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: layout.size.height - backgroundSize.height - 260.0), size: backgroundSize)
+            transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+            
+            let codeSize = self.codeTargetNode.updateLayout(backgroundSize)
+            let numberSize = self.phoneTargetNode.updateLayout(backgroundSize)
+            
+            let totalWidth = codeSize.width + numberSize.width + 10.0
+            
+            let codeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - totalWidth) / 2.0), y: 30.0), size: codeSize)
+            transition.updateFrame(node: self.codeTargetNode, frame: codeFrame.offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+            
+            let numberFrame = CGRect(origin: CGPoint(x: codeFrame.maxX + 10.0, y: 30.0), size: numberSize)
+            transition.updateFrame(node: self.phoneTargetNode, frame: numberFrame.offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+            
+            let textSize = self.textNode.updateLayout(backgroundSize)
+            transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - textSize.width) / 2.0), y: 88.0), size: textSize).offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+            
+            let proceedWidth = backgroundSize.width - 16.0 * 2.0
+            let proceedHeight = self.proceedNode.updateLayout(width: proceedWidth, transition: transition)
+            transition.updateFrame(node: self.proceedNode, frame: CGRect(origin: CGPoint(x: innerInset, y: backgroundSize.height - proceedHeight - innerInset), size: CGSize(width: proceedWidth, height: proceedHeight)).offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+            
+            let cancelSize = self.cancelButton.measure(layout.size)
+            transition.updateFrame(node: self.cancelButton, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - cancelSize.width) / 2.0), y: backgroundSize.height - proceedHeight - innerInset - cancelSize.height - 25.0), size: cancelSize).offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
+        }
+    }
+    
+    public init(theme: PresentationTheme, strings: PresentationStrings, code: String, number: String, sourceController: AuthorizationSequencePhoneEntryController) {
+        self.theme = theme
+        self.strings = strings
+        self.code = code
+        self.number = number
+        self.sourceController = sourceController
+        
+        super.init(navigationBarPresentationData: nil)
+        
+        self.blocksBackgroundWhenInOverlay = true
+        
+        self.statusBar.statusBarStyle = .Ignore
+    }
+    
+    required public init(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private var isDismissed = false
+    override public func loadDisplayNode() {
+        self.displayNode = Node(theme: self.theme, strings: self.strings, code: self.code, number: self.number)
+        self.displayNodeDidLoad()
+        
+        self.controllerNode.proceed = { [weak self] in
+            self?.proceed()
+        }
+        self.controllerNode.cancel = { [weak self] in
+            if let strongSelf = self, let sourceController = strongSelf.sourceController {
+                strongSelf.controllerNode.animateOut(codeNode: sourceController.codeNode, numberNode: sourceController.numberNode, buttonNode: sourceController.buttonNode, completion: { [weak self] in
+                    self?.dismiss()
+                })
+            }
+        }
+    }
+    
+    func transitionOut() {
+        self.controllerNode.cancel()
+        
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.5, curve: .spring)
+        transition.updatePosition(layer: self.view.layer, position: CGPoint(x: self.view.center.x - self.view.frame.width, y: self.view.center.y))
+    }
+    
+    private var didPlayAppearanceAnimation = false
+    override public func viewDidAppear(_ animated: Bool) {
+        if !self.didPlayAppearanceAnimation {
+            self.didPlayAppearanceAnimation = true
+            if let sourceController = self.sourceController {
+                self.controllerNode.animateIn(codeNode: sourceController.codeNode, numberNode: sourceController.numberNode, buttonNode: sourceController.buttonNode)
+            }
+        }
+    }
+    
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        super.containerLayoutUpdated(layout, transition: transition)
+        
+        self.controllerNode.containerLayoutUpdated(layout, transition: transition)
+    }
+}
+
+
+private enum ManagedPhoneAnimationState: CaseIterable, Equatable {
+    case keypad1
+    case keypad2
+    case keypad3
+    case keypad4
+}
+
+private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
+    private var phoneState: ManagedPhoneAnimationState = .keypad1
+    private var timer: SwiftSignalKit.Timer?
+    
+    init() {
+        super.init(size: CGSize(width: 100.0, height: 100.0))
+        
+        self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
+    }
+    
+    func enqueue(_ state: ManagedPhoneAnimationState) {
+        switch state {
+        case .keypad1:
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 10), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 10, endFrame: 0), duration: 0.15))
+        case .keypad2:
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 24, endFrame: 34), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 34, endFrame: 24), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
+        case .keypad3:
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 36, endFrame: 46), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 46, endFrame: 36), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
+        case .keypad4:
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 10), duration: 0.15))
+            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 10, endFrame: 0), duration: 0.15))
+        }
     }
 }

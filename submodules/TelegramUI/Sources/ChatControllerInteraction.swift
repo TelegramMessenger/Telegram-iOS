@@ -13,6 +13,7 @@ import ChatInterfaceState
 import UndoUI
 import TelegramPresentationData
 import ChatPresentationInterfaceState
+import TextFormat
 
 struct ChatInterfaceHighlightedState: Equatable {
     let messageStableId: UInt32
@@ -74,6 +75,7 @@ public final class ChatControllerInteraction {
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
     let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool
+    let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
     let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
@@ -179,6 +181,7 @@ public final class ChatControllerInteraction {
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
         sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
@@ -267,6 +270,7 @@ public final class ChatControllerInteraction {
         self.sendCurrentMessage = sendCurrentMessage
         self.sendMessage = sendMessage
         self.sendSticker = sendSticker
+        self.sendEmoji = sendEmoji
         self.sendGif = sendGif
         self.sendBotContextResultAsGif = sendBotContextResultAsGif
         self.requestMessageActionCallback = requestMessageActionCallback

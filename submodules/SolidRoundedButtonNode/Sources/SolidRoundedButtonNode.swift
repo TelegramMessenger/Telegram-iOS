@@ -23,11 +23,15 @@ public final class SolidRoundedButtonTheme: Equatable {
     public let backgroundColor: UIColor
     public let backgroundColors: [UIColor]
     public let foregroundColor: UIColor
+    public let disabledBackgroundColor: UIColor?
+    public let disabledForegroundColor: UIColor?
     
-    public init(backgroundColor: UIColor, backgroundColors: [UIColor] = [], foregroundColor: UIColor) {
+    public init(backgroundColor: UIColor, backgroundColors: [UIColor] = [], foregroundColor: UIColor, disabledBackgroundColor: UIColor? = nil, disabledForegroundColor: UIColor? = nil) {
         self.backgroundColor = backgroundColor
         self.backgroundColors = backgroundColors
         self.foregroundColor = foregroundColor
+        self.disabledBackgroundColor = disabledBackgroundColor
+        self.disabledForegroundColor = disabledForegroundColor
     }
     
     public static func ==(lhs: SolidRoundedButtonTheme, rhs: SolidRoundedButtonTheme) -> Bool {
@@ -38,6 +42,12 @@ public final class SolidRoundedButtonTheme: Equatable {
             return false
         }
         if lhs.foregroundColor != rhs.foregroundColor {
+            return false
+        }
+        if lhs.disabledBackgroundColor != rhs.disabledBackgroundColor {
+            return false
+        }
+        if lhs.disabledForegroundColor != rhs.disabledForegroundColor {
             return false
         }
         return true
@@ -85,6 +95,14 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     
     public var pressed: (() -> Void)?
     public var validLayout: CGFloat?
+    
+    public var isEnabled: Bool = true {
+        didSet {
+            if self.isEnabled != oldValue {
+                self.updateColors(animated: true)
+            }
+        }
+    }
     
     public var title: String? {
         didSet {
@@ -220,7 +238,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
-            if let strongSelf = self {
+            if let strongSelf = self, strongSelf.isEnabled {
                 if highlighted {
                     strongSelf.buttonBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.buttonBackgroundNode.alpha = 0.55
@@ -312,36 +330,20 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         }
     }
     
-    public func animateTitle(from title: String) {
-        let originalTitle = self.title ?? ""
-        self.title = title
-        
+    public func animateTitle(to title: String) {        
         Queue.mainQueue().justDispatch {
-            if let snapshotView = self.titleNode.view.snapshotView(afterScreenUpdates: false) {
-                snapshotView.frame = self.titleNode.frame
+            if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
+                snapshotView.frame = self.bounds
                 
-                self.view.insertSubview(snapshotView, aboveSubview: self.titleNode.view)
+                self.view.addSubview(snapshotView)
                 snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
                     snapshotView?.removeFromSuperview()
                 })
-                self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                
-                self.title = originalTitle
             }
-        }
-    }
-    
-    public func animateTitle(to title: String) {
-        if let snapshotView = self.titleNode.view.snapshotView(afterScreenUpdates: false) {
-            snapshotView.frame = self.titleNode.frame
-            
-            self.view.insertSubview(snapshotView, aboveSubview: self.titleNode.view)
-            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
-                snapshotView?.removeFromSuperview()
-            })
-            self.titleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             
             self.title = title
+            self.buttonBackgroundNode.backgroundColor = self.theme.disabledBackgroundColor
+            self.isEnabled = false
         }
     }
     
@@ -459,40 +461,60 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
             }
         }
         
-        self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
-        if theme.backgroundColors.count > 1 {
-            self.buttonBackgroundNode.backgroundColor = nil
-            
-            var locations: [CGFloat] = []
-            let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
-            for i in 0 ..< theme.backgroundColors.count {
-                locations.append(delta * CGFloat(i))
-            }
-            self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
-            
-            if self.buttonBackgroundAnimationView == nil {
-                let buttonBackgroundAnimationView = UIImageView()
-                self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
-                self.buttonBackgroundNode.view.addSubview(buttonBackgroundAnimationView)
-            }
-            
-            self.buttonBackgroundAnimationView?.image = self.buttonBackgroundNode.image
-        } else {
-            self.buttonBackgroundNode.image = nil
-            self.buttonBackgroundAnimationView?.image = nil
-        }
-        
-        self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: theme.foregroundColor)
-        self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: theme.foregroundColor)
-        
         self.iconNode.image = generateTintedImage(image: self.iconNode.image, color: theme.foregroundColor)
         self.animationNode?.customColor = theme.foregroundColor
+        
+        self.updateColors(animated: false)
+                
+        self.updateShimmerParameters()
+    }
+    
+    func updateColors(animated: Bool) {
+        if animated {
+            if let snapshotView = self.view.snapshotView(afterScreenUpdates: false) {
+                self.view.addSubview(snapshotView)
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+            }
+        }
+        
+        if !self.isEnabled, let disabledBackgroundColor = self.theme.disabledBackgroundColor, let disabledForegroundColor = self.theme.disabledForegroundColor {
+            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: disabledForegroundColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: disabledForegroundColor)
+            
+            self.buttonBackgroundNode.backgroundColor = disabledBackgroundColor
+        } else {
+            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
+            self.subtitleNode.attributedText = NSAttributedString(string: self.subtitle ?? "", font: Font.regular(14.0), textColor: self.theme.foregroundColor)
+            
+            self.buttonBackgroundNode.backgroundColor = theme.backgroundColor
+            if theme.backgroundColors.count > 1 {
+                self.buttonBackgroundNode.backgroundColor = nil
+                
+                var locations: [CGFloat] = []
+                let delta = 1.0 / CGFloat(theme.backgroundColors.count - 1)
+                for i in 0 ..< theme.backgroundColors.count {
+                    locations.append(delta * CGFloat(i))
+                }
+                self.buttonBackgroundNode.image = generateGradientImage(size: CGSize(width: 200.0, height: self.buttonHeight), colors: theme.backgroundColors, locations: locations, direction: .horizontal)
+                
+                if self.buttonBackgroundAnimationView == nil {
+                    let buttonBackgroundAnimationView = UIImageView()
+                    self.buttonBackgroundAnimationView = buttonBackgroundAnimationView
+                    self.buttonBackgroundNode.view.addSubview(buttonBackgroundAnimationView)
+                }
+                
+                self.buttonBackgroundAnimationView?.image = self.buttonBackgroundNode.image
+            } else {
+                self.buttonBackgroundNode.image = nil
+                self.buttonBackgroundAnimationView?.image = nil
+            }
+        }
         
         if let width = self.validLayout {
             _ = self.updateLayout(width: width, transition: .immediate)
         }
-        
-        self.updateShimmerParameters()
     }
     
     public func sizeThatFits(_ constrainedSize: CGSize) -> CGSize {
@@ -532,7 +554,7 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
         
         if self.title != self.titleNode.attributedText?.string {
-            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.theme.foregroundColor)
+            self.titleNode.attributedText = NSAttributedString(string: self.title ?? "", font: self.font == .bold ? Font.semibold(self.fontSize) : Font.regular(self.fontSize), textColor: self.isEnabled ? self.theme.foregroundColor : (self.theme.disabledForegroundColor ?? self.theme.foregroundColor))
         }
         
         let iconSize: CGSize
@@ -595,7 +617,9 @@ public final class SolidRoundedButtonNode: ASDisplayNode {
     }
     
     @objc private func buttonPressed() {
-        self.pressed?()
+        if self.isEnabled {
+            self.pressed?()
+        }
     }
     
     public func transitionToProgress() {

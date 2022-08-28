@@ -132,6 +132,10 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     
     private var countryNameForCode: (Int32, String)?
     
+    public var formattedCodeAndNumber: (String, String) {
+        return (self.countryCodeField.textField.text ?? "", self.numberField.textField.text ?? "")
+    }
+    
     public var codeAndNumber: (Int32?, String?, String) {
         get {
             var code: Int32?

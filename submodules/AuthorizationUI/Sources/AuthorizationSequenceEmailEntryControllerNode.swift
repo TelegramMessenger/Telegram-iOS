@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
-import AuthorizationUI
+import AuthorizationUtils
 import AuthenticationServices
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
@@ -50,6 +50,7 @@ final class AuthorizationDividerNode: ASDisplayNode {
 final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
     private let theme: PresentationTheme
+    private let mode: AuthorizationSequenceEmailEntryController.Mode
     
     private let animationNode: AnimatedStickerNode
     private let titleNode: ASTextNode
@@ -79,9 +80,10 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         }
     }
     
-    init(strings: PresentationStrings, theme: PresentationTheme) {
+    init(strings: PresentationStrings, theme: PresentationTheme, mode: AuthorizationSequenceEmailEntryController.Mode) {
         self.strings = strings
         self.theme = theme
+        self.mode = mode
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroMail"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
@@ -90,7 +92,6 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_AddEmailTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.isUserInteractionEnabled = false
@@ -190,10 +191,10 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         insets.top = layout.statusBarHeight ?? 20.0
         
         if let inputHeight = layout.inputHeight {
-            insets.bottom += max(inputHeight, insets.bottom)
+            insets.bottom = max(inputHeight, insets.bottom)
         }
         
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_AddEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.mode == .setup ? self.strings.Login_AddEmailTitle : self.strings.Login_EnterNewEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
         let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
@@ -209,19 +210,22 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 32.0, maxValue: 60.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 22.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 48.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        let inset: CGFloat = 24.0
+        let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
+        transition.updateFrame(node: self.proceedNode, frame: buttonFrame)
+        
+        let dividerSize = self.dividerNode.updateLayout(width: layout.size.width)
+        transition.updateFrame(node: self.dividerNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - dividerSize.width) / 2.0), y: buttonFrame.minY - dividerSize.height), size: dividerSize))
         
         if let _ = self.signInWithAppleButton, self.appleSignInAllowed {
             self.dividerNode.isHidden = false
-            let dividerSize = self.dividerNode.updateLayout(width: layout.size.width)
-            items.append(AuthorizationLayoutItem(node: self.dividerNode, size: dividerSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         } else {
             self.dividerNode.isHidden = true
         }
         
-        items.append(AuthorizationLayoutItem(node: self.proceedNode, size: proceedSize, spacingBefore: self.dividerNode.isHidden ? AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0) : AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                        
         let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
         
         if let signInWithAppleButton = self.signInWithAppleButton, self.appleSignInAllowed {

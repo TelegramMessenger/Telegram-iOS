@@ -9,7 +9,6 @@ import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
 import CountrySelectionUI
-import SettingsUI
 import PhoneNumberFormat
 import DebugSettingsUI
 
@@ -29,6 +28,18 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private let back: () -> Void
     
     private var currentData: (Int32, String?, String)?
+        
+    var codeNode: ASDisplayNode {
+        return self.controllerNode.codeNode
+    }
+    
+    var numberNode: ASDisplayNode {
+        return self.controllerNode.numberNode
+    }
+    
+    var buttonNode: ASDisplayNode {
+        return self.controllerNode.buttonNode
+    }
     
     var inProgress: Bool = false {
         didSet {
@@ -39,10 +50,13 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
 //                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
 //            }
             self.controllerNode.inProgress = self.inProgress
+            self.confirmationController?.inProgress = self.inProgress
         }
     }
     var loginWithNumber: ((String, Bool) -> Void)?
     var accountUpdated: ((UnauthorizedAccount) -> Void)?
+    
+    weak var confirmationController: PhoneConfirmationController?
     
     private let termsDisposable = MetaDisposable()
     
@@ -98,13 +112,13 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     }
     
     private var shouldAnimateIn = false
-    private var transitionInArguments: (buttonFrame: CGRect, animationSnapshot: UIView, textSnapshot: UIView)?
+    private var transitionInArguments: (buttonFrame: CGRect, buttonTitle: String, animationSnapshot: UIView, textSnapshot: UIView)?
     
     func animateWithSplashController(_ controller: AuthorizationSequenceSplashController) {
         self.shouldAnimateIn = true
         
         if let animationSnapshot = controller.animationSnapshot, let textSnapshot = controller.textSnaphot {
-            self.transitionInArguments = (controller.buttonFrame, animationSnapshot, textSnapshot)
+            self.transitionInArguments = (controller.buttonFrame, controller.buttonTitle, animationSnapshot, textSnapshot)
         }
     }
     
@@ -163,8 +177,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         
         if self.shouldAnimateIn {
             self.animatingIn = true
-            if let (buttonFrame, animationSnapshot, textSnapshot) = self.transitionInArguments {
-                self.controllerNode.willAnimateIn(buttonFrame: buttonFrame, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+            if let (buttonFrame, buttonTitle, animationSnapshot, textSnapshot) = self.transitionInArguments {
+                self.controllerNode.willAnimateIn(buttonFrame: buttonFrame, buttonTitle: buttonTitle, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
             }
             Queue.mainQueue().justDispatch {
                 self.controllerNode.activateInput()
@@ -182,15 +196,23 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         }
     }
     
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if let confirmationController = self.confirmationController {
+            confirmationController.transitionOut()
+        }
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
         
         if self.shouldAnimateIn, let inputHeight = layout.inputHeight, inputHeight > 0.0 {
-            if let (buttonFrame, animationSnapshot, textSnapshot) = self.transitionInArguments {
+            if let (buttonFrame, buttonTitle, animationSnapshot, textSnapshot) = self.transitionInArguments {
                 self.shouldAnimateIn = false
-                self.controllerNode.animateIn(buttonFrame: buttonFrame, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+                self.controllerNode.animateIn(buttonFrame: buttonFrame, buttonTitle: buttonTitle, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
             }
         }
     }
@@ -217,14 +239,16 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                var actions: [TextAlertAction] = []
-                actions.append(TextAlertAction(type: .genericAction, title: self.presentationData.strings.Login_Edit, action: {}))
-                actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Yes, action: { [weak self] in
+                let (code, formattedNumber) = self.controllerNode.formattedCodeAndNumber
+
+                let confirmationController = PhoneConfirmationController(theme: self.presentationData.theme, strings: self.presentationData.strings, code: code, number: formattedNumber, sourceController: self)
+                confirmationController.proceed = { [weak self] in
                     if let strongSelf = self {
                         strongSelf.loginWithNumber?(strongSelf.controllerNode.currentNumber, strongSelf.controllerNode.syncContacts)
                     }
-                }))
-                self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: logInNumber, text: self.presentationData.strings.Login_PhoneNumberConfirmation, actions: actions), in: .window(.root))
+                }
+                (self.navigationController as? NavigationController)?.presentOverlay(controller: confirmationController, inGlobal: true, blockInteraction: true)
+                self.confirmationController = confirmationController
             }
         } else {
             self.hapticFeedback.error()

@@ -7,7 +7,7 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import AccountContext
-import AuthorizationUI
+import AuthorizationUtils
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 

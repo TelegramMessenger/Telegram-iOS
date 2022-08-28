@@ -12,7 +12,6 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 import CountrySelectionUI
-import SettingsUI
 import PhoneNumberFormat
 import LegacyComponents
 import LegacyMediaPickerUI
@@ -247,7 +246,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
-                                        controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, presentationData: strongSelf.sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: strongSelf.sharedContext.presentationData), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        controller.present(strongSelf.sharedContext.makeProxySettingsController(sharedContext: strongSelf.sharedContext, account: strongSelf.account), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
                             controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), in: .window(.root))
@@ -260,11 +259,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
-                if c.data?.1 == type {
+                if c.data?.2 == type {
                     currentController = c
                 }
                 break
@@ -502,11 +501,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 authorizationController.performRequests()
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
+        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }
     
     private var signInWithAppleSetup = false
+    private var appleSignInAllowed = false
+    private var currentEmail: String?
+    
     private func emailSetupController(number: String, appleSignInAllowed: Bool) -> AuthorizationSequenceEmailEntryController {
         var currentController: AuthorizationSequenceEmailEntryController?
         for c in self.viewControllers {
@@ -519,7 +521,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceEmailEntryController(presentationData: self.presentationData, back: { [weak self] in
+            controller = AuthorizationSequenceEmailEntryController(presentationData: self.presentationData, mode: .setup, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -536,9 +538,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             controller?.inProgress = true
             
             strongSelf.actionDisposable.set((sendLoginEmailCode(account: strongSelf.account, email: email)
-            |> deliverOnMainQueue).start(next: { result in
-                controller?.inProgress = false
-            }, error: { error in
+            |> deliverOnMainQueue).start(error: { error in
                 if let strongSelf = self, let controller = controller {
                     controller.inProgress = false
                     
@@ -553,6 +553,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     
                     controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }
+            }, completed: { [weak self] in
+                controller?.inProgress = false
+                
+                if let strongSelf = self {
+                    strongSelf.currentEmail = email
                 }
             }))
         }
@@ -1017,9 +1023,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
+                        self.appleSignInAllowed = appleSignInAllowed
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
                     } else {
-                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
+                        if let _ = self.currentEmail {
+                            controllers.append(self.emailSetupController(number: number, appleSignInAllowed: self.appleSignInAllowed))
+                        }
+                        controllers.append(self.codeEntryController(number: number, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                     }
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _, suggestReset, syncContacts):
