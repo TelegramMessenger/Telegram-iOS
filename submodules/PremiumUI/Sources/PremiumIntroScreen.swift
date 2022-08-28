@@ -1285,7 +1285,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         if months > 1 {
                             pricePerMonth = product.pricePerMonth(Int(months))
                             
-                            if defaultPrice != product.price {
+                            if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
                                 if months == 12 {
                                     subtitle = environment.strings.Premium_PricePerYear(subtitle).string
