@@ -111,7 +111,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
-    func resetCode() {
+    public func resetCode() {
         self.controllerNode.resetCode()
     }
     

@@ -7998,6 +7998,12 @@ Sorry for the inconvenience.";
 "Login.WrongCodeError" = "Wrong code, please try again.";
 
 "PrivacySettings.LoginEmail" = "Login Email";
+"Login.EmailChanged" = "Your email has been changed.";
+
+"Login.InvalidEmailAddressError" = "An error occurred. Please try again.";
+"Login.InvalidEmailError" = "Please enter a valid e-mail address.";
+"Login.InvalidEmailTokenError" = "An error occurred. Please try again.";
+"Login.EmailNotAllowedError" = "Sorry, this email can't be used.";
 
 "Conversation.EmojiCopied" = "Emoji copied to clipboard";
 

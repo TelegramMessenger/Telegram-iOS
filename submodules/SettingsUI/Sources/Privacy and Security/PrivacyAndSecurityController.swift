@@ -17,6 +17,7 @@ import PasswordSetupUI
 import UndoUI
 import PremiumUI
 import AuthorizationUI
+import AuthenticationServices
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -1082,11 +1083,76 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, openUrl: { _ in }, back: {
                     dismissCodeControllerImpl?()
                 })
-                codeController.loginWithCode = { code in
-                    
+                codeController.loginWithCode = { [weak codeController] code in
+                    actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .emailCode(code))
+                    |> deliverOnMainQueue).start(error: { error in
+                        Queue.mainQueue().async {
+                            codeController?.inProgress = false
+                            
+                            if case .invalidCode = error {
+                                codeController?.animateError(text: presentationData.strings.Login_WrongCodeError)
+                            } else {
+                                var resetCode = false
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        resetCode = true
+                                        text = presentationData.strings.Login_CodeFloodError
+                                    case .invalidCode:
+                                        resetCode = true
+                                        text = presentationData.strings.Login_InvalidCodeError
+                                    case .generic:
+                                        text = presentationData.strings.Login_UnknownError
+                                    case .codeExpired:
+                                        text = presentationData.strings.Login_CodeExpired
+                                    case .timeout:
+                                        text = presentationData.strings.Login_NetworkError
+                                    case .invalidEmailToken:
+                                        text = presentationData.strings.Login_InvalidEmailTokenError
+                                    case .emailNotAllowed:
+                                        text = presentationData.strings.Login_EmailNotAllowedError
+                                }
+                                
+                                if resetCode {
+                                    codeController?.resetCode()
+                                }
+                                    
+                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                            }
+                        }
+                    }, completed: { [weak codeController] in
+                        codeController?.animateSuccess()
+                        Queue.mainQueue().after(0.75) {
+                            if let navigationController = getNavigationControllerImpl?() {
+                                let controllers = navigationController.viewControllers.filter { controller in
+                                    if controller is AuthorizationSequenceEmailEntryController || controller is AuthorizationSequenceCodeEntryController {
+                                        return false
+                                    } else {
+                                        return true
+                                    }
+                                }
+                                navigationController.setViewControllers(controllers, animated: true)
+                                
+                                navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                    return false
+                                }))
+                            }
+                        }
+                    }))
                 }
                 codeController.signInWithApple = {
-                    
+//                    if #available(iOS 13.0, *) {
+//                        let appleIdProvider = ASAuthorizationAppleIDProvider()
+//                        let passwordProvider = ASAuthorizationPasswordProvider()
+//                        let request = appleIdProvider.createRequest()
+//
+//                        let passwordRequest = passwordProvider.createRequest()
+//
+//                        let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
+//                        authorizationController.delegate = strongSelf
+//                        authorizationController.presentationContextProvider = strongSelf
+//                        authorizationController.performRequests()
+//                    }
                 }
                 codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, nextPhoneLoginDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
                 pushControllerImpl?(codeController, true)
@@ -1104,6 +1170,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         text = presentationData.strings.Login_UnknownError
                     case .timeout:
                         text = presentationData.strings.Login_NetworkError
+                    case .invalidEmail:
+                        text = presentationData.strings.Login_InvalidEmailError
+                    case .emailNotAllowed:
+                        text = presentationData.strings.Login_EmailNotAllowedError
                 }
                 
                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
