@@ -322,6 +322,31 @@ public enum AuthorizationEmailVerificationError {
     case timeout
 }
 
+public struct ChangeLoginEmailData: Equatable {
+    public let email: String
+    public let length: Int32
+}
+
+public func sendLoginEmailChangeCode(account: Account, email: String) -> Signal<ChangeLoginEmailData, AuthorizationSendEmailCodeError> {
+    return account.network.request(Api.functions.account.sendVerifyEmailCode(purpose: .emailVerifyPurposeLoginChange, email: email), automaticFloodWait: false)
+    |> `catch` { error -> Signal<Api.account.SentEmailCode, AuthorizationSendEmailCodeError> in
+        let errorDescription = error.errorDescription ?? ""
+        if errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .fail(.limitExceeded)
+        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
+            return .fail(.codeExpired)
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> map { result -> ChangeLoginEmailData in
+        switch result {
+            case let .sentEmailCode(_, length):
+                return ChangeLoginEmailData(email: email, length: length)
+        }
+    }
+}
+
 public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> Signal<Never, AuthorizationSendEmailCodeError> {
     return account.postbox.transaction { transaction -> Signal<Never, AuthorizationSendEmailCodeError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {

@@ -257,13 +257,16 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         discount = ""
                     }
                     
+                    let pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
+                    
                     items.append(SectionGroupComponent.Item(
                         AnyComponentWithIdentity(
                             id: product.id,
                             component: AnyComponent(
                                 PremiumOptionComponent(
                                     title: giftTitle,
-                                    totalPrice: product.price,
+                                    subtitle: product.price,
+                                    labelPrice: pricePerMonth,
                                     discount: discount,
                                     selected: product.id == component.selectedProductId,
                                     primaryTextColor: textColor,

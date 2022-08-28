@@ -595,6 +595,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1558266229] = { return Api.PopularContact.parse_popularContact($0) }
     dict[512535275] = { return Api.PostAddress.parse_postAddress($0) }
     dict[1958953753] = { return Api.PremiumGiftOption.parse_premiumGiftOption($0) }
+    dict[-1225711938] = { return Api.PremiumSubscriptionOption.parse_premiumSubscriptionOption($0) }
     dict[1124062251] = { return Api.PrivacyKey.parse_privacyKeyAddedByPhone($0) }
     dict[1343122938] = { return Api.PrivacyKey.parse_privacyKeyChatInvite($0) }
     dict[1777096355] = { return Api.PrivacyKey.parse_privacyKeyForwards($0) }
@@ -953,7 +954,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[415997816] = { return Api.help.InviteText.parse_inviteText($0) }
     dict[-1600596305] = { return Api.help.PassportConfig.parse_passportConfig($0) }
     dict[-1078332329] = { return Api.help.PassportConfig.parse_passportConfigNotModified($0) }
-    dict[-1974518743] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
+    dict[1395946908] = { return Api.help.PremiumPromo.parse_premiumPromo($0) }
     dict[-1942390465] = { return Api.help.PromoData.parse_promoData($0) }
     dict[-1728664459] = { return Api.help.PromoData.parse_promoDataEmpty($0) }
     dict[235081943] = { return Api.help.RecentMeUrls.parse_recentMeUrls($0) }
@@ -1496,6 +1497,8 @@ public extension Api {
             case let _1 as Api.PostAddress:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PremiumGiftOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.PremiumSubscriptionOption:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.PrivacyKey:
                 _1.serialize(buffer, boxed)

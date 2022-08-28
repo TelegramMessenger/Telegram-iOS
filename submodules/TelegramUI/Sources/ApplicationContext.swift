@@ -25,6 +25,7 @@ import AppLock
 import AccountUtils
 import ContextUI
 import TelegramCallsUI
+import AuthorizationUI
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -48,6 +49,7 @@ final class UnauthorizedApplicationContext {
         self.rootController = AuthorizationSequenceController(sharedContext: sharedContext, account: account, otherAccountPhoneNumbers: otherAccountPhoneNumbers, presentationData: presentationData, openUrl: sharedContext.applicationBindings.openUrl, apiId: apiId, apiHash: apiHash, authorizationCompleted: {
             authorizationCompleted?()
         })
+        (self.rootController as NavigationController).statusBarHost = sharedContext.mainWindow?.statusBarHost
         
         authorizationCompleted = { [weak self] in
             self?.authorizationCompleted = true

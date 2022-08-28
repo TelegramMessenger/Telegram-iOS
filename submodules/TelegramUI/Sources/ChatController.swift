@@ -407,6 +407,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var raiseToListen: RaiseToListenManager?
     private var voicePlaylistDidEndTimestamp: Double = 0.0
 
+    private weak var emojiTooltipController: TooltipController?
     private weak var sendingOptionsTooltipController: TooltipController?
     private weak var searchResultsTooltipController: TooltipController?
     private weak var messageTooltipController: TooltipController?
@@ -828,6 +829,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self?.sendMessages([message])
             }, sendSticker: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { fileReference, sourceNode, sourceRect in
                 return self?.controllerInteraction?.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil) ?? false
+            } : nil, sendEmoji: canSendMessagesToChat(strongSelf.presentationInterfaceState) ? { text, attribute in
+                self?.controllerInteraction?.sendEmoji(text, attribute)
             } : nil, setupTemporaryHiddenMedia: { signal, centralIndex, galleryMedia in
                 if let strongSelf = self {
                     strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { entry in
@@ -1949,6 +1952,29 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 strongSelf.sendMessages(transformedMessages)
             }
             return true
+        }, sendEmoji: { [weak self] text, attribute in
+            if let strongSelf = self {
+                strongSelf.interfaceInteraction?.insertText(NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: attribute]))
+                strongSelf.updateChatPresentationInterfaceState(interactive: true, { state in
+                    return state.updatedInputMode({ _ in
+                        return .text
+                    })
+                })
+                
+                let _ = (ApplicationSpecificNotice.getEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager)
+                |> deliverOnMainQueue).start(next: { count in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if count < 2 {
+                        let _ = ApplicationSpecificNotice.incrementEmojiTooltip(accountManager: strongSelf.context.sharedContext.accountManager).start()
+
+                        Queue.mainQueue().after(0.5, {
+                            strongSelf.displayEmojiTooltip()
+                        })
+                    }
+                })
+            }
         }, sendGif: { [weak self] fileReference, sourceView, sourceRect, silentPosting, schedule in
             if let strongSelf = self {
                 if let _ = strongSelf.presentationInterfaceState.slowmodeState, strongSelf.presentationInterfaceState.subject != .scheduledMessages {
@@ -15953,6 +15979,26 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
+    private func displayEmojiTooltip() {
+        guard let rect = self.chatDisplayNode.frameForEmojiButton(), self.effectiveNavigationController?.topViewController === self else {
+            return
+        }
+        self.emojiTooltipController?.dismiss()
+        let tooltipController = TooltipController(content: .text(self.presentationData.strings.Conversation_EmojiTooltip), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 3.0, dismissByTapOutside: true, dismissImmediatelyOnLayoutUpdate: true, padding: 2.0)
+        self.emojiTooltipController = tooltipController
+        tooltipController.dismissed = { [weak self, weak tooltipController] _ in
+            if let strongSelf = self, let tooltipController = tooltipController, strongSelf.emojiTooltipController === tooltipController {
+                strongSelf.emojiTooltipController = nil
+            }
+        }
+        self.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+            if let strongSelf = self {
+                return (strongSelf.chatDisplayNode, rect.offsetBy(dx: 0.0, dy: -3.0))
+            }
+            return nil
+        }))
+    }
+    
     private func displayChecksTooltip() {
         self.checksTooltipController?.dismiss()
         
@@ -15993,6 +16039,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func dismissAllTooltips() {
+        self.emojiTooltipController?.dismiss()
         self.sendingOptionsTooltipController?.dismiss()
         self.searchResultsTooltipController?.dismiss()
         self.messageTooltipController?.dismiss()
@@ -16750,7 +16797,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.chatDisplayNode.dismissTextInput()
         
         let presentationData = self.presentationData
-        let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), parentNavigationController: self.effectiveNavigationController, actionPerformed: { [weak self] actions in
+        let controller = StickerPackScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mainStickerPack: packReference, stickerPacks: Array(references), parentNavigationController: self.effectiveNavigationController, sendEmoji: canSendMessagesToChat(self.presentationInterfaceState) ? { [weak self] text, attribute in
+            if let strongSelf = self {
+                strongSelf.controllerInteraction?.sendEmoji(text, attribute)
+            }
+        } : nil, actionPerformed: { [weak self] actions in
             guard let strongSelf = self else {
                 return
             }

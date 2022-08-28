@@ -23,6 +23,7 @@ swift_library(
         "//submodules/MeshAnimationCache:MeshAnimationCache",
         "//submodules/Utils/RangeSet:RangeSet",
         "//submodules/InAppPurchaseManager:InAppPurchaseManager",
+        "//submodules/TextFormat:TextFormat",
     ],
     visibility = [
         "//visibility:public",

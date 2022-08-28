@@ -70,6 +70,11 @@ public final class InAppPurchaseManager: NSObject {
             return self.numberFormatter.string(from: price) ?? ""
         }
         
+        public func defaultPrice(_ value: NSDecimalNumber, monthsCount: Int) -> String {
+            let price = value.multiplying(by: NSDecimalNumber(value: monthsCount)).round(2)
+            return self.numberFormatter.string(from: price) ?? ""
+        }
+        
         public var priceValue: NSDecimalNumber {
             return self.skProduct.price
         }

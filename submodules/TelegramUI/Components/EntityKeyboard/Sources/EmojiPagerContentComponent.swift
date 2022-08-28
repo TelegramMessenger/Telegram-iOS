@@ -2160,7 +2160,7 @@ public final class EmojiPagerContentComponent: Component {
                 case featured
             }
             
-            let item: Item
+            public let item: Item
             
             private let content: ItemContent
             private let placeholderColor: UIColor

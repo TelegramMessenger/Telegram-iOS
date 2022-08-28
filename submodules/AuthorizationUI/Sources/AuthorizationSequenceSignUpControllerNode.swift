@@ -5,8 +5,8 @@ import Display
 import TelegramPresentationData
 import TextFormat
 import Markdown
-import AuthorizationUI
 import SolidRoundedButtonNode
+import AuthorizationUtils
 
 private func roundCorners(diameter: CGFloat) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)

@@ -11,7 +11,7 @@ import OverlayStatusController
 import AccountContext
 import AlertUI
 import PresentationDataUtils
-import AuthorizationUI
+import AuthorizationUtils
 import PhoneNumberFormat
 
 private final class ChangePhoneNumberCodeControllerArguments {

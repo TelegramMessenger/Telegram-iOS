@@ -116,6 +116,10 @@ final class AuthorizationSequenceSplashController: ViewController {
         return self.startButton.frame
     }
     
+    var buttonTitle: String {
+        return self.startButton.title ?? ""
+    }
+    
     var animationSnapshot: UIView? {
         return self.controller.createAnimationSnapshot()
     }
