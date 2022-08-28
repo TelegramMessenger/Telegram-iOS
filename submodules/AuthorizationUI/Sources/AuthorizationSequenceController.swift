@@ -302,30 +302,38 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 if let strongSelf = self, let controller = controller {
                                     controller.inProgress = false
                                     
-                                    var resetCode = false
-                                    let text: String
-                                    switch error {
-                                        case .limitExceeded:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_CodeFloodError
-                                        case .invalidCode:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                                        case .generic:
-                                            text = strongSelf.presentationData.strings.Login_UnknownError
-                                        case .codeExpired:
-                                            text = strongSelf.presentationData.strings.Login_CodeExpired
-                                            let account = strongSelf.account
-                                            let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
-                                        case .timeout:
-                                            text = strongSelf.presentationData.strings.Login_NetworkError
+                                    if case .invalidCode = error {
+                                        controller.animateError(text: strongSelf.presentationData.strings.Login_WrongCodeError)
+                                    } else {
+                                        var resetCode = false
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                            case .invalidCode:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                            case .generic:
+                                                text = strongSelf.presentationData.strings.Login_UnknownError
+                                            case .codeExpired:
+                                                text = strongSelf.presentationData.strings.Login_CodeExpired
+                                                let account = strongSelf.account
+                                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                            case .timeout:
+                                                text = strongSelf.presentationData.strings.Login_NetworkError
+                                            case .invalidEmailToken:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                            case .emailNotAllowed:
+                                                text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
+                                        }
+                                        
+                                        if resetCode {
+                                            controller.resetCode()
+                                        }
+                                        
+                                        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     }
-                                    
-                                    if resetCode {
-                                        controller.resetCode()
-                                    }
-                                    
-                                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             }
                         }))
@@ -420,6 +428,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                 text = strongSelf.presentationData.strings.Login_CodeExpired
                                                 let account = strongSelf.account
                                                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                            case .invalidEmailToken:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                            case .invalidEmailAddress:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailAddressError
                                         }
                                         
                                         if resetCode {
@@ -550,6 +562,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             text = strongSelf.presentationData.strings.Login_UnknownError
                         case .timeout:
                             text = strongSelf.presentationData.strings.Login_NetworkError
+                        case .invalidEmail:
+                            text = strongSelf.presentationData.strings.Login_InvalidEmailError
+                        case .emailNotAllowed:
+                            text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
                     }
                     
                     controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -610,6 +626,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 text = strongSelf.presentationData.strings.Login_InvalidCodeError
                             case .timeout:
                                 text = strongSelf.presentationData.strings.Login_NetworkError
+                            case .invalidEmailToken:
+                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                            case .emailNotAllowed:
+                                text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
                         }
                         lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -649,6 +669,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         text = strongSelf.presentationData.strings.Login_CodeExpired
                                         let account = strongSelf.account
                                         let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                    case .invalidEmailToken:
+                                        text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                    case .invalidEmailAddress:
+                                        text = strongSelf.presentationData.strings.Login_InvalidEmailAddressError
                                 }
                                 
                                 lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
