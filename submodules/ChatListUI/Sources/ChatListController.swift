@@ -190,10 +190,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.presentationData = (context.sharedContext.currentPresentationData.with { $0 })
         self.presentationDataValue.set(.single(self.presentationData))
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         self.titleView = ChatListTitleView(
             context: context,
@@ -327,20 +325,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return (data.isLockable, false)
         }
         
-        let peerStatus: Signal<NetworkStatusTitle.Status?, NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
-        |> map { peer -> NetworkStatusTitle.Status? in
-            guard case let .user(user) = peer else {
-                return nil
+        let peerStatus: Signal<NetworkStatusTitle.Status?, NoError>
+        if filter != nil || groupId != .root {
+            peerStatus = .single(nil)
+        } else {
+            peerStatus = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> NetworkStatusTitle.Status? in
+                guard case let .user(user) = peer else {
+                    return nil
+                }
+                if let emojiStatus = user.emojiStatus {
+                    return .emoji(emojiStatus)
+                } else if user.isPremium {
+                    return .premium
+                } else {
+                    return nil
+                }
             }
-            if let emojiStatus = user.emojiStatus {
-                return .emoji(emojiStatus)
-            } else if user.isPremium {
-                return .premium
-            } else {
-                return nil
-            }
+            |> distinctUntilChanged
         }
-        |> distinctUntilChanged
         
         let previousEditingAndNetworkStateValue = Atomic<(Bool, AccountNetworkState)?>(value: nil)
         if !self.hideNetworkActivityStatus {
@@ -846,6 +849,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func openStatusSetup(sourceView: UIView) {
         self.present(EmojiStatusSelectionController(
             context: self.context,
+            mode: .statusSelection,
             sourceView: sourceView,
             emojiContent: EmojiPagerContentComponent.emojiInputData(
                 context: self.context,
@@ -858,7 +862,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,
                 chatPeerId: self.context.account.peerId
-            )
+            ),
+            destinationItemView: { [weak sourceView] in
+                return sourceView
+            }
         ), in: .window(.root))
     }
     

@@ -77,10 +77,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         self.context = context
         self.presentationData = presentationData
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         var placeholder: String
         var includeChatList = false

@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import TelegramApi
 
 public final class CachedPeerBotInfo: PostboxCoding, Equatable {
     public let peerId: PeerId
@@ -78,6 +79,19 @@ public enum PeerAllowedReactions: Equatable, Codable {
             try container.encode(reactions, forKey: "r")
         case .empty:
             try container.encode(Discriminant.empty.rawValue, forKey: "_d")
+        }
+    }
+}
+
+extension PeerAllowedReactions {
+    init(apiReactions: Api.ChatReactions) {
+        switch apiReactions {
+        case .chatReactionsAll:
+            self = .all
+        case let .chatReactionsSome(reactions):
+            self = .limited(reactions.compactMap(MessageReaction.Reaction.init(apiReaction:)))
+        case .chatReactionsNone:
+            self = .empty
         }
     }
 }

@@ -963,7 +963,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             return (size, apparentHeight)
         }
         
-        func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: ASDisplayNode, height: CGFloat)? {
+        func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: InnerTextSelectionTipContainerNode, height: CGFloat)? {
             if let tip = self.tip {
                 var updatedTransition = transition
                 if let tipNode = self.tipNode, tipNode.tip == tip {
@@ -1172,7 +1172,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let animateAppearingContainers = transition.isAnimated && !self.dismissingItemContainers.isEmpty
         
         struct TipLayout {
-            var tipNode: ASDisplayNode
+            var tipNode: InnerTextSelectionTipContainerNode
             var tipHeight: CGFloat
         }
         
@@ -1320,11 +1320,13 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                     self.addSubnode(tip.tipNode)
                     animateTipIn = transition.isAnimated
                     tip.tipNode.frame = CGRect(origin: CGPoint(x: previousNavigationContainerFrame.minX, y: previousNavigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight))
+                    tip.tipNode.setActualSize(size: tip.tipNode.bounds.size, transition: .immediate)
                 }
                 
                 let tipAlpha: CGFloat = itemLayouts[i].alphaTransitionFraction
                 
                 tipTransition.updateFrame(node: tip.tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight)), beginWithCurrentState: true)
+                tip.tipNode.setActualSize(size: tip.tipNode.bounds.size, transition: tipTransition)
                 
                 if animateTipIn {
                     tip.tipNode.alpha = tipAlpha

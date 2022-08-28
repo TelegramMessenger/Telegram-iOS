@@ -123,8 +123,8 @@ class EmojiHeaderComponent: Component {
                     context: component.context,
                     animationCache: component.animationCache,
                     animationRenderer: component.animationRenderer,
-                    content: .emojiStatus(
-                        status: PeerEmojiStatus(fileId: component.fileId),
+                    content: .animation(
+                        content: .customEmoji(fileId: component.fileId),
                         size: CGSize(width: 100.0, height: 100.0),
                         placeholderColor: component.placeholderColor
                     ),

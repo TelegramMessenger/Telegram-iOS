@@ -2109,10 +2109,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         super.init()
         
@@ -2356,8 +2354,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
-                emojiExpandedStatusContent = .emojiStatus(status: emojiStatus, size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
             }
             
             let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
@@ -2676,7 +2674,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 collapsedTransitionOffset = -10.0 * navigationTransition.fraction
             }
             
-            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize))
+            transition.updateFrame(view: self.titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleSize.width + 4.0 + collapsedTransitionOffset, y: floor((titleSize.height - credibilityIconSize.height) / 2.0) + 2.0), size: credibilityIconSize))
             transition.updateFrame(view: self.titleExpandedCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleExpandedSize.width + 4.0, y: floor((titleExpandedSize.height - titleExpandedCredibilityIconSize.height) / 2.0) + 1.0), size: titleExpandedCredibilityIconSize))
         }
         
@@ -3155,9 +3153,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         guard let result = super.hitTest(point, with: event) else {
             return nil
         }
-        if result.isDescendant(of: self.navigationButtonContainer.view) {
-            return result
-        }
         if !self.backgroundNode.frame.contains(point) {
             return nil
         }
@@ -3175,6 +3170,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             default:
                 break
             }
+        }
+        
+        if result.isDescendant(of: self.navigationButtonContainer.view) {
+            return result
         }
         
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {

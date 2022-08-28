@@ -1411,10 +1411,20 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 var entities: [MessageTextEntity] = []
                 
                 let rawText: PresentationStrings.FormattedString
-                if !updatedValue.isEmpty {
-                    let emojiString = updatedValue.joined(separator: ", ")
+                switch updatedValue {
+                case .all:
+                    rawText = self.presentationData.strings.Channel_AdminLog_ReactionsEnabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
+                case let .limited(reactions):
+                    let emojiString = reactions.compactMap({ reaction -> String? in
+                        switch reaction {
+                        case let .builtin(value):
+                            return value
+                        case .custom:
+                            return nil
+                        }
+                    }).joined(separator: ", ")
                     rawText = self.presentationData.strings.Channel_AdminLog_AllowedReactionsUpdated(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "", emojiString)
-                } else {
+                case .empty:
                     rawText = self.presentationData.strings.Channel_AdminLog_ReactionsDisabled(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? "")
                 }
                 

@@ -989,9 +989,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction, messageNode: node as? ChatMessageItemView),
                     peerMessageAllowedReactions(context: strongSelf.context, message: topMessage),
+                    peerMessageSelectedReactionFiles(context: strongSelf.context, message: topMessage),
                     topMessageReactions(context: strongSelf.context, message: topMessage),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
-                ).start(next: { peer, actions, allowedReactions, topReactions, chatTextSelectionTips in
+                ).start(next: { peer, actions, allowedReactions, selectedReactionFiles, topReactions, chatTextSelectionTips in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1110,7 +1111,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         topReactionItems: reactionItems,
                                         areUnicodeEmojiEnabled: false,
                                         areCustomEmojiEnabled: true,
-                                        chatPeerId: strongSelf.chatLocation.peerId
+                                        chatPeerId: strongSelf.chatLocation.peerId,
+                                        selectedItems: selectedReactionFiles
                                     )
                                 }
                             }
@@ -1339,7 +1341,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: isLarge).start()
+                        let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: isLarge, storeAsRecentlyUsed: true).start()
                         
                         /*let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []
                         var updatedReactions: [MessageReaction.Reaction] = currentReactions.filter(\.isSelected).map(\.value)
@@ -1717,7 +1719,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     } else {
                         strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts(itemNode: itemNode)
                         
-                        if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message, isPremium: strongSelf.presentationInterfaceState.isPremium) {
+                        if let removedReaction = removedReaction, let targetView = itemNode.targetReactionView(value: removedReaction), shouldDisplayInlineDateReactions(message: message, isPremium: strongSelf.presentationInterfaceState.isPremium, forceInline: false) {
                             var hideRemovedReaction: Bool = false
                             if let reactions = mergedMessageReactions(attributes: message.attributes) {
                                 for reaction in reactions.reactions {
@@ -1746,7 +1748,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
-                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: false).start()
+                    let _ = updateMessageReactionsInteractively(account: strongSelf.context.account, messageId: message.id, reactions: mappedUpdatedReactions, isLarge: false, storeAsRecentlyUsed: false).start()
                 }
             })
         }, activateMessagePinch: { [weak self] sourceNode in
@@ -17021,6 +17023,29 @@ func peerMessageAllowedReactions(context: AccountContext, message: Message) -> S
                 return .set(Set())
             }
         }
+    }
+}
+
+func peerMessageSelectedReactionFiles(context: AccountContext, message: Message) -> Signal<Set<MediaId>, NoError> {
+    return context.engine.stickers.availableReactions()
+    |> take(1)
+    |> map { availableReactions -> Set<MediaId> in
+        var result = Set<MediaId>()
+        
+        if let effectiveReactions = message.effectiveReactions {
+            for reaction in effectiveReactions {
+                switch reaction.value {
+                case .builtin:
+                    if let availableReaction = availableReactions?.reactions.first(where: { $0.value == reaction.value }) {
+                        result.insert(availableReaction.selectAnimation.fileId)
+                    }
+                case let .custom(fileId):
+                    result.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: fileId))
+                }
+            }
+        }
+        
+        return result
     }
 }
 

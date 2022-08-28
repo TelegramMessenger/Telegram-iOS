@@ -250,6 +250,7 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
     public let accountPeerId: PeerId?
     public let reactions: [PendingReaction]
     public let isLarge: Bool
+    public let storeAsRecentlyUsed: Bool
     
     public var associatedPeerIds: [PeerId] {
         if let accountPeerId = self.accountPeerId {
@@ -277,16 +278,18 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         return result
     }
     
-    public init(accountPeerId: PeerId?, reactions: [PendingReaction], isLarge: Bool) {
+    public init(accountPeerId: PeerId?, reactions: [PendingReaction], isLarge: Bool, storeAsRecentlyUsed: Bool) {
         self.accountPeerId = accountPeerId
         self.reactions = reactions
         self.isLarge = isLarge
+        self.storeAsRecentlyUsed = storeAsRecentlyUsed
     }
     
     required public init(decoder: PostboxDecoder) {
         self.accountPeerId = decoder.decodeOptionalInt64ForKey("ap").flatMap(PeerId.init)
         self.reactions = decoder.decodeObjectArrayWithDecoderForKey("reac")
         self.isLarge = decoder.decodeInt32ForKey("l", orElse: 0) != 0
+        self.storeAsRecentlyUsed = decoder.decodeInt32ForKey("used", orElse: 0) != 0
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -299,5 +302,6 @@ public final class PendingReactionsMessageAttribute: MessageAttribute {
         encoder.encodeObjectArray(self.reactions, forKey: "reac")
         
         encoder.encodeInt32(self.isLarge ? 1 : 0, forKey: "l")
+        encoder.encodeInt32(self.storeAsRecentlyUsed ? 1 : 0, forKey: "used")
     }
 }

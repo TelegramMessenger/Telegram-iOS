@@ -13,6 +13,8 @@ import TelegramStringFormatting
 import PeerPresenceStatusManager
 import ContextUI
 import AccountContext
+import ComponentFlow
+import EmojiStatusComponent
 
 private final class ShimmerEffectNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
@@ -460,7 +462,7 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
     private let labelBadgeNode: ASImageNode
     private var labelArrowNode: ASImageNode?
     private let statusNode: TextNode
-    private var credibilityIconNode: ASImageNode?
+    private var credibilityIconView: ComponentHostView<Empty>?
     private var switchNode: SwitchNode?
     private var checkNode: ASImageNode?
     
@@ -601,27 +603,34 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             let labelDisclosureFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             
             var updatedLabelBadgeImage: UIImage?
-            var currentCredibilityIconImage: UIImage?
+            var credibilityIcon: EmojiStatusComponent.Content?
             
             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
             
             if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.account.peerId {
-                
             } else {
                 if item.peer.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    credibilityIcon = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
                 } else if item.peer.isFake {
-                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme, strings: item.presentationData.strings, type: .regular)
+                    credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                } else if case let .user(user) = item.peer, let emojiStatus = user.emojiStatus {
+                    credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
                 } else if item.peer.isVerified {
-                    currentCredibilityIconImage = PresentationResourcesChatList.verifiedIcon(item.presentationData.theme)
+                    credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                 } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
-                    currentCredibilityIconImage = PresentationResourcesChatList.premiumIcon(item.presentationData.theme)
+                    credibilityIcon = .premium(color: item.presentationData.theme.list.itemAccentColor)
                 }
             }
             
             var titleIconsWidth: CGFloat = 0.0
-            if let currentCredibilityIconImage = currentCredibilityIconImage {
-                titleIconsWidth += 4.0 + currentCredibilityIconImage.size.width
+            if let credibilityIcon = credibilityIcon {
+                titleIconsWidth += 4.0
+                switch credibilityIcon {
+                case .scam, .fake:
+                    titleIconsWidth += 30.0
+                default:
+                    titleIconsWidth += 16.0
+                }
             }
             
             var badgeColor: UIColor?
@@ -1063,23 +1072,38 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                     transition.updateFrame(node: strongSelf.titleNode, frame: titleFrame)
                     transition.updateFrame(node: strongSelf.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: strongSelf.titleNode.frame.maxY + titleSpacing), size: statusLayout.size))
                     
-                    if let currentCredibilityIconImage = currentCredibilityIconImage {
-                        let iconNode: ASImageNode
-                        if let current = strongSelf.credibilityIconNode {
-                            iconNode = current
+                    if let credibilityIcon = credibilityIcon {
+                        let animationCache = item.context.animationCache
+                        let animationRenderer = item.context.animationRenderer
+                        
+                        let credibilityIconView: ComponentHostView<Empty>
+                        if let current = strongSelf.credibilityIconView {
+                            credibilityIconView = current
                         } else {
-                            iconNode = ASImageNode()
-                            iconNode.isLayerBacked = true
-                            iconNode.displaysAsynchronously = false
-                            iconNode.displayWithoutProcessing = true
-                            strongSelf.containerNode.addSubnode(iconNode)
-                            strongSelf.credibilityIconNode = iconNode
+                            credibilityIconView = ComponentHostView<Empty>()
+                            strongSelf.containerNode.view.addSubview(credibilityIconView)
+                            strongSelf.credibilityIconView = credibilityIconView
                         }
-                        iconNode.image = currentCredibilityIconImage
-                        transition.updateFrame(node: iconNode, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - currentCredibilityIconImage.size.height / 2.0) - UIScreenPixel), size: currentCredibilityIconImage.size))
-                    } else if let credibilityIconNode = strongSelf.credibilityIconNode {
-                        strongSelf.credibilityIconNode = nil
-                        credibilityIconNode.removeFromSupernode()
+                        
+                        let iconSize = credibilityIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(EmojiStatusComponent(
+                                context: item.context,
+                                animationCache: animationCache,
+                                animationRenderer: animationRenderer,
+                                content: credibilityIcon,
+                                action: nil,
+                                longTapAction: nil,
+                                emojiFileUpdated: nil
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: 20.0, height: 20.0)
+                        )
+                        
+                        transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 4.0, y: floorToScreenPixels(titleFrame.midY - iconSize.height / 2.0)), size: iconSize))
+                    } else if let credibilityIconView = strongSelf.credibilityIconView {
+                        strongSelf.credibilityIconView = nil
+                        credibilityIconView.removeFromSuperview()
                     }
                     
                     if let currentSwitchNode = currentSwitchNode {
@@ -1321,8 +1345,8 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.titleNode.frame.minY), size: self.titleNode.bounds.size))
         transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: leftInset + revealOffset + editingOffset, y: self.statusNode.frame.minY), size: self.statusNode.bounds.size))
         
-        if let credibilityIconNode = self.credibilityIconNode {
-            transition.updateFrame(node: credibilityIconNode, frame: CGRect(origin: CGPoint(x: self.titleNode.frame.maxX + 4.0, y: credibilityIconNode.frame.minY), size: credibilityIconNode.bounds.size))
+        if let credibilityIconView = self.credibilityIconView {
+            transition.updateFrame(view: credibilityIconView, frame: CGRect(origin: CGPoint(x: self.titleNode.frame.maxX + 4.0, y: credibilityIconView.frame.minY), size: credibilityIconView.bounds.size))
         }
         
         var rightLabelInset: CGFloat = 15.0 + params.rightInset

@@ -597,7 +597,7 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                 self.readStats = readStats
                 
                 var mergedItems: [EngineMessageReactionListContext.Item] = listState.items
-                if !listState.canLoadMore, let readStats = readStats {
+                if !listState.canLoadMore, let readStats = readStats {                    
                     var existingPeers = Set(mergedItems.map(\.peer.id))
                     for peer in readStats.peers {
                         if !existingPeers.contains(peer.id) {
@@ -606,10 +606,6 @@ public final class ReactionListContextMenuContent: ContextControllerItemsContent
                         }
                     }
                 }
-                
-                /*for _ in 0 ..< 5 {
-                    mergedItems.append(contentsOf: mergedItems)
-                }*/
                 
                 self.mergedItems = mergedItems
             }

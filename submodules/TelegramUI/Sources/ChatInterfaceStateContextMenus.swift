@@ -1573,8 +1573,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             var readStats = readStats
             if !canViewStats {
-                readStats = MessageReadStats(peers: [])
+                readStats = MessageReadStats(reactionCount: 0, peers: [])
             }
+            
+            let reactionCount = readStats?.reactionCount ?? 0
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
@@ -2408,6 +2410,8 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         }
 
         if let currentStats = self.currentStats {
+            reactionCount = currentStats.reactionCount
+            
             if currentStats.peers.isEmpty {
                 if reactionCount != 0 {
                     let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))

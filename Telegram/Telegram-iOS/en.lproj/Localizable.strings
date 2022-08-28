@@ -7221,6 +7221,7 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
 "Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+"Channel.AdminLog.ReactionsEnabled" = "%1$@ enabled all reactions";
 
 "Contacts.ScanQrCode" = "Scan QR Code";
 "Contacts.QrCode.MyCode" = "My QR Code";

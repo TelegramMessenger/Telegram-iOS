@@ -147,64 +147,88 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     
     private func beginReactionAnimation() {
         if let item = self.item, let updatedReaction = item.reaction, let availableReactions = item.availableReactions, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
-            if let targetView = messageNode.targetReactionView(value: updatedReaction) {
-                for reaction in availableReactions.reactions {
-                    guard let centerAnimation = reaction.centerAnimation else {
-                        continue
-                    }
-                    guard let aroundAnimation = reaction.aroundAnimation else {
-                        continue
-                    }
-                    
-                    if reaction.value == updatedReaction {
-                        if let standaloneReactionAnimation = self.standaloneReactionAnimation {
-                            standaloneReactionAnimation.cancel()
-                            standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
-                                standaloneReactionAnimation?.removeFromSupernode()
-                            })
-                            self.standaloneReactionAnimation = nil
+            if let _ = messageNode.targetReactionView(value: updatedReaction) {
+                switch updatedReaction {
+                case .builtin:
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
+                        }
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
                         }
                         
-                        if let supernode = self.supernode {
-                            let standaloneReactionAnimation = StandaloneReactionAnimation()
-                            self.standaloneReactionAnimation = standaloneReactionAnimation
-                            
-                            let animationCache: AnimationCache
-                            if let current = self.animationCache {
-                                animationCache = current
-                            } else {
-                                animationCache = AnimationCacheImpl(basePath: item.context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-                                    return TempBox.shared.tempFile(fileName: "file").path
-                                })
-                                self.animationCache = animationCache
-                            }
-                            
-                            supernode.addSubnode(standaloneReactionAnimation)
-                            standaloneReactionAnimation.frame = supernode.bounds
-                            standaloneReactionAnimation.animateReactionSelection(
-                                context: item.context, theme: item.theme, animationCache: animationCache, reaction: ReactionItem(
-                                    reaction: ReactionItem.Reaction(rawValue: reaction.value),
-                                    appearAnimation: reaction.appearAnimation,
-                                    stillAnimation: reaction.selectAnimation,
-                                    listAnimation: centerAnimation,
-                                    largeListAnimation: reaction.activateAnimation,
-                                    applicationAnimation: aroundAnimation,
-                                    largeApplicationAnimation: reaction.effectAnimation,
-                                    isCustom: false
-                                ),
-                                avatarPeers: [],
-                                playHaptic: false,
-                                isLarge: false,
-                                targetView: targetView,
-                                addStandaloneReactionAnimation: nil,
-                                completion: { [weak standaloneReactionAnimation] in
-                                standaloneReactionAnimation?.removeFromSupernode()
-                                }
+                        if reaction.value == updatedReaction {
+                            let reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: reaction.value),
+                                appearAnimation: reaction.appearAnimation,
+                                stillAnimation: reaction.selectAnimation,
+                                listAnimation: centerAnimation,
+                                largeListAnimation: reaction.activateAnimation,
+                                applicationAnimation: aroundAnimation,
+                                largeApplicationAnimation: reaction.effectAnimation,
+                                isCustom: false
                             )
+                            self.beginReactionAnimation(reactionItem: reactionItem)
+                            
+                            break
                         }
-                        
-                        break
                     }
+                case let .custom(fileId):
+                    let _ = (item.context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                    |> deliverOnMainQueue).start(next: { [weak self] files in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let itemFile = files[fileId] {
+                            let reactionItem = ReactionItem(
+                                reaction: ReactionItem.Reaction(rawValue: .custom(itemFile.fileId.id)),
+                                appearAnimation: itemFile,
+                                stillAnimation: itemFile,
+                                listAnimation: itemFile,
+                                largeListAnimation: itemFile,
+                                applicationAnimation: nil,
+                                largeApplicationAnimation: nil,
+                                isCustom: true
+                            )
+                            strongSelf.beginReactionAnimation(reactionItem: reactionItem)
+                        }
+                    })
+                }
+            }
+        }
+    }
+    
+    private func beginReactionAnimation(reactionItem: ReactionItem) {
+        if let item = self.item, let updatedReaction = item.reaction, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
+            if let targetView = messageNode.targetReactionView(value: updatedReaction) {
+                if let standaloneReactionAnimation = self.standaloneReactionAnimation {
+                    standaloneReactionAnimation.cancel()
+                    standaloneReactionAnimation.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak standaloneReactionAnimation] _ in
+                        standaloneReactionAnimation?.removeFromSupernode()
+                    })
+                    self.standaloneReactionAnimation = nil
+                }
+                
+                if let supernode = self.supernode {
+                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                    self.standaloneReactionAnimation = standaloneReactionAnimation
+                    
+                    let animationCache = item.context.animationCache
+                    
+                    supernode.addSubnode(standaloneReactionAnimation)
+                    standaloneReactionAnimation.frame = supernode.bounds
+                    standaloneReactionAnimation.animateReactionSelection(
+                        context: item.context, theme: item.theme, animationCache: animationCache, reaction: reactionItem,
+                        avatarPeers: [],
+                        playHaptic: false,
+                        isLarge: false,
+                        targetView: targetView,
+                        addStandaloneReactionAnimation: nil,
+                        completion: { [weak standaloneReactionAnimation] in
+                        standaloneReactionAnimation?.removeFromSupernode()
+                        }
+                    )
                 }
             }
         }

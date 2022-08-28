@@ -118,7 +118,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 case .premium:
                     statusContent = .premium(color: self.theme.list.itemAccentColor)
                 case let .emoji(emoji):
-                    statusContent = .emojiStatus(status: emoji, size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
+                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
                 }
                 
                 var titleCredibilityIconTransition: Transition
@@ -351,7 +351,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
             case .premium:
                 statusContent = .premium(color: self.theme.list.itemAccentColor)
             case let .emoji(emoji):
-                statusContent = .emojiStatus(status: emoji, size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
+                statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
             }
             
             var titleCredibilityIconTransition = Transition(transition)
@@ -384,6 +384,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 containerSize: CGSize(width: 22.0, height: 22.0)
             )
             titleCredibilityIconTransition.setFrame(view: titleCredibilityIconView, frame: CGRect(origin: CGPoint(x: titleFrame.maxX + 2.0, y: floorToScreenPixels(titleFrame.midY - titleIconSize.height / 2.0)), size: titleIconSize))
+            titleCredibilityIconView.isHidden = self.title.activity
         } else {
             if let titleCredibilityIconView = self.titleCredibilityIconView {
                 self.titleCredibilityIconView = nil

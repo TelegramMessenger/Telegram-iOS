@@ -181,10 +181,10 @@ func _internal_reportPeerReaction(account: Account, authorId: PeerId, messageId:
         return (peer, author)
     }
     |> mapToSignal { inputData -> Signal<Never, NoError> in
-        guard let (inputPeer, inputUser) = inputData else {
+        guard let (inputPeer, authorPeer) = inputData else {
             return .complete()
         }
-        return account.network.request(Api.functions.messages.reportReaction(peer: inputPeer, id: messageId.id, reactionPeer: inputUser))
+        return account.network.request(Api.functions.messages.reportReaction(peer: inputPeer, id: messageId.id, reactionPeer: authorPeer))
         |> `catch` { _ -> Signal<Api.Bool, NoError> in
             return .single(.boolFalse)
         }

@@ -616,7 +616,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
                     } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
-                        credibilityIcon = .emojiStatus(status: emojiStatus, size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                        credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
                     } else if peer.isVerified {
                         credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
@@ -974,7 +974,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.frame = statusFrame
                             transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
                             
-                            if let credibilityIcon = credibilityIcon, let animationCache = item.animationCache, let animationRenderer = item.animationRenderer {
+                            if let credibilityIcon = credibilityIcon {
+                                let animationCache = item.context.animationCache
+                                let animationRenderer = item.context.animationRenderer
+                                
                                 let credibilityIconView: ComponentHostView<Empty>
                                 if let current = strongSelf.credibilityIconView {
                                     credibilityIconView = current

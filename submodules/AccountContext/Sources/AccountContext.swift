@@ -12,6 +12,8 @@ import DeviceLocationManager
 import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
+import AnimationCache
+import MultiAnimationRenderer
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -886,6 +888,9 @@ public protocol AccountContext: AnyObject {
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
+    
+    var animationCache: AnimationCache { get }
+    var animationRenderer: MultiAnimationRenderer { get }
     
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
     
