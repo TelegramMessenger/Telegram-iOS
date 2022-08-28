@@ -1769,6 +1769,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private let cachedFaq = Promise<ResolvedUrl?>(nil)
     
     private weak var copyProtectionTooltipController: TooltipController?
+    weak var emojiStatusSelectionController: ViewController?
     
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
@@ -3103,7 +3104,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let animationCache = context.animationCache
                 let animationRenderer = context.animationRenderer
                 
-                strongSelf.controller?.present(EmojiStatusSelectionController(
+                strongSelf.emojiStatusSelectionController?.dismiss()
+                let emojiStatusSelectionController = EmojiStatusSelectionController(
                     context: strongSelf.context,
                     mode: .statusSelection,
                     sourceView: sourceView,
@@ -3122,7 +3124,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     destinationItemView: { [weak sourceView] in
                         return sourceView
                     }
-                ), in: .window(.root))
+                )
+                strongSelf.emojiStatusSelectionController = emojiStatusSelectionController
+                strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
@@ -8307,6 +8311,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         super.viewWillDisappear(animated)
         
         self.dismissAllTooltips()
+        
+        if let emojiStatusSelectionController = self.controllerNode.emojiStatusSelectionController {
+            self.controllerNode.emojiStatusSelectionController = nil
+            emojiStatusSelectionController.dismiss()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {

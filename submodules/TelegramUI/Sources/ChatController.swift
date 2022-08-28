@@ -1053,31 +1053,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                         actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
-                        /*if hasPremiumPlaceholder && !premiumConfiguration.isPremiumDisabled {
-                            actions.reactionItems.append(.premium)
-                        }*/
                         
                         if !actions.reactionItems.isEmpty {
-                            let reactionItems: [AvailableReactions.Reaction] = actions.reactionItems.compactMap { item -> AvailableReactions.Reaction? in
+                            let reactionItems: [EmojiComponentReactionItem] = actions.reactionItems.compactMap { item -> EmojiComponentReactionItem? in
                                 switch item {
                                 case let .reaction(reaction):
-                                    if let largeApplicationAnimation = reaction.largeApplicationAnimation {
-                                        return AvailableReactions.Reaction(
-                                            isEnabled: true,
-                                            isPremium: false,
-                                            value: reaction.reaction.rawValue,
-                                            title: "",
-                                            staticIcon: reaction.listAnimation,
-                                            appearAnimation: reaction.appearAnimation,
-                                            selectAnimation: reaction.stillAnimation,
-                                            activateAnimation: reaction.largeListAnimation,
-                                            effectAnimation: largeApplicationAnimation,
-                                            aroundAnimation: reaction.applicationAnimation,
-                                            centerAnimation: reaction.listAnimation
-                                        )
-                                    } else {
-                                        return nil
-                                    }
+                                    return EmojiComponentReactionItem(reaction: reaction.reaction.rawValue, file: reaction.stillAnimation)
                                 default:
                                     return nil
                                 }

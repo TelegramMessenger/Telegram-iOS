@@ -106,7 +106,7 @@ public final class EmojiStatusSelectionComponent: Component {
             let topPanelHeight: CGFloat = 42.0
             
             let keyboardSize = self.keyboardView.update(
-                transition: transition,
+                transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
@@ -670,7 +670,52 @@ public final class EmojiStatusSelectionController: ViewController {
             }
             
             if let item = item, let destinationView = controller.destinationItemView() {
-                self.animateOutToStatus(groupId: groupId, item: item, customEffectFile: nil, destinationView: destinationView)
+                var emojiString: String?
+                if let itemFile = item.itemFile {
+                    attributeLoop: for attribute in itemFile.attributes {
+                        switch attribute {
+                        case let .CustomEmoji(_, alt, _):
+                            emojiString = alt
+                            break attributeLoop
+                        default:
+                            break
+                        }
+                    }
+                }
+                
+                let context = self.context
+                let _ = (context.engine.stickers.availableReactions()
+                |> take(1)
+                |> mapToSignal { availableReactions -> Signal<String?, NoError> in
+                    guard let emojiString = emojiString, let availableReactions = availableReactions else {
+                        return .single(nil)
+                    }
+                    for reaction in availableReactions.reactions {
+                        if case let .builtin(value) = reaction.value, value == emojiString {
+                            if let aroundAnimation = reaction.aroundAnimation {
+                                return context.account.postbox.mediaBox.resourceData(aroundAnimation.resource)
+                                |> take(1)
+                                |> map { data -> String? in
+                                    if data.complete {
+                                        return data.path
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                    }
+                    return .single(nil)
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] filePath in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.animateOutToStatus(groupId: groupId, item: item, customEffectFile: filePath, destinationView: destinationView)
+                })
             } else {
                 controller.dismiss()
             }
