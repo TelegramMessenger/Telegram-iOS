@@ -231,6 +231,8 @@ public enum AuthorizationCodeVerificationError {
     case limitExceeded
     case generic
     case codeExpired
+    case invalidEmailToken
+    case invalidEmailAddress
 }
 
 private enum AuthorizationCodeResult {
@@ -312,6 +314,8 @@ public enum AuthorizationSendEmailCodeError {
     case limitExceeded
     case codeExpired
     case timeout
+    case invalidEmail
+    case emailNotAllowed
 }
 
 public enum AuthorizationEmailVerificationError {
@@ -320,6 +324,37 @@ public enum AuthorizationEmailVerificationError {
     case codeExpired
     case invalidCode
     case timeout
+    case invalidEmailToken
+    case emailNotAllowed
+}
+
+public struct ChangeLoginEmailData: Equatable {
+    public let email: String
+    public let length: Int32
+}
+
+public func sendLoginEmailChangeCode(account: Account, email: String) -> Signal<ChangeLoginEmailData, AuthorizationSendEmailCodeError> {
+    return account.network.request(Api.functions.account.sendVerifyEmailCode(purpose: .emailVerifyPurposeLoginChange, email: email), automaticFloodWait: false)
+    |> `catch` { error -> Signal<Api.account.SentEmailCode, AuthorizationSendEmailCodeError> in
+        let errorDescription = error.errorDescription ?? ""
+        if errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .fail(.limitExceeded)
+        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
+            return .fail(.codeExpired)
+        } else if errorDescription.hasPrefix("EMAIL_INVALID") {
+            return .fail(.invalidEmail)
+        } else if errorDescription.hasPrefix("EMAIL_NOT_ALLOWED") {
+            return .fail(.emailNotAllowed)
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> map { result -> ChangeLoginEmailData in
+        switch result {
+            case let .sentEmailCode(_, length):
+                return ChangeLoginEmailData(email: email, length: length)
+        }
+    }
 }
 
 public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> Signal<Never, AuthorizationSendEmailCodeError> {
@@ -334,6 +369,10 @@ public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> S
                             return .fail(.limitExceeded)
                         } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
                             return .fail(.codeExpired)
+                        } else if errorDescription.hasPrefix("EMAIL_INVALID") {
+                            return .fail(.invalidEmail)
+                        } else if errorDescription.hasPrefix("EMAIL_NOT_ALLOWED") {
+                            return .fail(.emailNotAllowed)
                         } else {
                             return .fail(.generic)
                         }
@@ -364,6 +403,39 @@ public func sendLoginEmailCode(account: UnauthorizedAccount, email: String) -> S
     |> ignoreValues
 }
 
+public func verifyLoginEmailChange(account: Account, code: AuthorizationCode.EmailVerification) -> Signal<Never, AuthorizationEmailVerificationError> {
+    let verification: Api.EmailVerification
+    switch code {
+        case let .emailCode(code):
+            verification = .emailVerificationCode(code: code)
+        case let .appleToken(token):
+            verification = .emailVerificationApple(token: token)
+        case let .googleToken(token):
+            verification = .emailVerificationGoogle(token: token)
+    }
+
+    return account.network.request(Api.functions.account.verifyEmail(purpose: .emailVerifyPurposeLoginChange, verification: verification), automaticFloodWait: false)
+    |> `catch` { error -> Signal<Api.account.EmailVerified, AuthorizationEmailVerificationError> in
+        let errorDescription = error.errorDescription ?? ""
+        if errorDescription.hasPrefix("FLOOD_WAIT") {
+            return .fail(.limitExceeded)
+        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" || errorDescription == "EMAIL_VERIFY_EXPIRED" {
+            return .fail(.codeExpired)
+        } else if errorDescription == "CODE_INVALID" {
+            return .fail(.invalidCode)
+        } else if errorDescription == "EMAIL_TOKEN_INVALID" {
+            return .fail(.invalidEmailToken)
+        } else if errorDescription == "EMAIL_NOT_ALLOWED" {
+            return .fail(.emailNotAllowed)
+        } else {
+            return .fail(.generic)
+        }
+    }
+    |> mapToSignal { _ -> Signal<Never, AuthorizationEmailVerificationError> in
+        return .complete()
+    }
+}
+
 public func verifyLoginEmailSetup(account: UnauthorizedAccount, code: AuthorizationCode.EmailVerification) -> Signal<Never, AuthorizationEmailVerificationError> {
     return account.postbox.transaction { transaction -> Signal<Never, AuthorizationEmailVerificationError> in
         if let state = transaction.getState() as? UnauthorizedAccountState {
@@ -384,10 +456,14 @@ public func verifyLoginEmailSetup(account: UnauthorizedAccount, code: Authorizat
                         let errorDescription = error.errorDescription ?? ""
                         if errorDescription.hasPrefix("FLOOD_WAIT") {
                             return .fail(.limitExceeded)
-                        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
+                        } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" || errorDescription == "EMAIL_VERIFY_EXPIRED" {
                             return .fail(.codeExpired)
-                        } else if errorDescription == "" {
+                        } else if errorDescription == "CODE_INVALID" {
                             return .fail(.invalidCode)
+                        } else if errorDescription == "EMAIL_TOKEN_INVALID" {
+                            return .fail(.invalidEmailToken)
+                        } else if errorDescription == "EMAIL_NOT_ALLOWED" {
+                            return .fail(.emailNotAllowed)
                         } else {
                             return .fail(.generic)
                         }
@@ -477,12 +553,16 @@ public func authorizeWithCode(accountManager: AccountManager<TelegramAccountMana
                             case let (_, errorDescription):
                                 if errorDescription.hasPrefix("FLOOD_WAIT") {
                                     return .fail(.limitExceeded)
-                                } else if errorDescription == "PHONE_CODE_INVALID" {
+                                } else if errorDescription == "PHONE_CODE_INVALID" || errorDescription == "EMAIL_CODE_INVALID" {
                                     return .fail(.invalidCode)
                                 } else if errorDescription == "CODE_HASH_EXPIRED" || errorDescription == "PHONE_CODE_EXPIRED" {
                                     return .fail(.codeExpired)
                                 } else if errorDescription == "PHONE_NUMBER_UNOCCUPIED" {
                                     return .single(.signUp)
+                                } else if errorDescription == "EMAIL_TOKEN_INVALID" {
+                                    return .fail(.invalidEmailToken)
+                                } else if errorDescription == "EMAIL_ADDRESS_INVALID" {
+                                    return .fail(.invalidEmailAddress)
                                 } else {
                                     return .fail(.generic)
                                 }

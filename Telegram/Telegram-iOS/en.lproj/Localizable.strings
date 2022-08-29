@@ -7810,8 +7810,6 @@ Sorry for the inconvenience.";
 "Premium.Gift.Info" = "You can review the list of features and terms of use for Telegram Premium [here]().";
 "Premium.Gift.GiftSubscription" = "Gift Subscription for %@";
 
-"Premium.Gift.PricePerMonth" = "%@ / month";
-
 "Premium.Gift.Months_1" = "%@ Month";
 "Premium.Gift.Months_any" = "%@ Months";
 
@@ -7964,6 +7962,7 @@ Sorry for the inconvenience.";
 "Emoji.FrequentlyUsed" = "Recently Used";
 
 "Premium.Annual" = "Annual";
+"Premium.Semiannual" = "Semiannual";
 "Premium.Monthly" = "Monthly";
 
 "Login.PhoneNumberConfirmation" = "Is this the correct number?";
@@ -7987,15 +7986,29 @@ Sorry for the inconvenience.";
 "Login.EnterCodeSMSTitle" = "Enter Code";
 "Login.EnterCodeSMSText" = "We've sent and SMS with an activation code to your phone **%@**.";
 "Login.SendCodeAsSMS" = "Send the code as an SMS";
-
 "Login.EnterCodeTelegramTitle" = "Enter Code";
 "Login.EnterCodeTelegramText" = "We've sent the code to the **Telegram app** for %@ on your other device.";
-
 "Login.AddEmailTitle" = "Add Email";
 "Login.AddEmailText" = "Please enter your valid email address to protect your account.";
 "Login.AddEmailPlaceholder" = "Enter your email";
-
 "Login.EnterCodeEmailTitle" = "Check Your Email";
 "Login.EnterCodeEmailText" = "Please enter the code we have sent to your email %@.";
-
+"Login.EnterNewEmailTitle" = "Enter New Email";
+"Login.EnterCodeNewEmailTitle" = "Check Your New Email";
+"Login.EnterCodeNewEmailText" = "Please enter the code we have sent to your new email %@.";
 "Login.WrongCodeError" = "Wrong code, please try again.";
+
+"PrivacySettings.LoginEmail" = "Login Email";
+"Login.EmailChanged" = "Your email has been changed.";
+
+"Login.InvalidEmailAddressError" = "An error occurred. Please try again.";
+"Login.InvalidEmailError" = "Please enter a valid e-mail address.";
+"Login.InvalidEmailTokenError" = "An error occurred. Please try again.";
+"Login.EmailNotAllowedError" = "Sorry, this email can't be used.";
+
+"Conversation.EmojiCopied" = "Emoji copied to clipboard";
+
+"Conversation.EmojiTooltip" = "Tap here to choose more emoji";
+
+"Premium.PricePerMonth" = "%@/month";
+"Premium.PricePerYear" = "%@/year";

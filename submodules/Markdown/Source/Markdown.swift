@@ -124,7 +124,7 @@ public func parseMarkdownIntoAttributedString(_ string: String, attributes: Mark
                         
                         if let bold = parseBold(string: nsString, remainingRange: &remainingRange) {
                             var boldAttributes: [NSAttributedString.Key: Any] = [NSAttributedString.Key.font: attributes.bold.font, NSAttributedString.Key.foregroundColor: attributes.bold.textColor, NSAttributedString.Key.paragraphStyle: paragraphStyleWithAlignment(textAlignment)]
-                            if !attributes.body.additionalAttributes.isEmpty {
+                            if !attributes.bold.additionalAttributes.isEmpty {
                                 for (key, value) in attributes.bold.additionalAttributes {
                                     boldAttributes[NSAttributedString.Key(rawValue: key)] = value
                                 }

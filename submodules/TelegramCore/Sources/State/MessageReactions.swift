@@ -61,7 +61,7 @@ public func updateMessageReactionsInteractively(account: Account, messageId: Mes
                 for attribute in currentMessage.attributes {
                     if let attribute = attribute as? ReactionsMessageAttribute {
                         for updatedReaction in reactions {
-                            if !attribute.reactions.contains(where: { $0.value == updatedReaction.reaction }) {
+                            if !attribute.reactions.contains(where: { $0.value == updatedReaction.reaction && $0.isSelected }) {
                                 let recentReactionItem: RecentReactionItem
                                 switch updatedReaction {
                                 case let .builtin(value):

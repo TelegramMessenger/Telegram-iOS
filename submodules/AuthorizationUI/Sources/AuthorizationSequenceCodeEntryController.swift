@@ -6,41 +6,38 @@ import TelegramCore
 import TelegramPresentationData
 import ProgressNavigationButtonNode
 
-final class AuthorizationSequenceCodeEntryController: ViewController {
+public final class AuthorizationSequenceCodeEntryController: ViewController {
     private var controllerNode: AuthorizationSequenceCodeEntryControllerNode {
         return self.displayNode as! AuthorizationSequenceCodeEntryControllerNode
     }
+    
+    private var validLayout: ContainerViewLayout?
     
     private let strings: PresentationStrings
     private let theme: PresentationTheme
     private let openUrl: (String) -> Void
     
-    var loginWithCode: ((String) -> Void)?
-    var signInWithApple: (() -> Void)?
+    public var loginWithCode: ((String) -> Void)?
+    public var signInWithApple: (() -> Void)?
     
     var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
     
-    var data: (String, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
+    var data: (String, String?, SentAuthorizationCodeType, AuthorizationCodeNextType?, Int32?)?
     var termsOfService: (UnauthorizedAccountTermsOfService, Bool)?
     
     private let hapticFeedback = HapticFeedback()
     
     private var appleSignInAllowed = false
     
-    var inProgress: Bool = false {
+    public var inProgress: Bool = false {
         didSet {
-//            if self.inProgress {
-//                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
-//                self.navigationItem.rightBarButtonItem = item
-//            } else {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-//            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
     
-    init(presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    public init(presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
         self.strings = presentationData.strings
         self.theme = presentationData.theme
         self.openUrl = openUrl
@@ -52,9 +49,7 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
-        
-//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-        
+                
         self.attemptNavigation = { _ in
             return false
         }
@@ -96,38 +91,51 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
         
-        if let (number, codeType, nextType, timeout) = self.data {
+        if let (number, email, codeType, nextType, timeout) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
                 appleSignInAllowed = appleSignInAllowedValue
             }
-            self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+            self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
         }
     }
     
-    override func viewDidAppear(_ animated: Bool) {
+    override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.controllerNode.activateInput()
     }
     
-    func resetCode() {
+    public func resetCode() {
         self.controllerNode.resetCode()
     }
     
-    func animateSuccess() {
+    public func animateSuccess() {
         self.controllerNode.animateSuccess()
     }
     
-    func animateError(text: String) {
+    public func animateError(text: String) {
         self.hapticFeedback.error()
         self.controllerNode.animateError(text: text)
     }
     
-    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
+    public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
-        if self.data?.0 != number || self.data?.1 != codeType || self.data?.2 != nextType || self.data?.3 != timeout {
-            self.data = (number, codeType, nextType, timeout)
+        if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout {
+            self.data = (number, email, codeType, nextType, timeout)
                         
             var appleSignInAllowed = false
             if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
@@ -135,20 +143,27 @@ final class AuthorizationSequenceCodeEntryController: ViewController {
             }
             
             if self.isNodeLoaded {
-                self.controllerNode.updateData(number: number, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
+                self.controllerNode.updateData(number: number, email: email, codeType: codeType, nextType: nextType, timeout: timeout, appleSignInAllowed: appleSignInAllowed)
                 self.requestLayout(transition: .immediate)
             }
         }
     }
     
-    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
     
-    @objc func nextPressed() {
-        guard let (_, type, _, _) = self.data else {
+    @objc private func nextPressed() {
+        guard let (_, _, type, _, _) = self.data else {
             return
         }
         

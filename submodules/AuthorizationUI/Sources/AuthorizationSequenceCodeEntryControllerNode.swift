@@ -6,7 +6,6 @@ import TelegramCore
 import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
-import AuthorizationUI
 import AuthenticationServices
 import CodeInputView
 import PhoneNumberFormat
@@ -14,6 +13,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
 import InvisibleInkDustNode
+import AuthorizationUtils
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -53,6 +53,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             }
         }
     }
+    
+    var email: String?
     
     var currentCode: String {
         return self.codeInputView.text
@@ -202,9 +204,10 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.codeInputView.text = ""
     }
     
-    func updateData(number: String, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool) {
+    func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, appleSignInAllowed: Bool) {
         self.codeType = codeType
         self.phoneNumber = number
+        self.email = email
         
         var appleSignInAllowed = appleSignInAllowed
         if #available(iOS 13.0, *) {
@@ -213,7 +216,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         self.appleSignInAllowed = appleSignInAllowed
         
-        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, phoneNumber: self.phoneNumber, email: nil, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
+        self.currentOptionNode.attributedText = authorizationCurrentOptionText(codeType, phoneNumber: self.phoneNumber, email: self.email, strings: self.strings, primaryColor: self.theme.list.itemPrimaryTextColor, accentColor: self.theme.list.itemAccentColor)
         if case .missedCall = codeType {
             self.currentOptionInfoNode.attributedText = NSAttributedString(string: self.strings.Login_CodePhonePatternInfoText, font: Font.regular(17.0), textColor: self.theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         } else {

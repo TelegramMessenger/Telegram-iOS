@@ -1354,7 +1354,11 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
     }
 }
 
-func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool) -> Bool {
+func shouldDisplayInlineDateReactions(message: Message, isPremium: Bool, forceInline: Bool) -> Bool {
+    if forceInline {
+        return true
+    }
+    
     if message.id.peerId.namespace == Namespaces.Peer.CloudUser || message.id.peerId.namespace == Namespaces.Peer.SecretChat {
         if let chatPeer = message.peers[message.id.peerId] as? TelegramUser, chatPeer.isPremium {
             return false

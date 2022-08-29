@@ -3,7 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
-import AuthorizationUI
+import AuthorizationUtils
 
 final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings

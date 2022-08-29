@@ -17,6 +17,7 @@ import Lottie
 import EmojiTextAttachmentView
 import TextFormat
 import AppBundle
+import GZip
 
 public final class EmojiStatusSelectionComponent: Component {
     public typealias EnvironmentType = Empty
@@ -105,7 +106,7 @@ public final class EmojiStatusSelectionComponent: Component {
             let topPanelHeight: CGFloat = 42.0
             
             let keyboardSize = self.keyboardView.update(
-                transition: transition,
+                transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
@@ -335,7 +336,7 @@ public final class EmojiStatusSelectionController: ViewController {
             self.cloudShadowLayer1.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         }
         
-        func animateOutToStatus(groupId: AnyHashable, item: EmojiPagerContentComponent.Item, destinationView: UIView) {
+        func animateOutToStatus(groupId: AnyHashable, item: EmojiPagerContentComponent.Item, customEffectFile: String?, destinationView: UIView) {
             guard let emojiView = self.componentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View, let sourceLayer = emojiView.layerForItem( groupId: groupId, item: item) else {
                 self.controller?.dismiss()
                 return
@@ -363,6 +364,53 @@ public final class EmojiStatusSelectionController: ViewController {
                 strongSelf.controller?.dismissNow()
             }
             
+            var effectView: AnimationView?
+            
+            if let customEffectFile = customEffectFile, let data = try? Data(contentsOf: URL(fileURLWithPath: customEffectFile)), let composition = try? Animation.from(data: TGGUnzipData(data, 2 * 1024 * 1024) ?? data) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                effectView = view
+            } else if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                let animationCache = self.context.animationCache
+                let animationRenderer = self.context.animationRenderer
+                
+                for i in 1 ... 7 {
+                    let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
+                    for animationLayer in allLayers {
+                        let baseItemLayer = InlineStickerItemLayer(
+                            context: self.context,
+                            attemptSynchronousLoad: false,
+                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemFile.fileId.id, file: itemFile),
+                            file: item.itemFile,
+                            cache: animationCache,
+                            renderer: animationRenderer,
+                            placeholderColor: UIColor(white: 0.0, alpha: 0.0),
+                            pointSize: CGSize(width: 32.0, height: 32.0)
+                        )
+                        
+                        if let sublayers = animationLayer.sublayers {
+                            for sublayer in sublayers {
+                                sublayer.isHidden = true
+                            }
+                        }
+                        
+                        baseItemLayer.isVisibleForAnimations = true
+                        baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
+                        animationLayer.addSublayer(baseItemLayer)
+                    }
+                }
+                
+                effectView = view
+            }
+            
             if let sourceCopyLayer = sourceLayer.snapshotContentTree() {
                 self.layer.addSublayer(sourceCopyLayer)
                 sourceCopyLayer.frame = sourceLayer.convert(sourceLayer.bounds, to: self.layer)
@@ -387,49 +435,15 @@ public final class EmojiStatusSelectionController: ViewController {
                     sourceCopyLayer?.isHidden = true
                     if let destinationView = destinationView {
                         destinationView.isHidden = false
-                        destinationView.layer.animateScale(from: 0.5, to: 1.0, duration: 0.1)
+                        destinationView.layer.animateScale(from: 0.3, to: 1.0, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                     
                     hapticFeedback.tap()
                     
-                    if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
-                        let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
-                        view.animationSpeed = 1.0
-                        view.backgroundColor = nil
-                        view.isOpaque = false
-                        
-                        let animationCache = strongSelf.context.animationCache
-                        let animationRenderer = strongSelf.context.animationRenderer
-                        
-                        for i in 1 ... 7 {
-                            let allLayers = view.allLayers(forKeypath: AnimationKeypath(keypath: "placeholder_\(i)"))
-                            for animationLayer in allLayers {
-                                let baseItemLayer = InlineStickerItemLayer(
-                                    context: strongSelf.context,
-                                    attemptSynchronousLoad: false,
-                                    emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemFile.fileId.id, file: itemFile),
-                                    file: item.itemFile,
-                                    cache: animationCache,
-                                    renderer: animationRenderer,
-                                    placeholderColor: UIColor(white: 0.0, alpha: 0.0),
-                                    pointSize: CGSize(width: 32.0, height: 32.0)
-                                )
-                                
-                                if let sublayers = animationLayer.sublayers {
-                                    for sublayer in sublayers {
-                                        sublayer.isHidden = true
-                                    }
-                                }
-                                
-                                baseItemLayer.isVisibleForAnimations = true
-                                baseItemLayer.frame = CGRect(origin: CGPoint(x: -0.0, y: -0.0), size: CGSize(width: 500.0, height: 500.0))
-                                animationLayer.addSublayer(baseItemLayer)
-                            }
-                        }
-                        
-                        view.frame = effectFrame
-                        strongSelf.view.addSubview(view)
-                        view.play(completion: { _ in
+                    if let effectView = effectView {
+                        effectView.frame = effectFrame
+                        strongSelf.view.addSubview(effectView)
+                        effectView.play(completion: { _ in
                             effectCompleted = true
                             completion()
                         })
@@ -443,7 +457,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     1.0,
                     1.4,
                     1.0,
-                    destinationNormalScale * 0.5
+                    destinationNormalScale * 0.3
                 ]
                 sourceCopyLayer.transform = CATransform3DMakeScale(scaleKeyframes[scaleKeyframes.count - 1], scaleKeyframes[scaleKeyframes.count - 1], 1.0)
                 sourceCopyLayer.animateKeyframes(values: scaleKeyframes.map({ $0 as NSNumber }), duration: 0.2, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue)
@@ -543,7 +557,13 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 let cloudOffset0: CGFloat = 30.0
                 let cloudSize0: CGFloat = 16.0
-                let cloudFrame0 = CGRect(origin: CGPoint(x: floor(sourceOrigin.x + cloudOffset0 - cloudSize0 / 2.0), y: componentFrame.minY - cloudSize0 / 2.0), size: CGSize(width: cloudSize0, height: cloudSize0))
+                var cloudFrame0 = CGRect(origin: CGPoint(x: floor(sourceOrigin.x + cloudOffset0 - cloudSize0 / 2.0), y: componentFrame.minY - cloudSize0 / 2.0), size: CGSize(width: cloudSize0, height: cloudSize0))
+                var invertX = false
+                if cloudFrame0.maxX >= layout.size.width - layout.safeInsets.right - 32.0 {
+                    cloudFrame0.origin.x = floor(sourceOrigin.x - cloudSize0 - cloudOffset0 + cloudSize0 / 2.0)
+                    invertX = true
+                }
+                
                 transition.setFrame(layer: self.cloudLayer0, frame: cloudFrame0)
                 if self.cloudShadowLayer0.bounds.size != cloudFrame0.size {
                     let cloudShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: cloudFrame0.size), cornerRadius: 24.0).cgPath
@@ -554,7 +574,10 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 let cloudOffset1 = CGPoint(x: -9.0, y: -14.0)
                 let cloudSize1: CGFloat = 8.0
-                let cloudFrame1 = CGRect(origin: CGPoint(x: floor(cloudFrame0.midX + cloudOffset1.x - cloudSize1 / 2.0), y: floor(cloudFrame0.midY + cloudOffset1.y - cloudSize1 / 2.0)), size: CGSize(width: cloudSize1, height: cloudSize1))
+                var cloudFrame1 = CGRect(origin: CGPoint(x: floor(cloudFrame0.midX + cloudOffset1.x - cloudSize1 / 2.0), y: floor(cloudFrame0.midY + cloudOffset1.y - cloudSize1 / 2.0)), size: CGSize(width: cloudSize1, height: cloudSize1))
+                if invertX {
+                    cloudFrame1.origin.x = floor(cloudFrame0.midX - cloudSize1 - cloudOffset1.x + cloudSize1 / 2.0)
+                }
                 transition.setFrame(layer: self.cloudLayer1, frame: cloudFrame1)
                 if self.cloudShadowLayer1.bounds.size != cloudFrame1.size {
                     let cloudShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: cloudFrame1.size), cornerRadius: 24.0).cgPath
@@ -616,21 +639,98 @@ public final class EmojiStatusSelectionController: ViewController {
             guard let controller = self.controller else {
                 return
             }
-
-            let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
-            |> deliverOnMainQueue).start()
+            
+            switch controller.mode {
+            case .statusSelection:
+                let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
+                |> deliverOnMainQueue).start()
+            case let .quickReactionSelection(completion):
+                if let item = item, let itemFile = item.itemFile {
+                    var selectedReaction: MessageReaction.Reaction?
+                    
+                    if let availableReactions = self.availableReactions {
+                        for reaction in availableReactions.reactions {
+                            if reaction.selectAnimation.fileId == itemFile.fileId {
+                                selectedReaction = reaction.value
+                                break
+                            }
+                        }
+                    }
+                    
+                    if selectedReaction == nil {
+                        selectedReaction = .custom(itemFile.fileId.id)
+                    }
+                    
+                    if let selectedReaction = selectedReaction {
+                        let _ = context.engine.stickers.updateQuickReaction(reaction: selectedReaction).start()
+                    }
+                }
+                
+                completion()
+            }
             
             if let item = item, let destinationView = controller.destinationItemView() {
-                self.animateOutToStatus(groupId: groupId, item: item, destinationView: destinationView)
+                var emojiString: String?
+                if let itemFile = item.itemFile {
+                    attributeLoop: for attribute in itemFile.attributes {
+                        switch attribute {
+                        case let .CustomEmoji(_, alt, _):
+                            emojiString = alt
+                            break attributeLoop
+                        default:
+                            break
+                        }
+                    }
+                }
+                
+                let context = self.context
+                let _ = (context.engine.stickers.availableReactions()
+                |> take(1)
+                |> mapToSignal { availableReactions -> Signal<String?, NoError> in
+                    guard let emojiString = emojiString, let availableReactions = availableReactions else {
+                        return .single(nil)
+                    }
+                    for reaction in availableReactions.reactions {
+                        if case let .builtin(value) = reaction.value, value == emojiString {
+                            if let aroundAnimation = reaction.aroundAnimation {
+                                return context.account.postbox.mediaBox.resourceData(aroundAnimation.resource)
+                                |> take(1)
+                                |> map { data -> String? in
+                                    if data.complete {
+                                        return data.path
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                    }
+                    return .single(nil)
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] filePath in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.animateOutToStatus(groupId: groupId, item: item, customEffectFile: filePath, destinationView: destinationView)
+                })
             } else {
                 controller.dismiss()
             }
         }
     }
     
+    public enum Mode {
+        case statusSelection
+        case quickReactionSelection(completion: () -> Void)
+    }
+    
     private let context: AccountContext
     private weak var sourceView: UIView?
     private let emojiContent: Signal<EmojiPagerContentComponent, NoError>
+    private let mode: Mode
     private let destinationItemView: () -> UIView?
     
     fileprivate let _ready = Promise<Bool>()
@@ -638,8 +738,9 @@ public final class EmojiStatusSelectionController: ViewController {
         return self._ready
     }
     
-    public init(context: AccountContext, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, destinationItemView: @escaping () -> UIView?) {
+    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, destinationItemView: @escaping () -> UIView?) {
         self.context = context
+        self.mode = mode
         self.sourceView = sourceView
         self.emojiContent = emojiContent
         self.destinationItemView = destinationItemView

@@ -68,7 +68,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
     public var activated: ((ContextGesture, CGPoint) -> Void)?
     public var externalUpdated: ((UIView?, CGPoint) -> Void)?
     public var externalEnded: (((UIView?, CGPoint)?) -> Void)?
-    public var activatedAfterCompletion: (() -> Void)?
+    public var activatedAfterCompletion: ((CGPoint) -> Void)?
     public var cancelGesturesOnActivation: (() -> Void)?
     
     override public init(target: Any?, action: Selector?) {
@@ -208,7 +208,7 @@ public final class ContextGesture: UIGestureRecognizer, UIGestureRecognizerDeleg
                 self.currentProgress = 0.0
                 self.activationProgress?(0.0, .ended(self.currentProgress))
                 if self.wasActivated {
-                    self.activatedAfterCompletion?()
+                    self.activatedAfterCompletion?(touch.location(in: self.view))
                 }
             }
             

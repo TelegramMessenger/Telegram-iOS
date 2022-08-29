@@ -234,11 +234,11 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                     UIColor(rgb: 0xb36eee)
                 ]
                 
-                let shortestOptionPrice: Int64
+                let shortestOptionPrice: (Int64, NSDecimalNumber)
                 if let product = products.last {
-                    shortestOptionPrice = Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months))
+                    shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months)), product.storeProduct.priceValue.dividing(by: NSDecimalNumber(value: product.months)))
                 } else {
-                    shortestOptionPrice = 1
+                    shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
                 }
                 
                 for product in products {
@@ -249,7 +249,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         giftTitle = strings.Premium_Gift_Months(product.months)
                     }
                     
-                    let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice)) * 100.0)
+                    let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(product.months) / Float(shortestOptionPrice.0)) * 100.0)
                     let discount: String
                     if discountValue > 0 {
                         discount = "-\(discountValue)%"
@@ -257,13 +257,24 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                         discount = ""
                     }
                     
+                    let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(product.months))
+                    
+                    var subtitle = ""
+                    var pricePerMonth = product.storeProduct.pricePerMonth(Int(product.months))
+                    pricePerMonth = environment.strings.Premium_PricePerMonth(pricePerMonth).string
+                    
+                    if discountValue > 0 {
+                        subtitle = "**\(defaultPrice)** \(product.price)"
+                    }
+                   
                     items.append(SectionGroupComponent.Item(
                         AnyComponentWithIdentity(
                             id: product.id,
                             component: AnyComponent(
                                 PremiumOptionComponent(
                                     title: giftTitle,
-                                    totalPrice: product.price,
+                                    subtitle: subtitle,
+                                    labelPrice: pricePerMonth,
                                     discount: discount,
                                     selected: product.id == component.selectedProductId,
                                     primaryTextColor: textColor,
@@ -537,7 +548,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             ).start(next: { [weak self] products, peer in
                 if let strongSelf = self {
-                    
                     var gifts: [PremiumGiftProduct] = []
                     for option in strongSelf.options {
                         if let product = products.first(where: { $0.id == option.storeProductId }), !product.isSubscription {

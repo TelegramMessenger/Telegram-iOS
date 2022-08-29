@@ -27,6 +27,7 @@ swift_library(
         "//submodules/lottie-ios:Lottie",
         "//submodules/TextFormat:TextFormat",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

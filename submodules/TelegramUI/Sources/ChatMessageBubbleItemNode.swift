@@ -200,7 +200,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     let firstMessage = item.content.firstMessage
     
-    let reactionsAreInline = shouldDisplayInlineDateReactions(message: firstMessage, isPremium: item.associatedData.isPremium)
+    let reactionsAreInline: Bool
+    reactionsAreInline = shouldDisplayInlineDateReactions(message: firstMessage, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions)
     if reactionsAreInline {
         needReactions = false
     }
@@ -1681,7 +1682,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     impressionCount: viewCount,
                     dateText: dateText,
                     type: statusType,
-                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: item.associatedData.availableReactions,
                     reactions: dateReactionsAndPeers.reactions,

@@ -215,7 +215,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         return self._displayNode!
     }
     
-    var statusBarHost: StatusBarHost? {
+    public var statusBarHost: StatusBarHost? {
         didSet {
         }
     }

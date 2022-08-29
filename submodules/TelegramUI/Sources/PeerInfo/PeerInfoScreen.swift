@@ -1762,13 +1762,14 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private let archivedPacks = Promise<[ArchivedStickerPackItem]?>()
     private let blockedPeers = Promise<BlockedPeersContext?>(nil)
     private let hasTwoStepAuth = Promise<Bool?>(nil)
-    private let twoStepAuthData = Promise<TwoStepVerificationAccessConfiguration?>(nil)
-    private let hasPassport = Promise<Bool>(false)
+    private let twoStepAccessConfiguration = Promise<TwoStepVerificationAccessConfiguration?>(nil)
+    private let twoStepAuthData = Promise<TwoStepAuthData?>(nil)
     private let supportPeerDisposable = MetaDisposable()
     private let tipsPeerDisposable = MetaDisposable()
     private let cachedFaq = Promise<ResolvedUrl?>(nil)
     
     private weak var copyProtectionTooltipController: TooltipController?
+    weak var emojiStatusSelectionController: ViewController?
     
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
@@ -2274,6 +2275,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, sendMessage: { _ in
         }, sendSticker: { _, _, _, _, _, _, _, _ in
             return false
+        }, sendEmoji: { _, _ in
         }, sendGif: { _, _, _, _, _ in
             return false
         }, sendBotContextResultAsGif: { _, _, _, _, _ in
@@ -3033,21 +3035,28 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             ))
             self.privacySettings.set(.single(nil) |> then(context.engine.privacy.requestAccountPrivacySettings() |> map(Optional.init)))
             self.archivedPacks.set(.single(nil) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
-            self.twoStepAuthData.set(.single(nil) |> then(context.engine.auth.twoStepVerificationConfiguration()
+            self.twoStepAccessConfiguration.set(.single(nil) |> then(context.engine.auth.twoStepVerificationConfiguration()
             |> map { value -> TwoStepVerificationAccessConfiguration? in
                 return TwoStepVerificationAccessConfiguration(configuration: value, password: nil)
             }))
-            self.hasPassport.set(.single(false) |> then(context.engine.auth.twoStepAuthData()
-            |> map { value -> Bool in
-                return value.hasSecretValues
+            
+            self.twoStepAuthData.set(.single(nil)
+            |> then(
+                context.engine.auth.twoStepAuthData()
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
+                    return .single(nil)
+                }
+            ))
+            
+            let hasPassport = self.twoStepAuthData.get()
+            |> map { data -> Bool in
+                return data?.hasSecretValues ?? false
             }
-            |> `catch` { _ -> Signal<Bool, NoError> in
-                return .single(false)
-            }))
             
             self.cachedFaq.set(.single(nil) |> then(cachedFaqInstantPage(context: self.context) |> map(Optional.init)))
             
-            screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: self.hasPassport.get())
+            screenData = peerInfoScreenSettingsData(context: context, peerId: peerId, accountsAndPeers: self.accountsAndPeers.get(), activeSessionsContextAndCount: self.activeSessionsContextAndCount.get(), notificationExceptions: self.notificationExceptions.get(), privacySettings: self.privacySettings.get(), archivedStickerPacks: self.archivedPacks.get(), hasPassport: hasPassport)
             
             
             self.headerNode.displayCopyContextMenu = { [weak self] node, copyPhone, copyUsername in
@@ -3095,8 +3104,10 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let animationCache = context.animationCache
                 let animationRenderer = context.animationRenderer
                 
-                strongSelf.controller?.present(EmojiStatusSelectionController(
+                strongSelf.emojiStatusSelectionController?.dismiss()
+                let emojiStatusSelectionController = EmojiStatusSelectionController(
                     context: strongSelf.context,
+                    mode: .statusSelection,
                     sourceView: sourceView,
                     emojiContent: EmojiPagerContentComponent.emojiInputData(
                         context: strongSelf.context,
@@ -3113,7 +3124,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     destinationItemView: { [weak sourceView] in
                         return sourceView
                     }
-                ), in: .window(.root))
+                )
+                strongSelf.emojiStatusSelectionController = emojiStatusSelectionController
+                strongSelf.controller?.present(emojiStatusSelectionController, in: .window(.root))
             }
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
@@ -3407,7 +3420,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, callPeer: { peerId, isVideo in
             //self?.controllerInteraction?.callPeer(peerId)
         }, enqueueMessage: { _ in
-        }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
+        }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, actionInteraction: GalleryControllerActionInteraction(openUrl: { [weak self] url, concealed in
             if let strongSelf = self {
                 strongSelf.openUrl(url: url, concealed: false, external: false)
             }
@@ -6372,13 +6385,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] blockedPeersContext, hasTwoStepAuth in
                         if let strongSelf = self {
+                            let loginEmailPattern = strongSelf.twoStepAuthData.get() |> map { data -> String? in
+                                return data?.loginEmailPattern
+                            }
                             push(privacyAndSecurityController(context: strongSelf.context, initialSettings: settings.privacySettings, updatedSettings: { [weak self] settings in
                                 self?.privacySettings.set(.single(settings))
                             }, updatedBlockedPeers: { [weak self] blockedPeersContext in
                                 self?.blockedPeers.set(.single(blockedPeersContext))
                             }, updatedHasTwoStepAuth: { [weak self] hasTwoStepAuthValue in
                                 self?.hasTwoStepAuth.set(.single(hasTwoStepAuthValue))
-                            }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth))
+                            }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth, loginEmailPattern: loginEmailPattern))
                         }
                     })
                 }
@@ -6886,7 +6902,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }
                         })
                     }
-                }, resolvedFaqUrl: self.cachedFaq.get(), exceptionsList: .single(settings.notificationExceptions), archivedStickerPacks: .single(settings.archivedStickerPacks), privacySettings: .single(settings.privacySettings), hasTwoStepAuth: self.hasTwoStepAuth.get(), twoStepAuthData: self.twoStepAuthData.get(), activeSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.0 }, webSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.2 }), cancel: { [weak self] in
+                }, resolvedFaqUrl: self.cachedFaq.get(), exceptionsList: .single(settings.notificationExceptions), archivedStickerPacks: .single(settings.archivedStickerPacks), privacySettings: .single(settings.privacySettings), hasTwoStepAuth: self.hasTwoStepAuth.get(), twoStepAuthData: self.twoStepAccessConfiguration.get(), activeSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.0 }, webSessionsContext: self.activeSessionsContextAndCount.get() |> map { $0?.2 }), cancel: { [weak self] in
                     self?.deactivateSearch()
                 })
             }
@@ -8295,6 +8311,11 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         super.viewWillDisappear(animated)
         
         self.dismissAllTooltips()
+        
+        if let emojiStatusSelectionController = self.controllerNode.emojiStatusSelectionController {
+            self.controllerNode.emojiStatusSelectionController = nil
+            emojiStatusSelectionController.dismiss()
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {

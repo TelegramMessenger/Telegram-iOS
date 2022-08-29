@@ -12,6 +12,7 @@ import TextNodeWithEntities
 import EntityKeyboard
 import AnimationCache
 import MultiAnimationRenderer
+import UndoUI
 
 private let animationDurationFactor: Double = 1.0
 
@@ -1531,7 +1532,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 }
                 controller.reactionSelected?(reaction, isLarge)
             }
-            reactionContextNode.premiumReactionsSelected = { [weak self] in
+            reactionContextNode.premiumReactionsSelected = { [weak self] _ in
                 guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
                     return
                 }
@@ -2140,6 +2141,22 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             return nil
         }
         
+        if let controller = self.getController() as? ContextController {
+            var innerResult: UIView?
+            controller.forEachController { c in
+                if let c = c as? UndoOverlayController {
+                    if let result = c.view.hitTest(self.view.convert(point, to: c.view), with: event) {
+                        innerResult = result
+                        return false
+                    }
+                }
+                return true
+            }
+            if let innerResult = innerResult {
+                return innerResult
+            }
+        }
+        
         if let presentationNode = self.presentationNode {
             return presentationNode.hitTest(self.view.convert(point, to: presentationNode.view), with: event)
         }
@@ -2583,7 +2600,18 @@ public final class ContextController: ViewController, StandalonePresentableContr
         self.displayNode = ContextControllerNode(account: self.account, controller: self, presentationData: self.presentationData, source: self.source, items: self.items, beginDismiss: { [weak self] result in
             self?.dismiss(result: result, completion: nil)
         }, recognizer: self.recognizer, gesture: self.gesture, beganAnimatingOut: { [weak self] in
-            self?.statusBar.statusBarStyle = .Ignore
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.statusBar.statusBarStyle = .Ignore
+            
+            strongSelf.forEachController { c in
+                if let c = c as? UndoOverlayController {
+                    c.dismiss()
+                }
+                return true
+            }
         }, attemptTransitionControllerIntoNavigation: { [weak self] in
             guard let strongSelf = self else {
                 return

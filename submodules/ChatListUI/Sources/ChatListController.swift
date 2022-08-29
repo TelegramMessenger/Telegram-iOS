@@ -172,6 +172,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private var didSetupTabs = false
     
+    private weak var emojiStatusSelectionController: ViewController?
+    
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
             self.chatListDisplayNode.containerNode.updateSelectedChatLocation(data: data as? ChatLocation, progress: progress, transition: transition)
@@ -847,8 +849,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func openStatusSetup(sourceView: UIView) {
-        self.present(EmojiStatusSelectionController(
+        self.emojiStatusSelectionController?.dismiss()
+        let controller = EmojiStatusSelectionController(
             context: self.context,
+            mode: .statusSelection,
             sourceView: sourceView,
             emojiContent: EmojiPagerContentComponent.emojiInputData(
                 context: self.context,
@@ -865,7 +869,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             destinationItemView: { [weak sourceView] in
                 return sourceView
             }
-        ), in: .window(.root))
+        )
+        self.emojiStatusSelectionController = controller
+        self.present(controller, in: .window(.root))
     }
     
     private func updateThemeAndStrings() {
@@ -1898,6 +1904,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             return true
         })
+        
+        if let emojiStatusSelectionController = self.emojiStatusSelectionController {
+            self.emojiStatusSelectionController = nil
+            emojiStatusSelectionController.dismiss()
+        }
     }
     
     override public func viewWillDisappear(_ animated: Bool) {

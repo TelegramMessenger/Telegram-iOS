@@ -10,6 +10,7 @@ import PersistentStringHash
 
 private let productIdentifiers = [
     "org.telegram.telegramPremium.annual",
+    "org.telegram.telegramPremium.semiannual",
     "org.telegram.telegramPremium.monthly",
     "org.telegram.telegramPremium.twelveMonths",
     "org.telegram.telegramPremium.sixMonths",
@@ -17,7 +18,7 @@ private let productIdentifiers = [
 ]
 
 private func isSubscriptionProductId(_ id: String) -> Bool {
-    return id.hasSuffix(".monthly") || id.hasSuffix(".annual")
+    return id.hasSuffix(".monthly") || id.hasSuffix(".annual") || id.hasSuffix(".semiannual")
 }
 
 private extension NSDecimalNumber {
@@ -29,6 +30,22 @@ private extension NSDecimalNumber {
                                    raiseOnOverflow: false,
                                    raiseOnUnderflow: false,
                                    raiseOnDivideByZero: false))
+    }
+    
+    func prettyPrice() -> NSDecimalNumber {
+        return self.multiplying(by: NSDecimalNumber(value: 2))
+            .rounding(accordingToBehavior:
+                NSDecimalNumberHandler(
+                    roundingMode: .plain,
+                    scale: Int16(0),
+                    raiseOnExactness: false,
+                    raiseOnOverflow: false,
+                    raiseOnUnderflow: false,
+                    raiseOnDivideByZero: false
+                )
+            )
+            .dividing(by: NSDecimalNumber(value: 2))
+            .subtracting(NSDecimalNumber(value: 0.01))
     }
 }
 
@@ -57,7 +74,7 @@ public final class InAppPurchaseManager: NSObject {
             } else if #available(iOS 11.2, *) {
                 return self.skProduct.subscriptionPeriod != nil
             } else {
-                return self.id.hasSuffix(".monthly") || self.id.hasSuffix(".annual")
+                return self.id.hasSuffix(".monthly") || self.id.hasSuffix(".annual") || self.id.hasSuffix(".semiannual")
             }
         }
         
@@ -66,8 +83,27 @@ public final class InAppPurchaseManager: NSObject {
         }
         
         public func pricePerMonth(_ monthsCount: Int) -> String {
-            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).round(2)
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).prettyPrice().round(2)
             return self.numberFormatter.string(from: price) ?? ""
+        }
+        
+        public func defaultPrice(_ value: NSDecimalNumber, monthsCount: Int) -> String {
+            let price = value.multiplying(by: NSDecimalNumber(value: monthsCount)).round(2)
+            let prettierPrice = price
+                .multiplying(by: NSDecimalNumber(value: 2))
+                .rounding(accordingToBehavior:
+                    NSDecimalNumberHandler(
+                        roundingMode: .up,
+                        scale: Int16(0),
+                        raiseOnExactness: false,
+                        raiseOnOverflow: false,
+                        raiseOnUnderflow: false,
+                        raiseOnDivideByZero: false
+                    )
+                )
+                .dividing(by: NSDecimalNumber(value: 2))
+                .subtracting(NSDecimalNumber(value: 0.01))
+            return self.numberFormatter.string(from: prettierPrice) ?? ""
         }
         
         public var priceValue: NSDecimalNumber {

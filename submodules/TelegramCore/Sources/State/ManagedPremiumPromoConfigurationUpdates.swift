@@ -65,14 +65,10 @@ private func updatePremiumPromoConfiguration(transaction: Transaction, _ f: (Pre
 private extension PremiumPromoConfiguration {
     init(apiPremiumPromo: Api.help.PremiumPromo) {
         switch apiPremiumPromo {
-            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, periodOptions, _):
+            case let .premiumPromo(statusText, statusEntities, videoSections, videoFiles, options, _):
                 self.status = statusText
                 self.statusEntities = messageTextEntitiesFromApiEntities(statusEntities)
-                let _ = periodOptions
-                self.currency = "USD"
-                self.monthlyAmount = 500
-                //self.currency = currency
-                //self.monthlyAmount = monthlyAmount
+
                 var videos: [String: TelegramMediaFile] = [:]
                 for (key, document) in zip(videoSections, videoFiles) {
                     if let file = telegramMediaFileFromApiDocument(document) {
@@ -80,6 +76,14 @@ private extension PremiumPromoConfiguration {
                     }
                 }
                 self.videos = videos
+            
+                var productOptions: [PremiumProductOption] = []
+                for option in options {
+                    if case let .premiumSubscriptionOption(_, months, currency, amount, botUrl, storeProduct) = option {
+                        productOptions.append(PremiumProductOption(months: months, currency: currency, amount: amount, botUrl: botUrl, storeProductId: storeProduct))
+                    }
+                }
+                self.premiumProductOptions = productOptions
         }
     }
 }

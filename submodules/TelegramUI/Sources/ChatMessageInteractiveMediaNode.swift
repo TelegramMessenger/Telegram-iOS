@@ -512,7 +512,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     impressionCount: dateAndStatus.viewCount,
                     dateText: dateAndStatus.dateText,
                     type: dateAndStatus.type,
-                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: message, isPremium: associatedData.isPremium, forceInline: associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: nativeSize.width - 30.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: associatedData.availableReactions,
                     reactions: dateAndStatus.dateReactions,

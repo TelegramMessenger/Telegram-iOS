@@ -114,7 +114,8 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                         animationData: component.item,
                         content: .animation(component.item),
                         itemFile: nil,
-                        subgroupId: nil
+                        subgroupId: nil,
+                        icon: .none
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,

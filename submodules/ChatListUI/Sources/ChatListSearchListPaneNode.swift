@@ -1696,7 +1696,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }, openPeer: { _, _ in
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
-            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, gallerySource: .custom(messages: foundMessages |> map { message, a, b in
+            }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, gallerySource: .custom(messages: foundMessages |> map { message, a, b in
                 return (message.map { $0._asMessage() }, a, b)
             }, messageId: message.id, loadMore: {
                 loadMore()
@@ -1815,7 +1815,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }, openPeer: { peer, navigation in
             }, callPeer: { _, _ in
             }, enqueueMessage: { _ in
-            }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation, gallerySource: gallerySource))
+            }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: { _, _ in }, playlistLocation: playlistLocation, gallerySource: gallerySource))
         }, openMessageContextMenu: { [weak self] message, _, node, rect, gesture in
             guard let strongSelf = self, let currentEntries = strongSelf.currentEntries else {
                 return

@@ -16,6 +16,8 @@ import AppBundle
 import PasswordSetupUI
 import UndoUI
 import PremiumUI
+import AuthorizationUI
+import AuthenticationServices
 
 private final class PrivacyAndSecurityControllerArguments {
     let account: Account
@@ -33,8 +35,9 @@ private final class PrivacyAndSecurityControllerArguments {
     let toggleArchiveAndMuteNonContacts: (Bool) -> Void
     let setupAccountAutoremove: () -> Void
     let openDataSettings: () -> Void
+    let openEmailSettings: (String?) -> Void
     
-    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openVoiceMessagePrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, toggleArchiveAndMuteNonContacts: @escaping (Bool) -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void) {
+    init(account: Account, openBlockedUsers: @escaping () -> Void, openLastSeenPrivacy: @escaping () -> Void, openGroupsPrivacy: @escaping () -> Void, openVoiceCallPrivacy: @escaping () -> Void, openProfilePhotoPrivacy: @escaping () -> Void, openForwardPrivacy: @escaping () -> Void, openPhoneNumberPrivacy: @escaping () -> Void, openVoiceMessagePrivacy: @escaping () -> Void, openPasscode: @escaping () -> Void, openTwoStepVerification: @escaping (TwoStepVerificationAccessConfiguration?) -> Void, openActiveSessions: @escaping () -> Void, toggleArchiveAndMuteNonContacts: @escaping (Bool) -> Void, setupAccountAutoremove: @escaping () -> Void, openDataSettings: @escaping () -> Void, openEmailSettings: @escaping (String?) -> Void) {
         self.account = account
         self.openBlockedUsers = openBlockedUsers
         self.openLastSeenPrivacy = openLastSeenPrivacy
@@ -50,6 +53,7 @@ private final class PrivacyAndSecurityControllerArguments {
         self.toggleArchiveAndMuteNonContacts = toggleArchiveAndMuteNonContacts
         self.setupAccountAutoremove = setupAccountAutoremove
         self.openDataSettings = openDataSettings
+        self.openEmailSettings = openEmailSettings
     }
 }
 
@@ -87,6 +91,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case selectivePrivacyInfo(PresentationTheme, String)
     case passcode(PresentationTheme, String, Bool, String)
     case twoStepVerification(PresentationTheme, String, String, TwoStepVerificationAccessConfiguration?)
+    case loginEmail(PresentationTheme, String, String?)
     case activeSessions(PresentationTheme, String, String)
     case autoArchiveHeader(String)
     case autoArchive(String, Bool)
@@ -99,7 +104,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .blockedPeers, .activeSessions, .passcode, .twoStepVerification:
+            case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail:
                 return PrivacyAndSecuritySection.general.rawValue
             case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .voiceCallPrivacy, .voiceMessagePrivacy, .selectivePrivacyInfo:
                 return PrivacyAndSecuritySection.privacy.rawValue
@@ -122,40 +127,42 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 3
             case .twoStepVerification:
                 return 4
-            case .privacyHeader:
+            case .loginEmail:
                 return 5
-            case .phoneNumberPrivacy:
+            case .privacyHeader:
                 return 6
-            case .lastSeenPrivacy:
+            case .phoneNumberPrivacy:
                 return 7
-            case .profilePhotoPrivacy:
+            case .lastSeenPrivacy:
                 return 8
-            case .voiceCallPrivacy:
+            case .profilePhotoPrivacy:
                 return 9
-            case .voiceMessagePrivacy:
+            case .voiceCallPrivacy:
                 return 10
-            case .forwardPrivacy:
+            case .voiceMessagePrivacy:
                 return 11
-            case .groupPrivacy:
+            case .forwardPrivacy:
                 return 12
-            case .selectivePrivacyInfo:
+            case .groupPrivacy:
                 return 13
-            case .autoArchiveHeader:
+            case .selectivePrivacyInfo:
                 return 14
-            case .autoArchive:
+            case .autoArchiveHeader:
                 return 15
-            case .autoArchiveInfo:
+            case .autoArchive:
                 return 16
-            case .accountHeader:
+            case .autoArchiveInfo:
                 return 17
-            case .accountTimeout:
+            case .accountHeader:
                 return 18
-            case .accountInfo:
+            case .accountTimeout:
                 return 19
-            case .dataSettings:
+            case .accountInfo:
                 return 20
-            case .dataSettingsInfo:
+            case .dataSettings:
                 return 21
+            case .dataSettingsInfo:
+                return 22
         }
     }
     
@@ -229,6 +236,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }
             case let .twoStepVerification(lhsTheme, lhsText, lhsValue, lhsData):
                 if case let .twoStepVerification(rhsTheme, rhsText, rhsValue, rhsData) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue, lhsData == rhsData {
+                    return true
+                } else {
+                    return false
+                }
+            case let .loginEmail(lhsTheme, lhsText, lhsEmailPattern):
+                if case let .loginEmail(rhsTheme, rhsText, rhsEmailPattern) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEmailPattern == rhsEmailPattern {
                     return true
                 } else {
                     return false
@@ -341,6 +354,10 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification(data)
                 })
+            case let .loginEmail(_, text, emailPattern):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/LoginEmail")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
+                    arguments.openEmailSettings(emailPattern)
+                })
             case let .activeSessions(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
@@ -411,7 +428,20 @@ private func stringForSelectiveSettings(strings: PresentationStrings, settings: 
     }
 }
 
-private func privacyAndSecurityControllerEntries(presentationData: PresentationData, state: PrivacyAndSecurityControllerState, privacySettings: AccountPrivacySettings?, accessChallengeData: PostboxAccessChallengeData, blockedPeerCount: Int?, activeWebsitesCount: Int, hasTwoStepAuth: Bool?, twoStepAuthData: TwoStepVerificationAccessConfiguration?, canAutoarchive: Bool, isPremiumDisabled: Bool, isPremium: Bool) -> [PrivacyAndSecurityEntry] {
+private func privacyAndSecurityControllerEntries(
+    presentationData: PresentationData,
+    state: PrivacyAndSecurityControllerState,
+    privacySettings: AccountPrivacySettings?,
+    accessChallengeData: PostboxAccessChallengeData,
+    blockedPeerCount: Int?,
+    activeWebsitesCount: Int,
+    hasTwoStepAuth: Bool?,
+    twoStepAuthData: TwoStepVerificationAccessConfiguration?,
+    canAutoarchive: Bool,
+    isPremiumDisabled: Bool,
+    isPremium: Bool,
+    loginEmail: String?
+) -> [PrivacyAndSecurityEntry] {
     var entries: [PrivacyAndSecurityEntry] = []
     
     entries.append(.blockedPeers(presentationData.theme, presentationData.strings.Settings_BlockedUsers, blockedPeerCount == nil ? "" : (blockedPeerCount == 0 ? presentationData.strings.PrivacySettings_BlockedPeersEmpty : "\(blockedPeerCount!)")))
@@ -442,6 +472,10 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
         twoStepAuthString = hasTwoStepAuth ? presentationData.strings.PrivacySettings_PasscodeOn : presentationData.strings.PrivacySettings_PasscodeOff
     }
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
+    
+    if loginEmail != nil {
+    entries.append(.loginEmail(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmail, loginEmail))
+    }
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))
     if let privacySettings = privacySettings {
@@ -505,11 +539,21 @@ private func privacyAndSecurityControllerEntries(presentationData: PresentationD
     return entries
 }
 
-class PrivacyAndSecurityControllerImpl: ItemListController {
-
+class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    var authorizationCompletion: (ASAuthorizationCredential) -> Void = { _ in }
+    
+    @available(iOS 13.0, *)
+    public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        self.authorizationCompletion(authorization)
+    }
+    
+    @available(iOS 13.0, *)
+    public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return self.view.window!
+    }
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil, loginEmailPattern: Signal<String?, NoError>? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -568,6 +612,23 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         twoStepAuth.set(hasTwoStepAuthDataValue)
     }
     
+    let loginEmail: Signal<String?, NoError>
+    if let loginEmailPattern = loginEmailPattern {
+        loginEmail = loginEmailPattern
+    } else {
+        loginEmail = .single(nil)
+        |> then(
+            context.engine.auth.twoStepAuthData()
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
+                return .single(nil)
+            }
+            |> map { data -> String? in
+                return data?.loginEmailPattern
+            }
+        )
+    }
+    
     let updateHasTwoStepAuth: () -> Void = {
         let signal = context.engine.auth.twoStepVerificationConfiguration()
         |> map { value -> TwoStepVerificationAccessConfiguration? in
@@ -588,6 +649,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         )
     }
     updateHasTwoStepAuth()
+    
+    var setupEmailImpl: ((String?) -> Void)?
     
     let arguments = PrivacyAndSecurityControllerArguments(account: context.account, openBlockedUsers: {
         pushControllerImpl?(blockedPeersController(context: context, blockedPeersContext: blockedPeersContext), true)
@@ -926,6 +989,23 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         }))
     }, openDataSettings: {
         pushControllerImpl?(dataPrivacyController(context: context), true)
+    }, openEmailSettings: { emailPattern in
+        if let emailPattern = emailPattern {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let controller = textAlertController(
+                context: context, title: emailPattern, text: "This email address will be used every time you login to your Telegram account from a new device.", actions: [
+                    TextAlertAction(type: .genericAction, title: "Change Email", action: {
+                        setupEmailImpl?(emailPattern)
+                    }),
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
+                                        
+                    })
+                ], actionLayout: .vertical
+            )
+            presentControllerImpl?(controller)
+        } else {
+            setupEmailImpl?(nil)
+        }
     })
     
     actionsDisposable.add(context.engine.peers.managedUpdatedRecentPeers().start())
@@ -953,9 +1033,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         context.sharedContext.accountManager.accessChallengeData(),
         combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get()),
         context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App()),
-        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+        loginEmail
     )
-    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, appConfiguration, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, privacySettings, noticeView, sharedData, recentPeers, blockedPeersState, activeWebsitesState, accessChallengeData, twoStepAuth, appConfiguration, accountPeer, loginEmail -> (ItemListControllerState, (ItemListNodeState, Any)) in
         var canAutoarchive = false
         if let data = appConfiguration.data, let hasAutoarchive = data["autoarchive_setting_available"] as? Bool {
             canAutoarchive = hasAutoarchive
@@ -971,7 +1052,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         let isPremium = accountPeer?.isPremium ?? false
         let isPremiumDisabled = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 }).isPremiumDisabled
         
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1, canAutoarchive: canAutoarchive, isPremiumDisabled: isPremiumDisabled, isPremium: isPremium), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: privacyAndSecurityControllerEntries(presentationData: presentationData, state: state, privacySettings: privacySettings, accessChallengeData: accessChallengeData.data, blockedPeerCount: blockedPeersState.totalCount, activeWebsitesCount: activeWebsitesState.sessions.count, hasTwoStepAuth: twoStepAuth.0, twoStepAuthData: twoStepAuth.1, canAutoarchive: canAutoarchive, isPremiumDisabled: isPremiumDisabled, isPremium: isPremium, loginEmail: loginEmail), style: .blocks, ensureVisibleItemTag: focusOnItemTag, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }
@@ -995,6 +1076,169 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
 
     controller.didAppear = { _ in
         updateHasTwoStepAuth()
+    }
+    
+    setupEmailImpl = { emailPattern in
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        var dismissEmailControllerImpl: (() -> Void)?
+        let emailController = AuthorizationSequenceEmailEntryController(presentationData: presentationData, mode: emailPattern != nil ? .change : .setup, back: {
+            dismissEmailControllerImpl?()
+        })
+        emailController.proceedWithEmail = { [weak emailController] email in
+            emailController?.inProgress = true
+            
+            actionsDisposable.add((sendLoginEmailChangeCode(account: context.account, email: email)
+            |> deliverOnMainQueue).start(next: { data in
+                var dismissCodeControllerImpl: (() -> Void)?
+                let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, openUrl: { _ in }, back: {
+                    dismissCodeControllerImpl?()
+                })
+                
+                let emailChangeCompletion = { [weak codeController] in
+                    codeController?.animateSuccess()
+                    Queue.mainQueue().after(0.75) {
+                        if let navigationController = getNavigationControllerImpl?() {
+                            let controllers = navigationController.viewControllers.filter { controller in
+                                if controller is AuthorizationSequenceEmailEntryController || controller is AuthorizationSequenceCodeEntryController {
+                                    return false
+                                } else {
+                                    return true
+                                }
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                            
+                            navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                return false
+                            }))
+                        }
+                    }
+                }
+                
+                codeController.loginWithCode = { [weak codeController] code in
+                    actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .emailCode(code))
+                    |> deliverOnMainQueue).start(error: { error in
+                        Queue.mainQueue().async {
+                            codeController?.inProgress = false
+                            
+                            if case .invalidCode = error {
+                                codeController?.animateError(text: presentationData.strings.Login_WrongCodeError)
+                            } else {
+                                var resetCode = false
+                                let text: String
+                                switch error {
+                                    case .limitExceeded:
+                                        resetCode = true
+                                        text = presentationData.strings.Login_CodeFloodError
+                                    case .invalidCode:
+                                        resetCode = true
+                                        text = presentationData.strings.Login_InvalidCodeError
+                                    case .generic:
+                                        text = presentationData.strings.Login_UnknownError
+                                    case .codeExpired:
+                                        text = presentationData.strings.Login_CodeExpired
+                                    case .timeout:
+                                        text = presentationData.strings.Login_NetworkError
+                                    case .invalidEmailToken:
+                                        text = presentationData.strings.Login_InvalidEmailTokenError
+                                    case .emailNotAllowed:
+                                        text = presentationData.strings.Login_EmailNotAllowedError
+                                }
+                                
+                                if resetCode {
+                                    codeController?.resetCode()
+                                }
+                                    
+                                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+                            }
+                        }
+                    }, completed: {
+                       emailChangeCompletion()
+                    }))
+                }
+                codeController.signInWithApple = { [weak controller, weak codeController] in
+                    if #available(iOS 13.0, *) {
+                        let appleIdProvider = ASAuthorizationAppleIDProvider()
+                        let passwordProvider = ASAuthorizationPasswordProvider()
+                        let request = appleIdProvider.createRequest()
+
+                        let passwordRequest = passwordProvider.createRequest()
+
+                        let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
+                        authorizationController.delegate = controller
+                        authorizationController.presentationContextProvider = controller
+                        authorizationController.performRequests()
+                        
+                        controller.authorizationCompletion = { [weak controller, weak codeController] credentials in
+                            switch authorization.credential {
+                                case let appleIdCredential as ASAuthorizationAppleIDCredential:
+                                    guard let tokenData = appleIdCredential.identityToken, let token = String(data: tokenData, encoding: .utf8) else {
+                                        codeController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        return
+                                    }
+                                    actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .appleToken(token))
+                                    |> deliverOnMainQueue).start(error: { error in
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                text = presentationData.strings.Login_CodeFloodError
+                                            case .generic, .codeExpired:
+                                                text = presentationData.strings.Login_UnknownError
+                                            case .invalidCode:
+                                                text = presentationData.strings.Login_InvalidCodeError
+                                            case .timeout:
+                                                text = presentationData.strings.Login_NetworkError
+                                            case .invalidEmailToken:
+                                                text = presentationData.strings.Login_InvalidEmailTokenError
+                                            case .emailNotAllowed:
+                                                text = presentationData.strings.Login_EmailNotAllowedError
+                                        }
+                                        codeController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }, completed: { [weak controller] in
+                                        controller?.authorizationCompletion = nil
+                                        emailChangeCompletion()
+                                    }))
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                }
+                codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, nextPhoneLoginDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
+                pushControllerImpl?(codeController, true)
+                dismissCodeControllerImpl = { [weak codeController] in
+                    codeController?.dismiss()
+                }
+            }, error: { [weak emailController] error in
+                emailController?.inProgress = false
+                
+                let text: String
+                switch error {
+                    case .limitExceeded:
+                        text = presentationData.strings.Login_CodeFloodError
+                    case .generic, .codeExpired:
+                        text = presentationData.strings.Login_UnknownError
+                    case .timeout:
+                        text = presentationData.strings.Login_NetworkError
+                    case .invalidEmail:
+                        text = presentationData.strings.Login_InvalidEmailError
+                    case .emailNotAllowed:
+                        text = presentationData.strings.Login_EmailNotAllowedError
+                }
+                
+                presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
+            }, completed: { [weak emailController] in
+                emailController?.inProgress = false
+            }))
+        }
+        emailController.signInWithApple = {
+            
+        }
+        emailController.updateData(appleSignInAllowed: true)
+        pushControllerImpl?(emailController, true)
+        
+        dismissEmailControllerImpl = { [weak emailController] in
+            emailController?.dismiss()
+        }
     }
     
     return controller

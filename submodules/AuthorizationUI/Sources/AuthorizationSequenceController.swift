@@ -12,7 +12,6 @@ import TelegramPresentationData
 import TextFormat
 import AccountContext
 import CountrySelectionUI
-import SettingsUI
 import PhoneNumberFormat
 import LegacyComponents
 import LegacyMediaPickerUI
@@ -247,10 +246,12 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         guard let strongSelf = self, let controller = controller else {
                                             return
                                         }
-                                        controller.present(proxySettingsController(accountManager: strongSelf.sharedContext.accountManager, postbox: strongSelf.account.postbox, network: strongSelf.account.network, mode: .modal, presentationData: strongSelf.sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: strongSelf.sharedContext.presentationData), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                        controller.present(strongSelf.sharedContext.makeProxySettingsController(sharedContext: strongSelf.sharedContext, account: strongSelf.account), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), in: .window(.root))
+                            (controller.navigationController as? NavigationController)?.presentOverlay(controller: standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), inGlobal: true, blockInteraction: true)
+                            
+                            controller.dismissConfirmation()
                         }
                     }))
                 }
@@ -260,11 +261,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         return controller
     }
     
-    private func codeEntryController(number: String, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
+    private func codeEntryController(number: String, email: String?, type: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) -> AuthorizationSequenceCodeEntryController {
         var currentController: AuthorizationSequenceCodeEntryController?
         for c in self.viewControllers {
             if let c = c as? AuthorizationSequenceCodeEntryController {
-                if c.data?.1 == type {
+                if c.data?.2 == type {
                     currentController = c
                 }
                 break
@@ -303,30 +304,38 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 if let strongSelf = self, let controller = controller {
                                     controller.inProgress = false
                                     
-                                    var resetCode = false
-                                    let text: String
-                                    switch error {
-                                        case .limitExceeded:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_CodeFloodError
-                                        case .invalidCode:
-                                            resetCode = true
-                                            text = strongSelf.presentationData.strings.Login_InvalidCodeError
-                                        case .generic:
-                                            text = strongSelf.presentationData.strings.Login_UnknownError
-                                        case .codeExpired:
-                                            text = strongSelf.presentationData.strings.Login_CodeExpired
-                                            let account = strongSelf.account
-                                            let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
-                                        case .timeout:
-                                            text = strongSelf.presentationData.strings.Login_NetworkError
+                                    if case .invalidCode = error {
+                                        controller.animateError(text: strongSelf.presentationData.strings.Login_WrongCodeError)
+                                    } else {
+                                        var resetCode = false
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_CodeFloodError
+                                            case .invalidCode:
+                                                resetCode = true
+                                                text = strongSelf.presentationData.strings.Login_InvalidCodeError
+                                            case .generic:
+                                                text = strongSelf.presentationData.strings.Login_UnknownError
+                                            case .codeExpired:
+                                                text = strongSelf.presentationData.strings.Login_CodeExpired
+                                                let account = strongSelf.account
+                                                let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                            case .timeout:
+                                                text = strongSelf.presentationData.strings.Login_NetworkError
+                                            case .invalidEmailToken:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                            case .emailNotAllowed:
+                                                text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
+                                        }
+                                        
+                                        if resetCode {
+                                            controller.resetCode()
+                                        }
+                                        
+                                        controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                     }
-                                    
-                                    if resetCode {
-                                        controller.resetCode()
-                                    }
-                                    
-                                    controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                 }
                             }
                         }))
@@ -421,6 +430,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                                 text = strongSelf.presentationData.strings.Login_CodeExpired
                                                 let account = strongSelf.account
                                                 let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                            case .invalidEmailToken:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                            case .invalidEmailAddress:
+                                                text = strongSelf.presentationData.strings.Login_InvalidEmailAddressError
                                         }
                                         
                                         if resetCode {
@@ -502,11 +515,14 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 authorizationController.performRequests()
             }
         }
-        controller.updateData(number: formatPhoneNumber(number), codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
+        controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }
     
     private var signInWithAppleSetup = false
+    private var appleSignInAllowed = false
+    private var currentEmail: String?
+    
     private func emailSetupController(number: String, appleSignInAllowed: Bool) -> AuthorizationSequenceEmailEntryController {
         var currentController: AuthorizationSequenceEmailEntryController?
         for c in self.viewControllers {
@@ -519,7 +535,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
         if let currentController = currentController {
             controller = currentController
         } else {
-            controller = AuthorizationSequenceEmailEntryController(presentationData: self.presentationData, back: { [weak self] in
+            controller = AuthorizationSequenceEmailEntryController(presentationData: self.presentationData, mode: .setup, back: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
@@ -536,9 +552,7 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             controller?.inProgress = true
             
             strongSelf.actionDisposable.set((sendLoginEmailCode(account: strongSelf.account, email: email)
-            |> deliverOnMainQueue).start(next: { result in
-                controller?.inProgress = false
-            }, error: { error in
+            |> deliverOnMainQueue).start(error: { error in
                 if let strongSelf = self, let controller = controller {
                     controller.inProgress = false
                     
@@ -550,9 +564,19 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             text = strongSelf.presentationData.strings.Login_UnknownError
                         case .timeout:
                             text = strongSelf.presentationData.strings.Login_NetworkError
+                        case .invalidEmail:
+                            text = strongSelf.presentationData.strings.Login_InvalidEmailError
+                        case .emailNotAllowed:
+                            text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
                     }
                     
                     controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                }
+            }, completed: { [weak self] in
+                controller?.inProgress = false
+                
+                if let strongSelf = self {
+                    strongSelf.currentEmail = email
                 }
             }))
         }
@@ -604,6 +628,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                 text = strongSelf.presentationData.strings.Login_InvalidCodeError
                             case .timeout:
                                 text = strongSelf.presentationData.strings.Login_NetworkError
+                            case .invalidEmailToken:
+                                text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                            case .emailNotAllowed:
+                                text = strongSelf.presentationData.strings.Login_EmailNotAllowedError
                         }
                         lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     }
@@ -619,7 +647,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         guard let strongSelf = self else {
                             return
                         }
-//                        lastController?.inProgress = false
                         switch result {
                             case let .signUp(data):
                                 let _ = beginSignUp(account: strongSelf.account, data: data).start()
@@ -629,8 +656,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }, error: { [weak self, weak lastController] error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let lastController = lastController {
-//                                controller.inProgress = false
-                                
                                 let text: String
                                 switch error {
                                     case .limitExceeded:
@@ -643,6 +668,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         text = strongSelf.presentationData.strings.Login_CodeExpired
                                         let account = strongSelf.account
                                         let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: account.testingEnvironment, masterDatacenterId: account.masterDatacenterId, contents: .empty)).start()
+                                    case .invalidEmailToken:
+                                        text = strongSelf.presentationData.strings.Login_InvalidEmailTokenError
+                                    case .invalidEmailAddress:
+                                        text = strongSelf.presentationData.strings.Login_InvalidEmailAddressError
                                 }
                                 
                                 lastController.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
@@ -1017,9 +1046,13 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }
                     controllers.append(self.phoneEntryController(countryCode: defaultCountryCode(), number: "", splashController: nil))
                     if case let .emailSetupRequired(appleSignInAllowed) = type {
+                        self.appleSignInAllowed = appleSignInAllowed
                         controllers.append(self.emailSetupController(number: number, appleSignInAllowed: appleSignInAllowed))
                     } else {
-                        controllers.append(self.codeEntryController(number: number, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
+                        if let _ = self.currentEmail {
+                            controllers.append(self.emailSetupController(number: number, appleSignInAllowed: self.appleSignInAllowed))
+                        }
+                        controllers.append(self.codeEntryController(number: number, email: self.currentEmail, type: type, nextType: nextType, timeout: timeout, termsOfService: nil))
                     }
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty)
                 case let .passwordEntry(hint, _, _, suggestReset, syncContacts):

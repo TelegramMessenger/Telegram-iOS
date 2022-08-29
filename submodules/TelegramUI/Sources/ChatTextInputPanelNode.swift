@@ -3467,6 +3467,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         }
         return nil
     }
+    
+    func frameForEmojiButton() -> CGRect? {
+        for (item, button) in self.accessoryItemButtons {
+            if case let .input(_, inputMode) = item, case .emoji = inputMode {
+                return button.frame.insetBy(dx: 0.0, dy: 6.0)
+            }
+        }
+        return nil
+    }
 
     func makeSnapshotForTransition() -> ChatMessageTransitionNode.Source.TextInput? {
         guard let backgroundImage = self.transparentTextInputBackgroundImage else {
