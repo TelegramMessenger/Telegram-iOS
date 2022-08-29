@@ -305,6 +305,27 @@ struct PremiumIntroConfiguration {
     }
 }
 
+private struct PremiumProduct: Equatable {
+    let option: PremiumPromoConfiguration.PremiumProductOption
+    let storeProduct: InAppPurchaseManager.Product
+    
+    var id: String {
+        return self.storeProduct.id
+    }
+    
+    var months: Int32 {
+        return self.option.months
+    }
+    
+    var price: String {
+        return self.storeProduct.price
+    }
+    
+    var pricePerMonth: String {
+        return self.storeProduct.pricePerMonth(Int(self.months))
+    }
+}
+
 final class PremiumOptionComponent: CombinedComponent {
     let title: String
     let subtitle: String
@@ -419,7 +440,7 @@ final class PremiumOptionComponent: CombinedComponent {
             )
                         
             var spacing: CGFloat = 0.0
-            var subtitleHeight: CGFloat = 0.0
+            var subtitleSize = CGSize()
             if !component.subtitle.isEmpty {
                 spacing = 2.0
                 
@@ -447,7 +468,7 @@ final class PremiumOptionComponent: CombinedComponent {
                 context.add(subtitle
                     .position(CGPoint(x: insets.left + subtitle.size.width / 2.0, y: insets.top + title.size.height + spacing + subtitle.size.height / 2.0))
                 )
-                subtitleHeight = subtitle.size.height
+                subtitleSize = subtitle.size
                 
                 insets.top -= 2.0
                 insets.bottom -= 2.0
@@ -512,10 +533,19 @@ final class PremiumOptionComponent: CombinedComponent {
                 .position(CGPoint(x: insets.left + title.size.width / 2.0, y: insets.top + title.size.height / 2.0))
             )
                
-            let size = CGSize(width: context.availableSize.width, height: insets.top + title.size.height + spacing + subtitleHeight + insets.bottom)
+            let size = CGSize(width: context.availableSize.width, height: insets.top + title.size.height + spacing + subtitleSize.height + insets.bottom)
+            
+            let distance = context.availableSize.width - insets.left - insets.right - label.size.width - subtitleSize.width
+            
+            let labelY: CGFloat
+            if distance > 8.0 {
+                labelY = size.height / 2.0
+            } else {
+                labelY = insets.top + title.size.height / 2.0
+            }
             
             context.add(label
-                .position(CGPoint(x: context.availableSize.width - insets.right - label.size.width / 2.0, y: size.height / 2.0))
+                .position(CGPoint(x: context.availableSize.width - insets.right - label.size.width / 2.0, y: labelY))
             )
             
             context.add(check
@@ -970,20 +1000,22 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     let source: PremiumSource
     let isPremium: Bool?
     let otherPeerName: String?
-    let products: [InAppPurchaseManager.Product]?
+    let products: [PremiumProduct]?
     let selectedProductId: String?
+    let promoConfiguration: PremiumPromoConfiguration?
     let present: (ViewController) -> Void
     let selectProduct: (String) -> Void
     let buy: () -> Void
     let updateIsFocused: (Bool) -> Void
     
-    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, otherPeerName: String?, products: [InAppPurchaseManager.Product]?, selectedProductId: String?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
+    init(context: AccountContext, source: PremiumSource, isPremium: Bool?, otherPeerName: String?, products: [PremiumProduct]?, selectedProductId: String?, promoConfiguration: PremiumPromoConfiguration?, present: @escaping (ViewController) -> Void, selectProduct: @escaping (String) -> Void, buy: @escaping () -> Void, updateIsFocused: @escaping (Bool) -> Void) {
         self.context = context
         self.source = source
         self.isPremium = isPremium
         self.otherPeerName = otherPeerName
         self.products = products
         self.selectedProductId = selectedProductId
+        self.promoConfiguration = promoConfiguration
         self.present = present
         self.selectProduct = selectProduct
         self.buy = buy
@@ -1009,6 +1041,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
         if lhs.selectedProductId != rhs.selectedProductId {
             return false
         }
+        if lhs.promoConfiguration != rhs.promoConfiguration {
+            return false
+        }
     
         return true
     }
@@ -1016,15 +1051,14 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
     
-        var products: [InAppPurchaseManager.Product]?
+        var products: [PremiumProduct]?
         var selectedProductId: String?
         
         var isPremium: Bool?
         
         private var disposable: Disposable?
         private(set) var configuration = PremiumIntroConfiguration.defaultValue
-        private(set) var promoConfiguration: PremiumPromoConfiguration?
-        
+    
         private var stickersDisposable: Disposable?
         private var preloadDisposableSet =  DisposableSet()
         
@@ -1042,13 +1076,11 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             super.init()
             
             self.disposable = (context.engine.data.subscribe(
-                TelegramEngine.EngineData.Item.Configuration.App(),
-                TelegramEngine.EngineData.Item.Configuration.PremiumPromo()
+                TelegramEngine.EngineData.Item.Configuration.App()
             )
-            |> deliverOnMainQueue).start(next: { [weak self] appConfiguration, promoConfiguration in
+            |> deliverOnMainQueue).start(next: { [weak self] appConfiguration in
                 if let strongSelf = self {
                     strongSelf.configuration = PremiumIntroConfiguration.with(appConfiguration: appConfiguration)
-                    strongSelf.promoConfiguration = promoConfiguration
                     strongSelf.updated(transition: .immediate)
                     
                     if let identifier = source.identifier {
@@ -1069,10 +1101,6 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                         if let data = jsonString.data(using: .utf8), let json = JSON(data: data) {
                             addAppLogEvent(postbox: strongSelf.context.account.postbox, type: "premium.promo_screen_show", data: json)
                         }
-                    }
-                    
-                    for (_, video) in promoConfiguration.videos {
-                        strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
                     }
                 }
             })
@@ -1253,7 +1281,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     
                     let shortestOptionPrice: (Int64, NSDecimalNumber)
                     if let product = products.first(where: { $0.id.hasSuffix(".monthly") }) {
-                        shortestOptionPrice = (Int64(Float(product.priceCurrencyAndAmount.amount)), product.priceValue)
+                        shortestOptionPrice = (Int64(Float(product.storeProduct.priceCurrencyAndAmount.amount)), product.storeProduct.priceValue)
                     } else {
                         shortestOptionPrice = (1, NSDecimalNumber(decimal: 1))
                     }
@@ -1261,16 +1289,17 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     var i = 0
                     for product in products {
                         let giftTitle: String
-                        let months: Float
+                        let months = product.months
+                        
                         if product.id.hasSuffix(".monthly") {
                             giftTitle = strings.Premium_Monthly
-                            months = 1
+                        } else if product.id.hasSuffix(".semiannual") {
+                            giftTitle = strings.Premium_Semiannual
                         } else {
                             giftTitle = strings.Premium_Annual
-                            months = 12
                         }
                                             
-                        let discountValue = Int((1.0 - Float(product.priceCurrencyAndAmount.amount) / months / Float(shortestOptionPrice.0)) * 100.0)
+                        let discountValue = Int((1.0 - Float(product.storeProduct.priceCurrencyAndAmount.amount) / Float(months) / Float(shortestOptionPrice.0)) * 100.0)
                         let discount: String
                         if discountValue > 0 {
                             discount = "-\(discountValue)%"
@@ -1278,12 +1307,12 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             discount = ""
                         }
                         
-                        let defaultPrice = product.defaultPrice(shortestOptionPrice.1, monthsCount: Int(months))
+                        let defaultPrice = product.storeProduct.defaultPrice(shortestOptionPrice.1, monthsCount: Int(months))
                         
                         var subtitle = ""
                         var pricePerMonth = product.price
                         if months > 1 {
-                            pricePerMonth = product.pricePerMonth(Int(months))
+                            pricePerMonth = product.storeProduct.pricePerMonth(Int(months))
                             
                             if discountValue > 0 {
                                 subtitle = "**\(defaultPrice)** \(product.price)"
@@ -1552,7 +1581,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 let termsString: MultilineTextComponent.TextContent
                 if isGiftView {
                     termsString = .plain(NSAttributedString())
-                } else if let promoConfiguration = context.state.promoConfiguration {
+                } else if let promoConfiguration = context.component.promoConfiguration {
                     let attributedString = stringWithAppliedEntities(promoConfiguration.status, entities: promoConfiguration.statusEntities, baseColor: termsTextColor, linkColor: environment.theme.list.itemAccentColor, baseFont: termsFont, linkFont: termsFont, boldFont: boldTermsFont, italicFont: italicTermsFont, boldItalicFont: boldItalicTermsFont, fixedFont: monospaceTermsFont, blockQuoteFont: termsFont, message: nil)
                     termsString = .plain(attributedString)
                 } else {
@@ -1723,8 +1752,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         
         var inProgress = false
         
-        var products: [InAppPurchaseManager.Product]?
-        var selectedProductId: String?
+        private(set) var promoConfiguration: PremiumPromoConfiguration?
+        
+        private(set) var products: [PremiumProduct]?
+        private(set) var selectedProductId: String?
         
         var isPremium: Bool?
         var otherPeerName: String?
@@ -1740,6 +1771,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
         private var disposable: Disposable?
         private var paymentDisposable = MetaDisposable()
         private var activationDisposable = MetaDisposable()
+        private var preloadDisposableSet = DisposableSet()
         
         var price: String? {
             return self.products?.first(where: { $0.id == self.selectedProductId })?.price
@@ -1792,20 +1824,37 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.disposable = combineLatest(
                 queue: Queue.mainQueue(),
                 availableProducts,
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.PremiumPromo()),
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
                 |> map { peer -> Bool in
                     return peer?.isPremium ?? false
                 },
                 otherPeerName
-            ).start(next: { [weak self] products, isPremium, otherPeerName in
+            ).start(next: { [weak self] availableProducts, promoConfiguration, isPremium, otherPeerName in
                 if let strongSelf = self {
+                    strongSelf.promoConfiguration = promoConfiguration
+                    
                     let hadProducts = strongSelf.products != nil
-                    strongSelf.products = products.filter { $0.isSubscription }
-                    if !hadProducts {
-                        strongSelf.selectedProductId = strongSelf.products?.last?.id
+                    
+                    var products: [PremiumProduct] = []
+                    for option in promoConfiguration.premiumProductOptions {
+                        if let product = availableProducts.first(where: { $0.id == option.storeProductId }), product.isSubscription {
+                            products.append(PremiumProduct(option: option, storeProduct: product))
+                        }
                     }
+                    
+                    strongSelf.products = products
                     strongSelf.isPremium = isPremium
                     strongSelf.otherPeerName = otherPeerName
+                    
+                    if !hadProducts {
+                        strongSelf.selectedProductId = strongSelf.products?.last?.id
+                        
+                        for (_, video) in promoConfiguration.videos {
+                            strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
+                        }
+                    }
+                    
                     strongSelf.updated(transition: .immediate)
                 }
             })
@@ -1833,6 +1882,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             self.paymentDisposable.dispose()
             self.activationDisposable.dispose()
             self.emojiFileDisposable?.dispose()
+            self.preloadDisposableSet.dispose()
         }
         
         func buy() {
@@ -1851,7 +1901,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             |> deliverOnMainQueue).start(next: { [weak self] available in
                 if let strongSelf = self {
                     if available {
-                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct)
+                        strongSelf.paymentDisposable.set((inAppPurchaseManager.buyProduct(premiumProduct.storeProduct)
                         |> deliverOnMainQueue).start(next: { [weak self] status in
                             if let strongSelf = self, case .purchased = status {
                                 strongSelf.activationDisposable.set((strongSelf.context.account.postbox.peerView(id: strongSelf.context.account.peerId)
@@ -2153,6 +2203,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         otherPeerName: state.otherPeerName,
                         products: state.products,
                         selectedProductId: state.selectedProductId,
+                        promoConfiguration: state.promoConfiguration,
                         present: context.component.present,
                         selectProduct: { [weak state] productId in
                             state?.selectProduct(productId)

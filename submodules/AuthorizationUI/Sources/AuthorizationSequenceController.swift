@@ -249,7 +249,9 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                                         controller.present(strongSelf.sharedContext.makeProxySettingsController(sharedContext: strongSelf.sharedContext, account: strongSelf.account), in: .window(.root), with: ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
                                     }))
                             }
-                            controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), in: .window(.root))
+                            (controller.navigationController as? NavigationController)?.presentOverlay(controller: standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: actions), inGlobal: true, blockInteraction: true)
+                            
+                            controller.dismissConfirmation()
                         }
                     }))
                 }
@@ -645,7 +647,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                         guard let strongSelf = self else {
                             return
                         }
-//                        lastController?.inProgress = false
                         switch result {
                             case let .signUp(data):
                                 let _ = beginSignUp(account: strongSelf.account, data: data).start()
@@ -655,8 +656,6 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     }, error: { [weak self, weak lastController] error in
                         Queue.mainQueue().async {
                             if let strongSelf = self, let lastController = lastController {
-//                                controller.inProgress = false
-                                
                                 let text: String
                                 switch error {
                                     case .limitExceeded:

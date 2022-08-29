@@ -539,8 +539,18 @@ private func privacyAndSecurityControllerEntries(
     return entries
 }
 
-class PrivacyAndSecurityControllerImpl: ItemListController {
-
+class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
+    var authorizationCompletion: (ASAuthorizationCredential) -> Void = { _ in }
+    
+    @available(iOS 13.0, *)
+    public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
+        self.authorizationCompletion(authorization)
+    }
+    
+    @available(iOS 13.0, *)
+    public func presentationAnchor(for controller: ASAuthorizationController) -> ASPresentationAnchor {
+        return self.view.window!
+    }
 }
 
 public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil, loginEmailPattern: Signal<String?, NoError>? = nil) -> ViewController {
@@ -1083,6 +1093,27 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, openUrl: { _ in }, back: {
                     dismissCodeControllerImpl?()
                 })
+                
+                let emailChangeCompletion = { [weak codeController] in
+                    codeController?.animateSuccess()
+                    Queue.mainQueue().after(0.75) {
+                        if let navigationController = getNavigationControllerImpl?() {
+                            let controllers = navigationController.viewControllers.filter { controller in
+                                if controller is AuthorizationSequenceEmailEntryController || controller is AuthorizationSequenceCodeEntryController {
+                                    return false
+                                } else {
+                                    return true
+                                }
+                            }
+                            navigationController.setViewControllers(controllers, animated: true)
+                            
+                            navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                                return false
+                            }))
+                        }
+                    }
+                }
+                
                 codeController.loginWithCode = { [weak codeController] code in
                     actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .emailCode(code))
                     |> deliverOnMainQueue).start(error: { error in
@@ -1120,39 +1151,57 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                                 presentControllerImpl?(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]))
                             }
                         }
-                    }, completed: { [weak codeController] in
-                        codeController?.animateSuccess()
-                        Queue.mainQueue().after(0.75) {
-                            if let navigationController = getNavigationControllerImpl?() {
-                                let controllers = navigationController.viewControllers.filter { controller in
-                                    if controller is AuthorizationSequenceEmailEntryController || controller is AuthorizationSequenceCodeEntryController {
-                                        return false
-                                    } else {
-                                        return true
-                                    }
-                                }
-                                navigationController.setViewControllers(controllers, animated: true)
-                                
-                                navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
-                                    return false
-                                }))
-                            }
-                        }
+                    }, completed: {
+                       emailChangeCompletion()
                     }))
                 }
-                codeController.signInWithApple = {
-//                    if #available(iOS 13.0, *) {
-//                        let appleIdProvider = ASAuthorizationAppleIDProvider()
-//                        let passwordProvider = ASAuthorizationPasswordProvider()
-//                        let request = appleIdProvider.createRequest()
-//
-//                        let passwordRequest = passwordProvider.createRequest()
-//
-//                        let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
-//                        authorizationController.delegate = strongSelf
-//                        authorizationController.presentationContextProvider = strongSelf
-//                        authorizationController.performRequests()
-//                    }
+                codeController.signInWithApple = { [weak controller, weak codeController] in
+                    if #available(iOS 13.0, *) {
+                        let appleIdProvider = ASAuthorizationAppleIDProvider()
+                        let passwordProvider = ASAuthorizationPasswordProvider()
+                        let request = appleIdProvider.createRequest()
+
+                        let passwordRequest = passwordProvider.createRequest()
+
+                        let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
+                        authorizationController.delegate = controller
+                        authorizationController.presentationContextProvider = controller
+                        authorizationController.performRequests()
+                        
+                        controller.authorizationCompletion = { [weak controller, weak codeController] credentials in
+                            switch authorization.credential {
+                                case let appleIdCredential as ASAuthorizationAppleIDCredential:
+                                    guard let tokenData = appleIdCredential.identityToken, let token = String(data: tokenData, encoding: .utf8) else {
+                                        codeController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                        return
+                                    }
+                                    actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .appleToken(token))
+                                    |> deliverOnMainQueue).start(error: { error in
+                                        let text: String
+                                        switch error {
+                                            case .limitExceeded:
+                                                text = presentationData.strings.Login_CodeFloodError
+                                            case .generic, .codeExpired:
+                                                text = presentationData.strings.Login_UnknownError
+                                            case .invalidCode:
+                                                text = presentationData.strings.Login_InvalidCodeError
+                                            case .timeout:
+                                                text = presentationData.strings.Login_NetworkError
+                                            case .invalidEmailToken:
+                                                text = presentationData.strings.Login_InvalidEmailTokenError
+                                            case .emailNotAllowed:
+                                                text = presentationData.strings.Login_EmailNotAllowedError
+                                        }
+                                        codeController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
+                                    }, completed: { [weak controller] in
+                                        controller?.authorizationCompletion = nil
+                                        emailChangeCompletion()
+                                    }))
+                                default:
+                                    break
+                            }
+                        }
+                    }
                 }
                 codeController.updateData(number: "", email: email, codeType: .email(emailPattern: "", length: data.length, nextPhoneLoginDate: nil, appleSignInAllowed: false, setup: true), nextType: nil, timeout: nil, termsOfService: nil)
                 pushControllerImpl?(codeController, true)

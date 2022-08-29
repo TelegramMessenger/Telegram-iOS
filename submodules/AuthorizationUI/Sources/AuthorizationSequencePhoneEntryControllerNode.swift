@@ -227,7 +227,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneBackground.frame = CGRect(origin: CGPoint(x: 0.0, y: size.height - 57.0), size: CGSize(width: size.width - inset, height: 57.0))
         
         let countryCodeFrame = CGRect(origin: CGPoint(x: 18.0, y: size.height - 58.0), size: CGSize(width: 71.0, height: 57.0))
-        let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 58.0), size: CGSize(width: size.width - 96.0 - 8.0, height: 57.0))
+        let numberFrame = CGRect(origin: CGPoint(x: 107.0, y: size.height - 58.0), size: CGSize(width: size.width - 96.0 - 8.0 - 24.0, height: 57.0))
         let placeholderFrame = numberFrame.offsetBy(dx: 0.0, dy: 17.0 - UIScreenPixel)
         
         let phoneInputFrame = countryCodeFrame.union(numberFrame)
@@ -360,7 +360,6 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroPhone"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-        self.animationNode.visibility = true
         
         self.managedAnimationNode = ManagedPhoneAnimationNode()
         self.managedAnimationNode.isHidden = true
@@ -479,9 +478,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     
     func animateIn(buttonFrame: CGRect, buttonTitle: String, animationSnapshot: UIView, textSnapshot: UIView) {
         self.proceedNode.animateTitle(to: self.strings.Login_Continue)
-        
-        let duration: Double = 0.3
-        
+                
         self.animationSnapshotView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak self] _ in
             self?.animationSnapshotView?.removeFromSuperview()
             self?.animationSnapshotView = nil
@@ -507,7 +504,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
 
         for node in nodes {
             node.alpha = 1.0
-            node.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            node.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
     }
     
@@ -518,10 +515,12 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         var insets = layout.insets(options: [])
         insets.top = layout.statusBarHeight ?? 20.0
-        
         if let inputHeight = layout.inputHeight, !inputHeight.isZero {
             insets.bottom = max(inputHeight, insets.bottom)
         }
+        
+        let titleInset: CGFloat = layout.size.width > 320.0 ? 18.0 : 0.0
+        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
         
         self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         
@@ -534,11 +533,23 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         let proceedSize = CGSize(width: layout.size.width - inset * 2.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = [
-            AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
-            AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
+            AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
             AuthorizationLayoutItem(node: self.phoneAndCountryNode, size: CGSize(width: layout.size.width, height: 115.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)),
         ]
+        
+        if layout.size.width > 320.0 {
+            items.insert(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)), at: 0)
+            self.proceedNode.isHidden = false
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+        } else {
+            insets.top = navigationBarHeight
+            self.proceedNode.isHidden = true
+            self.animationNode.isHidden = true
+            self.managedAnimationNode.isHidden = true
+        }
+        
         let contactSyncSize = self.contactSyncNode.updateLayout(width: layout.size.width)
         if self.hasOtherAccounts {
             self.contactSyncNode.isHidden = false
@@ -558,7 +569,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         self.animationNode.updateLayout(size: animationSize)
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
         
         transition.updateFrame(node: self.managedAnimationNode, frame: self.animationNode.frame)
     }
@@ -696,7 +707,12 @@ final class PhoneConfirmationController: ViewController {
     
     var proceed: () -> Void = {}
     
-    class Node: ASDisplayNode {        
+    class Node: ASDisplayNode {
+        private let theme: PresentationTheme
+        
+        private let code: String
+        private let number: String
+        
         private let dimNode: ASDisplayNode
         private let backgroundNode: ASDisplayNode
         
@@ -714,7 +730,14 @@ final class PhoneConfirmationController: ViewController {
         var proceed: () -> Void = {}
         var cancel: () -> Void = {}
         
+        private var validLayout: ContainerViewLayout?
+        
         init(theme: PresentationTheme, strings: PresentationStrings, code: String, number: String) {
+            self.theme = theme
+            
+            self.code = code
+            self.number = number
+            
             self.dimNode = ASDisplayNode()
             self.dimNode.backgroundColor = UIColor(white: 0.0, alpha: 0.4)
             
@@ -752,7 +775,6 @@ final class PhoneConfirmationController: ViewController {
             self.codeTargetNode = ImmediateTextNode()
             self.codeTargetNode.displaysAsynchronously = false
             self.codeTargetNode.attributedText = NSAttributedString(string: code, font: largeFont, textColor: theme.list.itemPrimaryTextColor)
-            
             
             self.phoneTargetNode = ImmediateTextNode()
             self.phoneTargetNode.displaysAsynchronously = false
@@ -801,6 +823,9 @@ final class PhoneConfirmationController: ViewController {
         }
         
         func animateIn(codeNode: ASDisplayNode, numberNode: ASDisplayNode, buttonNode: ASDisplayNode) {
+            guard let layout = self.validLayout else {
+                return
+            }
             let codeFrame = codeNode.convert(codeNode.bounds, to: nil)
             let numberFrame = numberNode.convert(numberNode.bounds, to: nil)
             let buttonFrame = buttonNode.convert(buttonNode.bounds, to: nil)
@@ -811,43 +836,45 @@ final class PhoneConfirmationController: ViewController {
             
             self.dimNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             
-            let codeSize = self.codeSourceNode.updateLayout(self.frame.size)
+            let duration: Double = 0.25
+            
+            let codeSize = self.codeSourceNode.updateLayout(layout.size)
             self.codeSourceNode.frame = CGRect(origin: CGPoint(x: codeFrame.midX - codeSize.width / 2.0, y: codeFrame.midY - codeSize.height / 2.0), size: codeSize)
             
-            let numberSize = self.phoneSourceNode.updateLayout(self.frame.size)
+            let numberSize = self.phoneSourceNode.updateLayout(layout.size)
             self.phoneSourceNode.frame = CGRect(origin: CGPoint(x: numberFrame.minX, y: numberFrame.midY - numberSize.height / 2.0), size: numberSize)
             
             let targetScale = codeSize.height / self.codeTargetNode.frame.height
             let sourceScale = self.codeTargetNode.frame.height / codeSize.height
             
-            self.codeSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: 0.3)
-            self.codeSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            self.codeSourceNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: 0.3)
+            self.codeSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: duration)
+            self.codeSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            self.codeSourceNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: duration)
             
-            self.phoneSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: 0.3)
-            self.phoneSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            self.phoneSourceNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: 0.3)
+            self.phoneSourceNode.layer.animateScale(from: 1.0, to: sourceScale, duration: duration)
+            self.phoneSourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            self.phoneSourceNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: duration)
             
-            self.codeTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: 0.3)
-            self.codeTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.codeTargetNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: 0.3)
+            self.codeTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: duration)
+            self.codeTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.codeTargetNode.layer.animatePosition(from: self.codeSourceNode.position, to: self.codeTargetNode.position, duration: duration)
             
-            self.phoneTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: 0.3)
-            self.phoneTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.phoneTargetNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: 0.3)
+            self.phoneTargetNode.layer.animateScale(from: targetScale, to: 1.0, duration: duration)
+            self.phoneTargetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.phoneTargetNode.layer.animatePosition(from: self.phoneSourceNode.position, to: self.phoneTargetNode.position, duration: duration)
             
             self.backgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
-            self.backgroundNode.layer.animateFrame(from: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), to: self.backgroundNode.frame, duration: 0.3)
+            self.backgroundNode.layer.animateFrame(from: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), to: self.backgroundNode.frame, duration: duration)
             
-            self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.textNode.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3)
-            self.textNode.layer.animatePosition(from: CGPoint(x: -100.0, y: -45.0), to: CGPoint(), duration: 0.3, additive: true)
+            self.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.textNode.layer.animateScale(from: 0.5, to: 1.0, duration: duration)
+            self.textNode.layer.animatePosition(from: CGPoint(x: -100.0, y: -45.0), to: CGPoint(), duration: duration, additive: true)
             
-            self.cancelButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.cancelButton.layer.animateScale(from: 0.5, to: 1.0, duration: 0.3)
-            self.cancelButton.layer.animatePosition(from: CGPoint(x: -100.0, y: -70.0), to: CGPoint(), duration: 0.3, additive: true)
+            self.cancelButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.cancelButton.layer.animateScale(from: 0.5, to: 1.0, duration: duration)
+            self.cancelButton.layer.animatePosition(from: CGPoint(x: -100.0, y: -70.0), to: CGPoint(), duration: duration, additive: true)
             
-            self.proceedNode.layer.animatePosition(from: buttonFrame.center, to: self.proceedNode.position, duration: 0.3)
+            self.proceedNode.layer.animatePosition(from: buttonFrame.center, to: self.proceedNode.position, duration: duration)
         }
         
         func animateOut(codeNode: ASDisplayNode, numberNode: ASDisplayNode, buttonNode: ASDisplayNode, completion: @escaping () -> Void) {
@@ -857,6 +884,8 @@ final class PhoneConfirmationController: ViewController {
             
             self.dimNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
             
+            let duration: Double = 0.25
+            
             let codeSize = self.codeSourceNode.updateLayout(self.frame.size)
             self.codeSourceNode.frame = CGRect(origin: CGPoint(x: codeFrame.midX - codeSize.width / 2.0, y: codeFrame.midY - codeSize.height / 2.0), size: codeSize)
             
@@ -866,45 +895,48 @@ final class PhoneConfirmationController: ViewController {
             let targetScale = codeSize.height / self.codeTargetNode.frame.height
             let sourceScale = self.codeTargetNode.frame.height / codeSize.height
             
-            self.codeSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3)
-            self.codeSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.codeSourceNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: 0.3)
+            self.codeSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: duration)
+            self.codeSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.codeSourceNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: duration)
             
-            self.phoneSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: 0.3)
-            self.phoneSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-            self.phoneSourceNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: 0.3)
+            self.phoneSourceNode.layer.animateScale(from: sourceScale, to: 1.0, duration: duration)
+            self.phoneSourceNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.phoneSourceNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: duration)
             
-            self.codeTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3)
-            self.codeTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false)
-            self.codeTargetNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: 0.3)
+            self.codeTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: duration)
+            self.codeTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
+            self.codeTargetNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: duration)
             
-            Queue.mainQueue().after(0.25) {
+            Queue.mainQueue().after(0.23) {
                 codeNode.isHidden = false
                 numberNode.isHidden = false
                 buttonNode.isHidden = false
             }
             
-            self.phoneTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: 0.3)
-            self.phoneTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { _ in
+            self.phoneTargetNode.layer.animateScale(from: 1.0, to: targetScale, duration: duration)
+            self.phoneTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false, completion: { _ in
                 completion()
             })
-            self.phoneTargetNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: 0.3)
+            self.phoneTargetNode.layer.animatePosition(from: self.phoneTargetNode.position, to: self.phoneSourceNode.position, duration: duration)
             
             self.backgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, delay: 0.1, removeOnCompletion: false)
-            self.backgroundNode.layer.animateFrame(from: self.backgroundNode.frame, to: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), duration: 0.3)
+            self.backgroundNode.layer.animateFrame(from: self.backgroundNode.frame, to: CGRect(origin: CGPoint(x: 14.0, y: codeFrame.minY), size: CGSize(width: self.backgroundNode.frame.width - 12.0, height: buttonFrame.maxY + 18.0 - codeFrame.minY)), duration: duration)
                         
             self.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.textNode.layer.animateScale(from: 1.0, to: 0.5, duration: 0.3, removeOnCompletion: false)
-            self.textNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -45.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            self.textNode.layer.animateScale(from: 1.0, to: 0.5, duration: duration, removeOnCompletion: false)
+            self.textNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -45.0), duration: duration, removeOnCompletion: false, additive: true)
             
             self.cancelButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
-            self.cancelButton.layer.animateScale(from: 1.0, to: 0.5, duration: 0.3, removeOnCompletion: false)
-            self.cancelButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -70.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            self.cancelButton.layer.animateScale(from: 1.0, to: 0.5, duration: duration, removeOnCompletion: false)
+            self.cancelButton.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -100.0, y: -70.0), duration: duration, removeOnCompletion: false, additive: true)
             
-            self.proceedNode.layer.animatePosition(from: self.proceedNode.position, to: buttonFrame.center, duration: 0.3, removeOnCompletion: false)
+            self.proceedNode.layer.animatePosition(from: self.proceedNode.position, to: buttonFrame.center, duration: duration, removeOnCompletion: false)
         }
         
         func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+            let hadLayout = self.validLayout != nil
+            self.validLayout = layout
+            
             let sideInset: CGFloat = 8.0
             let innerInset: CGFloat = 18.0
             
@@ -913,16 +945,33 @@ final class PhoneConfirmationController: ViewController {
             let backgroundSize = CGSize(width: layout.size.width - sideInset * 2.0, height: 243.0)
             let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - backgroundSize.width) / 2.0), y: layout.size.height - backgroundSize.height - 260.0), size: backgroundSize)
             transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+              
+            let maxWidth = layout.size.width - 20.0
+            if !hadLayout {
+                var fontSize = 34.0
+                if layout.size.width < 375.0 {
+                    fontSize = 30.0
+                }
+              
+                let largeFont = Font.with(size: fontSize, design: .regular, weight: .bold, traits: [.monospacedNumbers])
+                
+                self.codeTargetNode.attributedText = NSAttributedString(string: self.code, font: largeFont, textColor: self.theme.list.itemPrimaryTextColor)
+                let targetString = NSMutableAttributedString(string: self.number, font: largeFont, textColor: self.theme.list.itemPrimaryTextColor)
+                targetString.addAttribute(NSAttributedString.Key.kern, value: 1.6, range: NSRange(location: 0, length: targetString.length))
+                self.phoneTargetNode.attributedText = targetString
+            }
             
-            let codeSize = self.codeTargetNode.updateLayout(backgroundSize)
-            let numberSize = self.phoneTargetNode.updateLayout(backgroundSize)
+            let spacing: CGFloat = 10.0
             
-            let totalWidth = codeSize.width + numberSize.width + 10.0
+            let codeSize = self.codeTargetNode.updateLayout(CGSize(width: maxWidth, height: .greatestFiniteMagnitude))
+            let numberSize = self.phoneTargetNode.updateLayout(CGSize(width: maxWidth - codeSize.width - spacing, height: .greatestFiniteMagnitude))
+            
+            let totalWidth = codeSize.width + numberSize.width + spacing
             
             let codeFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - totalWidth) / 2.0), y: 30.0), size: codeSize)
             transition.updateFrame(node: self.codeTargetNode, frame: codeFrame.offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
             
-            let numberFrame = CGRect(origin: CGPoint(x: codeFrame.maxX + 10.0, y: 30.0), size: numberSize)
+            let numberFrame = CGRect(origin: CGPoint(x: codeFrame.maxX + spacing, y: 30.0), size: numberSize)
             transition.updateFrame(node: self.phoneTargetNode, frame: numberFrame.offsetBy(dx: backgroundFrame.minX, dy: backgroundFrame.minY))
             
             let textSize = self.textNode.updateLayout(backgroundSize)
@@ -970,6 +1019,10 @@ final class PhoneConfirmationController: ViewController {
                 })
             }
         }
+    }
+    
+    func dismissAnimated() {
+        self.controllerNode.cancel()
     }
     
     func transitionOut() {
