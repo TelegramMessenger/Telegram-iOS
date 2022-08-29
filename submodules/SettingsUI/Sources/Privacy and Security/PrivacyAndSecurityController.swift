@@ -1168,7 +1168,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         authorizationController.presentationContextProvider = controller
                         authorizationController.performRequests()
                         
-                        controller.authorizationCompletion = { [weak controller, weak codeController] credentials in
+                        controller?.authorizationCompletion = { [weak controller, weak codeController] credentials in
                             switch authorization.credential {
                                 case let appleIdCredential as ASAuthorizationAppleIDCredential:
                                     guard let tokenData = appleIdCredential.identityToken, let token = String(data: tokenData, encoding: .utf8) else {
