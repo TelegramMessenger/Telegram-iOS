@@ -551,6 +551,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             
             controller?.inProgress = true
             
+            strongSelf.currentEmail = email
+            
             strongSelf.actionDisposable.set((sendLoginEmailCode(account: strongSelf.account, email: email)
             |> deliverOnMainQueue).start(error: { error in
                 if let strongSelf = self, let controller = controller {
@@ -572,12 +574,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     
                     controller.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: strongSelf.presentationData), title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                 }
-            }, completed: { [weak self] in
+            }, completed: {
                 controller?.inProgress = false
-                
-                if let strongSelf = self {
-                    strongSelf.currentEmail = email
-                }
             }))
         }
         controller.signInWithApple = { [weak self] in
