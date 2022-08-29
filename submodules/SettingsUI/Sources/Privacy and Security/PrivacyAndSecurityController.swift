@@ -540,11 +540,11 @@ private func privacyAndSecurityControllerEntries(
 }
 
 class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationControllerDelegate, ASAuthorizationControllerPresentationContextProviding {
-    var authorizationCompletion: (ASAuthorizationCredential) -> Void = { _ in }
+    var authorizationCompletion: ((Any) -> Void)?
     
     @available(iOS 13.0, *)
     public func authorizationController(controller: ASAuthorizationController, didCompleteWithAuthorization authorization: ASAuthorization) {
-        self.authorizationCompletion(authorization)
+        self.authorizationCompletion?(authorization.credential)
     }
     
     @available(iOS 13.0, *)
@@ -1168,8 +1168,11 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                         authorizationController.presentationContextProvider = controller
                         authorizationController.performRequests()
                         
-                        controller?.authorizationCompletion = { [weak controller, weak codeController] credentials in
-                            switch authorization.credential {
+                        controller?.authorizationCompletion = { [weak controller, weak codeController] credential in
+                            guard let credential = credential as? ASAuthorizationCredential else {
+                                return
+                            }
+                            switch credential {
                                 case let appleIdCredential as ASAuthorizationAppleIDCredential:
                                     guard let tokenData = appleIdCredential.identityToken, let token = String(data: tokenData, encoding: .utf8) else {
                                         codeController?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
