@@ -97,7 +97,7 @@ public final class ReactionIconView: PortalSourceView {
             case .builtin:
                 iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
             case .custom:
-                iconSize = size
+                iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
             }
             
             transition.updateFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
@@ -125,9 +125,9 @@ public final class ReactionIconView: PortalSourceView {
         let iconSize: CGSize
         switch reaction {
         case .builtin:
-            iconSize = CGSize(width: floor(size.width * 1.5), height: floor(size.height * 1.5))
+            iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
         case .custom:
-            iconSize = size
+            iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
         }
         
         let animationLayer = InlineStickerItemLayer(
@@ -653,8 +653,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     public var activateAfterCompletion: Bool = false {
         didSet {
             if self.activateAfterCompletion {
-                self.contextGesture?.activatedAfterCompletion = { [weak self] in
-                    self?.pressed()
+                self.contextGesture?.activatedAfterCompletion = { [weak self] point in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if strongSelf.buttonNode.bounds.contains(point) {
+                        strongSelf.pressed()
+                    }
                 }
             } else {
                 self.contextGesture?.activatedAfterCompletion = nil
@@ -692,8 +697,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         }
         
         if self.activateAfterCompletion {
-            self.contextGesture?.activatedAfterCompletion = { [weak self] in
-                self?.pressed()
+            self.contextGesture?.activatedAfterCompletion = { [weak self] point in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.buttonNode.bounds.contains(point) {
+                    strongSelf.pressed()
+                }
             }
         }
     }

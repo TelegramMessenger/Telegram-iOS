@@ -211,12 +211,14 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
     case let channel as TelegramChannel:
         if case .broadcast = channel.info {
             return false
-        } else if let participantCount = participantCount {
-            if participantCount > maxParticipantCount {
+        } else {
+            if let participantCount = participantCount {
+                if participantCount > maxParticipantCount {
+                    return false
+                }
+            } else {
                 return false
             }
-        } else {
-            return false
         }
     case let group as TelegramGroup:
         if group.participantCount > maxParticipantCount {
@@ -1571,19 +1573,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 reactionCount = 0
             }
             
-            var readStats = readStats
+            /*var readStats = readStats
             if !canViewStats {
                 readStats = MessageReadStats(reactionCount: 0, peers: [])
-            }
-            
-            let reactionCount = readStats?.reactionCount ?? 0
+            }*/
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
                     actions.insert(.separator, at: 0)
                 }
 
-                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
+                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
                             controllerInteraction.openPeer(stats.peers[0].id, .default, nil, false, nil)
@@ -2162,12 +2162,14 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
 final class ChatReadReportContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let message: Message
+    fileprivate let hasReadReports: Bool
     fileprivate let stats: MessageReadStats?
     fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void
 
-    init(context: AccountContext, message: Message, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void) {
+    init(context: AccountContext, message: Message, hasReadReports: Bool, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void) {
         self.context = context
         self.message = message
+        self.hasReadReports = hasReadReports
         self.stats = stats
         self.action = action
     }
@@ -2380,7 +2382,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
     private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
 
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
-        self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty
+        self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
 
         guard let (calculatedWidth, size) = self.validLayout else {
             return

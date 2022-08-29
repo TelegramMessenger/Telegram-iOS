@@ -7,6 +7,7 @@ import TextSelectionNode
 import TelegramCore
 import SwiftSignalKit
 import ReactionSelectionNode
+import UndoUI
 
 private extension ContextControllerTakeViewInfo.ContainingItem {
     var contentRect: CGRect {
@@ -189,6 +190,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     private let contentRectDebugNode: ASDisplayNode
     private let actionsStackNode: ContextControllerActionsStackNode
     
+    private var validLayout: ContainerViewLayout?
     private var animatingOutState: AnimatingOutState?
     
     private var strings: PresentationStrings?
@@ -200,6 +202,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     }
     
     private var overscrollMode: OverscrollMode = .unrestricted
+    
+    private weak var currentUndoController: ViewController?
     
     init(
         getController: @escaping () -> ContextControllerProtocol?,
@@ -437,6 +441,8 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         transition: ContainedViewLayoutTransition,
         stateTransition: ContextControllerPresentationNodeStateTransition?
     ) {
+        self.validLayout = layout
+        
         let contentActionsSpacing: CGFloat = 7.0
         let actionsEdgeInset: CGFloat
         let actionsSideInset: CGFloat = 6.0
@@ -540,11 +546,37 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     }
                     controller.reactionSelected?(reaction, isLarge)
                 }
-                reactionContextNode.premiumReactionsSelected = { [weak self] in
-                    guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
+                let context = reactionItems.context
+                reactionContextNode.premiumReactionsSelected = { [weak self] file in
+                    guard let strongSelf = self, let validLayout = strongSelf.validLayout, let controller = strongSelf.getController() as? ContextController else {
                         return
                     }
-                    controller.premiumReactionsSelected?()
+                    
+                    if let file = file, let reactionContextNode = strongSelf.reactionContextNode {
+                        let position: UndoOverlayController.Position
+                        let insets = validLayout.insets(options: .statusBar)
+                        if reactionContextNode.hasSpaceInTheBottom(insets: insets, height: 100.0) {
+                            position = .bottom
+                        } else {
+                            position = .top
+                        }
+                        
+                        var animateInAsReplacement = false
+                        if let currentUndoController = strongSelf.currentUndoController {
+                            currentUndoController.dismiss()
+                            animateInAsReplacement = true
+                        }
+                        
+                        //TODO:localize
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let undoController = UndoOverlayController(presentationData: presentationData, content: .sticker(context: context, file: file, title: nil, text: "Subscribe to **Telegram Premium** to unlock this reaction.", undoText: "More", customAction: { [weak controller] in
+                            controller?.premiumReactionsSelected?()
+                        }), elevatedLayout: false, position: position, animateInAsReplacement: animateInAsReplacement, action: { _ in true })
+                        strongSelf.currentUndoController = undoController
+                        controller.present(undoController, in: .current)
+                    } else {
+                        controller.premiumReactionsSelected?()
+                    }
                 }
             }
             contentTopInset += reactionContextNode.contentHeight + 18.0

@@ -17,6 +17,7 @@ import Lottie
 import EmojiTextAttachmentView
 import TextFormat
 import AppBundle
+import GZip
 
 public final class EmojiStatusSelectionComponent: Component {
     public typealias EnvironmentType = Empty
@@ -105,7 +106,7 @@ public final class EmojiStatusSelectionComponent: Component {
             let topPanelHeight: CGFloat = 42.0
             
             let keyboardSize = self.keyboardView.update(
-                transition: transition,
+                transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
@@ -335,7 +336,7 @@ public final class EmojiStatusSelectionController: ViewController {
             self.cloudShadowLayer1.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
         }
         
-        func animateOutToStatus(groupId: AnyHashable, item: EmojiPagerContentComponent.Item, destinationView: UIView) {
+        func animateOutToStatus(groupId: AnyHashable, item: EmojiPagerContentComponent.Item, customEffectFile: String?, destinationView: UIView) {
             guard let emojiView = self.componentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View, let sourceLayer = emojiView.layerForItem( groupId: groupId, item: item) else {
                 self.controller?.dismiss()
                 return
@@ -364,7 +365,15 @@ public final class EmojiStatusSelectionController: ViewController {
             }
             
             var effectView: AnimationView?
-            if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            
+            if let customEffectFile = customEffectFile, let data = try? Data(contentsOf: URL(fileURLWithPath: customEffectFile)), let composition = try? Animation.from(data: TGGUnzipData(data, 2 * 1024 * 1024) ?? data) {
+                let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
+                view.animationSpeed = 1.0
+                view.backgroundColor = nil
+                view.isOpaque = false
+                
+                effectView = view
+            } else if let itemFile = item.itemFile, let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
                 let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = 1.0
                 view.backgroundColor = nil
@@ -661,7 +670,52 @@ public final class EmojiStatusSelectionController: ViewController {
             }
             
             if let item = item, let destinationView = controller.destinationItemView() {
-                self.animateOutToStatus(groupId: groupId, item: item, destinationView: destinationView)
+                var emojiString: String?
+                if let itemFile = item.itemFile {
+                    attributeLoop: for attribute in itemFile.attributes {
+                        switch attribute {
+                        case let .CustomEmoji(_, alt, _):
+                            emojiString = alt
+                            break attributeLoop
+                        default:
+                            break
+                        }
+                    }
+                }
+                
+                let context = self.context
+                let _ = (context.engine.stickers.availableReactions()
+                |> take(1)
+                |> mapToSignal { availableReactions -> Signal<String?, NoError> in
+                    guard let emojiString = emojiString, let availableReactions = availableReactions else {
+                        return .single(nil)
+                    }
+                    for reaction in availableReactions.reactions {
+                        if case let .builtin(value) = reaction.value, value == emojiString {
+                            if let aroundAnimation = reaction.aroundAnimation {
+                                return context.account.postbox.mediaBox.resourceData(aroundAnimation.resource)
+                                |> take(1)
+                                |> map { data -> String? in
+                                    if data.complete {
+                                        return data.path
+                                    } else {
+                                        return nil
+                                    }
+                                }
+                            } else {
+                                return .single(nil)
+                            }
+                        }
+                    }
+                    return .single(nil)
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] filePath in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    strongSelf.animateOutToStatus(groupId: groupId, item: item, customEffectFile: filePath, destinationView: destinationView)
+                })
             } else {
                 controller.dismiss()
             }

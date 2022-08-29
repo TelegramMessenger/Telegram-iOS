@@ -489,7 +489,7 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                 let duration: Double = frameSource.frameRate > 0 ? Double(frameSource.frameCount) / Double(frameSource.frameRate) : 0
                 let frameRate = frameSource.frameRate
                 
-                let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
+                let timerEvent: () -> Void = {
                     let frame = frameQueue.syncWith { frameQueue in
                         return frameQueue.take(draw: true)
                     }
@@ -544,8 +544,13 @@ public final class DefaultAnimatedStickerNodeImpl: ASDisplayNode, AnimatedSticke
                     frameQueue.with { frameQueue in
                         frameQueue.generateFramesIfNeeded()
                     }
+                }
+                
+                let timer = SwiftSignalKit.Timer(timeout: 1.0 / Double(frameRate), repeat: !firstFrame, completion: {
+                    timerEvent()
                 }, queue: queue)
                 let _ = timerHolder.swap(timer)
+                timerEvent()
                 timer.start()
             }
         } else {

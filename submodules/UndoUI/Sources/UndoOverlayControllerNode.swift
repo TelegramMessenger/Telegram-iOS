@@ -20,6 +20,7 @@ import AccountContext
 
 final class UndoOverlayControllerNode: ViewControllerTracingNode {
     private let elevatedLayout: Bool
+    private let placementPosition: UndoOverlayController.Position
     private var statusNode: RadialStatusNode?
     private let timerTextNode: ImmediateTextNode
     private let avatarNode: AvatarNode?
@@ -56,8 +57,9 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     private var fetchResourceDisposable: Disposable?
     
-    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
+    init(presentationData: PresentationData, content: UndoOverlayContent, elevatedLayout: Bool, placementPosition: UndoOverlayController.Position, action: @escaping (UndoOverlayAction) -> Bool, dismiss: @escaping () -> Void) {
         self.elevatedLayout = elevatedLayout
+        self.placementPosition = placementPosition
         self.content = content
         
         self.action = action
@@ -1099,12 +1101,23 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         contentHeight = max(49.0, contentHeight)
         
         var insets = layout.insets(options: [.input])
-        if self.elevatedLayout {
-            insets.bottom += 49.0
+        switch self.placementPosition {
+        case .top:
+            insets.top = layout.statusBarHeight ?? 0.0
+        case .bottom:
+            if self.elevatedLayout {
+                insets.bottom += 49.0
+            }
         }
         
-        let panelFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
-        let panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        var panelFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        var panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
+        
+        if case .top = self.placementPosition {
+            panelFrame.origin.y = insets.top
+            panelWrapperFrame.origin.y = insets.top
+        }
+        
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
         transition.updateFrame(node: self.panelWrapperNode, frame: panelWrapperFrame)
         self.effectView.frame = CGRect(x: 0.0, y: 0.0, width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight)
