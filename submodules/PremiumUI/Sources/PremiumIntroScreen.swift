@@ -2071,7 +2071,9 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             )
             
             let titleString: String
-            if case .giftTerms = context.component.source {
+            if case .emojiStatus = context.component.source {
+                titleString = environment.strings.Premium_Title
+            } else if case .giftTerms = context.component.source {
                 titleString = environment.strings.Premium_Title
             } else if case .gift = context.component.source {
                 titleString = environment.strings.Premium_GiftedTitle
@@ -2504,9 +2506,7 @@ public final class PremiumIntroScreen: ViewControllerComponentContainer {
                     view.animateFrom = sourceView
                     view.containerView = self.containerView
                     
-                    Queue.mainQueue().after(0.1) {
-                        view.animateIn()
-                    }
+                    view.animateIn()
                     
                     self.sourceView = nil
                     self.containerView = nil

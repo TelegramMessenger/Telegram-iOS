@@ -77,6 +77,14 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
     var inProgress: Bool = false {
         didSet {
             self.codeField.alpha = self.inProgress ? 0.6 : 1.0
+            
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.proceedNode.transitionToProgress()
+                } else {
+                    self.proceedNode.transitionFromProgress()
+                }
+            }
         }
     }
     

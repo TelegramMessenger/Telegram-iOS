@@ -72,9 +72,10 @@ class EmojiHeaderComponent: Component {
         
         override init(frame: CGRect) {
             self.statusView = ComponentHostView<Empty>()
-            
+        
             super.init(frame: frame)
-            
+        
+            self.statusView.isHidden = true
             self.addSubview(self.statusView)
                         
             self.disablesInteractiveModalDismiss = true
@@ -84,13 +85,29 @@ class EmojiHeaderComponent: Component {
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
+        
+        var scheduledAnimateIn = false
+        override func didMoveToWindow() {
+            super.didMoveToWindow()
+            
+            if self.scheduledAnimateIn {
+                self.animateIn()
+                self.scheduledAnimateIn = false
+            }
+        }
          
         func animateIn() {
             guard let animateFrom = self.animateFrom, var containerView = self.containerView else {
                 return
             }
+            
+            guard let _ = self.window else {
+                self.scheduledAnimateIn = true
+                return
+            }
                         
-            containerView = containerView.subviews[2].subviews[1]
+            self.statusView.isHidden = false
+            containerView = containerView.subviews[1].subviews[1]
             
             let initialPosition = self.statusView.center
             let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)
