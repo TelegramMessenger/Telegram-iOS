@@ -20,6 +20,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import EmojiTextAttachmentView
 import TextFormat
+import GZip
 
 public final class ReactionItem {
     public struct Reaction: Equatable {
@@ -106,7 +107,7 @@ private final class ExpandItemView: UIView {
     }
     
     func updateTheme(theme: PresentationTheme) {
-        self.backgroundColor = theme.chat.inputMediaPanel.panelContentVibrantOverlayColor.mixedWith(theme.contextMenu.backgroundColor.withMultipliedAlpha(0.4), alpha: 0.5)
+        self.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.mixedWith(theme.contextMenu.backgroundColor.withMultipliedAlpha(0.4), alpha: 0.5)
     }
     
     func update(size: CGSize, transition: ContainedViewLayoutTransition) {
@@ -198,6 +199,45 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var hasPremium: Bool?
     private var hasPremiumDisposable: Disposable?
+    
+    private var genericReactionEffectDisposable: Disposable?
+    private var genericReactionEffect: String?
+    
+    public static func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
+        return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
+        |> map { result -> [TelegramMediaFile]? in
+            switch result {
+            case let .result(_, items, _):
+                return items.map(\.file)
+            default:
+                return nil
+            }
+        }
+        |> filter { $0 != nil }
+        |> take(1)
+        |> mapToSignal { items -> Signal<String?, NoError> in
+            guard let items = items else {
+                return .single(nil)
+            }
+            guard let file = items.randomElement() else {
+                return .single(nil)
+            }
+            return Signal { subscriber in
+                let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+                let dataDisposable = (context.account.postbox.mediaBox.resourceData(file.resource)
+                |> filter(\.complete)
+                |> take(1)).start(next: { data in
+                    subscriber.putNext(data.path)
+                    subscriber.putCompletion()
+                })
+                
+                return ActionDisposable {
+                    fetchDisposable.dispose()
+                    dataDisposable.dispose()
+                }
+            }
+        }
+    }
     
     public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
@@ -351,12 +391,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
             })
         }
+        
+        self.genericReactionEffectDisposable = (ReactionContextNode.randomGenericReactionEffect(context: context)
+        |> deliverOnMainQueue).start(next: { [weak self] path in
+            self?.genericReactionEffect = path
+        })
     }
     
     deinit {
         self.emojiContentDisposable?.dispose()
         self.availableReactionsDisposable?.dispose()
         self.hasPremiumDisposable?.dispose()
+        self.genericReactionEffectDisposable?.dispose()
     }
     
     override public func didLoad() {
@@ -702,7 +748,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             transition.updateFrame(node: self.leftBackgroundMaskNode, frame: CGRect(x: -1000.0 + currentMaskFrame.minX, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance))
             transition.updateFrame(node: self.rightBackgroundMaskNode, frame: CGRect(x: currentMaskFrame.maxX, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance))
         } else {
-            self.leftBackgroundMaskNode.frame = CGRect(x: 0.0, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance)
+            transition.updateFrame(node: self.leftBackgroundMaskNode, frame: CGRect(x: 0.0, y: 0.0, width: 1000.0, height: self.currentContentHeight + self.extensionDistance))
             self.rightBackgroundMaskNode.frame = CGRect(origin: .zero, size: .zero)
         }
         
@@ -1175,16 +1221,22 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
+        //targetSnapshotView.layer.sublayers![0].backgroundColor = UIColor.green.cgColor
+        
         let sourceFrame = itemNode.view.convert(itemNode.bounds, to: self.view)
         
         var selfTargetBounds = targetView.bounds
-        if case .builtin = itemNode.item.reaction.rawValue {
-            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        if let targetView = targetView as? ReactionIconView, let iconFrame = targetView.iconFrame, !"".isEmpty {
+            selfTargetBounds = iconFrame
         }
+        /*if case .builtin = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        }*/
         
         let targetFrame = self.view.convert(targetView.convert(selfTargetBounds, to: nil), from: nil)
         
         targetSnapshotView.frame = targetFrame
+        //targetSnapshotView.backgroundColor = .blue
         self.view.insertSubview(targetSnapshotView, belowSubview: itemNode.view)
         
         var completedTarget = false
@@ -1199,6 +1251,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let duration: Double = 0.16
         
         itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration * 0.9, removeOnCompletion: false)
+        
+        //itemNode.layer.isHidden = true
+        /*targetView.alpha = 1.0
+        targetView.isHidden = false
+        if let targetView = targetView as? ReactionIconView {
+            targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
+        }*/
+        
         itemNode.layer.animatePosition(from: itemNode.layer.position, to: targetPosition, duration: duration, removeOnCompletion: false)
         targetSnapshotView.alpha = 1.0
         targetSnapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration * 0.8)
@@ -1349,7 +1409,20 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         } else if itemNode.item.isCustom {
             additionalAnimationNode = nil
             
-            if let url = getAppBundle().url(forResource: self.didTriggerExpandedReaction ? "generic_reaction_effect" : "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            var effectData: Data?
+            if self.didTriggerExpandedReaction {
+                if let url = getAppBundle().url(forResource: "generic_reaction_effect", withExtension: "json") {
+                    effectData = try? Data(contentsOf: url)
+                }
+            } else if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
+                effectData = TGGUnzipData(data, 5 * 1024 * 1024) ?? data
+            } else {
+                if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json") {
+                    effectData = try? Data(contentsOf: url)
+                }
+            }
+            
+            if let effectData = effectData, let composition = try? Animation.from(data: effectData) {
                 let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = 1.0
                 view.backgroundColor = nil
@@ -1489,7 +1562,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 if self.didTriggerExpandedReaction {
                     self.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: hideNode, completion: { [weak self] in
                         if let strongSelf = self, strongSelf.didTriggerExpandedReaction, let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
-                            let standaloneReactionAnimation = StandaloneReactionAnimation()
+                            let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: strongSelf.genericReactionEffect)
                             
                             addStandaloneReactionAnimation(standaloneReactionAnimation)
                             
@@ -1775,6 +1848,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
 }
 
 public final class StandaloneReactionAnimation: ASDisplayNode {
+    private let genericReactionEffect: String?
     private let useDirectRendering: Bool
     private var itemNode: ReactionNode? = nil
     private var itemNodeIsEmbedded: Bool = false
@@ -1783,7 +1857,8 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
     
     private weak var targetView: UIView?
     
-    public init(useDirectRendering: Bool = false) {
+    public init(genericReactionEffect: String?, useDirectRendering: Bool = false) {
+        self.genericReactionEffect = genericReactionEffect
         self.useDirectRendering = useDirectRendering
         
         super.init()
@@ -1922,7 +1997,16 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         } else if itemNode.item.isCustom {
             additionalAnimationNode = nil
             
-            if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json"), let composition = Animation.filepath(url.path) {
+            var effectData: Data?
+            if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
+                effectData = TGGUnzipData(data, 5 * 1024 * 1024) ?? data
+            } else {
+                if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json") {
+                    effectData = try? Data(contentsOf: url)
+                }
+            }
+            
+            if let effectData = effectData, let composition = try? Animation.from(data: effectData) {
                 let view = AnimationView(animation: composition, configuration: LottieConfiguration(renderingEngine: .mainThread, decodingStrategy: .codable))
                 view.animationSpeed = 1.0
                 view.backgroundColor = nil
@@ -2043,9 +2127,10 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     intermediateCompletion()
                 } else {
                     if isLarge {
+                        let genericReactionEffect = strongSelf.genericReactionEffect
                         strongSelf.animateFromItemNodeToReaction(itemNode: itemNode, targetView: targetView, hideNode: true, completion: {
                             if let addStandaloneReactionAnimation = addStandaloneReactionAnimation {
-                                let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: genericReactionEffect)
                                 
                                 addStandaloneReactionAnimation(standaloneReactionAnimation)
                                 

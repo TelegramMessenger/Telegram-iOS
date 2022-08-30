@@ -26,6 +26,8 @@ import ChatPresentationInterfaceState
 import ChatMessageBackground
 import AnimationCache
 import MultiAnimationRenderer
+import ComponentFlow
+import EmojiStatusComponent
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -488,7 +490,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
-    private var credibilityIconNode: ASImageNode?
+    private var credibilityIconView: ComponentHostView<Empty>?
+    private var credibilityIconComponent: EmojiStatusComponent?
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     var forwardInfoReferenceNode: ASDisplayNode? {
         return self.forwardInfoNode
@@ -531,6 +534,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 if let replyInfoNode = self.replyInfoNode {
                     replyInfoNode.visibility = self.visibility != .none
+                }
+                
+                self.visibilityStatus = self.visibility != .none
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                if let credibilityIconView = self.credibilityIconView, let credibilityIconComponent = self.credibilityIconComponent {
+                    let _ = credibilityIconView.update(
+                        transition: .immediate,
+                        component: AnyComponent(credibilityIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                        environment: {},
+                        containerSize: credibilityIconView.bounds.size
+                    )
                 }
             }
         }
@@ -1527,7 +1547,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             bottomNodeMergeStatus = .Both
         }
         
-        var currentCredibilityIconImage: UIImage?
+        var currentCredibilityIcon: EmojiStatusComponent.Content?
         
         var initialDisplayHeader = true
         if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
@@ -1557,11 +1577,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
 
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
-                    
                 } else if effectiveAuthor.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, strings: item.presentationData.strings, type: incoming ? .regular : .outgoing)
+                    currentCredibilityIcon = .scam(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor)
                 } else if effectiveAuthor.isFake {
-                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme.theme, strings: item.presentationData.strings, type: incoming ? .regular : .outgoing)
+                    currentCredibilityIcon = .fake(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor)
+                } else if let user = item.message.author as? TelegramUser, let emojiStatus = user.emojiStatus {
+                    currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: authorNameColor?.withMultipliedAlpha(0.4), loopMode: .count(2))
                 }
                 
             }
@@ -1756,8 +1777,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 var credibilityIconWidth: CGFloat = 0.0
-                if let credibilityIconImage = currentCredibilityIconImage {
-                    credibilityIconWidth += credibilityIconImage.size.width + 4.0
+                if let currentCredibilityIcon = currentCredibilityIcon {
+                    credibilityIconWidth += 4.0
+                    switch currentCredibilityIcon {
+                    case .fake, .scam:
+                        credibilityIconWidth += 30.0
+                    default:
+                        credibilityIconWidth += 20.0
+                    }
                 }
                 let adminBadgeSizeAndApply = adminBadgeLayout(TextNodeLayoutArguments(attributedString: adminBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
@@ -2249,7 +2276,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentOrigin: contentOrigin,
                 nameNodeOriginY: nameNodeOriginY,
                 layoutConstants: layoutConstants,
-                currentCredibilityIconImage: currentCredibilityIconImage,
+                currentCredibilityIcon: currentCredibilityIcon,
                 adminNodeSizeApply: adminNodeSizeApply,
                 contentUpperRightCorner: contentUpperRightCorner,
                 forwardInfoSizeApply: forwardInfoSizeApply,
@@ -2293,7 +2320,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
         layoutConstants: ChatMessageItemLayoutConstants,
-        currentCredibilityIconImage: UIImage?,
+        currentCredibilityIcon: EmojiStatusComponent.Content?,
         adminNodeSizeApply: (CGSize, () -> TextNode?),
         contentUpperRightCorner: CGPoint,
         forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?),
@@ -2411,20 +2438,38 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 animation.animator.updateFrame(layer: nameNode.layer, frame: nameNodeFrame, completion: nil)
             }
             
-            if let credibilityIconImage = currentCredibilityIconImage {
-                let credibilityIconNode: ASImageNode
-                if let node = strongSelf.credibilityIconNode {
-                    credibilityIconNode = node
+            if let currentCredibilityIcon = currentCredibilityIcon {
+                let credibilityIconView: ComponentHostView<Empty>
+                if let current = strongSelf.credibilityIconView {
+                    credibilityIconView = current
                 } else {
-                    credibilityIconNode = ASImageNode()
-                    strongSelf.credibilityIconNode = credibilityIconNode
-                    strongSelf.clippingNode.addSubnode(credibilityIconNode)
+                    credibilityIconView = ComponentHostView<Empty>()
+                    credibilityIconView.isUserInteractionEnabled = false
+                    strongSelf.credibilityIconView = credibilityIconView
+                    strongSelf.clippingNode.view.addSubview(credibilityIconView)
                 }
-                credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY), size: credibilityIconImage.size)
-                credibilityIconNode.image = credibilityIconImage
+                
+                let credibilityIconComponent = EmojiStatusComponent(
+                    context: item.context,
+                    animationCache: item.context.animationCache,
+                    animationRenderer: item.context.animationRenderer,
+                    content: currentCredibilityIcon,
+                    isVisibleForAnimations: strongSelf.visibilityStatus,
+                    action: nil,
+                    longTapAction: nil
+                )
+                
+                let credibilityIconSize = credibilityIconView.update(
+                    transition: .immediate,
+                    component: AnyComponent(credibilityIconComponent),
+                    environment: {},
+                    containerSize: CGSize(width: 20.0, height: 20.0)
+                )
+                
+                credibilityIconView.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY + floor((nameNode.bounds.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize)
             } else {
-                strongSelf.credibilityIconNode?.removeFromSupernode()
-                strongSelf.credibilityIconNode = nil
+                strongSelf.credibilityIconView?.removeFromSuperview()
+                strongSelf.credibilityIconView = nil
             }
             
             if let adminBadgeNode = adminNodeSizeApply.1() {

@@ -1985,6 +1985,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         animationCache: state.animationCache,
                         animationRenderer: state.animationRenderer,
                         placeholderColor: environment.theme.list.mediaPlaceholderColor,
+                        accentColor: environment.theme.list.itemAccentColor,
                         fileId: fileId,
                         isVisible: starIsVisible,
                         hasIdleAnimations: state.hasIdleAnimations

@@ -21,6 +21,7 @@ class EmojiHeaderComponent: Component {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     let placeholderColor: UIColor
+    let accentColor: UIColor
     let fileId: Int64
     let isVisible: Bool
     let hasIdleAnimations: Bool
@@ -30,6 +31,7 @@ class EmojiHeaderComponent: Component {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         placeholderColor: UIColor,
+        accentColor: UIColor,
         fileId: Int64,
         isVisible: Bool,
         hasIdleAnimations: Bool
@@ -38,13 +40,14 @@ class EmojiHeaderComponent: Component {
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.placeholderColor = placeholderColor
+        self.accentColor = accentColor
         self.fileId = fileId
         self.isVisible = isVisible
         self.hasIdleAnimations = hasIdleAnimations
     }
     
     static func ==(lhs: EmojiHeaderComponent, rhs: EmojiHeaderComponent) -> Bool {
-        return lhs.placeholderColor == rhs.placeholderColor && lhs.fileId == rhs.fileId && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
+        return lhs.placeholderColor == rhs.placeholderColor && lhs.accentColor == rhs.accentColor && lhs.fileId == rhs.fileId && lhs.isVisible == rhs.isVisible && lhs.hasIdleAnimations == rhs.hasIdleAnimations
     }
     
     final class View: UIView, SCNSceneRendererDelegate, ComponentTaggedView {
@@ -126,8 +129,11 @@ class EmojiHeaderComponent: Component {
                     content: .animation(
                         content: .customEmoji(fileId: component.fileId),
                         size: CGSize(width: 100.0, height: 100.0),
-                        placeholderColor: component.placeholderColor
+                        placeholderColor: component.placeholderColor,
+                        themeColor: component.accentColor,
+                        loopMode: .forever
                     ),
+                    isVisibleForAnimations: true,
                     action: nil,
                     longTapAction: nil
                 )),

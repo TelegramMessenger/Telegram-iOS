@@ -118,7 +118,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 case .premium:
                     statusContent = .premium(color: self.theme.list.itemAccentColor)
                 case let .emoji(emoji):
-                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
+                    statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
                 }
                 
                 var titleCredibilityIconTransition: Transition
@@ -144,6 +144,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                         animationCache: self.animationCache,
                         animationRenderer: self.animationRenderer,
                         content: statusContent,
+                        isVisibleForAnimations: true,
                         action: { [weak self] in
                             guard let strongSelf = self, let titleCredibilityIconView = strongSelf.titleCredibilityIconView else {
                                 return
@@ -351,7 +352,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
             case .premium:
                 statusContent = .premium(color: self.theme.list.itemAccentColor)
             case let .emoji(emoji):
-                statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
+                statusContent = .animation(content: .customEmoji(fileId: emoji.fileId), size: CGSize(width: 22.0, height: 22.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
             }
             
             var titleCredibilityIconTransition = Transition(transition)
@@ -372,6 +373,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                     animationCache: self.animationCache,
                     animationRenderer: self.animationRenderer,
                     content: statusContent,
+                    isVisibleForAnimations: true,
                     action: { [weak self] in
                         guard let strongSelf = self, let titleCredibilityIconView = strongSelf.titleCredibilityIconView else {
                             return

@@ -33,6 +33,13 @@ public final class ReactionIconView: PortalSourceView {
     
     private var disposable: Disposable?
     
+    public var iconFrame: CGRect? {
+        if let animationLayer = self.animationLayer {
+            return animationLayer.frame
+        }
+        return nil
+    }
+    
     override public init(frame: CGRect) {
         super.init(frame: frame)
     }

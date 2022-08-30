@@ -92,6 +92,9 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
     
     private var animationCache: AnimationCache?
     
+    private var genericReactionEffect: String?
+    private var genericReactionEffectDisposable: Disposable?
+    
     init() {
         self.topStripeNode = ASDisplayNode()
         self.topStripeNode.isLayerBacked = true
@@ -109,6 +112,10 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         self.clipsToBounds = true
         
         self.addSubnode(self.containerNode)
+    }
+    
+    deinit {
+        self.genericReactionEffectDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -199,6 +206,16 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
         }
     }
     
+    private func loadNextGenericReactionEffect(context: AccountContext) {
+        self.genericReactionEffectDisposable?.dispose()
+        self.genericReactionEffectDisposable = (ReactionContextNode.randomGenericReactionEffect(context: context) |> deliverOnMainQueue).start(next: { [weak self] path in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.genericReactionEffect = path
+        })
+    }
+    
     private func beginReactionAnimation(reactionItem: ReactionItem) {
         if let item = self.item, let updatedReaction = item.reaction, let messageNode = self.messageNode as? ChatMessageItemNodeProtocol {
             if let targetView = messageNode.targetReactionView(value: updatedReaction) {
@@ -211,7 +228,8 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                 }
                 
                 if let supernode = self.supernode {
-                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                    let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
+                    self.loadNextGenericReactionEffect(context: item.context)
                     self.standaloneReactionAnimation = standaloneReactionAnimation
                     
                     let animationCache = item.context.animationCache
@@ -308,6 +326,10 @@ class ReactionChatPreviewItemNode: ListViewItemNode {
                     }
                        
                     strongSelf.item = item
+                    
+                    if strongSelf.genericReactionEffectDisposable == nil {
+                        strongSelf.loadNextGenericReactionEffect(context: item.context)
+                    }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
                     

@@ -585,6 +585,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     
     private var refreshDisplayedItemRangeTimer: SwiftSignalKit.Timer?
     
+    private var genericReactionEffect: String?
+    private var genericReactionEffectDisposable: Disposable?
+    
     private var visibleMessageRange = Atomic<VisibleMessageRange?>(value: nil)
     
     private let clientId: Atomic<Int32>
@@ -1568,6 +1571,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             return strongSelf.isSelectionGestureEnabled
         }
         self.view.addGestureRecognizer(selectionRecognizer)
+        
+        self.loadNextGenericReactionEffect(context: context)
     }
     
     deinit {
@@ -1579,6 +1584,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.loadedMessagesFromCachedDataDisposable?.dispose()
         self.preloadAdPeerDisposable.dispose()
         self.refreshDisplayedItemRangeTimer?.invalidate()
+        self.genericReactionEffectDisposable?.dispose()
+    }
+    
+    func takeGenericReactionEffect() -> String? {
+        let result = self.genericReactionEffect
+        self.loadNextGenericReactionEffect(context: self.context)
+        
+        return result
+    }
+    
+    private func loadNextGenericReactionEffect(context: AccountContext) {
+        self.genericReactionEffectDisposable?.dispose()
+        self.genericReactionEffectDisposable = (ReactionContextNode.randomGenericReactionEffect(context: context) |> deliverOnMainQueue).start(next: { [weak self] path in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.genericReactionEffect = path
+        })
     }
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {
@@ -2724,7 +2747,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     
                     if reaction.value == updatedReaction {
-                        let standaloneReactionAnimation = StandaloneReactionAnimation()
+                        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
                         
                         chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                         
