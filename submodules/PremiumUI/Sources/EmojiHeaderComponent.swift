@@ -151,8 +151,7 @@ class EmojiHeaderComponent: Component {
                         loopMode: .forever
                     ),
                     isVisibleForAnimations: true,
-                    action: nil,
-                    longTapAction: nil
+                    action: nil
                 )),
                 environment: {},
                 containerSize: CGSize(width: 96.0, height: 96.0)

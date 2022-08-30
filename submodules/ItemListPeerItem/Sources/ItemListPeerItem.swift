@@ -1124,7 +1124,6 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
                             content: credibilityIcon,
                             isVisibleForAnimations: strongSelf.visibilityStatus,
                             action: nil,
-                            longTapAction: nil,
                             emojiFileUpdated: nil
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent

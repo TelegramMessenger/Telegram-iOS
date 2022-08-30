@@ -52,7 +52,6 @@ public final class EmojiStatusComponent: Component {
     public let content: Content
     public let isVisibleForAnimations: Bool
     public let action: (() -> Void)?
-    public let longTapAction: (() -> Void)?
     public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
     
     public init(
@@ -62,7 +61,6 @@ public final class EmojiStatusComponent: Component {
         content: Content,
         isVisibleForAnimations: Bool,
         action: (() -> Void)?,
-        longTapAction: (() -> Void)?,
         emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
     ) {
         self.context = context
@@ -71,7 +69,6 @@ public final class EmojiStatusComponent: Component {
         self.content = content
         self.isVisibleForAnimations = isVisibleForAnimations
         self.action = action
-        self.longTapAction = longTapAction
         self.emojiFileUpdated = emojiFileUpdated
     }
     
@@ -83,7 +80,6 @@ public final class EmojiStatusComponent: Component {
             content: self.content,
             isVisibleForAnimations: isVisibleForAnimations,
             action: self.action,
-            longTapAction: self.longTapAction,
             emojiFileUpdated: self.emojiFileUpdated
         )
     }
@@ -157,7 +153,6 @@ public final class EmojiStatusComponent: Component {
             self.layer.addSublayer(self.hierarchyTrackingLayer)
             
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-            self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
             
             self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
                 guard let strongSelf = self else {
@@ -184,12 +179,6 @@ public final class EmojiStatusComponent: Component {
             }
         }
         
-        @objc private func longPressGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .began = recognizer.state {
-                self.component?.longTapAction?()
-            }
-        }
-        
         func update(component: EmojiStatusComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.state = state
             
@@ -199,6 +188,8 @@ public final class EmojiStatusComponent: Component {
             var emojiThemeColor: UIColor?
             var emojiLoopMode: LoopMode?
             var emojiSize = CGSize()
+            
+            self.isUserInteractionEnabled = component.action != nil
             
             //let previousContent = self.component?.content
             if self.component?.content != component.content {

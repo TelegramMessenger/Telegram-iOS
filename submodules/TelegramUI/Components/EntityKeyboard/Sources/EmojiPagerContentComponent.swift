@@ -1717,7 +1717,7 @@ public final class EmojiPagerContentComponent: Component {
         public let isPremiumLocked: Bool
         public let isEmbedded: Bool
         public let hasClear: Bool
-        public let isExpandable: Bool
+        public let collapsedLineCount: Int?
         public let displayPremiumBadges: Bool
         public let headerItem: EntityKeyboardAnimationData?
         public let items: [Item]
@@ -1732,7 +1732,7 @@ public final class EmojiPagerContentComponent: Component {
             isPremiumLocked: Bool,
             isEmbedded: Bool,
             hasClear: Bool,
-            isExpandable: Bool,
+            collapsedLineCount: Int?,
             displayPremiumBadges: Bool,
             headerItem: EntityKeyboardAnimationData?,
             items: [Item]
@@ -1746,7 +1746,7 @@ public final class EmojiPagerContentComponent: Component {
             self.isPremiumLocked = isPremiumLocked
             self.isEmbedded = isEmbedded
             self.hasClear = hasClear
-            self.isExpandable = isExpandable
+            self.collapsedLineCount = collapsedLineCount
             self.displayPremiumBadges = displayPremiumBadges
             self.headerItem = headerItem
             self.items = items
@@ -1783,7 +1783,7 @@ public final class EmojiPagerContentComponent: Component {
             if lhs.hasClear != rhs.hasClear {
                 return false
             }
-            if lhs.isExpandable != rhs.isExpandable {
+            if lhs.collapsedLineCount != rhs.collapsedLineCount {
                 return false
             }
             if lhs.displayPremiumBadges != rhs.displayPremiumBadges {
@@ -1900,7 +1900,7 @@ public final class EmojiPagerContentComponent: Component {
             let isFeatured: Bool
             let itemCount: Int
             let isEmbedded: Bool
-            let isExpandable: Bool
+            let collapsedLineCount: Int?
         }
         
         private struct ItemGroupLayout: Equatable {
@@ -2034,13 +2034,8 @@ public final class EmojiPagerContentComponent: Component {
                     let visibleItemCount: Int
                     if itemGroup.isEmbedded {
                         visibleItemCount = 0
-                    } else if itemGroup.isExpandable && !expandedGroupIds.contains(itemGroup.groupId) {
-                        let maxLines: Int
-                        #if DEBUG
-                        maxLines = 2
-                        #else
-                        maxLines = 3
-                        #endif
+                    } else if let collapsedLineCount = itemGroup.collapsedLineCount, !expandedGroupIds.contains(itemGroup.groupId) {
+                        let maxLines: Int = collapsedLineCount
                         if numRowsInGroup > maxLines {
                             visibleItemCount = self.itemsPerRow * maxLines - 1
                             collapsedItemIndex = visibleItemCount
@@ -4562,7 +4557,7 @@ public final class EmojiPagerContentComponent: Component {
                     isFeatured: itemGroup.isFeatured,
                     itemCount: itemGroup.items.count,
                     isEmbedded: itemGroup.isEmbedded,
-                    isExpandable: itemGroup.isExpandable
+                    collapsedLineCount: itemGroup.collapsedLineCount
                 ))
             }
             
@@ -4789,7 +4784,7 @@ public final class EmojiPagerContentComponent: Component {
                 var subtitle: String?
                 var isPremiumLocked: Bool
                 var isFeatured: Bool
-                var isExpandable: Bool
+                var collapsedLineCount: Int?
                 var isClearable: Bool
                 var headerItem: EntityKeyboardAnimationData?
                 var items: [EmojiPagerContentComponent.Item]
@@ -4831,7 +4826,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: true, isClearable: false, headerItem: nil, items: [resultItem]))
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
                 }
                 
                 var existingIds = Set<MediaId>()
@@ -4986,7 +4981,7 @@ public final class EmojiPagerContentComponent: Component {
                         }
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: false, headerItem: nil, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
                     }
                 }
                 
@@ -5039,7 +5034,7 @@ public final class EmojiPagerContentComponent: Component {
                                 itemGroups[groupIndex].items.append(resultItem)
                             } else {
                                 itemGroupIndexById[groupId] = itemGroups.count
-                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: hasRecent && !isQuickReactionSelection, headerItem: nil, items: [resultItem]))
+                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: hasRecent && !isQuickReactionSelection, headerItem: nil, items: [resultItem]))
                             }
                         } else {
                             let groupId = "recent"
@@ -5051,7 +5046,7 @@ public final class EmojiPagerContentComponent: Component {
                                 }
                             } else {
                                 itemGroupIndexById[groupId] = itemGroups.count
-                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: false, headerItem: nil, items: [resultItem]))
+                                itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
                             }
                         }
                     }
@@ -5118,7 +5113,7 @@ public final class EmojiPagerContentComponent: Component {
                             popularInsertIndex += 1
                         } else {
                             itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: hasRecent && !isQuickReactionSelection, headerItem: nil, items: [resultItem]))
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: popularTitle, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: hasRecent && !isQuickReactionSelection, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }
@@ -5166,7 +5161,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemGroups[groupIndex].items.append(resultItem)
                     } else {
                         itemGroupIndexById[groupId] = itemGroups.count
-                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Emoji_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: true, headerItem: nil, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.Emoji_FrequentlyUsed, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: true, headerItem: nil, items: [resultItem]))
                     }
                 }
             }
@@ -5188,7 +5183,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemGroups[groupIndex].items.append(resultItem)
                         } else {
                             itemGroupIndexById[groupId] = itemGroups.count
-                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, isExpandable: false, isClearable: false, headerItem: nil, items: [resultItem]))
+                            itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: strings.EmojiInput_SectionTitleEmoji, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: nil, items: [resultItem]))
                         }
                     }
                 }
@@ -5260,7 +5255,7 @@ public final class EmojiPagerContentComponent: Component {
                                 break inner
                             }
                         }
-                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, isExpandable: false, isClearable: false, headerItem: headerItem, items: [resultItem]))
+                        itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: false, collapsedLineCount: nil, isClearable: false, headerItem: headerItem, items: [resultItem]))
                     }
                 }
                 
@@ -5316,7 +5311,7 @@ public final class EmojiPagerContentComponent: Component {
                                     )
                                 }
                                 
-                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, isExpandable: true, isClearable: false, headerItem: headerItem, items: [resultItem]))
+                                itemGroups.append(ItemGroup(supergroupId: supergroupId, id: groupId, title: featuredEmojiPack.info.title, subtitle: nil, isPremiumLocked: isPremiumLocked, isFeatured: true, collapsedLineCount: 3, isClearable: false, headerItem: headerItem, items: [resultItem]))
                             }
                         }
                     }
@@ -5358,7 +5353,7 @@ public final class EmojiPagerContentComponent: Component {
                         isPremiumLocked: group.isPremiumLocked,
                         isEmbedded: false,
                         hasClear: group.isClearable,
-                        isExpandable: group.isExpandable,
+                        collapsedLineCount: group.collapsedLineCount,
                         displayPremiumBadges: false,
                         headerItem: headerItem,
                         items: group.items

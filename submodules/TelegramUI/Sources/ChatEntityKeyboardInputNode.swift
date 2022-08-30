@@ -505,7 +505,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         isPremiumLocked: group.isPremiumLocked,
                         isEmbedded: isEmbedded,
                         hasClear: hasClear,
-                        isExpandable: false,
+                        collapsedLineCount: nil,
                         displayPremiumBadges: group.displayPremiumBadges,
                         headerItem: group.headerItem,
                         items: group.items

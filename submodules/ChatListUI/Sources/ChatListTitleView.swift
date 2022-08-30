@@ -150,8 +150,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                                 return
                             }
                             strongSelf.openStatusSetup?(titleCredibilityIconView)
-                        },
-                        longTapAction: nil
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: 22.0, height: 22.0)
@@ -379,8 +378,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                             return
                         }
                         strongSelf.openStatusSetup?(titleCredibilityIconView)
-                    },
-                    longTapAction: nil
+                    }
                 )),
                 environment: {},
                 containerSize: CGSize(width: 22.0, height: 22.0)

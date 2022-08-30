@@ -223,6 +223,7 @@ public final class EmojiStatusSelectionController: ViewController {
         
         private var emojiContentDisposable: Disposable?
         private var emojiContent: EmojiPagerContentComponent?
+        private var freezeUpdates: Bool = false
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private var availableReactions: AvailableReactions?
@@ -281,7 +282,9 @@ public final class EmojiStatusSelectionController: ViewController {
                     return
                 }
                 strongSelf.controller?._ready.set(.single(true))
-                strongSelf.emojiContent = emojiContent
+                if strongSelf.emojiContent == nil || !strongSelf.freezeUpdates {
+                    strongSelf.emojiContent = emojiContent
+                }
                 
                 emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                     performItemAction: { groupId, item, _, _, _, _ in
@@ -524,12 +527,6 @@ public final class EmojiStatusSelectionController: ViewController {
                 itemCompleted = true
             }
             
-            /*if let availableReactions = self.availableReactions, let availableReaction = availableReactions.reactions.first(where: { $0.value ==  }) {
-                
-            } else {
-                effectCompleted = true
-            }*/
-            
             self.animateOut(completion: {
                 contentCompleted = true
                 completion()
@@ -697,6 +694,19 @@ public final class EmojiStatusSelectionController: ViewController {
         private func applyItem(groupId: AnyHashable, item: EmojiPagerContentComponent.Item?) {
             guard let controller = self.controller else {
                 return
+            }
+            
+            self.freezeUpdates = true
+            
+            if let _ = item, let destinationView = controller.destinationItemView() {
+                if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = destinationView.frame
+                    destinationView.superview?.insertSubview(snapshotView, belowSubview: destinationView)
+                    snapshotView.layer.animateScale(from: 1.0, to: 0.001, duration: 0.15, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                destinationView.isHidden = true
             }
             
             switch controller.mode {

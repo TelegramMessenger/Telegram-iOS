@@ -2073,8 +2073,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             animationRenderer: item.interaction.animationRenderer,
                             content: currentCredibilityIconContent,
                             isVisibleForAnimations: strongSelf.visibilityStatus,
-                            action: nil,
-                            longTapAction: nil
+                            action: nil
                         )
                         strongSelf.credibilityIconComponent = credibilityIconComponent
                         

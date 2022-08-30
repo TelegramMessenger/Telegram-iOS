@@ -1036,7 +1036,6 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 content: credibilityIcon,
                                 isVisibleForAnimations: true,
                                 action: nil,
-                                longTapAction: nil,
                                 emojiFileUpdated: nil
                             )),
                             environment: {},

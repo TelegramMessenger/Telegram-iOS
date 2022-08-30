@@ -690,8 +690,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 animationRenderer: self.animationRenderer,
                 content: titleCredibilityContent,
                 isVisibleForAnimations: true,
-                action: nil,
-                longTapAction: nil
+                action: nil
             )),
             environment: {},
             containerSize: CGSize(width: 20.0, height: 20.0)

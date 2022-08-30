@@ -2373,12 +2373,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                         }
                         strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
                     },
-                    longTapAction: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.accountData.setEmojiStatus(file: nil).start()
-                    }, emojiFileUpdated: { [weak self] emojiFile in
+                    emojiFileUpdated: { [weak self] emojiFile in
                         guard let strongSelf = self else {
                             return
                         }
@@ -2432,12 +2427,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             return
                         }
                         strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
-                    },
-                    longTapAction: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.accountData.setEmojiStatus(file: nil).start()
                     }
                 )),
                 environment: {},
