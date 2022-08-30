@@ -234,6 +234,7 @@ public final class EmojiStatusSelectionController: ViewController {
         
         private var hapticFeedback: HapticFeedback?
         
+        private var isAnimatingOut: Bool = false
         private var isDismissed: Bool = false
         
         init(controller: EmojiStatusSelectionController, context: AccountContext, sourceView: UIView?, emojiContent: Signal<EmojiPagerContentComponent, NoError>) {
@@ -373,6 +374,11 @@ public final class EmojiStatusSelectionController: ViewController {
         }
         
         func animateOut(completion: @escaping () -> Void) {
+            if self.isAnimatingOut {
+                return
+            }
+            self.isAnimatingOut = true
+            
             self.componentShadowLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
             self.componentHost.view?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { _ in
                 completion()
