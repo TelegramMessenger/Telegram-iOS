@@ -2460,6 +2460,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     isVisibleForAnimations: strongSelf.visibilityStatus,
                     action: nil
                 )
+                strongSelf.credibilityIconComponent = credibilityIconComponent
                 
                 let credibilityIconSize = credibilityIconView.update(
                     transition: .immediate,
