@@ -1145,6 +1145,7 @@ public final class PresentationThemeInputMediaPanel {
     public let panelHighlightedIconColor: UIColor
     public let panelContentVibrantOverlayColor: UIColor
     public let panelContentControlVibrantOverlayColor: UIColor
+    public let panelContentControlVibrantSelectionColor: UIColor
     public let stickersBackgroundColor: UIColor
     public let stickersSectionTextColor: UIColor
     public let stickersSearchBackgroundColor: UIColor
@@ -1161,6 +1162,7 @@ public final class PresentationThemeInputMediaPanel {
         panelHighlightedIconColor: UIColor,
         panelContentVibrantOverlayColor: UIColor,
         panelContentControlVibrantOverlayColor: UIColor,
+        panelContentControlVibrantSelectionColor: UIColor,
         stickersBackgroundColor: UIColor,
         stickersSectionTextColor: UIColor,
         stickersSearchBackgroundColor: UIColor,
@@ -1176,6 +1178,7 @@ public final class PresentationThemeInputMediaPanel {
         self.panelHighlightedIconColor = panelHighlightedIconColor
         self.panelContentVibrantOverlayColor = panelContentVibrantOverlayColor
         self.panelContentControlVibrantOverlayColor = panelContentControlVibrantOverlayColor
+        self.panelContentControlVibrantSelectionColor = panelContentControlVibrantSelectionColor
         self.stickersBackgroundColor = stickersBackgroundColor
         self.stickersSectionTextColor = stickersSectionTextColor
         self.stickersSearchBackgroundColor = stickersSearchBackgroundColor
@@ -1193,6 +1196,7 @@ public final class PresentationThemeInputMediaPanel {
         panelHighlightedIconColor: UIColor? = nil,
         panelContentVibrantOverlayColor: UIColor? = nil,
         panelContentControlVibrantOverlayColor: UIColor? = nil,
+        panelContentControlVibrantSelectionColor: UIColor? = nil,
         stickersBackgroundColor: UIColor? = nil,
         stickersSectionTextColor: UIColor? = nil,
         stickersSearchBackgroundColor: UIColor? = nil,
@@ -1209,6 +1213,7 @@ public final class PresentationThemeInputMediaPanel {
             panelHighlightedIconColor: panelHighlightedIconColor ?? self.panelHighlightedIconColor,
             panelContentVibrantOverlayColor: panelContentVibrantOverlayColor ?? self.panelContentVibrantOverlayColor,
             panelContentControlVibrantOverlayColor: panelContentControlVibrantOverlayColor ?? self.panelContentControlVibrantOverlayColor,
+            panelContentControlVibrantSelectionColor: panelContentControlVibrantSelectionColor ?? self.panelContentControlVibrantSelectionColor,
             stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor,
             stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor,
             stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor,

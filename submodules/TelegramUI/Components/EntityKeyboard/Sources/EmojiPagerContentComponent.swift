@@ -2749,7 +2749,11 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let distanceNorm = min(1.0, max(0.0, distance / self.bounds.width))
                 let delay = 0.05 + (distanceNorm) * 0.3
-                itemLayer.animateScale(from: 0.01, to: 1.0, duration: 0.18, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+                
+                let t = itemLayer.transform
+                let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+                
+                itemLayer.animateScale(from: 0.01, to: currentScale, duration: 0.18, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                 
                 if let itemSelectionLayer = self.visibleItemSelectionLayers[key] {
                     itemSelectionLayer.animateScale(from: 0.01, to: 1.0, duration: 0.18, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
@@ -2786,7 +2790,11 @@ public final class EmojiPagerContentComponent: Component {
                     let delay = listViewAnimationCurveSystem(distanceNorm) * 0.1
                     
                     itemLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
-                    itemLayer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.6, delay: delay)
+                    
+                    let t = itemLayer.transform
+                    let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
+                    
+                    itemLayer.animateSpring(from: 0.01 as NSNumber, to: currentScale as NSNumber, keyPath: "transform.scale", duration: 0.6, delay: delay)
                     
                     if let itemSelectionLayer = self.visibleItemSelectionLayers[key] {
                         itemSelectionLayer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
@@ -4031,9 +4039,13 @@ public final class EmojiPagerContentComponent: Component {
                                 self.visibleItemSelectionLayers[itemId] = itemSelectionLayer
                             }
                             
-                            itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.cgColor
-                            itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.white.cgColor
+                            itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+                            itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
                             itemSelectionLayer.frame = baseItemFrame
+                            
+                            itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
+                        } else {
+                            itemLayer.transform = CATransform3DIdentity
                         }
                         
                         if animateItemIn, !transition.animation.isImmediate, let contentAnimation = contentAnimation, case .groupExpanded(id: itemGroup.groupId) = contentAnimation.type, let placeholderView = self.visibleItemPlaceholderViews[itemId] {

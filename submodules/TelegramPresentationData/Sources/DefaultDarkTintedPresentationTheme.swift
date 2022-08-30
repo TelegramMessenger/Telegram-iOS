@@ -844,6 +844,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         panelHighlightedIconColor: mainSecondaryTextColor.withAlphaComponent(0.5).mixedWith(inputPanel.primaryTextColor, alpha: 0.35),
         panelContentVibrantOverlayColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         panelContentControlVibrantOverlayColor: mainSecondaryTextColor.withAlphaComponent(0.3),
+        panelContentControlVibrantSelectionColor: mainSecondaryTextColor.withAlphaComponent(0.1),
         stickersBackgroundColor: additionalBackgroundColor,
         stickersSectionTextColor: mainSecondaryTextColor.withAlphaComponent(0.5),
         stickersSearchBackgroundColor: accentColor.withMultiplied(hue: 1.009, saturation: 0.621, brightness: 0.15),
