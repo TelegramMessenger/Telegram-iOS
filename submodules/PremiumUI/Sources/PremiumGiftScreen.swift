@@ -548,7 +548,6 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             ).start(next: { [weak self] products, peer in
                 if let strongSelf = self {
-                    
                     var gifts: [PremiumGiftProduct] = []
                     for option in strongSelf.options {
                         if let product = products.first(where: { $0.id == option.storeProductId }), !product.isSubscription {

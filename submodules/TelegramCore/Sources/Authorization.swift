@@ -432,7 +432,7 @@ public func verifyLoginEmailChange(account: Account, code: AuthorizationCode.Ema
         }
     }
     |> mapToSignal { _ -> Signal<Never, AuthorizationEmailVerificationError> in
-        return .never()
+        return .complete()
     }
 }
 

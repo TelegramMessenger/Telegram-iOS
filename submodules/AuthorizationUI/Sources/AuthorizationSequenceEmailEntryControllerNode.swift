@@ -77,6 +77,14 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
     var inProgress: Bool = false {
         didSet {
             self.codeField.alpha = self.inProgress ? 0.6 : 1.0
+            
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.proceedNode.transitionToProgress()
+                } else {
+                    self.proceedNode.transitionFromProgress()
+                }
+            }
         }
     }
     
@@ -87,7 +95,6 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         
         self.animationNode = DefaultAnimatedStickerNodeImpl()
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "IntroMail"), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
-        self.animationNode.visibility = true
         
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -189,10 +196,11 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         
         var insets = layout.insets(options: [])
         insets.top = layout.statusBarHeight ?? 20.0
-        
         if let inputHeight = layout.inputHeight {
             insets.bottom = max(inputHeight, insets.bottom)
         }
+        
+        let titleInset: CGFloat = layout.size.width > 320.0 ? 18.0 : 0.0
         
         self.titleNode.attributedText = NSAttributedString(string: self.mode == .setup ? self.strings.Login_AddEmailTitle : self.strings.Login_EnterNewEmailTitle, font: Font.bold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
 
@@ -204,14 +212,24 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
         
         var items: [AuthorizationLayoutItem] = []
-        items.append(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-        self.animationNode.updateLayout(size: animationSize)
         
-        items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
         items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 22.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 48.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        if layout.size.width > 320.0 {
+            items.insert(AuthorizationLayoutItem(node: self.animationNode, size: animationSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 10.0, maxValue: 10.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)), at: 0)
+            self.animationNode.updateLayout(size: animationSize)
+            self.proceedNode.isHidden = false
+            self.animationNode.isHidden = false
+            self.animationNode.visibility = true
+        } else {
+            insets.top = navigationBarHeight
+            self.proceedNode.isHidden = true
+            self.animationNode.isHidden = true
+        }
         
         let inset: CGFloat = 24.0
         let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)

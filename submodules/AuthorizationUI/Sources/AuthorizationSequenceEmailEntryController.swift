@@ -17,6 +17,8 @@ public final class AuthorizationSequenceEmailEntryController: ViewController {
         return self.displayNode as! AuthorizationSequenceEmailEntryControllerNode
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private let presentationData: PresentationData
     
     public var proceedWithEmail: ((String) -> Void)?
@@ -28,12 +30,7 @@ public final class AuthorizationSequenceEmailEntryController: ViewController {
     
     public var inProgress: Bool = false {
         didSet {
-//            if self.inProgress {
-//                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-//                self.navigationItem.rightBarButtonItem = item
-//            } else {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-//            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -56,8 +53,6 @@ public final class AuthorizationSequenceEmailEntryController: ViewController {
         self.navigationBar?.backPressed = {
             back()
         }
-        
-//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -87,6 +82,19 @@ public final class AuthorizationSequenceEmailEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
     public func updateData(appleSignInAllowed: Bool) {
         var appleSignInAllowed = appleSignInAllowed
         if #available(iOS 13.0, *) {
@@ -103,6 +111,13 @@ public final class AuthorizationSequenceEmailEntryController: ViewController {
     
     override public  func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }

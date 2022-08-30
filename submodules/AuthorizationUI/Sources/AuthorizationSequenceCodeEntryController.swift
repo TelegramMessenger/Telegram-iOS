@@ -11,6 +11,8 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         return self.displayNode as! AuthorizationSequenceCodeEntryControllerNode
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private let strings: PresentationStrings
     private let theme: PresentationTheme
     private let openUrl: (String) -> Void
@@ -30,12 +32,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     public var inProgress: Bool = false {
         didSet {
-//            if self.inProgress {
-//                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
-//                self.navigationItem.rightBarButtonItem = item
-//            } else {
-//                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-//            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -52,9 +49,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.hasActiveInput = true
         
         self.statusBar.statusBarStyle = theme.intro.statusBarStyle.style
-        
-//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-        
+                
         self.attemptNavigation = { _ in
             return false
         }
@@ -124,6 +119,19 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.controllerNode.animateError(text: text)
     }
     
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
     public func updateData(number: String, email: String?, codeType: SentAuthorizationCodeType, nextType: AuthorizationCodeNextType?, timeout: Int32?, termsOfService: (UnauthorizedAccountTermsOfService, Bool)?) {
         self.termsOfService = termsOfService
         if self.data?.0 != number || self.data?.1 != email || self.data?.2 != codeType || self.data?.3 != nextType || self.data?.4 != timeout {
@@ -143,6 +151,13 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }

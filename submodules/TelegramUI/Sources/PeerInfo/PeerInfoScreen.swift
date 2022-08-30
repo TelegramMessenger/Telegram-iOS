@@ -3096,7 +3096,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }))
             }
             
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, _, _, _, _ in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, _, _, _ in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3131,7 +3131,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
                        
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFile, emojiPackTitle, white in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPackTitle, white in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3146,18 +3146,31 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     guard let strongSelf = self else {
                         return
                     }
-                    let source: PremiumSource
-                    if let peerStatus = peerStatus, let emojiStatusFile = emojiStatusFile {
-                        source = .emojiStatus(strongSelf.peerId, peerStatus.fileId, emojiStatusFile, emojiPackTitle)
+                    let source: Signal<PremiumSource, NoError>
+                    if let peerStatus = peerStatus {
+                        source = emojiStatusFileAndPackTitle
+                        |> take(1)
+                        |> mapToSignal { emojiStatusFileAndPackTitle -> Signal<PremiumSource, NoError> in
+                            if let (file, packTitle) = emojiStatusFileAndPackTitle {
+                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, packTitle))
+                            } else {
+                                return .complete()
+                            }
+                        }
                     } else {
-                        source = .profile(strongSelf.peerId)
+                        source = .single(.profile(strongSelf.peerId))
                     }
                     
-                    let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
-                    controller.sourceView = sourceView
-                    controller.containerView = strongSelf.controller?.navigationController?.view
-                    controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
-                    strongSelf.controller?.push(controller)
+                    let _ = source.start(next: { [weak self] source in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let controller = PremiumIntroScreen(context: strongSelf.context, source: source)
+                        controller.sourceView = sourceView
+                        controller.containerView = strongSelf.controller?.navigationController?.view
+                        controller.animationColor = white ? .white : strongSelf.presentationData.theme.list.itemAccentColor
+                        strongSelf.controller?.push(controller)
+                    })
                 })
             }
             

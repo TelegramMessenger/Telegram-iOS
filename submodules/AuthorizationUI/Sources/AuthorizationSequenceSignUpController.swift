@@ -15,6 +15,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         return self.displayNode as! AuthorizationSequenceSignUpControllerNode
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private let presentationData: PresentationData
     private let back: () -> Void
     
@@ -30,12 +32,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -79,6 +76,19 @@ final class AuthorizationSequenceSignUpController: ViewController {
         }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_CancelPhoneVerificationStop, action: { [weak self] in
             self?.back()
         })]), in: .window(.root))
+    }
+    
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
     }
     
     override public func loadDisplayNode() {
@@ -137,6 +147,13 @@ final class AuthorizationSequenceSignUpController: ViewController {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }

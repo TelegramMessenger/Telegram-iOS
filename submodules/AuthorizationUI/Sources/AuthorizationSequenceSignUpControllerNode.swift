@@ -67,6 +67,14 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         didSet {
             self.firstNameField.alpha = self.inProgress ? 0.6 : 1.0
             self.lastNameField.alpha = self.inProgress ? 0.6 : 1.0
+            
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.proceedNode.transitionToProgress()
+                } else {
+                    self.proceedNode.transitionFromProgress()
+                }
+            }
         }
     }
     
@@ -206,88 +214,19 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         if let inputHeight = layout.inputHeight {
             insets.bottom += max(inputHeight, layout.standardInputHeight)
         }
+        
+        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
                 
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
-        
-//        let additionalTitleSpacing: CGFloat
-//        if titleSize.width > layout.size.width - 160.0 {
-//            additionalTitleSpacing = 44.0
-//        } else {
-//            additionalTitleSpacing = 0.0
-//        }
         
         let fieldHeight: CGFloat = 54.0
         
         let sideInset: CGFloat = 24.0
         let innerInset: CGFloat = 16.0
         
-//        let minimalNoticeSpacing: CGFloat = 11.0
-//        let maxNoticeSpacing: CGFloat = 35.0
         let noticeSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let termsSize = self.termsNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-//
-//        let noticeHeight: CGFloat = noticeSize.height + (self.termsNode.isHidden ? 0.0 : (termsSize.height + 4.0))
-//
-//        let minimalTermsOfServiceSpacing: CGFloat = 6.0
-//        let maxTermsOfServiceSpacing: CGFloat = 20.0
-//        let minTrailingSpacing: CGFloat = 10.0
-//
-//        let inputHeight = inputFieldsHeight
-//        let essentialHeight = additionalTitleSpacing + titleSize.height + minimalTitleSpacing + inputHeight + minimalNoticeSpacing + noticeHeight
-//        let additionalHeight = minimalTermsOfServiceSpacing + minTrailingSpacing
-//
-//        let navigationHeight: CGFloat
-//        if essentialHeight + additionalHeight > availableHeight || availableHeight * 0.66 - inputHeight < additionalHeight {
-//            navigationHeight = min(floor(availableHeight * 0.3), availableHeight - inputFieldsHeight)
-//        } else {
-//            navigationHeight = floor(availableHeight * 0.3)
-//        }
-//
-//        let titleOffset: CGFloat
-//        if navigationHeight * 0.5 < titleSize.height + minimalTitleSpacing {
-//            titleOffset = max(navigationBarHeight, floor((navigationHeight - titleSize.height) / 2.0))
-//        } else {
-//            titleOffset = max(navigationBarHeight, max(navigationHeight * 0.5, navigationHeight - maxTitleSpacing - titleSize.height))
-//        }
-//        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - titleSize.width) / 2.0), y: titleOffset), size: titleSize))
-//
-//        let avatarSize: CGSize = CGSize(width: 110.0, height: 110.0)
-//        let addPhotoButtonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - avatarSize.width) / 2.0), y: navigationHeight + 10.0), size: avatarSize)
-//        transition.updateFrame(node: self.addPhotoButton, frame: addPhotoButtonFrame)
-//        self.currentPhotoNode.frame = CGRect(origin: CGPoint(), size: addPhotoButtonFrame.size)
-//
-//
-//
-//        let firstFieldFrame = CGRect(origin: CGPoint(x: sideInset + innerInset, y: navigationHeight + 3.0), size: CGSize(width: layout.size.width - (sideInset + innerInset) * 2.0, height: fieldHeight))
-//        transition.updateFrame(node: self.firstNameField, frame: firstFieldFrame)
-//
-//        let lastFieldFrame = CGRect(origin: CGPoint(x: firstFieldFrame.minX, y: firstFieldFrame.maxY), size: CGSize(width: firstFieldFrame.size.width, height: fieldHeight))
-//        transition.updateFrame(node: self.lastNameField, frame: lastFieldFrame)
-//
-//        transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: firstFieldFrame.maxY), size: CGSize(width: layout.size.width - sideInset * 2.0, height: UIScreenPixel)))
-//        transition.updateFrame(node: self.lastSeparatorNode, frame: CGRect(origin: CGPoint(x: sideInset, y: lastFieldFrame.maxY), size: CGSize(width: layout.size.width - sideInset * 2.0, height: UIScreenPixel)))
-//
-//        let additionalAvailableHeight = max(1.0, availableHeight - lastFieldFrame.maxY)
-//        let additionalAvailableSpacing = max(1.0, additionalAvailableHeight - noticeHeight)
-//        let noticeSpacingFactor = maxNoticeSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-//        let termsOfServiceSpacingFactor = maxTermsOfServiceSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-//
-//        let noticeSpacing: CGFloat
-//        let termsOfServiceSpacing: CGFloat
-//        if additionalAvailableHeight <= maxNoticeSpacing + noticeHeight + maxTermsOfServiceSpacing + minTrailingSpacing {
-//            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-//            noticeSpacing = floor((additionalAvailableHeight - termsOfServiceSpacing - noticeHeight) / 2.0)
-//        } else {
-//            noticeSpacing = min(floor(noticeSpacingFactor * additionalAvailableSpacing), maxNoticeSpacing)
-//            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-//        }
-//
-//        let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: lastFieldFrame.maxY + max(0.0, noticeSpacing)), size: noticeSize)
-//        transition.updateFrame(node: self.currentOptionNode, frame: currentOptionFrame)
-//        let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: layout.size.height - insets.bottom - termsSize.height - 4.0), size: termsSize)
-//        transition.updateFrame(node: self.termsNode, frame: termsFrame)
-//
         
         let avatarSize: CGSize = CGSize(width: 110.0, height: 110.0)
         var items: [AuthorizationLayoutItem] = []
@@ -305,11 +244,19 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         items.append(AuthorizationLayoutItem(node: self.termsNode, size: termsSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
-        let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
-        items.append(AuthorizationLayoutItem(node: self.proceedNode, size: proceedSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 20.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
-                        
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 20.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        if layout.size.width > 320.0 {
+            self.proceedNode.isHidden = false
+            
+            let inset: CGFloat = 24.0
+            let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
+            let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
+            transition.updateFrame(node: self.proceedNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize))
+        } else {
+            insets.top = navigationBarHeight
+            self.proceedNode.isHidden = true
+        }
+        
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
     }
     
     func activateInput() {
