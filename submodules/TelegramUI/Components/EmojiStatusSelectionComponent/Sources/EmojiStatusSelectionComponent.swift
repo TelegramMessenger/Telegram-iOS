@@ -428,8 +428,26 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 effectView = view
             } else if let itemFile = item.itemFile {
+                var useCleanEffect = false
+                for attribute in itemFile.attributes {
+                    if case let .CustomEmoji(_, _, packReference) = attribute {
+                        switch packReference {
+                        case let .id(id, _):
+                            if id == 773947703670341676 {
+                                useCleanEffect = true
+                            }
+                        default:
+                            break
+                        }
+                    }
+                }
+                
                 var effectData: Data?
-                if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
+                if useCleanEffect {
+                    if let url = getAppBundle().url(forResource: "generic_reaction_avatar_effect", withExtension: "json") {
+                        effectData = try? Data(contentsOf: url)
+                    }
+                } else if let genericReactionEffect = self.genericReactionEffect, let data = try? Data(contentsOf: URL(fileURLWithPath: genericReactionEffect)) {
                     effectData = TGGUnzipData(data, 5 * 1024 * 1024) ?? data
                 } else {
                     if let url = getAppBundle().url(forResource: "generic_reaction_small_effect", withExtension: "json") {
