@@ -43,7 +43,9 @@ private func tagsForMessage(_ message: Message) -> MessageTags? {
 }
 
 private func galleryMediaForMedia(media: Media) -> Media? {
-    if let media = media as? TelegramMediaImage {
+    if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+        return fullMedia
+    } else if let media = media as? TelegramMediaImage {
         return media
     } else if let file = media as? TelegramMediaFile {
         if file.mimeType.hasPrefix("audio/") {

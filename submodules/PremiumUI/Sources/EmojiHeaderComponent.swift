@@ -111,14 +111,18 @@ class EmojiHeaderComponent: Component {
             
             let initialPosition = self.statusView.center
             let targetPosition = self.statusView.superview!.convert(self.statusView.center, to: containerView)
-            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: -20.0)
+            let sourcePosition = animateFrom.superview!.convert(animateFrom.center, to: containerView).offsetBy(dx: 0.0, dy: 0.0)
             
             containerView.addSubview(self.statusView)
             self.statusView.center = targetPosition
             
             animateFrom.alpha = 0.0
-            self.statusView.layer.animateScale(from: 0.05, to: 1.0, duration: 0.55, timingFunction: kCAMediaTimingFunctionSpring)
-            self.statusView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 0.55, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+            self.statusView.layer.animateScale(from: 0.24, to: 1.0, duration: 0.36, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+            
+            let transition = ContainedViewLayoutTransition.animated(duration: 0.36, curve: .linear)
+            transition.animatePositionWithKeyframes(layer: self.statusView.layer, keyframes: generateParabollicMotionKeyframes(from: sourcePosition, to: targetPosition, elevation: 50.0))
+            
+            Queue.mainQueue().after(0.55, {
                 self.addSubview(self.statusView)
                 self.statusView.center = initialPosition
             })
@@ -164,4 +168,38 @@ class EmojiHeaderComponent: Component {
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, transition: transition)
     }
+}
+
+private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat) -> [CGPoint] {
+    let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)
+    
+    let x1 = sourcePoint.x
+    let y1 = sourcePoint.y
+    let x2 = midPoint.x
+    let y2 = midPoint.y
+    let x3 = targetPosition.x
+    let y3 = targetPosition.y
+    
+    var keyframes: [CGPoint] = []
+    if abs(y1 - y3) < 5.0 && abs(x1 - x3) < 5.0 {
+        for i in 0 ..< 10 {
+            let k = CGFloat(i) / CGFloat(10 - 1)
+            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+            let y = sourcePoint.y * (1.0 - k) + targetPosition.y * k
+            keyframes.append(CGPoint(x: x, y: y))
+        }
+    } else {
+        let a = (x3 * (y2 - y1) + x2 * (y1 - y3) + x1 * (y3 - y2)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        let b = (x1 * x1 * (y2 - y3) + x3 * x3 * (y1 - y2) + x2 * x2 * (y3 - y1)) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        let c = (x2 * x2 * (x3 * y1 - x1 * y3) + x2 * (x1 * x1 * y3 - x3 * x3 * y1) + x1 * x3 * (x3 - x1) * y2) / ((x1 - x2) * (x1 - x3) * (x2 - x3))
+        
+        for i in 0 ..< 10 {
+            let k = CGFloat(i) / CGFloat(10 - 1)
+            let x = sourcePoint.x * (1.0 - k) + targetPosition.x * k
+            let y = a * x * x + b * x + c
+            keyframes.append(CGPoint(x: x, y: y))
+        }
+    }
+    
+    return keyframes
 }

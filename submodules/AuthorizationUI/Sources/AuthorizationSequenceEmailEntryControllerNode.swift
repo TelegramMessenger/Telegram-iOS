@@ -172,11 +172,17 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
     private func updateButtonsVisibility(transition: ContainedViewLayoutTransition) {
         if self.currentEmail.isEmpty && self.appleSignInAllowed {
             transition.updateAlpha(node: self.proceedNode, alpha: 0.0)
+            if self.proceedNode.isHidden {
+                transition.updateAlpha(node: self.dividerNode, alpha: 1.0)
+            }
             if let signInWithAppleButton = self.signInWithAppleButton {
                 transition.updateAlpha(layer: signInWithAppleButton.layer, alpha: 1.0)
             }
         } else {
             transition.updateAlpha(node: self.proceedNode, alpha: 1.0)
+            if self.proceedNode.isHidden {
+                transition.updateAlpha(node: self.dividerNode, alpha: 0.0)
+            }
             if let signInWithAppleButton = self.signInWithAppleButton {
                 transition.updateAlpha(layer: signInWithAppleButton.layer, alpha: 0.0)
             }
@@ -216,7 +222,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: titleInset, maxValue: titleInset), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.noticeNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 22.0, maxValue: 40.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.codeField, size: CGSize(width: layout.size.width - 88.0, height: 44.0), spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         items.append(AuthorizationLayoutItem(node: self.codeSeparatorNode, size: CGSize(width: layout.size.width - 48.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
         if layout.size.width > 320.0 {
@@ -244,7 +250,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
             self.dividerNode.isHidden = true
         }
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 80.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 110.0)), items: items, transition: transition, failIfDoesNotFit: false)
         
         if let signInWithAppleButton = self.signInWithAppleButton, self.appleSignInAllowed {
             signInWithAppleButton.isHidden = false

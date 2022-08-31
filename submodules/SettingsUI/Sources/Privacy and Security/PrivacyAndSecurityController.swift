@@ -92,6 +92,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case passcode(PresentationTheme, String, Bool, String)
     case twoStepVerification(PresentationTheme, String, String, TwoStepVerificationAccessConfiguration?)
     case loginEmail(PresentationTheme, String, String?)
+    case loginEmailInfo(PresentationTheme, String)
     case activeSessions(PresentationTheme, String, String)
     case autoArchiveHeader(String)
     case autoArchive(String, Bool)
@@ -104,7 +105,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail:
+            case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail, .loginEmailInfo:
                 return PrivacyAndSecuritySection.general.rawValue
             case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .voiceCallPrivacy, .voiceMessagePrivacy, .selectivePrivacyInfo:
                 return PrivacyAndSecuritySection.privacy.rawValue
@@ -129,40 +130,42 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 4
             case .loginEmail:
                 return 5
-            case .privacyHeader:
+            case .loginEmailInfo:
                 return 6
-            case .phoneNumberPrivacy:
+            case .privacyHeader:
                 return 7
-            case .lastSeenPrivacy:
+            case .phoneNumberPrivacy:
                 return 8
-            case .profilePhotoPrivacy:
+            case .lastSeenPrivacy:
                 return 9
-            case .voiceCallPrivacy:
+            case .profilePhotoPrivacy:
                 return 10
-            case .voiceMessagePrivacy:
+            case .voiceCallPrivacy:
                 return 11
-            case .forwardPrivacy:
+            case .voiceMessagePrivacy:
                 return 12
-            case .groupPrivacy:
+            case .forwardPrivacy:
                 return 13
-            case .selectivePrivacyInfo:
+            case .groupPrivacy:
                 return 14
-            case .autoArchiveHeader:
+            case .selectivePrivacyInfo:
                 return 15
-            case .autoArchive:
+            case .autoArchiveHeader:
                 return 16
-            case .autoArchiveInfo:
+            case .autoArchive:
                 return 17
-            case .accountHeader:
+            case .autoArchiveInfo:
                 return 18
-            case .accountTimeout:
+            case .accountHeader:
                 return 19
-            case .accountInfo:
+            case .accountTimeout:
                 return 20
-            case .dataSettings:
+            case .accountInfo:
                 return 21
-            case .dataSettingsInfo:
+            case .dataSettings:
                 return 22
+            case .dataSettingsInfo:
+                return 23
         }
     }
     
@@ -242,6 +245,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 }
             case let .loginEmail(lhsTheme, lhsText, lhsEmailPattern):
                 if case let .loginEmail(rhsTheme, rhsText, rhsEmailPattern) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsEmailPattern == rhsEmailPattern {
+                    return true
+                } else {
+                    return false
+                }
+            case let .loginEmailInfo(lhsTheme, lhsText):
+                if case let .loginEmailInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -358,6 +367,8 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/LoginEmail")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openEmailSettings(emailPattern)
                 })
+            case let .loginEmailInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .activeSessions(_, text, value):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Websites")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openActiveSessions()
@@ -474,7 +485,8 @@ private func privacyAndSecurityControllerEntries(
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
     
     if loginEmail != nil {
-    entries.append(.loginEmail(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmail, loginEmail))
+        entries.append(.loginEmail(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmail, loginEmail))
+        entries.append(.loginEmailInfo(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmailInfo))
     }
     
     entries.append(.privacyHeader(presentationData.theme, presentationData.strings.PrivacySettings_PrivacyTitle))

@@ -64,6 +64,8 @@ extension StickerPackReference {
                 self = .animatedEmojiAnimations
             case .inputStickerSetPremiumGifts:
                 self = .premiumGifts
+            case .inputStickerSetEmojiGenericAnimations:
+                self = .premiumGifts
         }
     }
 }

@@ -608,6 +608,7 @@ public extension Api {
         case updateLangPack(difference: Api.LangPackDifference)
         case updateLangPackTooLong(langCode: String)
         case updateLoginToken
+        case updateMessageExtendedMedia(peer: Api.Peer, msgId: Int32, extendedMedia: Api.MessageExtendedMedia)
         case updateMessageID(id: Int32, randomId: Int64)
         case updateMessagePoll(flags: Int32, pollId: Int64, poll: Api.Poll?, results: Api.PollResults)
         case updateMessagePollVote(pollId: Int64, userId: Int64, options: [Buffer], qts: Int32)
@@ -1149,6 +1150,14 @@ public extension Api {
                     }
                     
                     break
+                case .updateMessageExtendedMedia(let peer, let msgId, let extendedMedia):
+                    if boxed {
+                        buffer.appendInt32(1517529484)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(msgId, buffer: buffer, boxed: false)
+                    extendedMedia.serialize(buffer, true)
+                    break
                 case .updateMessageID(let id, let randomId):
                     if boxed {
                         buffer.appendInt32(1318109142)
@@ -1679,6 +1688,8 @@ public extension Api {
                 return ("updateLangPackTooLong", [("langCode", String(describing: langCode))])
                 case .updateLoginToken:
                 return ("updateLoginToken", [])
+                case .updateMessageExtendedMedia(let peer, let msgId, let extendedMedia):
+                return ("updateMessageExtendedMedia", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("extendedMedia", String(describing: extendedMedia))])
                 case .updateMessageID(let id, let randomId):
                 return ("updateMessageID", [("id", String(describing: id)), ("randomId", String(describing: randomId))])
                 case .updateMessagePoll(let flags, let pollId, let poll, let results):
@@ -2804,6 +2815,27 @@ public extension Api {
         }
         public static func parse_updateLoginToken(_ reader: BufferReader) -> Update? {
             return Api.Update.updateLoginToken
+        }
+        public static func parse_updateMessageExtendedMedia(_ reader: BufferReader) -> Update? {
+            var _1: Api.Peer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Api.MessageExtendedMedia?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.MessageExtendedMedia
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateMessageExtendedMedia(peer: _1!, msgId: _2!, extendedMedia: _3!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_updateMessageID(_ reader: BufferReader) -> Update? {
             var _1: Int32?

@@ -239,7 +239,7 @@ func _internal_fetchBotPaymentInvoice(postbox: Postbox, network: Network, source
                         parsedFlags.insert(.shippingAddressRequested)
                     }
                     
-                    return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: 0, startParam: "", flags: parsedFlags)
+                    return TelegramMediaInvoice(title: title, description: description, photo: photo.flatMap(TelegramMediaWebFile.init), receiptMessageId: nil, currency: parsedInvoice.currency, totalAmount: 0, startParam: "", extendedMedia: nil, flags: parsedFlags)
                 }
             }
             |> mapError { _ -> BotPaymentFormRequestError in }
@@ -612,6 +612,7 @@ func _internal_requestBotPaymentReceipt(account: Account, messageId: MessageId) 
                         currency: currency,
                         totalAmount: totalAmount,
                         startParam: "",
+                        extendedMedia: nil,
                         flags: []
                     )
                     

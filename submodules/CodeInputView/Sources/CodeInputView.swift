@@ -121,6 +121,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
     private var theme: Theme?
     private var count: Int?
     private var prefix: String = ""
+    private var compact = false
     
     private var textValue: String = ""
     public var text: String {
@@ -261,7 +262,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
             
             let fontSize: CGFloat
             if self.prefix.isEmpty {
-                let height: CGFloat = 51.0
+                let height: CGFloat = self.compact ? 44.0 : 51.0
                 fontSize = floor(13.0 * height / 28.0)
             } else {
                 let height: CGFloat = 28.0
@@ -291,10 +292,11 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
-    public func update(theme: Theme, prefix: String, count: Int, width: CGFloat) -> CGSize {
+    public func update(theme: Theme, prefix: String, count: Int, width: CGFloat, compact: Bool) -> CGSize {
         self.theme = theme
         self.count = count
         self.prefix = prefix
+        self.compact = compact
         
         if theme.isDark {
             self.textField.keyboardAppearance = .dark
@@ -305,7 +307,7 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
         let fontSize: CGFloat
         let height: CGFloat
         if prefix.isEmpty {
-            height = 51.0
+            height = compact ? 44.0 : 51.0
             fontSize = floor(13.0 * height / 28.0)
         } else {
             height = 28.0
