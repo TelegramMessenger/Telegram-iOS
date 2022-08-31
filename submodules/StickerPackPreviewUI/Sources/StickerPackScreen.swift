@@ -729,8 +729,19 @@ private final class StickerPackContainer: ASDisplayNode {
             case .unknown, .none:
                 backgroundAlpha = 1.0
         }
-        self.actionAreaBackgroundNode.alpha = backgroundAlpha
-        self.actionAreaSeparatorNode.alpha = backgroundAlpha
+        
+        let transition: ContainedViewLayoutTransition
+        var delay: Double = 0.0
+        if backgroundAlpha >= self.actionAreaBackgroundNode.alpha || abs(backgroundAlpha - self.actionAreaBackgroundNode.alpha) < 0.01 {
+            transition = .immediate
+        } else {
+            transition = .animated(duration: 0.2, curve: .linear)
+            if abs(backgroundAlpha - self.actionAreaBackgroundNode.alpha) > 0.9 {
+                delay = 0.2
+            }
+        }
+        transition.updateAlpha(node: self.actionAreaBackgroundNode, alpha: backgroundAlpha, delay: delay)
+        transition.updateAlpha(node: self.actionAreaSeparatorNode, alpha: backgroundAlpha, delay: delay)
     }
     
     private func updateStickerPackContents(_ contents: [LoadedStickerPack], hasPremium: Bool) {

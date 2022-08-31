@@ -907,7 +907,7 @@ final class PhoneConfirmationController: ViewController {
             self.codeTargetNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, removeOnCompletion: false)
             self.codeTargetNode.layer.animatePosition(from: self.codeTargetNode.position, to: self.codeSourceNode.position, duration: duration)
             
-            Queue.mainQueue().after(0.23) {
+            Queue.mainQueue().after(0.2) {
                 codeNode.isHidden = false
                 numberNode.isHidden = false
                 buttonNode.isHidden = false

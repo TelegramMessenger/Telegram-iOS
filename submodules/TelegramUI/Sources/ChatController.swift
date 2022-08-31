@@ -636,6 +636,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             var openMessageByAction = false
             var isLocation = false
+                        
             for media in message.media {
                 if media is TelegramMediaMap {
                     isLocation = true
@@ -646,7 +647,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         strongSelf.chatDisplayNode.dismissInput()
                     }
                 }
-                if let action = media as? TelegramMediaAction {
+                if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia {
+                    switch extendedMedia {
+                        case .preview:
+                            strongSelf.controllerInteraction?.openCheckoutOrReceipt(message.id)
+                            return true
+                        case .full:
+                            break
+                    }
+                } else if let action = media as? TelegramMediaAction {
                     switch action.action {
                         case .pinnedMessageUpdated:
                             for attribute in message.attributes {

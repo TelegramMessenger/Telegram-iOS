@@ -7999,6 +7999,7 @@ Sorry for the inconvenience.";
 "Login.WrongCodeError" = "Wrong code, please try again.";
 
 "PrivacySettings.LoginEmail" = "Login Email";
+"PrivacySettings.LoginEmailInfo" = "Change your email address for Telegram login codes.";
 "Login.EmailChanged" = "Your email has been changed.";
 
 "Login.InvalidEmailAddressError" = "An error occurred. Please try again.";

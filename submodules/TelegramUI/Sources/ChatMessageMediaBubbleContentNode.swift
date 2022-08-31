@@ -114,6 +114,39 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                         contentMode = .aspectFill
+                    } else if let invoice = media as? TelegramMediaInvoice {
+                        selectedMedia = invoice
+                        
+                        if let extendedMedia = invoice.extendedMedia, case let .full(media) = extendedMedia {
+                            if let telegramImage = media as? TelegramMediaImage {
+                                if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramImage) {
+                                    automaticDownload = .full
+                                }
+                            } else if let telegramFile = media as? TelegramMediaFile {
+                                if shouldDownloadMediaAutomatically(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, authorPeerId: item.message.author?.id, contactsPeerIds: item.associatedData.contactsPeerIds, media: telegramFile) {
+                                    automaticDownload = .full
+                                } else if shouldPredownloadMedia(settings: item.controllerInteraction.automaticMediaDownloadSettings, peerType: item.associatedData.automaticDownloadPeerType, networkType: item.associatedData.automaticDownloadNetworkType, media: telegramFile) {
+                                    automaticDownload = .prefetch
+                                }
+                                
+                                if !item.message.containsSecretMedia {
+                                    if telegramFile.isAnimated && item.controllerInteraction.automaticMediaDownloadSettings.autoplayGifs {
+                                        if case .full = automaticDownload {
+                                            automaticPlayback = true
+                                        } else {
+                                            automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                                        }
+                                    } else if (telegramFile.isVideo && !telegramFile.isAnimated) && item.controllerInteraction.automaticMediaDownloadSettings.autoplayVideos {
+                                        if case .full = automaticDownload {
+                                            automaticPlayback = true
+                                        } else {
+                                            automaticPlayback = item.context.account.postbox.mediaBox.completedResourcePath(telegramFile.resource) != nil
+                                        }
+                                    }
+                                }
+                                contentMode = .aspectFill
+                            }
+                        }
                     }
                 }
             }
@@ -121,7 +154,33 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
             var hasReplyMarkup: Bool = false
             for attribute in item.message.attributes {
                 if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
-                    hasReplyMarkup = true
+                    var isExtendedMedia = false
+                    for media in item.message.media {
+                        if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                            isExtendedMedia = true
+                            break
+                        }
+                    }
+                    if isExtendedMedia {
+                        var updatedRows: [ReplyMarkupRow] = []
+                        for row in attribute.rows {
+                            let updatedButtons = row.buttons.filter { button in
+                                if case .payment = button.action {
+                                    return false
+                                } else {
+                                    return true
+                                }
+                            }
+                            if !updatedButtons.isEmpty {
+                                updatedRows.append(ReplyMarkupRow(buttons: updatedButtons))
+                            }
+                        }
+                        if !updatedRows.isEmpty {
+                            hasReplyMarkup = true
+                        }
+                    } else {
+                        hasReplyMarkup = true
+                    }
                     break
                 }
             }

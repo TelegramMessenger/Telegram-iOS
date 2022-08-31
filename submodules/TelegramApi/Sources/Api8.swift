@@ -101,7 +101,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputMedia: TypeConstructorDescription {
+    indirect enum InputMedia: TypeConstructorDescription {
         case inputMediaContact(phoneNumber: String, firstName: String, lastName: String, vcard: String)
         case inputMediaDice(emoticon: String)
         case inputMediaDocument(flags: Int32, id: Api.InputDocument, ttlSeconds: Int32?, query: String?)
@@ -110,7 +110,7 @@ public extension Api {
         case inputMediaGame(id: Api.InputGame)
         case inputMediaGeoLive(flags: Int32, geoPoint: Api.InputGeoPoint, heading: Int32?, period: Int32?, proximityNotificationRadius: Int32?)
         case inputMediaGeoPoint(geoPoint: Api.InputGeoPoint)
-        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String?)
+        case inputMediaInvoice(flags: Int32, title: String, description: String, photo: Api.InputWebDocument?, invoice: Api.Invoice, payload: Buffer, provider: String, providerData: Api.DataJSON, startParam: String?, extendedMedia: Api.InputMedia?)
         case inputMediaPhoto(flags: Int32, id: Api.InputPhoto, ttlSeconds: Int32?)
         case inputMediaPhotoExternal(flags: Int32, url: String, ttlSeconds: Int32?)
         case inputMediaPoll(flags: Int32, poll: Api.Poll, correctAnswers: [Buffer]?, solution: String?, solutionEntities: [Api.MessageEntity]?)
@@ -180,9 +180,9 @@ public extension Api {
                     }
                     geoPoint.serialize(buffer, true)
                     break
-                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam):
+                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let extendedMedia):
                     if boxed {
-                        buffer.appendInt32(-646342540)
+                        buffer.appendInt32(-1900697899)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
@@ -193,6 +193,7 @@ public extension Api {
                     serializeString(provider, buffer: buffer, boxed: false)
                     providerData.serialize(buffer, true)
                     if Int(flags) & Int(1 << 1) != 0 {serializeString(startParam!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {extendedMedia!.serialize(buffer, true)}
                     break
                 case .inputMediaPhoto(let flags, let id, let ttlSeconds):
                     if boxed {
@@ -293,8 +294,8 @@ public extension Api {
                 return ("inputMediaGeoLive", [("flags", String(describing: flags)), ("geoPoint", String(describing: geoPoint)), ("heading", String(describing: heading)), ("period", String(describing: period)), ("proximityNotificationRadius", String(describing: proximityNotificationRadius))])
                 case .inputMediaGeoPoint(let geoPoint):
                 return ("inputMediaGeoPoint", [("geoPoint", String(describing: geoPoint))])
-                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam):
-                return ("inputMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("invoice", String(describing: invoice)), ("payload", String(describing: payload)), ("provider", String(describing: provider)), ("providerData", String(describing: providerData)), ("startParam", String(describing: startParam))])
+                case .inputMediaInvoice(let flags, let title, let description, let photo, let invoice, let payload, let provider, let providerData, let startParam, let extendedMedia):
+                return ("inputMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("invoice", String(describing: invoice)), ("payload", String(describing: payload)), ("provider", String(describing: provider)), ("providerData", String(describing: providerData)), ("startParam", String(describing: startParam)), ("extendedMedia", String(describing: extendedMedia))])
                 case .inputMediaPhoto(let flags, let id, let ttlSeconds):
                 return ("inputMediaPhoto", [("flags", String(describing: flags)), ("id", String(describing: id)), ("ttlSeconds", String(describing: ttlSeconds))])
                 case .inputMediaPhotoExternal(let flags, let url, let ttlSeconds):
@@ -459,6 +460,10 @@ public extension Api {
             }
             var _9: String?
             if Int(_1!) & Int(1 << 1) != 0 {_9 = parseString(reader) }
+            var _10: Api.InputMedia?
+            if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
+                _10 = Api.parse(reader, signature: signature) as? Api.InputMedia
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -468,8 +473,9 @@ public extension Api {
             let _c7 = _7 != nil
             let _c8 = _8 != nil
             let _c9 = (Int(_1!) & Int(1 << 1) == 0) || _9 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
-                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9)
+            let _c10 = (Int(_1!) & Int(1 << 2) == 0) || _10 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 {
+                return Api.InputMedia.inputMediaInvoice(flags: _1!, title: _2!, description: _3!, photo: _4, invoice: _5!, payload: _6!, provider: _7!, providerData: _8!, startParam: _9, extendedMedia: _10)
             }
             else {
                 return nil

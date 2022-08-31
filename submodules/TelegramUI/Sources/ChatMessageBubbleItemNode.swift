@@ -114,9 +114,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
                 break inner
-            } else if let _ = media as? TelegramMediaInvoice {
-                skipText = true
-                result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+            } else if let invoice = media as? TelegramMediaInvoice {
+                if let _ = invoice.extendedMedia {
+                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                } else {
+                    skipText = true
+                    result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                }
                 needReactions = false
                 break inner
             } else if let _ = media as? TelegramMediaContact {
@@ -1376,7 +1380,33 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
-                replyMarkup = attribute
+                var isExtendedMedia = false
+                for media in firstMessage.media {
+                    if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                        isExtendedMedia = true
+                        break
+                    }
+                }
+                if isExtendedMedia {
+                    var updatedRows: [ReplyMarkupRow] = []
+                    for row in attribute.rows {
+                        let updatedButtons = row.buttons.filter { button in
+                            if case .payment = button.action {
+                                return false
+                            } else {
+                                return true
+                            }
+                        }
+                        if !updatedButtons.isEmpty {
+                            updatedRows.append(ReplyMarkupRow(buttons: updatedButtons))
+                        }
+                    }
+                    if !updatedRows.isEmpty {
+                        replyMarkup = ReplyMarkupMessageAttribute(rows: updatedRows, flags: attribute.flags, placeholder: attribute.placeholder)
+                    }
+                } else {
+                    replyMarkup = attribute
+                }
             } else if let attribute = attribute as? AuthorSignatureMessageAttribute {
                 if let chatPeer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .group = chatPeer.info, firstMessage.author is TelegramChannel, !attribute.signature.isEmpty {
                     authorRank = .custom(attribute.signature)
