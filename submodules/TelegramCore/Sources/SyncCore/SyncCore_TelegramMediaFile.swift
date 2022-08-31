@@ -20,6 +20,7 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     case dice(String)
     case animatedEmojiAnimations
     case premiumGifts
+    case emojiGenericAnimations
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("r", orElse: 0) {
@@ -66,22 +67,24 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .id(id, accessHash):
-                encoder.encodeInt32(0, forKey: "r")
-                encoder.encodeInt64(id, forKey: "i")
-                encoder.encodeInt64(accessHash, forKey: "h")
-            case let .name(name):
-                encoder.encodeInt32(1, forKey: "r")
-                encoder.encodeString(name, forKey: "n")
-            case .animatedEmoji:
-                encoder.encodeInt32(2, forKey: "r")
-            case let .dice(emoji):
-                encoder.encodeInt32(3, forKey: "r")
-                encoder.encodeString(emoji, forKey: "e")
-            case .animatedEmojiAnimations:
-                encoder.encodeInt32(4, forKey: "r")
-            case .premiumGifts:
-                encoder.encodeInt32(5, forKey: "r")
+        case let .id(id, accessHash):
+            encoder.encodeInt32(0, forKey: "r")
+            encoder.encodeInt64(id, forKey: "i")
+            encoder.encodeInt64(accessHash, forKey: "h")
+        case let .name(name):
+            encoder.encodeInt32(1, forKey: "r")
+            encoder.encodeString(name, forKey: "n")
+        case .animatedEmoji:
+            encoder.encodeInt32(2, forKey: "r")
+        case let .dice(emoji):
+            encoder.encodeInt32(3, forKey: "r")
+            encoder.encodeString(emoji, forKey: "e")
+        case .animatedEmojiAnimations:
+            encoder.encodeInt32(4, forKey: "r")
+        case .premiumGifts:
+            encoder.encodeInt32(5, forKey: "r")
+        case .emojiGenericAnimations:
+            preconditionFailure()
         }
     }
     
@@ -105,47 +108,55 @@ public enum StickerPackReference: PostboxCoding, Hashable, Equatable, Codable {
             try container.encode(4 as Int32, forKey: "r")
         case .premiumGifts:
             try container.encode(5 as Int32, forKey: "r")
+        case .emojiGenericAnimations:
+            preconditionFailure()
         }
     }
     
     public static func ==(lhs: StickerPackReference, rhs: StickerPackReference) -> Bool {
         switch lhs {
-            case let .id(id, accessHash):
-                if case .id(id, accessHash) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .name(name):
-                if case .name(name) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .animatedEmoji:
-                if case .animatedEmoji = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case let .dice(emoji):
-                if case .dice(emoji) = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .animatedEmojiAnimations:
-                if case .animatedEmojiAnimations = rhs {
-                    return true
-                } else {
-                    return false
-                }
-            case .premiumGifts:
-                if case .premiumGifts = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case let .id(id, accessHash):
+            if case .id(id, accessHash) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .name(name):
+            if case .name(name) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .animatedEmoji:
+            if case .animatedEmoji = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .dice(emoji):
+            if case .dice(emoji) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .animatedEmojiAnimations:
+            if case .animatedEmojiAnimations = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .premiumGifts:
+            if case .premiumGifts = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .emojiGenericAnimations:
+            if case .emojiGenericAnimations = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }

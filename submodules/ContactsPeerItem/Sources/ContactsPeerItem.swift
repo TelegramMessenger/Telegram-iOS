@@ -370,6 +370,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private let avatarNode: AvatarNode
     private let titleNode: TextNode
     private var credibilityIconView: ComponentHostView<Empty>?
+    private var credibilityIconComponent: EmojiStatusComponent?
     private let statusNode: TextNode
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
@@ -396,6 +397,37 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     
     public var item: ContactsPeerItem? {
         return self.layoutParams?.0
+    }
+    
+    override public var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = self.visibilityStatus
+            let isVisible: Bool
+            switch self.visibility {
+                case let .visible(fraction, _):
+                    isVisible = fraction > 0.01
+                case .none:
+                    isVisible = false
+            }
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                if let credibilityIconView = self.credibilityIconView, let credibilityIconComponent = self.credibilityIconComponent {
+                    let _ = credibilityIconView.update(
+                        transition: .immediate,
+                        component: AnyComponent(credibilityIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                        environment: {},
+                        containerSize: credibilityIconView.bounds.size
+                    )
+                }
+            }
+        }
     }
         
     required public init() {
@@ -616,7 +648,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
                     } else if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
-                        credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                        credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                     } else if peer.isVerified {
                         credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
@@ -987,17 +1019,20 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.credibilityIconView = credibilityIconView
                                 }
                                 
+                                let credibilityIconComponent = EmojiStatusComponent(
+                                    context: item.context,
+                                    animationCache: animationCache,
+                                    animationRenderer: animationRenderer,
+                                    content: credibilityIcon,
+                                    isVisibleForAnimations: strongSelf.visibilityStatus,
+                                    action: nil,
+                                    emojiFileUpdated: nil
+                                )
+                                strongSelf.credibilityIconComponent = credibilityIconComponent
+                                
                                 let iconSize = credibilityIconView.update(
                                     transition: .immediate,
-                                    component: AnyComponent(EmojiStatusComponent(
-                                        context: item.context,
-                                        animationCache: animationCache,
-                                        animationRenderer: animationRenderer,
-                                        content: credibilityIcon,
-                                        action: nil,
-                                        longTapAction: nil,
-                                        emojiFileUpdated: nil
-                                    )),
+                                    component: AnyComponent(credibilityIconComponent),
                                     environment: {},
                                     containerSize: CGSize(width: 20.0, height: 20.0)
                                 )

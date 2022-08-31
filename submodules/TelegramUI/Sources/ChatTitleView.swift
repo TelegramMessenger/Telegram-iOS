@@ -679,7 +679,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         case .scam:
             titleCredibilityContent = .scam(color: self.theme.chat.message.incoming.scamColor)
         case let .emojiStatus(emojiStatus):
-            titleCredibilityContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor)
+            titleCredibilityContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: self.theme.list.mediaPlaceholderColor, themeColor: self.theme.list.itemAccentColor, loopMode: .count(2))
         }
         
         let titleCredibilitySize = self.titleCredibilityIconView.update(
@@ -689,8 +689,8 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                 animationCache: self.animationCache,
                 animationRenderer: self.animationRenderer,
                 content: titleCredibilityContent,
-                action: nil,
-                longTapAction: nil
+                isVisibleForAnimations: true,
+                action: nil
             )),
             environment: {},
             containerSize: CGSize(width: 20.0, height: 20.0)

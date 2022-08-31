@@ -291,7 +291,9 @@ public class ItemListReactionItemNode: ListViewItemNode, ItemListItemNode {
                                 context: item.context,
                                 animationCache: item.context.animationCache,
                                 animationRenderer: item.context.animationRenderer,
-                                content: .animation(content: animationContent, size: iconBoundingSize, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor), action: nil, longTapAction: nil
+                                content: .animation(content: animationContent, size: iconBoundingSize, placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .forever),
+                                isVisibleForAnimations: true,
+                                action: nil
                             )),
                             environment: {},
                             containerSize: iconBoundingSize

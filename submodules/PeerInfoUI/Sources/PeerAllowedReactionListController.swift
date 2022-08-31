@@ -20,12 +20,12 @@ private enum PeerReactionsMode {
 
 private final class PeerAllowedReactionListControllerArguments {
     let context: AccountContext
-    let setMode: (PeerReactionsMode) -> Void
+    let setMode: (PeerReactionsMode, Bool) -> Void
     let toggleItem: (MessageReaction.Reaction) -> Void
     
     init(
         context: AccountContext,
-        setMode: @escaping (PeerReactionsMode) -> Void,
+        setMode: @escaping (PeerReactionsMode, Bool) -> Void,
         toggleItem: @escaping (MessageReaction.Reaction) -> Void
     ) {
         self.context = context
@@ -41,6 +41,7 @@ private enum PeerAllowedReactionListControllerSection: Int32 {
 
 private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
     enum StableId: Hashable {
+        case allowSwitch
         case allowAllHeader
         case allowAll
         case allowSome
@@ -50,6 +51,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
         case item(MessageReaction.Reaction)
     }
     
+    case allowSwitch(text: String, value: Bool)
     case allowAllHeader(String)
     case allowAll(text: String, isEnabled: Bool)
     case allowSome(text: String, isEnabled: Bool)
@@ -57,11 +59,11 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
     case allowAllInfo(String)
     
     case itemsHeader(String)
-    case item(index: Int, value: MessageReaction.Reaction, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction, text: String, isEnabled: Bool)
+    case item(index: Int, value: MessageReaction.Reaction, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction, text: String, isEnabled: Bool, allDisabled: Bool)
     
     var section: ItemListSectionId {
         switch self {
-        case .allowAllHeader, .allowAll, .allowSome, .allowNone, .allowAllInfo:
+        case .allowSwitch, .allowAllHeader, .allowAll, .allowSome, .allowNone, .allowAllInfo:
             return PeerAllowedReactionListControllerSection.all.rawValue
         case .itemsHeader, .item:
             return PeerAllowedReactionListControllerSection.items.rawValue
@@ -70,6 +72,8 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
     
     var stableId: StableId {
         switch self {
+        case .allowSwitch:
+            return .allowSwitch
         case .allowAllHeader:
             return .allowAllHeader
         case .allowAll:
@@ -82,32 +86,40 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             return .allowAllInfo
         case .itemsHeader:
             return .itemsHeader
-        case let .item(_, value, _, _, _, _):
+        case let .item(_, value, _, _, _, _, _):
             return .item(value)
         }
     }
     
     var sortId: Int {
         switch self {
-        case .allowAllHeader:
+        case .allowSwitch:
             return 0
-        case .allowAll:
+        case .allowAllHeader:
             return 1
-        case .allowSome:
+        case .allowAll:
             return 2
-        case .allowNone:
+        case .allowSome:
             return 3
-        case .allowAllInfo:
+        case .allowNone:
             return 4
-        case .itemsHeader:
+        case .allowAllInfo:
             return 5
-        case let .item(index, _, _, _, _, _):
+        case .itemsHeader:
+            return 6
+        case let .item(index, _, _, _, _, _, _):
             return 100 + index
         }
     }
     
     static func ==(lhs: PeerAllowedReactionListControllerEntry, rhs: PeerAllowedReactionListControllerEntry) -> Bool {
         switch lhs {
+        case let .allowSwitch(text, value):
+            if case .allowSwitch(text, value) = rhs {
+                return true
+            } else {
+                return false
+            }
         case let .allowAllHeader(text):
             if case .allowAllHeader(text) = rhs {
                 return true
@@ -144,8 +156,8 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .item(index, value, availableReactions, reaction, text, isEnabled):
-            if case .item(index, value, availableReactions, reaction, text, isEnabled) = rhs {
+        case let .item(index, value, availableReactions, reaction, text, isEnabled, allDisabled):
+            if case .item(index, value, availableReactions, reaction, text, isEnabled, allDisabled) = rhs {
                 return true
             } else {
                 return false
@@ -160,6 +172,14 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! PeerAllowedReactionListControllerArguments
         switch self {
+        case let .allowSwitch(text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                if value {
+                    arguments.setMode(.some, false)
+                } else {
+                    arguments.setMode(.empty, false)
+                }
+            })
         case let .allowAllHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .allowAll(text, isEnabled):
@@ -177,7 +197,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
                 zeroSeparatorInsets: false,
                 sectionId: self.section,
                 action: {
-                    arguments.setMode(.all)
+                    arguments.setMode(.all, true)
                 },
                 deleteAction: nil
             )
@@ -196,7 +216,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
                 zeroSeparatorInsets: false,
                 sectionId: self.section,
                 action: {
-                    arguments.setMode(.some)
+                    arguments.setMode(.some, true)
                 },
                 deleteAction: nil
             )
@@ -215,7 +235,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
                 zeroSeparatorInsets: false,
                 sectionId: self.section,
                 action: {
-                    arguments.setMode(.empty)
+                    arguments.setMode(.empty, true)
                 },
                 deleteAction: nil
             )
@@ -223,7 +243,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .itemsHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .item(_, value, availableReactions, reaction, text, isEnabled):
+        case let .item(_, value, availableReactions, reaction, text, isEnabled, allDisabled):
             return ItemListReactionItem(
                 context: arguments.context,
                 presentationData: presentationData,
@@ -231,6 +251,7 @@ private enum PeerAllowedReactionListControllerEntry: ItemListNodeEntry {
                 reaction: reaction,
                 title: text,
                 value: isEnabled,
+                enabled: !allDisabled,
                 sectionId: self.section,
                 style: .blocks,
                 updated: { _ in
@@ -255,47 +276,62 @@ private func peerAllowedReactionListControllerEntries(
 ) -> [PeerAllowedReactionListControllerEntry] {
     var entries: [PeerAllowedReactionListControllerEntry] = []
     
-    if let availableReactions = availableReactions, let allowedReactions = state.updatedAllowedReactions, let mode = state.updatedMode {
-        //TODO:localize
-        entries.append(.allowAllHeader("AVAILABLE REACTIONS"))
-        
-        //TODO:localize
-        entries.append(.allowAll(text: "All Reactions", isEnabled: mode == .all))
-        entries.append(.allowSome(text: "Some Reactions", isEnabled: mode == .some))
-        entries.append(.allowNone(text: "No Reactions", isEnabled: mode == .empty))
-        
-        let allInfoText: String
-        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-            switch mode {
-            case .all:
-                allInfoText = "Subscribers of this channel can use any emoji as reactions to messages."
-            case .some:
-                allInfoText = "You can select emoji that will allow subscribers of your channel to react to messages."
-            case .empty:
-                allInfoText = "Subscribers of the channel can't add any reactions to messages."
-            }
-        } else {
-            switch mode {
-            case .all:
-                allInfoText = "Members of this group can use any emoji as reactions to messages."
-            case .some:
-                allInfoText = "You can select emoji that will allow members of your group to react to messages."
-            case .empty:
-                allInfoText = "Members of the group can't add any reactions to messages."
-            }
-        }
-        
-        entries.append(.allowAllInfo(allInfoText))
-        
-        if mode == .some {
+    if let peer = peer, let availableReactions = availableReactions, let allowedReactions = state.updatedAllowedReactions, let mode = state.updatedMode {
+        if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+            //TODO:localize
+            entries.append(.allowSwitch(text: "Allow Reactions", value: mode != .empty))
+            
             entries.append(.itemsHeader(presentationData.strings.PeerInfo_AllowedReactions_ReactionListHeader))
             var index = 0
             for availableReaction in availableReactions.reactions {
                 if !availableReaction.isEnabled {
                     continue
                 }
-                entries.append(.item(index: index, value: availableReaction.value, availableReactions: availableReactions, reaction: availableReaction.value, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value)))
+                entries.append(.item(index: index, value: availableReaction.value, availableReactions: availableReactions, reaction: availableReaction.value, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value), allDisabled: mode == .empty))
                 index += 1
+            }
+        } else {
+            //TODO:localize
+            entries.append(.allowAllHeader("AVAILABLE REACTIONS"))
+            
+            //TODO:localize
+            entries.append(.allowAll(text: "All Reactions", isEnabled: mode == .all))
+            entries.append(.allowSome(text: "Some Reactions", isEnabled: mode == .some))
+            entries.append(.allowNone(text: "No Reactions", isEnabled: mode == .empty))
+            
+            let allInfoText: String
+            if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                switch mode {
+                case .all:
+                    allInfoText = "Subscribers of this channel can use any emoji as reactions to messages."
+                case .some:
+                    allInfoText = "You can select emoji that will allow subscribers of your channel to react to messages."
+                case .empty:
+                    allInfoText = "Subscribers of the channel can't add any reactions to messages."
+                }
+            } else {
+                switch mode {
+                case .all:
+                    allInfoText = "Members of this group can use any emoji as reactions to messages."
+                case .some:
+                    allInfoText = "Members of the group can use only some allowed emoji as reactions to messages."
+                case .empty:
+                    allInfoText = "Members of the group can't add any reactions to messages."
+                }
+            }
+            
+            entries.append(.allowAllInfo(allInfoText))
+        
+            if mode == .some {
+                entries.append(.itemsHeader(presentationData.strings.PeerInfo_AllowedReactions_ReactionListHeader))
+                var index = 0
+                for availableReaction in availableReactions.reactions {
+                    if !availableReaction.isEnabled {
+                        continue
+                    }
+                    entries.append(.item(index: index, value: availableReaction.value, availableReactions: availableReactions, reaction: availableReaction.value, text: availableReaction.title, isEnabled: allowedReactions.contains(availableReaction.value), allDisabled: false))
+                    index += 1
+                }
             }
         }
     }
@@ -330,7 +366,11 @@ public func peerAllowedReactionListController(
                 switch value {
                 case .all:
                     state.updatedMode = .all
-                    state.updatedAllowedReactions = Set()
+                    if let availableReactions = availableReactions {
+                        state.updatedAllowedReactions = Set(availableReactions.reactions.filter(\.isEnabled).map(\.value))
+                    } else {
+                        state.updatedAllowedReactions = Set()
+                    }
                 case let .limited(reactions):
                     state.updatedMode = .some
                     state.updatedAllowedReactions = Set(reactions)
@@ -346,7 +386,7 @@ public func peerAllowedReactionListController(
     
     let arguments = PeerAllowedReactionListControllerArguments(
         context: context,
-        setMode: { mode in
+        setMode: { mode, resetItems in
             let _ = (context.engine.stickers.availableReactions()
             |> take(1)
             |> deliverOnMainQueue).start(next: { availableReactions in
@@ -360,23 +400,37 @@ public func peerAllowedReactionListController(
                     if var updatedAllowedReactions = state.updatedAllowedReactions {
                         switch mode {
                         case .all:
-                            updatedAllowedReactions.removeAll()
-                            for availableReaction in availableReactions.reactions {
-                                if !availableReaction.isEnabled {
-                                    continue
+                            if resetItems {
+                                updatedAllowedReactions.removeAll()
+                                for availableReaction in availableReactions.reactions {
+                                    if !availableReaction.isEnabled {
+                                        continue
+                                    }
+                                    updatedAllowedReactions.insert(availableReaction.value)
                                 }
-                                updatedAllowedReactions.insert(availableReaction.value)
                             }
                         case .some:
-                            updatedAllowedReactions.removeAll()
-                            if let thumbsUp = availableReactions.reactions.first(where: { $0.value == .builtin("👍") }) {
-                                updatedAllowedReactions.insert(thumbsUp.value)
-                            }
-                            if let thumbsDown = availableReactions.reactions.first(where: { $0.value == .builtin("👎") }) {
-                                updatedAllowedReactions.insert(thumbsDown.value)
+                            if resetItems {
+                                updatedAllowedReactions.removeAll()
+                                if let thumbsUp = availableReactions.reactions.first(where: { $0.value == .builtin("👍") }) {
+                                    updatedAllowedReactions.insert(thumbsUp.value)
+                                }
+                                if let thumbsDown = availableReactions.reactions.first(where: { $0.value == .builtin("👎") }) {
+                                    updatedAllowedReactions.insert(thumbsDown.value)
+                                }
+                            } else {
+                                updatedAllowedReactions.removeAll()
+                                for availableReaction in availableReactions.reactions {
+                                    if !availableReaction.isEnabled {
+                                        continue
+                                    }
+                                    updatedAllowedReactions.insert(availableReaction.value)
+                                }
                             }
                         case .empty:
-                            updatedAllowedReactions.removeAll()
+                            if resetItems {
+                                updatedAllowedReactions.removeAll()
+                            }
                         }
                         state.updatedAllowedReactions = updatedAllowedReactions
                     }
@@ -391,6 +445,9 @@ public func peerAllowedReactionListController(
                 if var updatedAllowedReactions = state.updatedAllowedReactions {
                     if updatedAllowedReactions.contains(reaction) {
                         updatedAllowedReactions.remove(reaction)
+                        if state.updatedMode == .all {
+                            state.updatedMode = .some
+                        }
                     } else {
                         updatedAllowedReactions.insert(reaction)
                     }
@@ -446,8 +503,20 @@ public func peerAllowedReactionListController(
     
     let controller = ItemListController(context: context, state: signal)
     controller.willDisappear = { _ in
-        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId))
-        |> deliverOnMainQueue).start(next: { initialAllowedReactions in
+        let _ = (combineLatest(
+            context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: peerId)
+            ),
+            context.engine.stickers.availableReactions() |> take(1)
+        )
+        |> deliverOnMainQueue).start(next: { data, availableReactions in
+            let (peer, initialAllowedReactions) = data
+            
+            guard let peer = peer, let availableReactions = availableReactions else {
+                return
+            }
+            
             let state = stateValue.with({ $0 })
             guard let updatedMode = state.updatedMode, let updatedAllowedReactions = state.updatedAllowedReactions else {
                 return
@@ -458,7 +527,15 @@ public func peerAllowedReactionListController(
             case .all:
                 updatedValue = .all
             case .some:
-                updatedValue = .limited(Array(updatedAllowedReactions))
+                if case let .channel(channel) = peer, case .broadcast = channel.info {
+                    if updatedAllowedReactions == Set(availableReactions.reactions.filter(\.isEnabled).map(\.value)) {
+                        updatedValue = .all
+                    } else {
+                        updatedValue = .limited(Array(updatedAllowedReactions))
+                    }
+                } else {
+                    updatedValue = .limited(Array(updatedAllowedReactions))
+                }
             case .empty:
                 updatedValue = .empty
             }

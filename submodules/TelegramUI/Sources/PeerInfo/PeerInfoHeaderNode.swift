@@ -2353,8 +2353,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
-                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor)
-                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15))
+                emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
+                emojiExpandedStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: UIColor(rgb: 0xffffff, alpha: 0.15), themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
             }
             
             let animateStatusIcon = !self.titleCredibilityIconView.bounds.isEmpty
@@ -2366,18 +2366,14 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationCache: self.animationCache,
                     animationRenderer: self.animationRenderer,
                     content: emojiRegularStatusContent,
+                    isVisibleForAnimations: true,
                     action: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.displayPremiumIntro?(strongSelf.titleCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), false)
                     },
-                    longTapAction: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.accountData.setEmojiStatus(file: nil).start()
-                    }, emojiFileUpdated: { [weak self] emojiFile in
+                    emojiFileUpdated: { [weak self] emojiFile in
                         guard let strongSelf = self else {
                             return
                         }
@@ -2425,17 +2421,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationCache: self.animationCache,
                     animationRenderer: self.animationRenderer,
                     content: emojiExpandedStatusContent,
+                    isVisibleForAnimations: true,
                     action: { [weak self] in
                         guard let strongSelf = self else {
                             return
                         }
                         strongSelf.displayPremiumIntro?(strongSelf.titleExpandedCredibilityIconView, currentEmojiStatus, strongSelf.emojiStatusFileAndPackTitle.get(), true)
-                    },
-                    longTapAction: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        let _ = strongSelf.context.engine.accountData.setEmojiStatus(file: nil).start()
                     }
                 )),
                 environment: {},

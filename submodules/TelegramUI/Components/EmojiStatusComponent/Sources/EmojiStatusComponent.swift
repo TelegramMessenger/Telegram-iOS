@@ -11,6 +11,9 @@ import Postbox
 import EmojiTextAttachmentView
 import AppBundle
 import TextFormat
+import Lottie
+import GZip
+import HierarchyTrackingLayer
 
 public final class EmojiStatusComponent: Component {
     public typealias EnvironmentType = Empty
@@ -29,21 +32,26 @@ public final class EmojiStatusComponent: Component {
         }
     }
     
+    public enum LoopMode: Equatable {
+        case forever
+        case count(Int)
+    }
+    
     public enum Content: Equatable {
         case none
         case premium(color: UIColor)
         case verified(fillColor: UIColor, foregroundColor: UIColor)
         case fake(color: UIColor)
         case scam(color: UIColor)
-        case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor)
+        case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
     }
     
     public let context: AccountContext
     public let animationCache: AnimationCache
     public let animationRenderer: MultiAnimationRenderer
     public let content: Content
+    public let isVisibleForAnimations: Bool
     public let action: (() -> Void)?
-    public let longTapAction: (() -> Void)?
     public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
     
     public init(
@@ -51,17 +59,29 @@ public final class EmojiStatusComponent: Component {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         content: Content,
+        isVisibleForAnimations: Bool,
         action: (() -> Void)?,
-        longTapAction: (() -> Void)?,
         emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
     ) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.content = content
+        self.isVisibleForAnimations = isVisibleForAnimations
         self.action = action
-        self.longTapAction = longTapAction
         self.emojiFileUpdated = emojiFileUpdated
+    }
+    
+    public func withVisibleForAnimations(_ isVisibleForAnimations: Bool) -> EmojiStatusComponent {
+        return EmojiStatusComponent(
+            context: self.context,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            content: self.content,
+            isVisibleForAnimations: isVisibleForAnimations,
+            action: self.action,
+            emojiFileUpdated: self.emojiFileUpdated
+        )
     }
     
     public static func ==(lhs: EmojiStatusComponent, rhs: EmojiStatusComponent) -> Bool {
@@ -77,23 +97,71 @@ public final class EmojiStatusComponent: Component {
         if lhs.content != rhs.content {
             return false
         }
+        if lhs.isVisibleForAnimations != rhs.isVisibleForAnimations {
+            return false
+        }
         return true
     }
 
     public final class View: UIView {
+        private final class AnimationFileProperties {
+            let path: String
+            let coloredComposition: Animation?
+            
+            init(path: String, coloredComposition: Animation?) {
+                self.path = path
+                self.coloredComposition = coloredComposition
+            }
+            
+            static func load(from path: String) -> AnimationFileProperties {
+                guard let size = fileSize(path), size < 1024 * 1024 else {
+                    return AnimationFileProperties(path: path, coloredComposition: nil)
+                }
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: path)) else {
+                    return AnimationFileProperties(path: path, coloredComposition: nil)
+                }
+                guard let unzippedData = TGGUnzipData(data, 1024 * 1024) else {
+                    return AnimationFileProperties(path: path, coloredComposition: nil)
+                }
+                
+                var coloredComposition: Animation?
+                if let composition = try? Animation.from(data: unzippedData) {
+                    coloredComposition = composition
+                }
+                
+                return AnimationFileProperties(path: path, coloredComposition: coloredComposition)
+            }
+        }
+        
         private weak var state: EmptyComponentState?
         private var component: EmojiStatusComponent?
         private var iconView: UIImageView?
         private var animationLayer: InlineStickerItemLayer?
+        private var lottieAnimationView: AnimationView?
+        private let hierarchyTrackingLayer: HierarchyTrackingLayer
         
         private var emojiFile: TelegramMediaFile?
+        private var emojiFileDataProperties: AnimationFileProperties?
         private var emojiFileDisposable: Disposable?
+        private var emojiFileDataPathDisposable: Disposable?
         
         override init(frame: CGRect) {
+            self.hierarchyTrackingLayer = HierarchyTrackingLayer()
+            
             super.init(frame: frame)
             
+            self.layer.addSublayer(self.hierarchyTrackingLayer)
+            
             self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
-            self.addGestureRecognizer(UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:))))
+            
+            self.hierarchyTrackingLayer.didEnterHierarchy = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                if let lottieAnimationView = strongSelf.lottieAnimationView {
+                    lottieAnimationView.play()
+                }
+            }
         }
         
         required init?(coder: NSCoder) {
@@ -102,17 +170,12 @@ public final class EmojiStatusComponent: Component {
         
         deinit {
             self.emojiFileDisposable?.dispose()
+            self.emojiFileDataPathDisposable?.dispose()
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
                 self.component?.action?()
-            }
-        }
-        
-        @objc private func longPressGesture(_ recognizer: UITapGestureRecognizer) {
-            if case .began = recognizer.state {
-                self.component?.longTapAction?()
             }
         }
         
@@ -122,8 +185,13 @@ public final class EmojiStatusComponent: Component {
             var iconImage: UIImage?
             var emojiFileId: Int64?
             var emojiPlaceholderColor: UIColor?
+            var emojiThemeColor: UIColor?
+            var emojiLoopMode: LoopMode?
             var emojiSize = CGSize()
             
+            self.isUserInteractionEnabled = component.action != nil
+            
+            //let previousContent = self.component?.content
             if self.component?.content != component.content {
                 switch component.content {
                 case .none:
@@ -155,6 +223,7 @@ public final class EmojiStatusComponent: Component {
                                 context.fill(CGRect(origin: CGPoint(), size: size))
                                 context.restoreGState()
                                 
+                                context.setBlendMode(.copy)
                                 context.clip(to: CGRect(origin: .zero, size: size), mask: foregroundCgImage)
                                 context.setFillColor(foregroundColor.cgColor)
                                 context.fill(CGRect(origin: CGPoint(), size: size))
@@ -167,18 +236,23 @@ public final class EmojiStatusComponent: Component {
                     iconImage = nil
                 case .scam:
                     iconImage = nil
-                case let .animation(animationContent, size, placeholderColor):
+                case let .animation(animationContent, size, placeholderColor, themeColor, loopMode):
                     iconImage = nil
                     emojiFileId = animationContent.fileId.id
                     emojiPlaceholderColor = placeholderColor
+                    emojiThemeColor = themeColor
                     emojiSize = size
+                    emojiLoopMode = loopMode
                     
-                    if case let .animation(previousAnimationContent, _, _) = self.component?.content {
+                    if case let .animation(previousAnimationContent, _, _, _, _) = self.component?.content {
                         if previousAnimationContent.fileId != animationContent.fileId {
                             self.emojiFileDisposable?.dispose()
                             self.emojiFileDisposable = nil
+                            self.emojiFileDataPathDisposable?.dispose()
+                            self.emojiFileDataPathDisposable = nil
                             
                             self.emojiFile = nil
+                            self.emojiFileDataProperties = nil
                             
                             if let animationLayer = self.animationLayer {
                                 self.animationLayer = nil
@@ -190,6 +264,18 @@ public final class EmojiStatusComponent: Component {
                                     animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                                 } else {
                                     animationLayer.removeFromSuperlayer()
+                                }
+                            }
+                            if let lottieAnimationView = self.lottieAnimationView {
+                                self.lottieAnimationView = nil
+                                
+                                if !transition.animation.isImmediate {
+                                    lottieAnimationView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak lottieAnimationView] _ in
+                                        lottieAnimationView?.removeFromSuperview()
+                                    })
+                                    lottieAnimationView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                                } else {
+                                    lottieAnimationView.removeFromSuperview()
                                 }
                             }
                         }
@@ -204,9 +290,11 @@ public final class EmojiStatusComponent: Component {
                 }
             } else {
                 iconImage = self.iconView?.image
-                if case let .animation(animationContent, size, placeholderColor) = component.content {
+                if case let .animation(animationContent, size, placeholderColor, themeColor, loopMode) = component.content {
                     emojiFileId = animationContent.fileId.id
                     emojiPlaceholderColor = placeholderColor
+                    emojiThemeColor = themeColor
+                    emojiLoopMode = loopMode
                     emojiSize = size
                 }
             }
@@ -248,17 +336,71 @@ public final class EmojiStatusComponent: Component {
             }
             
             let emojiFileUpdated = component.emojiFileUpdated
-            if let emojiFileId = emojiFileId, let emojiPlaceholderColor = emojiPlaceholderColor {
+            if let emojiFileId = emojiFileId, let emojiPlaceholderColor = emojiPlaceholderColor, let emojiLoopMode = emojiLoopMode {
                 size = availableSize
+                
+                let _ = emojiLoopMode
                 
                 if let emojiFile = self.emojiFile {
                     self.emojiFileDisposable?.dispose()
                     self.emojiFileDisposable = nil
+                    self.emojiFileDataPathDisposable?.dispose()
+                    self.emojiFileDataPathDisposable = nil
+                    
+                    /*if !"".isEmpty {
+                        var resetThemeColor = false
+                        let lottieAnimationView: AnimationView
+                        if let current = self.lottieAnimationView {
+                            lottieAnimationView = current
+                            if case let .animation(_, _, _, previousThemeColor, _) = previousContent {
+                                if previousThemeColor != emojiThemeColor {
+                                    resetThemeColor = true
+                                }
+                            } else {
+                                resetThemeColor = true
+                            }
+                        } else {
+                            resetThemeColor = true
+                            lottieAnimationView = AnimationView(animation: coloredComposition)
+                            lottieAnimationView.loopMode = .loop
+                            self.lottieAnimationView = lottieAnimationView
+                            self.addSubview(lottieAnimationView)
+                            
+                            if !transition.animation.isImmediate {
+                                lottieAnimationView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                lottieAnimationView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
+                            }
+                        }
+                        
+                        if resetThemeColor {
+                            for keypath in lottieAnimationView.allKeypaths(predicate: { $0.keys.contains(where: { $0.contains("_theme") }) && $0.keys.last == "Color" }) {
+                                lottieAnimationView.setValueProvider(ColorValueProvider(emojiThemeColor.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
+                            }
+                        }
+                        
+                        lottieAnimationView.frame = CGRect(origin: CGPoint(), size: size)
+                        if component.isVisibleForAnimations {
+                            if !lottieAnimationView.isAnimationPlaying {
+                                lottieAnimationView.play()
+                            }
+                        } else {
+                            if lottieAnimationView.isAnimationPlaying {
+                                lottieAnimationView.stop()
+                            }
+                        }
+                    } else {*/
                     
                     let animationLayer: InlineStickerItemLayer
                     if let current = self.animationLayer {
                         animationLayer = current
                     } else {
+                        let loopCount: Int?
+                        switch emojiLoopMode {
+                        case .forever:
+                            loopCount = nil
+                        case let .count(value):
+                            loopCount = value
+                        }
                         animationLayer = InlineStickerItemLayer(
                             context: component.context,
                             attemptSynchronousLoad: false,
@@ -266,8 +408,10 @@ public final class EmojiStatusComponent: Component {
                             file: emojiFile,
                             cache: component.animationCache,
                             renderer: component.animationRenderer,
+                            unique: true,
                             placeholderColor: emojiPlaceholderColor,
-                            pointSize: emojiSize
+                            pointSize: emojiSize,
+                            loopCount: loopCount
                         )
                         self.animationLayer = animationLayer
                         self.layer.addSublayer(animationLayer)
@@ -277,8 +421,68 @@ public final class EmojiStatusComponent: Component {
                             animationLayer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
                         }
                     }
+                    
+                    var accentTint = false
+                    if let _ = emojiThemeColor {
+                        for attribute in emojiFile.attributes {
+                            if case let .CustomEmoji(_, _, packReference) = attribute {
+                                switch packReference {
+                                case let .id(id, _):
+                                    if id == 773947703670341676 {
+                                        accentTint = true
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if accentTint {
+                        animationLayer.contentTintColor = emojiThemeColor
+                    } else {
+                        animationLayer.contentTintColor = nil
+                    }
+                    
                     animationLayer.frame = CGRect(origin: CGPoint(), size: size)
-                    animationLayer.isVisibleForAnimations = true
+                    animationLayer.isVisibleForAnimations = component.isVisibleForAnimations
+                    /*} else {
+                        if self.emojiFileDataPathDisposable == nil {
+                            let account = component.context.account
+                            self.emojiFileDataPathDisposable = (Signal<AnimationFileProperties?, NoError> { subscriber in
+                                let disposable = MetaDisposable()
+                                
+                                let _ = (account.postbox.mediaBox.resourceData(emojiFile.resource)
+                                |> take(1)).start(next: { firstAttemptData in
+                                    if firstAttemptData.complete {
+                                        subscriber.putNext(AnimationFileProperties.load(from: firstAttemptData.path))
+                                        subscriber.putCompletion()
+                                    } else {
+                                        let fetchDisposable = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: emojiFile)).start()
+                                        let dataDisposable = account.postbox.mediaBox.resourceData(emojiFile.resource).start(next: { data in
+                                            if data.complete {
+                                                subscriber.putNext(AnimationFileProperties.load(from: data.path))
+                                                subscriber.putCompletion()
+                                            }
+                                        })
+                                        
+                                        disposable.set(ActionDisposable {
+                                            fetchDisposable.dispose()
+                                            dataDisposable.dispose()
+                                        })
+                                    }
+                                })
+                                
+                                return disposable
+                            }
+                            |> deliverOnMainQueue).start(next: { [weak self] properties in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.emojiFileDataProperties = properties
+                                strongSelf.state?.updated(transition: transition)
+                            })
+                        }
+                    }*/
                 } else {
                     if self.emojiFileDisposable == nil {
                         self.emojiFileDisposable = (component.context.engine.stickers.resolveInlineStickers(fileIds: [emojiFileId])
@@ -287,6 +491,7 @@ public final class EmojiStatusComponent: Component {
                                 return
                             }
                             strongSelf.emojiFile = result[emojiFileId]
+                            strongSelf.emojiFileDataProperties = nil
                             strongSelf.state?.updated(transition: transition)
                             
                             emojiFileUpdated?(result[emojiFileId])
@@ -296,11 +501,14 @@ public final class EmojiStatusComponent: Component {
             } else {
                 if let _ = self.emojiFile {
                     self.emojiFile = nil
+                    self.emojiFileDataProperties = nil
                     emojiFileUpdated?(nil)
                 }
                 
                 self.emojiFileDisposable?.dispose()
                 self.emojiFileDisposable = nil
+                self.emojiFileDataPathDisposable?.dispose()
+                self.emojiFileDataPathDisposable = nil
                 
                 if let animationLayer = self.animationLayer {
                     self.animationLayer = nil
@@ -312,6 +520,18 @@ public final class EmojiStatusComponent: Component {
                         animationLayer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
                     } else {
                         animationLayer.removeFromSuperlayer()
+                    }
+                }
+                if let lottieAnimationView = self.lottieAnimationView {
+                    self.lottieAnimationView = nil
+                    
+                    if !transition.animation.isImmediate {
+                        lottieAnimationView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak lottieAnimationView] _ in
+                            lottieAnimationView?.removeFromSuperview()
+                        })
+                        lottieAnimationView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.2, removeOnCompletion: false)
+                    } else {
+                        lottieAnimationView.removeFromSuperview()
                     }
                 }
             }

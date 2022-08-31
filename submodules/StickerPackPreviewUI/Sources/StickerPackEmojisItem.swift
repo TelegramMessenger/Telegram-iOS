@@ -362,7 +362,8 @@ final class StickerPackEmojisItemNode: GridItemNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     ),
                     context: context,
                     attemptSynchronousLoad: attemptSynchronousLoads,

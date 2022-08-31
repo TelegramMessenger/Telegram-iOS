@@ -841,7 +841,7 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
             } else if item.peer.isFake {
                 credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
             } else if let user = item.peer as? TelegramUser, let emojiStatus = user.emojiStatus {
-                credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor)
+                credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
             } else if item.peer.isVerified {
                 credibilityIcon = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
             } else if item.peer.isPremium && !premiumConfiguration.isPremiumDisabled {
@@ -1034,8 +1034,8 @@ class VoiceChatParticipantItemNode: ItemListRevealOptionsItemNode {
                                 animationCache: animationCache,
                                 animationRenderer: animationRenderer,
                                 content: credibilityIcon,
+                                isVisibleForAnimations: true,
                                 action: nil,
-                                longTapAction: nil,
                                 emojiFileUpdated: nil
                             )),
                             environment: {},

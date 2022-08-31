@@ -1667,7 +1667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 }
                                 
                                 if let reactionItem = reactionItem {
-                                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                    let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: strongSelf.chatDisplayNode.historyNode.takeGenericReactionEffect())
                                     
                                     strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                                     
@@ -6733,7 +6733,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                                 }
                                                 
                                                 if reaction.value == updatedReaction {
-                                                    let standaloneReactionAnimation = StandaloneReactionAnimation()
+                                                    let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: strongSelf.chatDisplayNode.historyNode.takeGenericReactionEffect())
                                                     
                                                     strongSelf.chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
                                                     

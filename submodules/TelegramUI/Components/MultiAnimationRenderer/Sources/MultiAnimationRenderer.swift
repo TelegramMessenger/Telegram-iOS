@@ -6,7 +6,7 @@ import AnimationCache
 import Accelerate
 
 public protocol MultiAnimationRenderer: AnyObject {
-    func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable
+    func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable
     func loadFirstFrameSynchronously(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize) -> Bool
     func loadFirstFrame(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: ((AnimationCacheFetchOptions) -> Disposable)?, completion: @escaping (Bool, Bool) -> Void) -> Disposable
     func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage)
@@ -73,7 +73,7 @@ open class MultiAnimationRenderTarget: SimpleLayer {
     open func updateDisplayPlaceholder(displayPlaceholder: Bool) {
     }
     
-    open func transitionToContents(_ contents: AnyObject) {
+    open func transitionToContents(_ contents: AnyObject, didLoop: Bool) {
     }
 }
 
@@ -281,7 +281,7 @@ private final class ItemAnimationContext {
                 for i in 0 ... index {
                     let result = item.advance(advance: .frames(1), requestedFormat: .rgba)
                     if i == index {
-                        return result
+                        return result?.frame
                     }
                 }
                 return nil
@@ -294,7 +294,7 @@ private final class ItemAnimationContext {
                 
                 for target in self.targets.copyItems() {
                     if let target = target.value {
-                        target.transitionToContents(currentFrame.image.cgImage!)
+                        target.transitionToContents(currentFrame.image.cgImage!, didLoop: false)
                         
                         if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                             blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -305,7 +305,7 @@ private final class ItemAnimationContext {
         } else {
             for target in self.targets.copyItems() {
                 if let target = target.value {
-                    target.transitionToContents(placeholder.cgImage!)
+                    target.transitionToContents(placeholder.cgImage!, didLoop: false)
                 }
             }
             
@@ -316,7 +316,7 @@ private final class ItemAnimationContext {
     func updateAddedTarget(target: MultiAnimationRenderTarget) {
         if let currentFrame = self.currentFrame {
             if let cgImage = currentFrame.image.cgImage {
-                target.transitionToContents(cgImage)
+                target.transitionToContents(cgImage, didLoop: false)
                 
                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
                     blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
@@ -384,10 +384,16 @@ private final class ItemAnimationContext {
             self.loadingFrameTaskId = taskId
             
             return LoadFrameGroupTask(task: { [weak self] in
-                let currentFrame: Frame?
+                let currentFrame: (frame: Frame, didLoop: Bool)?
                 do {
-                    if let frame = try item.tryWith({ $0.advance(advance: frameAdvance, requestedFormat: .rgba) }) {
-                        currentFrame = Frame(frame: frame)
+                    if let (frame, didLoop) = try item.tryWith({ item -> (AnimationCacheItemFrame, Bool)? in
+                        if let result = item.advance(advance: frameAdvance, requestedFormat: .rgba) {
+                            return (result.frame, result.didLoop)
+                        } else {
+                            return nil
+                        }
+                    }), let mappedFrame = Frame(frame: frame) {
+                        currentFrame = (mappedFrame, didLoop)
                     } else {
                         currentFrame = nil
                     }
@@ -408,13 +414,13 @@ private final class ItemAnimationContext {
                     strongSelf.loadingFrameTaskId = nil
                     
                     if let currentFrame = currentFrame {
-                        strongSelf.currentFrame = currentFrame
+                        strongSelf.currentFrame = currentFrame.frame
                         for target in strongSelf.targets.copyItems() {
                             if let target = target.value {
-                                target.transitionToContents(currentFrame.image.cgImage!)
+                                target.transitionToContents(currentFrame.frame.image.cgImage!, didLoop: currentFrame.didLoop)
                                 
                                 if let blurredRepresentationTarget = target.blurredRepresentationTarget {
-                                    blurredRepresentationTarget.contents = currentFrame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
+                                    blurredRepresentationTarget.contents = currentFrame.frame.blurredRepresentation(color: target.blurredRepresentationBackgroundColor)?.cgImage
                                 }
                             }
                         }
@@ -444,10 +450,12 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             var id: String
             var width: Int
             var height: Int
+            var uniqueId: Int
         }
         
         private var itemContexts: [ItemKey: ItemAnimationContext] = [:]
         private var nextQueueAffinity: Int = 0
+        private var nextUniqueId: Int = 1
         
         private(set) var isPlaying: Bool = false {
             didSet {
@@ -462,8 +470,14 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.stateUpdated = stateUpdated
         }
         
-        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
-            let itemKey = ItemKey(id: itemId, width: Int(size.width), height: Int(size.height))
+        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
+            var uniqueId = 0
+            if unique {
+                uniqueId = self.nextUniqueId
+                self.nextUniqueId += 1
+            }
+            
+            let itemKey = ItemKey(id: itemId, width: Int(size.width), height: Int(size.height), uniqueId: uniqueId)
             let itemContext: ItemAnimationContext
             if let current = self.itemContexts[itemKey] {
                 itemContext = current
@@ -521,7 +535,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                 guard let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) else {
                     return false
                 }
-                guard let loadedFrame = ItemAnimationContext.Frame(frame: frame) else {
+                guard let loadedFrame = ItemAnimationContext.Frame(frame: frame.frame) else {
                     return false
                 }
                 
@@ -551,7 +565,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                 
                 let loadedFrame: ItemAnimationContext.Frame?
                 if let frame = item.advance(advance: .frames(1), requestedFormat: .rgba) {
-                    loadedFrame = ItemAnimationContext.Frame(frame: frame)
+                    loadedFrame = ItemAnimationContext.Frame(frame: frame.frame)
                 } else {
                     loadedFrame = nil
                 }
@@ -564,7 +578,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
                     if let loadedFrame = loadedFrame {
                         if let cgImage = loadedFrame.image.cgImage {
                             if hadIntermediateUpdate {
-                                target.transitionToContents(cgImage)
+                                target.transitionToContents(cgImage, didLoop: false)
                             } else {
                                 target.contents = cgImage
                             }
@@ -583,7 +597,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
         
         func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
-            if let itemContext = self.itemContexts[ItemKey(id: itemId, width: Int(size.width), height: Int(size.height))] {
+            if let itemContext = self.itemContexts[ItemKey(id: itemId, width: Int(size.width), height: Int(size.height), uniqueId: 0)] {
                 itemContext.setFrameIndex(index: frameIndex, placeholder: placeholder)
             }
         }
@@ -664,7 +678,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
         }
     }
     
-    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
         let groupContext: GroupContext
         if let current = self.groupContext {
             groupContext = current
@@ -678,7 +692,7 @@ public final class MultiAnimationRendererImpl: MultiAnimationRenderer {
             self.groupContext = groupContext
         }
         
-        let disposable = groupContext.add(target: target, cache: cache, itemId: itemId, size: size, fetch: fetch)
+        let disposable = groupContext.add(target: target, cache: cache, itemId: itemId, unique: unique, size: size, fetch: fetch)
         
         return ActionDisposable {
             disposable.dispose()

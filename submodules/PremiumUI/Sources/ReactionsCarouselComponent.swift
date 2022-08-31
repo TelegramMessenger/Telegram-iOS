@@ -406,7 +406,7 @@ private class ReactionCarouselNode: ASDisplayNode, UIScrollViewDelegate {
         
         targetContainerNode.view.superview?.bringSubviewToFront(targetContainerNode.view)
         
-        let standaloneReactionAnimation = StandaloneReactionAnimation(useDirectRendering: true)
+        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: nil, useDirectRendering: true)
         self.standaloneReactionAnimation = standaloneReactionAnimation
         
         targetContainerNode.addSubnode(standaloneReactionAnimation)

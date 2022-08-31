@@ -201,7 +201,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let supergroupId = "featuredTop"
@@ -238,7 +239,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let groupId = "saved"
@@ -266,7 +268,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.media,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let groupId = "recent"
@@ -317,7 +320,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let groupId = "premium"
@@ -350,7 +354,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let groupId = "peerSpecific"
@@ -373,7 +378,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     content: .animation(animationData),
                     itemFile: item.file,
                     subgroupId: nil,
-                    icon: .none
+                    icon: .none,
+                    accentTint: false
                 )
                 let groupId = entry.index.collectionId
                 if let groupIndex = itemGroupIndexById[groupId] {
@@ -426,7 +432,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         content: .animation(animationData),
                         itemFile: item.file,
                         subgroupId: nil,
-                        icon: .none
+                        icon: .none,
+                        accentTint: false
                     )
                     
                     let supergroupId = featuredStickerPack.info.id
@@ -498,7 +505,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         isPremiumLocked: group.isPremiumLocked,
                         isEmbedded: isEmbedded,
                         hasClear: hasClear,
-                        isExpandable: false,
+                        collapsedLineCount: nil,
                         displayPremiumBadges: group.displayPremiumBadges,
                         headerItem: group.headerItem,
                         items: group.items
