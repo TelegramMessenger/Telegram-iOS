@@ -4,6 +4,7 @@ import Postbox
 import SwiftSignalKit
 import AsyncDisplayKit
 import TelegramCore
+import Postbox
 import Display
 import TelegramUIPreferences
 import AccountContext
@@ -74,7 +75,7 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool
+    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
     let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
     let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
     let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
@@ -180,7 +181,7 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
         sendEmoji: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void,
         sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
         sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,

@@ -203,9 +203,9 @@ final class StickerPackEmojisItemNode: GridItemNode {
                 var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                 loop: for attribute in file.attributes {
                     switch attribute {
-                    case let .CustomEmoji(_, displayText, packReference):
+                    case let .CustomEmoji(_, displayText, _):
                         text = displayText
-                        emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                        emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                         break loop
                     default:
                         break
@@ -229,9 +229,9 @@ final class StickerPackEmojisItemNode: GridItemNode {
                     var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                     loop: for attribute in file.attributes {
                         switch attribute {
-                        case let .CustomEmoji(_, displayText, packReference):
+                        case let .CustomEmoji(_, displayText, _):
                             text = displayText
-                            emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                            emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                             break loop
                         default:
                             break

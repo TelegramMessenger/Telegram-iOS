@@ -126,7 +126,7 @@ final class StickersChatInputContextPanelItemNode: ListViewItemNode {
         for i in 0 ..< self.nodes.count {
             if self.nodes[i].frame.contains(location) {
                 let file = item.files[i]
-                let _ = item.interfaceInteraction.sendSticker(.standalone(media: file), true, self.nodes[i].view, self.nodes[i].bounds, nil)
+                let _ = item.interfaceInteraction.sendSticker(.standalone(media: file), true, self.nodes[i].view, self.nodes[i].bounds, nil, [])
                 break
             }
         }

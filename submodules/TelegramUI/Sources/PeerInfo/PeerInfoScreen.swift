@@ -314,7 +314,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -2273,7 +2273,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             strongSelf.paneContainerNode.updateSelectedMessageIds(strongSelf.state.selectedMessageIds, animated: true)
         }, sendCurrentMessage: { _ in
         }, sendMessage: { _ in
-        }, sendSticker: { _, _, _, _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _, _, _, _ in
             return false
         }, sendEmoji: { _, _ in
         }, sendGif: { _, _, _, _, _ in
@@ -5107,7 +5107,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             if case let .user(peer) = peer, let _ = peer.botInfo {
                 strongSelf.activeActionDisposable.set(strongSelf.context.engine.privacy.requestUpdatePeerIsBlocked(peerId: peer.id, isBlocked: block).start())
                 if !block {
-                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
+                    let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: "/start", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
                     if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id)))
                     }
@@ -5532,7 +5532,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .help:
                 text = "/help"
             }
-            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)]).start()
+            let _ = enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
             
             if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: strongSelf.peerId)))
@@ -6741,7 +6741,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
-                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                         }
                     }
                 }

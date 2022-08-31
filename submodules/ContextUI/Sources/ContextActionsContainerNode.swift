@@ -518,7 +518,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         if let file = self.file {
             let range = (attributedText.string as NSString).range(of: "#")
             if range.location != NSNotFound {
-                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file), range: range)
             }
         }
         

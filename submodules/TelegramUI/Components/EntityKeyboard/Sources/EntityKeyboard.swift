@@ -49,7 +49,7 @@ public final class EntityKeyboardComponent: Component {
         }
     }
     
-    private enum ReorderCategory {
+    public enum ReorderCategory {
         case stickers
         case emoji
     }
@@ -94,6 +94,7 @@ public final class EntityKeyboardComponent: Component {
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
     public let switchToTextInput: () -> Void
     public let switchToGifSubject: (GifPagerContentComponent.Subject) -> Void
+    public let reorderItems: (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
@@ -116,6 +117,7 @@ public final class EntityKeyboardComponent: Component {
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
         switchToTextInput: @escaping () -> Void,
         switchToGifSubject: @escaping (GifPagerContentComponent.Subject) -> Void,
+        reorderItems: @escaping (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void,
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
@@ -137,6 +139,7 @@ public final class EntityKeyboardComponent: Component {
         self.hideInputUpdated = hideInputUpdated
         self.switchToTextInput = switchToTextInput
         self.switchToGifSubject = switchToGifSubject
+        self.reorderItems = reorderItems
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
@@ -766,31 +769,7 @@ public final class EntityKeyboardComponent: Component {
         }
         
         private func reorderPacks(category: ReorderCategory, items: [EntityKeyboardTopPanelComponent.Item]) {
-            guard let component = self.component else {
-                return
-            }
-            
-            var currentIds: [ItemCollectionId] = []
-            for item in items {
-                guard let id = item.id.base as? ItemCollectionId else {
-                    continue
-                }
-                currentIds.append(id)
-            }
-            let namespace: ItemCollectionId.Namespace
-            switch category {
-            case .stickers:
-                namespace = Namespaces.ItemCollection.CloudStickerPacks
-            case .emoji:
-                namespace = Namespaces.ItemCollection.CloudEmojiPacks
-            }
-            let _ = (component.emojiContent.context.engine.stickers.reorderStickerPacks(namespace: namespace, itemIds: currentIds)
-            |> deliverOnMainQueue).start(completed: { [weak self] in
-                guard let strongSelf = self else {
-                    return
-                }
-                strongSelf.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
-            })
+            self.component?.reorderItems(category, items)
         }
     }
     

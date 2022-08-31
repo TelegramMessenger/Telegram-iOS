@@ -1496,7 +1496,7 @@ private final class GroupExpandActionButton: UIButton {
 }
 
 public protocol EmojiContentPeekBehavior: AnyObject {
-    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?)
+    func setGestureRecognizerEnabled(view: UIView, isEnabled: Bool, itemAtPoint: @escaping (CGPoint) -> (AnyHashable, EmojiPagerContentComponent.View.ItemLayer, TelegramMediaFile)?)
 }
 
 public final class EmojiPagerContentComponent: Component {
@@ -1571,7 +1571,7 @@ public final class EmojiPagerContentComponent: Component {
         public let presentController: (ViewController) -> Void
         public let presentGlobalOverlayController: (ViewController) -> Void
         public let navigationController: () -> NavigationController?
-        public let sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?
+        public let sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Void)?
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
@@ -1588,7 +1588,7 @@ public final class EmojiPagerContentComponent: Component {
             presentController: @escaping (ViewController) -> Void,
             presentGlobalOverlayController: @escaping (ViewController) -> Void,
             navigationController: @escaping () -> NavigationController?,
-            sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Void)?,
+            sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Void)?,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -1840,6 +1840,22 @@ public final class EmojiPagerContentComponent: Component {
         self.warpContentsOnEdges = warpContentsOnEdges
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
+    }
+    
+    public func withUpdatedItemGroups(_ itemGroups: [ItemGroup]) -> EmojiPagerContentComponent {
+        return EmojiPagerContentComponent(
+            id: self.id,
+            context: self.context,
+            avatarPeer: self.avatarPeer,
+            animationCache: self.animationCache,
+            animationRenderer: self.animationRenderer,
+            inputInteractionHolder: self.inputInteractionHolder,
+            itemGroups: itemGroups,
+            itemLayoutType: self.itemLayoutType,
+            warpContentsOnEdges: self.warpContentsOnEdges,
+            enableLongPress: self.enableLongPress,
+            selectedItems: self.selectedItems
+        )
     }
     
     public static func ==(lhs: EmojiPagerContentComponent, rhs: EmojiPagerContentComponent) -> Bool {
@@ -4399,7 +4415,7 @@ public final class EmojiPagerContentComponent: Component {
                 if itemLayer.displayPlaceholder {
                     return nil
                 }
-                return (itemLayer, file)
+                return (item.1.groupId, itemLayer, file)
             })
             
             let keyboardChildEnvironment = environment[EntityKeyboardChildEnvironment.self].value

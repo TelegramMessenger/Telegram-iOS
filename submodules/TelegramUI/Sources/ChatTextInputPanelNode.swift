@@ -2587,9 +2587,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                             loop: for attribute in file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, displayText, packReference):
+                                case let .CustomEmoji(_, displayText, _):
                                     text = displayText
-                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                     break loop
                                 default:
                                     break
@@ -2614,7 +2614,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                         if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
                                             break
                                         }
-                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: emojiAttribute.stickerPack, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
                                         replacedUpperBound = replaceRange.lowerBound
                                     } else {
                                         break

@@ -369,7 +369,7 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 } else if key == ChatTextInputAttributes.textUrl, let value = value as? ChatTextInputTextUrlAttribute {
                     parsedAttributes.append(ChatTextInputStateTextAttribute(type: .textUrl(value.url), range: range.location ..< (range.location + range.length)))
                 } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: value.stickerPack, fileId: value.fileId), range: range.location ..< (range.location + range.length)))
+                    parsedAttributes.append(ChatTextInputStateTextAttribute(type: .customEmoji(stickerPack: nil, fileId: value.fileId), range: range.location ..< (range.location + range.length)))
                 }
             }
         })
@@ -406,8 +406,8 @@ public struct ChatTextInputStateText: Codable, Equatable {
                 result.addAttribute(ChatTextInputAttributes.textMention, value: ChatTextInputTextMentionAttribute(peerId: id), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             case let .textUrl(url):
                 result.addAttribute(ChatTextInputAttributes.textUrl, value: ChatTextInputTextUrlAttribute(url: url), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
-            case let .customEmoji(stickerPack, fileId):
-                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: nil), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
+            case let .customEmoji(_, fileId):
+                result.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: nil), range: NSRange(location: attribute.range.lowerBound, length: attribute.range.count))
             }
         }
         return result

@@ -326,7 +326,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
                 let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
                 let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                     if let strongSelf = self {
-                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
+                        return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
                     } else {
                         return false
                     }

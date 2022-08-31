@@ -913,18 +913,18 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
     }
 }
 
-final class EntityKeyboardTopPanelItemEnvironment: Equatable {
-    let isExpanded: Bool
-    let isHighlighted: Bool
-    let highlightedSubgroupId: AnyHashable?
+public final class EntityKeyboardTopPanelItemEnvironment: Equatable {
+    public let isExpanded: Bool
+    public let isHighlighted: Bool
+    public let highlightedSubgroupId: AnyHashable?
     
-    init(isExpanded: Bool, isHighlighted: Bool, highlightedSubgroupId: AnyHashable?) {
+    public init(isExpanded: Bool, isHighlighted: Bool, highlightedSubgroupId: AnyHashable?) {
         self.isExpanded = isExpanded
         self.isHighlighted = isHighlighted
         self.highlightedSubgroupId = highlightedSubgroupId
     }
     
-    static func ==(lhs: EntityKeyboardTopPanelItemEnvironment, rhs: EntityKeyboardTopPanelItemEnvironment) -> Bool {
+    public static func ==(lhs: EntityKeyboardTopPanelItemEnvironment, rhs: EntityKeyboardTopPanelItemEnvironment) -> Bool {
         if lhs.isExpanded != rhs.isExpanded {
             return false
         }
@@ -1137,18 +1137,18 @@ private final class ReorderGestureRecognizer: UIGestureRecognizer {
 public final class EntityKeyboardTopPanelComponent: Component {
     public typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
     
-    final class Item: Equatable {
-        let id: AnyHashable
-        let isReorderable: Bool
-        let content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>
+    public final class Item: Equatable {
+        public let id: AnyHashable
+        public let isReorderable: Bool
+        public let content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>
         
-        init(id: AnyHashable, isReorderable: Bool, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
+        public init(id: AnyHashable, isReorderable: Bool, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
             self.id = id
             self.isReorderable = isReorderable
             self.content = content
         }
         
-        static func ==(lhs: Item, rhs: Item) -> Bool {
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.id != rhs.id {
                 return false
             }
