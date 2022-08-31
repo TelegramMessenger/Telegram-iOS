@@ -177,6 +177,7 @@ public final class AccountStateManager {
     private let appliedQtsDisposable = MetaDisposable()
     
     var updateConfigRequested: (() -> Void)?
+    var isPremiumUpdated: (() -> Void)?
     
     init(
         accountPeerId: PeerId,
@@ -784,6 +785,10 @@ public final class AccountStateManager {
             
                 if events.updateConfig {
                     self.updateConfigRequested?()
+                }
+            
+                if events.isPremiumUpdated {
+                    self.isPremiumUpdated?()
                 }
             case let .pollCompletion(pollId, preMessageIds, preSubscribers):
                 if self.operations.count > 1 {

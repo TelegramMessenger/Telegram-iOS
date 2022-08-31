@@ -2591,6 +2591,8 @@ func replayFinalState(
         }
     }
     
+    var isPremiumUpdated = false
+    
     for operation in optimizedOperations(finalState.state.operations) {
         switch operation {
             case let .AddMessages(messages, location):
@@ -3067,12 +3069,25 @@ func replayFinalState(
                         peers.append(telegramUser)
                     }
                 }
+            
+                if let updatedAccountPeer = peers.first(where: { $0.id == accountPeerId }) as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                    if updatedAccountPeer.isPremium != previousAccountPeer.isPremium {
+                        isPremiumUpdated = true
+                    }
+                }
+            
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated in
                     return updated
                 })
                 updateContacts(transaction: transaction, apiUsers: users)
             case let .UpdatePeer(id, f):
                 if let peer = f(transaction.getPeer(id)) {
+                    if id == accountPeerId, let updatedAccountPeer = peer as? TelegramUser, let previousAccountPeer = transaction.getPeer(accountPeerId) as? TelegramUser {
+                        if updatedAccountPeer.isPremium != previousAccountPeer.isPremium {
+                            isPremiumUpdated = true
+                        }
+                    }
+                    
                     updatePeers(transaction: transaction, peers: [peer], update: { _, updated in
                         return updated
                     })
@@ -3865,5 +3880,5 @@ func replayFinalState(
         requestChatListFiltersSync(transaction: transaction)
     }
     
-    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig)
+    return AccountReplayedFinalState(state: finalState, addedIncomingMessageIds: addedIncomingMessageIds, addedReactionEvents: addedReactionEvents, wasScheduledMessageIds: wasScheduledMessageIds, addedSecretMessageIds: addedSecretMessageIds, deletedMessageIds: deletedMessageIds, updatedTypingActivities: updatedTypingActivities, updatedWebpages: updatedWebpages, updatedCalls: updatedCalls, addedCallSignalingData: addedCallSignalingData, updatedGroupCallParticipants: updatedGroupCallParticipants, updatedPeersNearby: updatedPeersNearby, isContactUpdates: isContactUpdates, delayNotificatonsUntil: delayNotificatonsUntil, updatedIncomingThreadReadStates: updatedIncomingThreadReadStates, updatedOutgoingThreadReadStates: updatedOutgoingThreadReadStates, updateConfig: updateConfig, isPremiumUpdated: isPremiumUpdated)
 }

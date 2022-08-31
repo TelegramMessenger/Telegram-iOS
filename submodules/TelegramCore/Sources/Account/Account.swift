@@ -894,6 +894,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
+    private let managedTopReactionsDisposable = MetaDisposable()
     private var storageSettingsDisposable: Disposable?
     
     public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
@@ -1179,7 +1180,8 @@ public class Account {
             self.managedOperationsDisposable.add(managedRecentStatusEmoji(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedFeaturedStatusEmoji(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedRecentReactions(postbox: self.postbox, network: self.network).start())
-            self.managedOperationsDisposable.add(managedTopReactions(postbox: self.postbox, network: self.network).start())
+            self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
         }
 
         if !supplementary {
@@ -1204,6 +1206,13 @@ public class Account {
             self?.restartConfigurationUpdates()
         }
         self.restartConfigurationUpdates()
+        
+        self.stateManager.isPremiumUpdated = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.managedTopReactionsDisposable.set(managedTopReactions(postbox: strongSelf.postbox, network: strongSelf.network).start())
+        }
         
         /*#if DEBUG
         self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
