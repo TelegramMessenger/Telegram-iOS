@@ -154,7 +154,7 @@ public final class RecentEmojiItem: Codable, Equatable {
 }
 
 public struct RecentReactionItemId {
-    public enum Id {
+    public enum Id : Hashable {
         case custom(MediaId)
         case builtin(String)
     }
