@@ -1669,7 +1669,7 @@ public final class StickerPackScreenImpl: ViewController {
                         MessageTextEntity(
                             range: 0 ..< (text as NSString).length,
                             type: .CustomEmoji(
-                                stickerPack: attribute.stickerPack,
+                                stickerPack: nil,
                                 fileId: attribute.fileId
                             )
                         )

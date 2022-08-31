@@ -2970,10 +2970,14 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var inlineStickers: [MediaId: Media] = [:]
                 var firstLockedPremiumEmoji: TelegramMediaFile?
+                var bubbleUpEmojiOrStickersetsById: [Int64: ItemCollectionId] = [:]
                 effectiveInputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: effectiveInputText.length), using: { value, _, _ in
                     if let value = value as? ChatTextInputTextCustomEmojiAttribute {
                         if let file = value.file {
                             inlineStickers[file.fileId] = file
+                            if let packId = value.interactivelySelectedFromPackId {
+                                bubbleUpEmojiOrStickersetsById[file.fileId.id] = packId
+                            }
                             if file.isPremiumEmoji && !self.chatPresentationInterfaceState.isPremium && self.chatPresentationInterfaceState.chatLocation.peerId != self.context.account.peerId {
                                 if firstLockedPremiumEmoji == nil {
                                     firstLockedPremiumEmoji = file
@@ -3016,7 +3020,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 let trimmedInputText = effectiveInputText.string.trimmingCharacters(in: .whitespacesAndNewlines)
                 let peerId = effectivePresentationInterfaceState.chatLocation.peerId
                 if peerId?.namespace != Namespaces.Peer.SecretChat, let interactiveEmojis = self.interactiveEmojis, interactiveEmojis.emojis.contains(trimmedInputText) {
-                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                    messages.append(.message(text: "", attributes: [], inlineStickers: [:], mediaReference: AnyMediaReference.standalone(media: TelegramMediaDice(emoji: trimmedInputText)), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                 } else {
                     let inputText = convertMarkdownToAttributes(effectiveInputText)
                     
@@ -3033,8 +3037,23 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             } else {
                                 webpage = self.chatPresentationInterfaceState.urlPreview?.1
                             }
+                            
+                            var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+                            for entity in entities {
+                                if case let .CustomEmoji(_, fileId) = entity.type {
+                                    if let packId = bubbleUpEmojiOrStickersetsById[fileId] {
+                                        if !bubbleUpEmojiOrStickersets.contains(packId) {
+                                            bubbleUpEmojiOrStickersets.append(packId)
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if bubbleUpEmojiOrStickersets.count > 1 {
+                                bubbleUpEmojiOrStickersets.removeAll()
+                            }
 
-                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil))
+                            messages.append(.message(text: text.string, attributes: attributes, inlineStickers: inlineStickers, mediaReference: webpage.flatMap(AnyMediaReference.standalone), replyToMessageId: self.chatPresentationInterfaceState.interfaceState.replyMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                         }
                     }
 

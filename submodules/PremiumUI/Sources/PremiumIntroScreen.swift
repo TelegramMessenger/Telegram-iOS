@@ -2151,7 +2151,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             if let emojiFile = state.emojiFile {
                 let range = (secondaryAttributedText.string as NSString).range(of: "#")
                 if range.location != NSNotFound {
-                    secondaryAttributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
+                    secondaryAttributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile), range: range)
                 }
             }
             let accountContext = context.component.context
