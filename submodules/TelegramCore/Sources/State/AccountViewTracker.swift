@@ -303,6 +303,10 @@ public final class AccountViewTracker {
     private var nextSeenLiveLocationDisposableId: Int32 = 0
     private var seenLiveLocationDisposables = DisposableDict<Int32>()
     
+    private var updatedExtendedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedExtendedMediaDisposableId: Int32 = 0
+    private var updatedExtendedMediaDisposables = DisposableDict<Int32>()
+    
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var refreshSecretChatMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextUpdatedUnsupportedMediaDisposableId: Int32 = 0
@@ -960,6 +964,59 @@ public final class AccountViewTracker {
                             }
                         }
                         self.seenLiveLocationDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
+    public func updatedExtendedMediaForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedExtendedMediaMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 30 {
+                    self.updatedExtendedMediaMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedExtendedMediaDisposableId
+                    self.nextUpdatedExtendedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> Peer? in
+                            if let peer = transaction.getPeer(peerId) {
+                                return peer
+                            } else {
+                                return nil
+                            }
+                        }
+                        |> mapToSignal { peer -> Signal<Void, NoError> in
+                            guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+                                return .complete()
+                            }
+                            return account.network.request(Api.functions.messages.getExtendedMedia(peer: inputPeer, id: messageIds.map { $0.id }))
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                                return .single(nil)
+                            }
+                            |> mapToSignal { updates -> Signal<Void, NoError> in
+                                if let updates = updates {
+                                    account.stateManager.addUpdates(updates)
+                                }
+                                return .complete()
+                            }
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedExtendedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedExtendedMediaDisposables.set(signal.start(), forKey: disposableId)
                     }
                 }
             }
