@@ -1100,6 +1100,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                     var items: [ActionSheetItem] = []
                     let context = strongSelf.context
+                    //TODO:localize
+                    items.append(ActionSheetTextItem(title: "Do you want to clear your recent reaction emoji from suggestions?", parseMarkdown: true))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         let _ = context.engine.stickers.clearRecentlyUsedReactions().start()

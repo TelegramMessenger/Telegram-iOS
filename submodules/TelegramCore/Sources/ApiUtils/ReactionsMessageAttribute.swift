@@ -57,20 +57,34 @@ extension ReactionsMessageAttribute {
     }
 }
 
-public func mergedMessageReactionsAndPeers(message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
+public func mergedMessageReactionsAndPeers(accountPeer: EnginePeer?, message: Message) -> (reactions: [MessageReaction], peers: [(MessageReaction.Reaction, EnginePeer)]) {
     guard let attribute = mergedMessageReactions(attributes: message.attributes) else {
         return ([], [])
     }
     
-    var recentPeers = attribute.recentPeers.compactMap { recentPeer -> (MessageReaction.Reaction, EnginePeer)? in
-        if let peer = message.peers[recentPeer.peerId] {
-            return (recentPeer.value, EnginePeer(peer))
-        } else {
-            return nil
+    var recentPeers: [(MessageReaction.Reaction, EnginePeer)] = []
+    
+    if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+        for reaction in attribute.reactions {
+            if reaction.isSelected {
+                if let accountPeer = accountPeer {
+                    recentPeers.append((reaction.value, accountPeer))
+                }
+            } else if let peer = message.peers[message.id.peerId] {
+                recentPeers.append((reaction.value, EnginePeer(peer)))
+            }
         }
-    }
-    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
-        recentPeers.removeAll()
+    } else {
+        recentPeers = attribute.recentPeers.compactMap { recentPeer -> (MessageReaction.Reaction, EnginePeer)? in
+            if let peer = message.peers[recentPeer.peerId] {
+                return (recentPeer.value, EnginePeer(peer))
+            } else {
+                return nil
+            }
+        }
+        if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+            recentPeers.removeAll()
+        }
     }
     
     return (attribute.reactions, recentPeers)

@@ -86,6 +86,7 @@ final class MessageReactionButtonsNode: ASDisplayNode {
         presentationContext: ChatPresentationContext,
         availableReactions: AvailableReactions?,
         reactions: ReactionsMessageAttribute,
+        accountPeer: EnginePeer?,
         message: Message,
         alignment: DisplayAlignment,
         constrainedWidth: CGFloat,
@@ -163,19 +164,31 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 }
                 
                 var peers: [EnginePeer] = []
-                if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                
+                if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                    if reaction.isSelected, let accountPeer = accountPeer {
+                        peers.append(accountPeer)
+                    }
+                    if !reaction.isSelected || reaction.count >= 2 {
+                        if let peer = message.peers[message.id.peerId] {
+                            peers.append(EnginePeer(peer))
+                        }
+                    }
                 } else {
-                    for recentPeer in reactions.recentPeers {
-                        if recentPeer.value == reaction.value {
-                            if let peer = message.peers[recentPeer.peerId] {
-                                peers.append(EnginePeer(peer))
+                    if let channel = message.peers[message.id.peerId] as? TelegramChannel, case .broadcast = channel.info {
+                    } else {
+                        for recentPeer in reactions.recentPeers {
+                            if recentPeer.value == reaction.value {
+                                if let peer = message.peers[recentPeer.peerId] {
+                                    peers.append(EnginePeer(peer))
+                                }
                             }
                         }
                     }
-                }
-                
-                if peers.count != Int(reaction.count) || totalReactionCount != reactions.recentPeers.count {
-                    peers.removeAll()
+                    
+                    if peers.count != Int(reaction.count) || totalReactionCount != reactions.recentPeers.count {
+                        peers.removeAll()
+                    }
                 }
                 
                 return ReactionButtonsAsyncLayoutContainer.Reaction(
@@ -514,7 +527,7 @@ final class ChatMessageReactionsFooterContentNode: ChatMessageBubbleContentNode 
                     context: item.context,
                     presentationData: item.presentationData,
                     presentationContext: item.controllerInteraction.presentationContext,
-                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
+                    availableReactions: item.associatedData.availableReactions, reactions: reactionsAttribute, accountPeer: item.associatedData.accountPeer, message: item.message, alignment: .left, constrainedWidth: constrainedSize.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, type: item.message.effectivelyIncoming(item.context.account.peerId) ? .incoming : .outgoing)
                      
                 return (layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right + buttonsUpdate.proposedWidth, { boundingWidth in
                     var boundingSize = CGSize()
@@ -594,6 +607,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
         let availableReactions: AvailableReactions?
         let reactions: ReactionsMessageAttribute
         let message: Message
+        let accountPeer: EnginePeer?
         let isIncoming: Bool
         let constrainedWidth: CGFloat
         
@@ -604,6 +618,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
             availableReactions: AvailableReactions?,
             reactions: ReactionsMessageAttribute,
             message: Message,
+            accountPeer: EnginePeer?,
             isIncoming: Bool,
             constrainedWidth: CGFloat
         ) {
@@ -613,6 +628,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
             self.availableReactions = availableReactions
             self.reactions = reactions
             self.message = message
+            self.accountPeer = accountPeer
             self.isIncoming = isIncoming
             self.constrainedWidth = constrainedWidth
         }
@@ -649,6 +665,7 @@ final class ChatMessageReactionButtonsNode: ASDisplayNode {
                 presentationContext: arguments.presentationContext,
                 availableReactions: arguments.availableReactions,
                 reactions: arguments.reactions,
+                accountPeer: arguments.accountPeer,
                 message: arguments.message,
                 alignment: arguments.isIncoming ? .left : .right,
                 constrainedWidth: arguments.constrainedWidth,

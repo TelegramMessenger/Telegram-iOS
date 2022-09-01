@@ -226,6 +226,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
         var availableReactions: AvailableReactions?
         var reactions: [MessageReaction]
         var reactionPeers: [(MessageReaction.Reaction, EnginePeer)]
+        var displayAllReactionPeers: Bool
         var replyCount: Int
         var isPinned: Bool
         var hasAutoremove: Bool
@@ -245,6 +246,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             availableReactions: AvailableReactions?,
             reactions: [MessageReaction],
             reactionPeers: [(MessageReaction.Reaction, EnginePeer)],
+            displayAllReactionPeers: Bool,
             replyCount: Int,
             isPinned: Bool,
             hasAutoremove: Bool,
@@ -263,6 +265,7 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
             self.constrainedSize = constrainedSize
             self.reactions = reactions
             self.reactionPeers = reactionPeers
+            self.displayAllReactionPeers = displayAllReactionPeers
             self.replyCount = replyCount
             self.isPinned = isPinned
             self.hasAutoremove = hasAutoremove
@@ -774,11 +777,15 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                             var peers: [EnginePeer] = []
                             for (value, peer) in arguments.reactionPeers {
                                 if value == reaction.value {
-                                    peers.append(peer)
+                                    if !peers.contains(where: { $0.id == peer.id }) {
+                                        peers.append(peer)
+                                    }
                                 }
                             }
-                            if peers.count != Int(reaction.count) || arguments.reactionPeers.count != totalReactionCount {
-                                peers.removeAll()
+                            if !arguments.displayAllReactionPeers {
+                                if peers.count != Int(reaction.count) || arguments.reactionPeers.count != totalReactionCount {
+                                    peers.removeAll()
+                                }
                             }
                             
                             return ReactionButtonsAsyncLayoutContainer.Reaction(

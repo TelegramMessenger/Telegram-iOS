@@ -2367,6 +2367,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationRenderer: self.animationRenderer,
                     content: emojiRegularStatusContent,
                     isVisibleForAnimations: true,
+                    useSharedAnimation: true,
                     action: { [weak self] in
                         guard let strongSelf = self else {
                             return
@@ -2412,7 +2413,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 80.0, height: 80.0)
             )
             let expandedIconSize = self.titleExpandedCredibilityIconView.update(
                 transition: animateStatusIcon ? Transition(animation: .curve(duration: 0.3, curve: .easeInOut)) : .immediate,
@@ -2422,6 +2423,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     animationRenderer: self.animationRenderer,
                     content: emojiExpandedStatusContent,
                     isVisibleForAnimations: true,
+                    useSharedAnimation: true,
                     action: { [weak self] in
                         guard let strongSelf = self else {
                             return
@@ -2430,7 +2432,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     }
                 )),
                 environment: {},
-                containerSize: CGSize(width: 34.0, height: 34.0)
+                containerSize: CGSize(width: 80.0, height: 80.0)
             )
             
             self.credibilityIconSize = iconSize

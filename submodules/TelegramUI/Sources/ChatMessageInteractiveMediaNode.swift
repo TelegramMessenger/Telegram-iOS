@@ -650,6 +650,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     availableReactions: associatedData.availableReactions,
                     reactions: dateAndStatus.dateReactions,
                     reactionPeers: dateAndStatus.dateReactionPeers,
+                    displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     replyCount: dateAndStatus.dateReplies,
                     isPinned: dateAndStatus.isPinned,
                     hasAutoremove: message.isSelfExpiring,

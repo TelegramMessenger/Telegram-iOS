@@ -1690,7 +1690,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: message)
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: message)
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1741,6 +1741,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     availableReactions: item.associatedData.availableReactions,
                     reactions: dateReactionsAndPeers.reactions,
                     reactionPeers: dateReactionsAndPeers.peers,
+                    displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
@@ -1948,6 +1949,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 availableReactions: item.associatedData.availableReactions,
                 reactions: bubbleReactions,
                 message: item.message,
+                accountPeer: item.associatedData.accountPeer,
                 isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                 constrainedWidth: maximumNodeWidth
             ))
