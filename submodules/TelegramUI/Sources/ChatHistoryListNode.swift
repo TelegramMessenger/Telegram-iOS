@@ -489,6 +489,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let refreshMediaProcessingManager = ChatMessageThrottledProcessingManager()
     private let messageMentionProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2)
     private let unseenReactionsProcessingManager = ChatMessageThrottledProcessingManager(delay: 0.2, submitInterval: 0.0)
+    private let extendedMediaProcessingManager = ChatMessageVisibleThrottledProcessingManager(interval: 5.0)
+    
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
     private var currentLaterPrefetchMessages: [(Message, Media)] = []
@@ -731,6 +733,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
             }
+        }
+        
+        self.extendedMediaProcessingManager.process = { [weak self] messageIds in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.context.account.viewTracker.updatedExtendedMediaForMessageIds(messageIds: messageIds)
         }
         
         self.preloadPages = false
@@ -1747,6 +1756,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithRefreshMedia: [MessageId] = []
             var messageIdsWithUnseenPersonalMention: [MessageId] = []
             var messageIdsWithUnseenReactions: [MessageId] = []
+            var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
             
             if indexRange.0 <= indexRange.1 {
@@ -1813,6 +1823,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 if let representation = image.representations.last {
                                     downloadableResourceIds.append((message.id, representation.resource.id.stringRepresentation))
                                 }
+                            } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case .preview = extendedMedia {
+                                messageIdsWithInactiveExtendedMedia.insert(message.id)
                             }
                         }
                         if contentRequiredValidation {
@@ -2023,6 +2035,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
             if !downloadableResourceIds.isEmpty {
                 let _ = markRecentDownloadItemsAsSeen(postbox: self.context.account.postbox, items: downloadableResourceIds).start()
+            }
+            if !messageIdsWithInactiveExtendedMedia.isEmpty {
+                self.extendedMediaProcessingManager.update(messageIdsWithInactiveExtendedMedia)
             }
             
             self.currentEarlierPrefetchMessages = toEarlierMediaMessages

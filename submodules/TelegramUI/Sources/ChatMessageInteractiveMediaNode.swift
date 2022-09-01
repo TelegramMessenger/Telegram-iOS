@@ -90,7 +90,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.blurNode = NavigationBackgroundNode(color: .clear)
         
         self.highlightedBackgroundNode = ASDisplayNode()
-        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.3)
+        self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.2)
         self.highlightedBackgroundNode.alpha = 0.0
         
         self.iconNode = ASImageNode()
@@ -150,7 +150,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
             self.blurNode.frame = self.highlightedBackgroundNode.frame
             self.blurNode.update(size: self.blurNode.frame.size, transition: .immediate)
-            self.blurNode.updateColor(color: UIColor(rgb: 0xffffff, alpha: 0.2), enableBlur: true, transition: .immediate)
+            self.blurNode.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.5), enableBlur: true, transition: .immediate)
             
             self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0), size: iconSize)
             self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
@@ -1673,14 +1673,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             if self.badgeNode == nil {
                 let badgeNode = ChatMessageInteractiveMediaBadge()
                 
-                let incoming: Bool
-                if let context = self.context, let message = self.message {
-                    incoming = message.effectivelyIncoming(context.account.peerId)
-                } else {
-                    incoming = false
+                var inset: CGFloat = 6.0
+                if let corners = self.currentImageArguments?.corners, case .Tail = corners.bottomLeft {
+                    inset = 10.0
                 }
                 
-                badgeNode.frame = CGRect(origin: CGPoint(x: incoming ? 10.0 : 6.0, y: 6.0), size: CGSize(width: radialStatusSize, height: radialStatusSize))
+                badgeNode.frame = CGRect(origin: CGPoint(x: inset, y: 6.0), size: CGSize(width: radialStatusSize, height: radialStatusSize))
                 badgeNode.pressed = { [weak self] in
                     guard let strongSelf = self, let fetchStatus = strongSelf.fetchStatus else {
                         return
