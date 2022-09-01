@@ -141,7 +141,7 @@ public final class ReactionIconView: PortalSourceView {
             context: context,
             attemptSynchronousLoad: false,
             emoji: ChatTextInputTextCustomEmojiAttribute(
-                stickerPack: nil,
+                interactivelySelectedFromPackId: nil,
                 fileId: file.fileId.id,
                 file: file
             ),

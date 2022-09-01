@@ -1443,7 +1443,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
                             attemptSynchronousLoad: false,
-                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,
                             cache: animationCache,
                             renderer: animationRenderer,
@@ -1918,9 +1918,12 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         itemNode.isExtracted = true
         
         var selfTargetBounds = targetView.bounds
-        if case .builtin = itemNode.item.reaction.rawValue {
-            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        if let targetView = targetView as? ReactionIconView, let iconFrame = targetView.iconFrame {
+            selfTargetBounds = iconFrame
         }
+        /*if case .builtin = itemNode.item.reaction.rawValue {
+            selfTargetBounds = selfTargetBounds.insetBy(dx: -selfTargetBounds.width * 0.5, dy: -selfTargetBounds.height * 0.5)
+        }*/
         
         let selfTargetRect = self.view.convert(selfTargetBounds, from: targetView)
         
@@ -2027,7 +2030,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
                             attemptSynchronousLoad: false,
-                            emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
+                            emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,
                             cache: animationCache,
                             renderer: animationRenderer,

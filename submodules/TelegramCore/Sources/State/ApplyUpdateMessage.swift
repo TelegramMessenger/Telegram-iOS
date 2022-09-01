@@ -91,6 +91,8 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         
         var updatedMessage: StoreMessage?
         
+        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+        
         transaction.updateMessage(message.id, update: { currentMessage in
             let updatedId: MessageId
             if let messageId = messageId {
@@ -105,6 +107,12 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 updatedId = MessageId(peerId: currentMessage.id.peerId, namespace: namespace, id: messageId)
             } else {
                 updatedId = currentMessage.id
+            }
+            
+            for attribute in currentMessage.attributes {
+                if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                    bubbleUpEmojiOrStickersets = attribute.bubbleUpEmojiOrStickersets
+                }
             }
             
             let media: [Media]
@@ -262,6 +270,9 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
                 }
             }
         }
+        if !bubbleUpEmojiOrStickersets.isEmpty {
+            applyBubbleUpEmojiOrStickersets(transaction: transaction, ids: bubbleUpEmojiOrStickersets)
+        }
         
         stateManager.addUpdates(result)
         stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: message.id.peerId)])
@@ -335,6 +346,8 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
             transaction.updateMessageGroupingKeysAtomically(ids, groupingKey: key)
         }
         
+        var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
+        
         for (message, _, updatedMessage) in mapping {
             transaction.updateMessage(message.id, update: { currentMessage in
                 let updatedId: MessageId
@@ -342,6 +355,16 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                     updatedId = id
                 } else {
                     updatedId = currentMessage.id
+                }
+                
+                for attribute in currentMessage.attributes {
+                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                        for id in attribute.bubbleUpEmojiOrStickersets {
+                            if !bubbleUpEmojiOrStickersets.contains(id) {
+                                bubbleUpEmojiOrStickersets.append(id)
+                            }
+                        }
+                    }
                 }
                 
                 let media: [Media]
@@ -409,7 +432,36 @@ func applyUpdateGroupMessages(postbox: Postbox, stateManager: AccountStateManage
                 }
             }
         }
+        if !bubbleUpEmojiOrStickersets.isEmpty {
+            applyBubbleUpEmojiOrStickersets(transaction: transaction, ids: bubbleUpEmojiOrStickersets)
+        }
         stateManager.addUpdates(result)
         stateManager.addUpdateGroups([.ensurePeerHasLocalState(id: messages[0].id.peerId)])
+    }
+}
+
+private func applyBubbleUpEmojiOrStickersets(transaction: Transaction, ids: [ItemCollectionId]) {
+    let namespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks, Namespaces.ItemCollection.CloudEmojiPacks]
+    for namespace in namespaces {
+        let namespaceIds = ids.filter { $0.namespace == namespace }
+        if !namespaceIds.isEmpty {
+            let infos = transaction.getItemCollectionsInfos(namespace: namespace)
+            
+            var packDict: [ItemCollectionId: Int] = [:]
+            for i in 0 ..< infos.count {
+                packDict[infos[i].0] = i
+            }
+            var topSortedPacks: [(ItemCollectionId, ItemCollectionInfo)] = []
+            var processedPacks = Set<ItemCollectionId>()
+            for id in namespaceIds {
+                if let index = packDict[id] {
+                    topSortedPacks.append(infos[index])
+                    processedPacks.insert(id)
+                }
+            }
+            let restPacks = infos.filter { !processedPacks.contains($0.0) }
+            let sortedPacks = topSortedPacks + restPacks
+            transaction.replaceItemCollectionInfos(namespace: namespace, itemCollectionInfos: sortedPacks)
+        }
     }
 }

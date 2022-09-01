@@ -159,6 +159,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     hideInputUpdated: { _, _, _ in },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
+                    reorderItems: { _, _ in },
                     makeSearchContainerNode: { _ in return nil },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
@@ -397,6 +398,7 @@ public final class EmojiStatusSelectionController: ViewController {
             }
             
             self.isUserInteractionEnabled = false
+            destinationView.isHidden = true
             
             let hapticFeedback: HapticFeedback
             if let current = self.hapticFeedback {
@@ -470,7 +472,7 @@ public final class EmojiStatusSelectionController: ViewController {
                             let baseItemLayer = InlineStickerItemLayer(
                                 context: self.context,
                                 attemptSynchronousLoad: false,
-                                emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: itemFile.fileId.id, file: itemFile),
+                                emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemFile.fileId.id, file: itemFile),
                                 file: item.itemFile,
                                 cache: animationCache,
                                 renderer: animationRenderer,
@@ -501,7 +503,6 @@ public final class EmojiStatusSelectionController: ViewController {
                 self.layer.addSublayer(sourceCopyLayer)
                 sourceCopyLayer.frame = sourceLayer.convert(sourceLayer.bounds, to: self.layer)
                 sourceLayer.isHidden = true
-                destinationView.isHidden = true
                 
                 let previousSourceCopyFrame = sourceCopyLayer.frame
                 
@@ -512,7 +513,15 @@ public final class EmojiStatusSelectionController: ViewController {
                 
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
                 sourceCopyLayer.position = localDestinationFrame.center
-                transition.animatePositionWithKeyframes(layer: sourceCopyLayer, keyframes: generateParabollicMotionKeyframes(from: previousSourceCopyFrame.center, to: localDestinationFrame.center, elevation: -(localDestinationFrame.center.y - previousSourceCopyFrame.center.y) + 30.0), completion: { [weak self, weak sourceCopyLayer, weak destinationView] _ in
+                
+                var midPointY: CGFloat = localDestinationFrame.center.y - 30.0
+                if let layout = self.validLayout {
+                    if midPointY < layout.safeInsets.top + 8.0 {
+                        midPointY = max(localDestinationFrame.center.y, layout.safeInsets.top + 8.0)
+                    }
+                }
+                
+                transition.animatePositionWithKeyframes(layer: sourceCopyLayer, keyframes: generateParabollicMotionKeyframes(from: previousSourceCopyFrame.center, to: localDestinationFrame.center, midPointY: midPointY), completion: { [weak self, weak sourceCopyLayer, weak destinationView] _ in
                     guard let strongSelf = self else {
                         return
                     }
@@ -549,6 +558,7 @@ public final class EmojiStatusSelectionController: ViewController {
                 sourceCopyLayer.animateKeyframes(values: scaleKeyframes.map({ $0 as NSNumber }), duration: 0.2, keyPath: "transform.scale", timingFunction: CAMediaTimingFunctionName.linear.rawValue)
             } else {
                 itemCompleted = true
+                destinationView.isHidden = false
             }
             
             self.animateOut(completion: {
@@ -877,8 +887,8 @@ public final class EmojiStatusSelectionController: ViewController {
     }
 }
 
-private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, elevation: CGFloat) -> [CGPoint] {
-    let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: sourcePoint.y - elevation)
+private func generateParabollicMotionKeyframes(from sourcePoint: CGPoint, to targetPosition: CGPoint, midPointY: CGFloat) -> [CGPoint] {
+    let midPoint = CGPoint(x: (sourcePoint.x + targetPosition.x) / 2.0, y: midPointY)
     
     let x1 = sourcePoint.x
     let y1 = sourcePoint.y
