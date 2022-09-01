@@ -391,7 +391,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SponsoredMessage: TypeConstructorDescription {
+    indirect enum SponsoredMessage: TypeConstructorDescription {
         case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {

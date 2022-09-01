@@ -745,7 +745,7 @@ public final class EmojiStatusSelectionController: ViewController {
             
             switch controller.mode {
             case .statusSelection:
-                let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile)
+                let _ = (self.context.engine.accountData.setEmojiStatus(file: item?.itemFile, expirationDate: nil)
                 |> deliverOnMainQueue).start()
             case let .quickReactionSelection(completion):
                 if let item = item, let itemFile = item.itemFile {

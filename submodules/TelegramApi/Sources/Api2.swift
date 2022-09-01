@@ -555,7 +555,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelAdminLogEvent: TypeConstructorDescription {
+    indirect enum ChannelAdminLogEvent: TypeConstructorDescription {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int64, action: Api.ChannelAdminLogEventAction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -605,7 +605,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelAdminLogEventAction: TypeConstructorDescription {
+    indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)

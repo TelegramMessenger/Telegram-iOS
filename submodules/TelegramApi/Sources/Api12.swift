@@ -1,5 +1,5 @@
 public extension Api {
-    enum MessageEntity: TypeConstructorDescription {
+    indirect enum MessageEntity: TypeConstructorDescription {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityBankCard(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)
@@ -541,7 +541,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum MessageExtendedMedia: TypeConstructorDescription {
+    indirect enum MessageExtendedMedia: TypeConstructorDescription {
         case messageExtendedMedia(media: Api.MessageMedia)
         case messageExtendedMediaPreview(flags: Int32, w: Int32?, h: Int32?, thumb: Api.PhotoSize?, videoDuration: Int32?)
     

@@ -39,7 +39,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputInvoice: TypeConstructorDescription {
+    indirect enum InputInvoice: TypeConstructorDescription {
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
         case inputInvoiceSlug(slug: String)
     
@@ -731,7 +731,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputNotifyPeer: TypeConstructorDescription {
+    indirect enum InputNotifyPeer: TypeConstructorDescription {
         case inputNotifyBroadcasts
         case inputNotifyChats
         case inputNotifyPeer(peer: Api.InputPeer)
