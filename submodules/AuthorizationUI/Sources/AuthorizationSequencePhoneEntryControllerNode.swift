@@ -25,7 +25,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     var selectCountryCode: (() -> Void)?
     var checkPhone: (() -> Void)?
     var hasNumberUpdated: ((Bool) -> Void)?
-    var numberUpdated: (() -> Void)?
+    var keyPressed: ((Int) -> Void)?
     
     var preferredCountryIdForCode: [String: String] = [:]
     
@@ -146,9 +146,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.numberTextUpdated = { [weak self] number in
             if let strongSelf = self {
                 let _ = processNumberChange(strongSelf.phoneInputNode.number)
-                
-                strongSelf.numberUpdated?()
-                
+                                
                 if strongSelf.hasCountry {
                     strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
                 } else {
@@ -162,9 +160,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                 if let name = name {
                     strongSelf.preferredCountryIdForCode[code] = name
                 }
-                
-                strongSelf.numberUpdated?()
-                
+                                
                 if processNumberChange(strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name)
@@ -210,6 +206,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.phoneInputNode.number = "+1"
         self.phoneInputNode.returnAction = { [weak self] in
             self?.checkPhone?()
+        }
+        
+        self.phoneInputNode.keyPressed = { [weak self] num in
+            self?.keyPressed?(num)
         }
     }
     
@@ -410,11 +410,9 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.phoneAndCountryNode.hasNumberUpdated = { [weak self] hasNumber in
             self?.proceedNode.isEnabled = hasNumber
         }
-        self.phoneAndCountryNode.numberUpdated = { [weak self] in
+        self.phoneAndCountryNode.keyPressed = { [weak self] num in
             if let strongSelf = self, !strongSelf.managedAnimationNode.isHidden {
-                if let state = ManagedPhoneAnimationState.allCases.randomElement() {
-                    strongSelf.managedAnimationNode.enqueue(state)
-                }
+                strongSelf.managedAnimationNode.animate(num: num)
             }
         }
         
@@ -1049,40 +1047,113 @@ final class PhoneConfirmationController: ViewController {
     }
 }
 
-
-private enum ManagedPhoneAnimationState: CaseIterable, Equatable {
-    case keypad1
-    case keypad2
-    case keypad3
-    case keypad4
+private final class PhoneKeyNode: ASDisplayNode {
+    private let imageNode: ASImageNode
+    private var highlightedNode: ASImageNode?
+    
+    private let image: UIImage?
+    private let highlightedImage: UIImage?
+    
+    init(offset: CGPoint, image: UIImage?, highlightedImage: UIImage?) {
+        self.image = image
+        self.highlightedImage = highlightedImage
+        
+        self.imageNode = ASImageNode()
+        self.imageNode.displaysAsynchronously = false
+        self.imageNode.image = image
+        
+        super.init()
+        
+        self.clipsToBounds = true
+        
+        if let imageSize = self.imageNode.image?.size {
+            self.imageNode.frame = CGRect(origin: CGPoint(x: -offset.x, y: -offset.y), size: imageSize)
+        }
+        
+        self.addSubnode(self.imageNode)
+    }
+    
+    func animatePress() {
+        guard self.highlightedNode == nil else {
+            return
+        }
+        
+        let highlightedNode = ASImageNode()
+        highlightedNode.displaysAsynchronously = false
+        highlightedNode.image = self.highlightedImage
+        highlightedNode.frame = self.imageNode.frame
+        self.addSubnode(highlightedNode)
+        self.highlightedNode = highlightedNode
+        
+        highlightedNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.16, removeOnCompletion: false, completion: { [weak self] _ in
+            self?.highlightedNode?.removeFromSupernode()
+            self?.highlightedNode = nil
+        })
+        
+        let values: [NSNumber] = [0.75, 0.5, 0.75, 1.0]
+        self.layer.animateKeyframes(values: values, duration: 0.16, keyPath: "transform.scale")
+    }
 }
 
 private final class ManagedPhoneAnimationNode: ManagedAnimationNode {
-    private var phoneState: ManagedPhoneAnimationState = .keypad1
     private var timer: SwiftSignalKit.Timer?
     
+    private let plateNode: ASDisplayNode
+    private var nodes: [PhoneKeyNode]
+    
     init() {
+        self.plateNode = ASDisplayNode()
+        self.plateNode.backgroundColor = UIColor(rgb: 0xc30023)
+        self.plateNode.frame = CGRect(x: 27.0, y: 38.0, width: 46.0, height: 32.0)
+        
+        let image = UIImage(bundleImageName: "Settings/Keypad")
+        let highlightedImage = generateTintedImage(image: image, color: UIColor(rgb: 0x000000, alpha: 0.4))
+        
+        var nodes: [PhoneKeyNode] = []
+        for i in 0 ..< 9 {
+            let offset: CGPoint
+            switch i {
+                case 1:
+                    offset = CGPoint(x: 15.0, y: 0.0)
+                case 2:
+                    offset = CGPoint(x: 30.0, y: 0.0)
+                case 3:
+                    offset = CGPoint(x: 0.0, y: 10.0)
+                case 4:
+                    offset = CGPoint(x: 15.0, y: 10.0)
+                case 5:
+                    offset = CGPoint(x: 30.0, y: 10.0)
+                case 6:
+                    offset = CGPoint(x: 0.0, y: 21.0)
+                case 7:
+                    offset = CGPoint(x: 15.0, y: 21.0)
+                case 8:
+                    offset = CGPoint(x: 30.0, y: 21.0)
+                default:
+                    offset = CGPoint(x: 0.0, y: 0.0)
+            }
+            let node = PhoneKeyNode(offset: offset, image: image, highlightedImage: highlightedImage)
+            node.frame = CGRect(origin: offset.offsetBy(dx: 28.0, dy: 38.0), size: CGSize(width: 15.0, height: 10.0))
+            nodes.append(node)
+        }
+        self.nodes = nodes
+        
         super.init(size: CGSize(width: 100.0, height: 100.0))
         
-        self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.3))
+        self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.001))
+        
+        self.addSubnode(self.plateNode)
+        
+        for node in nodes {
+            self.addSubnode(node)
+        }
     }
     
-    func enqueue(_ state: ManagedPhoneAnimationState) {
-        switch state {
-        case .keypad1:
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 10), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 10, endFrame: 0), duration: 0.15))
-        case .keypad2:
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 24, endFrame: 34), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 34, endFrame: 24), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
-        case .keypad3:
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 36, endFrame: 46), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 46, endFrame: 36), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 0), duration: 0.1))
-        case .keypad4:
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 0, endFrame: 10), duration: 0.15))
-            self.trackTo(item: ManagedAnimationItem(source: .local("IntroPhone"), frames: .range(startFrame: 10, endFrame: 0), duration: 0.15))
+    func animate(num: Int) {
+        guard num != 0 else {
+            return
         }
+        let index = max(0, min(self.nodes.count - 1, num - 1))
+        self.nodes[index].animatePress()
     }
 }

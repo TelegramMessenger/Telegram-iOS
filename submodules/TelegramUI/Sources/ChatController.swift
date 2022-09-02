@@ -5749,16 +5749,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> map { peer in
-            return FoundPeer(peer: peer, subscribers: nil)
+            return SendAsPeer(peer: peer, subscribers: nil, isPremiumRequired: false)
         }
         
         if let peerId = self.chatLocation.peerId, [Namespaces.Peer.CloudChannel, Namespaces.Peer.CloudGroup].contains(peerId.namespace) {
-            self.sendAsPeersDisposable = (combineLatest(queue: Queue.mainQueue(), currentAccountPeer, self.context.account.postbox.peerView(id: peerId), self.context.engine.peers.sendAsAvailablePeers(peerId: peerId)))
-            .start(next: { [weak self] currentAccountPeer, peerView, peers in
+            self.sendAsPeersDisposable = (combineLatest(
+                queue: Queue.mainQueue(),
+                currentAccountPeer,
+                self.context.account.postbox.peerView(id: peerId),
+                self.context.engine.peers.sendAsAvailablePeers(peerId: peerId))
+            ).start(next: { [weak self] currentAccountPeer, peerView, peers in
                 guard let strongSelf = self else {
                     return
                 }
-                var allPeers: [FoundPeer]?
+                
+                let isPremium = strongSelf.presentationInterfaceState.isPremium
+                
+                var allPeers: [SendAsPeer]?
                 if !peers.isEmpty {
                     if let channel = peerViewMainPeer(peerView) as? TelegramChannel, case .group = channel.info, channel.hasPermission(.canBeAnonymous) {
                         allPeers = peers
@@ -5771,7 +5778,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         if !hasAnonymousPeer {
-                            allPeers?.insert(FoundPeer(peer: channel, subscribers: 0), at: 0)
+                            allPeers?.insert(SendAsPeer(peer: channel, subscribers: 0, isPremiumRequired: false), at: 0)
                         }
                     } else {
                         allPeers = peers.filter { $0.peer.id != peerViewMainPeer(peerView)?.id }
@@ -5781,8 +5788,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if allPeers?.count == 1 {
                     allPeers = nil
                 }
+                
+                var currentSendAsPeerId = strongSelf.presentationInterfaceState.currentSendAsPeerId
+                if let peerId = currentSendAsPeerId, let peer = allPeers?.first(where: { $0.peer.id == peerId }) {
+                    if !isPremium && peer.isPremiumRequired {
+                        currentSendAsPeerId = nil
+                    }
+                } else {
+                    currentSendAsPeerId = nil
+                }
+                
                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: false, {
-                    return $0.updatedSendAsPeers(allPeers)
+                    return $0.updatedSendAsPeers(allPeers).updatedCurrentSendAsPeerId(currentSendAsPeerId)
                 })
             })
         }
@@ -8935,6 +8952,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return
             }
             
+            let isPremium = strongSelf.presentationInterfaceState.isPremium
+                        
             let cleanInsets = layout.intrinsicInsets
             let insets = layout.insets(options: .input)
             let bottomInset = max(insets.bottom, cleanInsets.bottom) + 43.0
@@ -8949,7 +8968,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             var items: [ContextMenuItem] = []
             items.append(.custom(ChatSendAsPeerTitleContextItem(text: strongSelf.presentationInterfaceState.strings.Conversation_SendMesageAs.uppercased()), false))
-            items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId), false))
+            items.append(.custom(ChatSendAsPeerListContextItem(context: strongSelf.context, chatPeerId: peerId, peers: peers, selectedPeerId: myPeerId, isPremium: isPremium, presentToast: { [weak self] peer in
+                if let strongSelf = self {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action), elevatedLayout: false, action: { [weak self] action in
+                        guard let strongSelf = self else {
+                            return true
+                        }
+                        if case .undo = action {
+                            strongSelf.chatDisplayNode.dismissTextInput()
+                            
+                            let controller = PremiumIntroScreen(context: strongSelf.context, source: .settings)
+                            strongSelf.push(controller)
+                        }
+                        return true
+                    }), in: .current)
+                }
+                
+            }), false))
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
             

@@ -690,7 +690,7 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
             return _internal_cachedPeerSendAsAvailablePeers(account: self.account, peerId: peerId)
         }
         

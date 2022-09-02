@@ -101,6 +101,8 @@ extension PeerEmojiStatus {
             self.init(fileId: documentId)
         case .emojiStatusEmpty:
             return nil
+        case .emojiStatusUntil:
+            return nil
         }
     }
 }

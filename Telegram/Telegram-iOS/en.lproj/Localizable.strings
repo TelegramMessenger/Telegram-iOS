@@ -7973,6 +7973,7 @@ Sorry for the inconvenience.";
 
 "Settings.ChangeProfilePhoto" = "Change Profile Photo";
 
+"Premium.EmojiStatusShortTitle" = "This is %1$@'s current status.";
 "Premium.EmojiStatusTitle" = "This is %1$@'s current status from #[%2$@]().";
 "Premium.EmojiStatusText" = "Emoji status is a premium feature.\n Other features included in **Telegram Premium**:";
 
@@ -8013,3 +8014,5 @@ Sorry for the inconvenience.";
 
 "Premium.PricePerMonth" = "%@/month";
 "Premium.PricePerYear" = "%@/year";
+
+"Conversation.SendMesageAsPremiumInfo" = "Subscribe to **Telegram Premium** to be able to comment on behalf your channels in group chats.";

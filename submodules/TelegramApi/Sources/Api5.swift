@@ -390,6 +390,7 @@ public extension Api {
     enum EmojiStatus: TypeConstructorDescription {
         case emojiStatus(documentId: Int64)
         case emojiStatusEmpty
+        case emojiStatusUntil(documentId: Int64, until: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -405,6 +406,13 @@ public extension Api {
                     }
                     
                     break
+                case .emojiStatusUntil(let documentId, let until):
+                    if boxed {
+                        buffer.appendInt32(-97474361)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
+                    serializeInt32(until, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -414,6 +422,8 @@ public extension Api {
                 return ("emojiStatus", [("documentId", String(describing: documentId))])
                 case .emojiStatusEmpty:
                 return ("emojiStatusEmpty", [])
+                case .emojiStatusUntil(let documentId, let until):
+                return ("emojiStatusUntil", [("documentId", String(describing: documentId)), ("until", String(describing: until))])
     }
     }
     
@@ -430,6 +440,20 @@ public extension Api {
         }
         public static func parse_emojiStatusEmpty(_ reader: BufferReader) -> EmojiStatus? {
             return Api.EmojiStatus.emojiStatusEmpty
+        }
+        public static func parse_emojiStatusUntil(_ reader: BufferReader) -> EmojiStatus? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.EmojiStatus.emojiStatusUntil(documentId: _1!, until: _2!)
+            }
+            else {
+                return nil
+            }
         }
     
     }
@@ -1132,70 +1156,6 @@ public extension Api {
             else {
                 return nil
             }
-        }
-    
-    }
-}
-public extension Api {
-    enum GeoPoint: TypeConstructorDescription {
-        case geoPoint(flags: Int32, long: Double, lat: Double, accessHash: Int64, accuracyRadius: Int32?)
-        case geoPointEmpty
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .geoPoint(let flags, let long, let lat, let accessHash, let accuracyRadius):
-                    if boxed {
-                        buffer.appendInt32(-1297942941)
-                    }
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeDouble(long, buffer: buffer, boxed: false)
-                    serializeDouble(lat, buffer: buffer, boxed: false)
-                    serializeInt64(accessHash, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(accuracyRadius!, buffer: buffer, boxed: false)}
-                    break
-                case .geoPointEmpty:
-                    if boxed {
-                        buffer.appendInt32(286776671)
-                    }
-                    
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .geoPoint(let flags, let long, let lat, let accessHash, let accuracyRadius):
-                return ("geoPoint", [("flags", String(describing: flags)), ("long", String(describing: long)), ("lat", String(describing: lat)), ("accessHash", String(describing: accessHash)), ("accuracyRadius", String(describing: accuracyRadius))])
-                case .geoPointEmpty:
-                return ("geoPointEmpty", [])
-    }
-    }
-    
-        public static func parse_geoPoint(_ reader: BufferReader) -> GeoPoint? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Double?
-            _2 = reader.readDouble()
-            var _3: Double?
-            _3 = reader.readDouble()
-            var _4: Int64?
-            _4 = reader.readInt64()
-            var _5: Int32?
-            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt32() }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            let _c4 = _4 != nil
-            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 {
-                return Api.GeoPoint.geoPoint(flags: _1!, long: _2!, lat: _3!, accessHash: _4!, accuracyRadius: _5)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_geoPointEmpty(_ reader: BufferReader) -> GeoPoint? {
-            return Api.GeoPoint.geoPointEmpty
         }
     
     }

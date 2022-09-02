@@ -808,7 +808,11 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil, nil)
+                    var concealed = true
+                    if url.hasPrefix("tg://") {
+                        concealed = false
+                    }
+                    item.controllerInteraction.openUrl(url, concealed, nil, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:

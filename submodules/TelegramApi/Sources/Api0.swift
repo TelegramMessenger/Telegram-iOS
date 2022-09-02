@@ -205,6 +205,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1275374751] = { return Api.EmojiLanguage.parse_emojiLanguage($0) }
     dict[-1835310691] = { return Api.EmojiStatus.parse_emojiStatus($0) }
     dict[769727150] = { return Api.EmojiStatus.parse_emojiStatusEmpty($0) }
+    dict[-97474361] = { return Api.EmojiStatus.parse_emojiStatusUntil($0) }
     dict[-1519029347] = { return Api.EmojiURL.parse_emojiURL($0) }
     dict[1643173063] = { return Api.EncryptedChat.parse_encryptedChat($0) }
     dict[505183301] = { return Api.EncryptedChat.parse_encryptedChatDiscarded($0) }
@@ -354,6 +355,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[215889721] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmojiAnimations($0) }
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
+    dict[701560302] = { return Api.InputStickerSet.parse_inputStickerSetEmojiDefaultStatuses($0) }
     dict[80008398] = { return Api.InputStickerSet.parse_inputStickerSetEmojiGenericAnimations($0) }
     dict[-4838507] = { return Api.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[-1645763991] = { return Api.InputStickerSet.parse_inputStickerSetID($0) }
@@ -696,6 +698,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1954007928] = { return Api.SecureValueType.parse_secureValueTypeRentalAgreement($0) }
     dict[-368907213] = { return Api.SecureValueType.parse_secureValueTypeTemporaryRegistration($0) }
     dict[-63531698] = { return Api.SecureValueType.parse_secureValueTypeUtilityBill($0) }
+    dict[-1206095820] = { return Api.SendAsPeer.parse_sendAsPeer($0) }
     dict[-44119819] = { return Api.SendMessageAction.parse_sendMessageCancelAction($0) }
     dict[1653390447] = { return Api.SendMessageAction.parse_sendMessageChooseContactAction($0) }
     dict[-1336228175] = { return Api.SendMessageAction.parse_sendMessageChooseStickerAction($0) }
@@ -805,6 +808,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1398708869] = { return Api.Update.parse_updateMessagePoll($0) }
     dict[274961865] = { return Api.Update.parse_updateMessagePollVote($0) }
     dict[357013699] = { return Api.Update.parse_updateMessageReactions($0) }
+    dict[-2030252155] = { return Api.Update.parse_updateMoveStickerSetToTop($0) }
     dict[1656358105] = { return Api.Update.parse_updateNewChannelMessage($0) }
     dict[314359194] = { return Api.Update.parse_updateNewEncryptedMessage($0) }
     dict[522914557] = { return Api.Update.parse_updateNewMessage($0) }
@@ -936,7 +940,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
     dict[-266911767] = { return Api.channels.ChannelParticipants.parse_channelParticipantsNotModified($0) }
-    dict[-2091463255] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
+    dict[-191450938] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
     dict[182326673] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-513392236] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
@@ -1553,6 +1557,8 @@ public extension Api {
             case let _1 as Api.SecureValueHash:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueType:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SendAsPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
                 _1.serialize(buffer, boxed)

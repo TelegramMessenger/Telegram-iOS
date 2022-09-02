@@ -102,6 +102,7 @@ public final class ContextMenuActionItem {
     public let badge: ContextMenuActionBadge?
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
+    public let textIcon: (PresentationTheme) -> UIImage?
     public let action: ((Action) -> Void)?
     
     convenience public init(
@@ -114,6 +115,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
     ) {
         self.init(
@@ -126,6 +128,7 @@ public final class ContextMenuActionItem {
             badge: badge,
             icon: icon,
             iconSource: iconSource,
+            textIcon: textIcon,
             action: action.flatMap { action in
                 return { impl in
                     action(impl.controller, impl.dismissWithResult)
@@ -144,6 +147,7 @@ public final class ContextMenuActionItem {
         badge: ContextMenuActionBadge? = nil,
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
+        textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
         action: ((Action) -> Void)?
     ) {
         self.id = id
@@ -155,6 +159,7 @@ public final class ContextMenuActionItem {
         self.badge = badge
         self.icon = icon
         self.iconSource = iconSource
+        self.textIcon = textIcon
         self.action = action
     }
 }

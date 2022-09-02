@@ -66,6 +66,8 @@ extension StickerPackReference {
             self = .premiumGifts
         case .inputStickerSetEmojiGenericAnimations:
             self = .emojiGenericAnimations
+        case .inputStickerSetEmojiDefaultStatuses:
+            return nil
         }
     }
 }
