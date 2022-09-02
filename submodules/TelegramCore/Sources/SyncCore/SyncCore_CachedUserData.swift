@@ -88,9 +88,11 @@ public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
 
 public struct PeerEmojiStatus: Equatable, Codable {
     public var fileId: Int64
+    public var expirationDate: Int32?
     
-    public init(fileId: Int64) {
+    public init(fileId: Int64, expirationDate: Int32?) {
         self.fileId = fileId
+        self.expirationDate = expirationDate
     }
 }
 
@@ -98,7 +100,9 @@ extension PeerEmojiStatus {
     init?(apiStatus: Api.EmojiStatus) {
         switch apiStatus {
         case let .emojiStatus(documentId):
-            self.init(fileId: documentId)
+            self.init(fileId: documentId, expirationDate: nil)
+        case let .emojiStatusUntil(documentId, until):
+            self.init(fileId: documentId, expirationDate: until)
         case .emojiStatusEmpty:
             return nil
         case .emojiStatusUntil:

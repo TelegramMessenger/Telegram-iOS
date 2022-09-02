@@ -612,6 +612,8 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         panelContentVibrantOverlayColor: UIColor(rgb: 0x808080),
         panelContentControlVibrantOverlayColor: UIColor(rgb: 0x808080).mixedWith(UIColor(rgb: 0x000000), alpha: 0.35),
         panelContentControlVibrantSelectionColor: UIColor(white: 1.0, alpha: 0.1),
+        panelContentControlOpaqueOverlayColor: UIColor(white: 1.0, alpha: 0.1),
+        panelContentControlOpaqueSelectionColor: UIColor(white: 1.0, alpha: 0.1),
         stickersBackgroundColor: UIColor(rgb: 0x000000),
         stickersSectionTextColor: UIColor(rgb: 0x7b7b7b),
         stickersSearchBackgroundColor: UIColor(rgb: 0x1c1c1d),

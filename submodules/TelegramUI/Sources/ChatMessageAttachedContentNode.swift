@@ -338,7 +338,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var viewCount: Int?
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: message)
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden
@@ -683,6 +683,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                         availableReactions: associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
+                        displayAllReactionPeers: message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         replyCount: dateReplies,
                         isPinned: message.tags.contains(.pinned) && !associatedData.isInPinnedListMode && !isReplyThread,
                         hasAutoremove: message.isSelfExpiring,

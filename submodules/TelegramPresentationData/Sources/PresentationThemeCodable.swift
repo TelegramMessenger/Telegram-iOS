@@ -1609,6 +1609,8 @@ extension PresentationThemeInputMediaPanel: Codable {
         case panelContentVibrantOverlay
         case panelContentControlVibrantOverlay
         case panelContentControlVibrantSelection
+        case panelContentControlOpaqueOverlay
+        case panelContentControlOpaqueSelection
         case stickersBg
         case stickersSectionText
         case stickersSearchBg
@@ -1648,6 +1650,8 @@ extension PresentationThemeInputMediaPanel: Codable {
                   panelContentVibrantOverlayColor: try decodeColor(values, .panelContentVibrantOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
                   panelContentControlVibrantOverlayColor: try decodeColor(values, .panelContentControlVibrantOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
                   panelContentControlVibrantSelectionColor: try decodeColor(values, .panelContentControlVibrantSelection, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentControlOpaqueOverlayColor: try decodeColor(values, .panelContentControlOpaqueOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
+                  panelContentControlOpaqueSelectionColor: try decodeColor(values, .panelContentControlOpaqueSelection, fallbackKey: "\(codingPath).stickersSectionText"),
                   stickersBackgroundColor: try decodeColor(values, .stickersBg),
                   stickersSectionTextColor: try decodeColor(values, .stickersSectionText),
                   stickersSearchBackgroundColor: try decodeColor(values, .stickersSearchBg),
@@ -1666,6 +1670,8 @@ extension PresentationThemeInputMediaPanel: Codable {
         try encodeColor(&values, self.panelContentVibrantOverlayColor, .panelContentVibrantOverlay)
         try encodeColor(&values, self.panelContentControlVibrantOverlayColor, .panelContentControlVibrantOverlay)
         try encodeColor(&values, self.panelContentControlVibrantSelectionColor, .panelContentControlVibrantSelection)
+        try encodeColor(&values, self.panelContentControlOpaqueOverlayColor, .panelContentControlOpaqueOverlay)
+        try encodeColor(&values, self.panelContentControlOpaqueSelectionColor, .panelContentControlOpaqueSelection)
         try encodeColor(&values, self.stickersBackgroundColor, .stickersBg)
         try encodeColor(&values, self.stickersSectionTextColor, .stickersSectionText)
         try encodeColor(&values, self.stickersSearchBackgroundColor, .stickersSearchBg)

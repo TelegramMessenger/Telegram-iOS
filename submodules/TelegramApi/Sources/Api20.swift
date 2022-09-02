@@ -597,7 +597,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum Update: TypeConstructorDescription {
+    indirect enum Update: TypeConstructorDescription {
         case updateAttachMenuBots
         case updateBotCallbackQuery(flags: Int32, queryId: Int64, userId: Int64, peer: Api.Peer, msgId: Int32, chatInstance: Int64, data: Buffer?, gameShortName: String?)
         case updateBotChatInviteRequester(peer: Api.Peer, date: Int32, userId: Int64, about: String, invite: Api.ExportedChatInvite, qts: Int32)

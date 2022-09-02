@@ -1392,6 +1392,16 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     namespace = .stickers
                 }
                 updatedState.addUpdateInstalledStickerPacks(.reorder(namespace, order))
+            case let .updateMoveStickerSetToTop(flags, stickerset):
+                let namespace: SynchronizeInstalledStickerPacksOperationNamespace
+                if (flags & (1 << 0)) != 0 {
+                    namespace = .masks
+                } else if (flags & (1 << 1)) != 0 {
+                    namespace = .emoji
+                } else {
+                    namespace = .stickers
+                }
+                updatedState.addUpdateInstalledStickerPacks(.reorderToTop(namespace, [stickerset]))
             case .updateStickerSets:
                 updatedState.addUpdateInstalledStickerPacks(.sync)
             case .updateSavedGifs:
@@ -3666,6 +3676,33 @@ func replayFinalState(
                             }
                             transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                         }
+                    case let .reorderToTop(namespace, ids):
+                        let collectionNamespace: ItemCollectionId.Namespace
+                        switch namespace {
+                        case .stickers:
+                            collectionNamespace = Namespaces.ItemCollection.CloudStickerPacks
+                        case .masks:
+                            collectionNamespace = Namespaces.ItemCollection.CloudMaskPacks
+                        case .emoji:
+                            collectionNamespace = Namespaces.ItemCollection.CloudEmojiPacks
+                        }
+                        let currentInfos = transaction.getItemCollectionsInfos(namespace: collectionNamespace).map { $0.1 as! StickerPackCollectionInfo }
+                        
+                        var currentDict: [ItemCollectionId: StickerPackCollectionInfo] = [:]
+                        for info in currentInfos {
+                            currentDict[info.id] = info
+                        }
+                        var updatedInfos: [StickerPackCollectionInfo] = []
+                        for id in ids {
+                            let currentInfo = currentDict[ItemCollectionId(namespace: collectionNamespace, id: id)]!
+                            updatedInfos.append(currentInfo)
+                        }
+                        for info in currentInfos {
+                            if !updatedInfos.contains(where: { $0.id == info.id }) {
+                                updatedInfos.append(info)
+                            }
+                        }
+                        transaction.replaceItemCollectionInfos(namespace: collectionNamespace, itemCollectionInfos: updatedInfos.map { ($0.id, $0) })
                     case .sync:
                         syncStickers = true
                         syncMasks = true

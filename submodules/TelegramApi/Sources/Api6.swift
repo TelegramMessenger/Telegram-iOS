@@ -1265,7 +1265,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputChannel: TypeConstructorDescription {
+    indirect enum InputChannel: TypeConstructorDescription {
         case inputChannel(channelId: Int64, accessHash: Int64)
         case inputChannelEmpty
         case inputChannelFromMessage(peer: Api.InputPeer, msgId: Int32, channelId: Int64)

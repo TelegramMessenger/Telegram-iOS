@@ -30,8 +30,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
     public let forceInlineReactions: Bool
+    public let accountPeer: EnginePeer?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, forceInlineReactions: Bool = false) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -46,6 +47,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.availableReactions = availableReactions
         self.defaultReaction = defaultReaction
         self.isPremium = isPremium
+        self.accountPeer = accountPeer
         self.forceInlineReactions = forceInlineReactions
     }
     
@@ -87,6 +89,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.isPremium != rhs.isPremium {
+            return false
+        }
+        if lhs.accountPeer != rhs.accountPeer {
             return false
         }
         if lhs.forceInlineReactions != rhs.forceInlineReactions {

@@ -51,6 +51,7 @@ public final class EmojiStatusComponent: Component {
     public let animationRenderer: MultiAnimationRenderer
     public let content: Content
     public let isVisibleForAnimations: Bool
+    public let useSharedAnimation: Bool
     public let action: (() -> Void)?
     public let emojiFileUpdated: ((TelegramMediaFile?) -> Void)?
     
@@ -60,6 +61,7 @@ public final class EmojiStatusComponent: Component {
         animationRenderer: MultiAnimationRenderer,
         content: Content,
         isVisibleForAnimations: Bool,
+        useSharedAnimation: Bool = false,
         action: (() -> Void)?,
         emojiFileUpdated: ((TelegramMediaFile?) -> Void)? = nil
     ) {
@@ -68,6 +70,7 @@ public final class EmojiStatusComponent: Component {
         self.animationRenderer = animationRenderer
         self.content = content
         self.isVisibleForAnimations = isVisibleForAnimations
+        self.useSharedAnimation = useSharedAnimation
         self.action = action
         self.emojiFileUpdated = emojiFileUpdated
     }
@@ -79,6 +82,7 @@ public final class EmojiStatusComponent: Component {
             animationRenderer: self.animationRenderer,
             content: self.content,
             isVisibleForAnimations: isVisibleForAnimations,
+            useSharedAnimation: self.useSharedAnimation,
             action: self.action,
             emojiFileUpdated: self.emojiFileUpdated
         )
@@ -98,6 +102,9 @@ public final class EmojiStatusComponent: Component {
             return false
         }
         if lhs.isVisibleForAnimations != rhs.isVisibleForAnimations {
+            return false
+        }
+        if lhs.useSharedAnimation != rhs.useSharedAnimation {
             return false
         }
         return true
@@ -339,56 +346,11 @@ public final class EmojiStatusComponent: Component {
             if let emojiFileId = emojiFileId, let emojiPlaceholderColor = emojiPlaceholderColor, let emojiLoopMode = emojiLoopMode {
                 size = availableSize
                 
-                let _ = emojiLoopMode
-                
                 if let emojiFile = self.emojiFile {
                     self.emojiFileDisposable?.dispose()
                     self.emojiFileDisposable = nil
                     self.emojiFileDataPathDisposable?.dispose()
                     self.emojiFileDataPathDisposable = nil
-                    
-                    /*if !"".isEmpty {
-                        var resetThemeColor = false
-                        let lottieAnimationView: AnimationView
-                        if let current = self.lottieAnimationView {
-                            lottieAnimationView = current
-                            if case let .animation(_, _, _, previousThemeColor, _) = previousContent {
-                                if previousThemeColor != emojiThemeColor {
-                                    resetThemeColor = true
-                                }
-                            } else {
-                                resetThemeColor = true
-                            }
-                        } else {
-                            resetThemeColor = true
-                            lottieAnimationView = AnimationView(animation: coloredComposition)
-                            lottieAnimationView.loopMode = .loop
-                            self.lottieAnimationView = lottieAnimationView
-                            self.addSubview(lottieAnimationView)
-                            
-                            if !transition.animation.isImmediate {
-                                lottieAnimationView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                lottieAnimationView.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.5)
-                            }
-                        }
-                        
-                        if resetThemeColor {
-                            for keypath in lottieAnimationView.allKeypaths(predicate: { $0.keys.contains(where: { $0.contains("_theme") }) && $0.keys.last == "Color" }) {
-                                lottieAnimationView.setValueProvider(ColorValueProvider(emojiThemeColor.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
-                            }
-                        }
-                        
-                        lottieAnimationView.frame = CGRect(origin: CGPoint(), size: size)
-                        if component.isVisibleForAnimations {
-                            if !lottieAnimationView.isAnimationPlaying {
-                                lottieAnimationView.play()
-                            }
-                        } else {
-                            if lottieAnimationView.isAnimationPlaying {
-                                lottieAnimationView.stop()
-                            }
-                        }
-                    } else {*/
                     
                     let animationLayer: InlineStickerItemLayer
                     if let current = self.animationLayer {
@@ -408,7 +370,7 @@ public final class EmojiStatusComponent: Component {
                             file: emojiFile,
                             cache: component.animationCache,
                             renderer: component.animationRenderer,
-                            unique: true,
+                            unique: !component.useSharedAnimation,
                             placeholderColor: emojiPlaceholderColor,
                             pointSize: emojiSize,
                             loopCount: loopCount
@@ -428,7 +390,7 @@ public final class EmojiStatusComponent: Component {
                             if case let .CustomEmoji(_, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
-                                    if id == 773947703670341676 {
+                                    if id == 773947703670341676 || id == 2964141614563343 {
                                         accentTint = true
                                     }
                                 default:

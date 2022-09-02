@@ -487,7 +487,7 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
                 subtree.position = sublayer.position
                 subtree.bounds = sublayer.bounds
                 subtree.anchorPoint = sublayer.anchorPoint
-                layer.addSublayer(subtree)
+                view.addSublayer(subtree)
             } else {
                 return nil
             }

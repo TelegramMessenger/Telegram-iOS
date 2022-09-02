@@ -6,6 +6,7 @@ final class PeerTable: Table {
     }
     
     private let reverseAssociatedTable: ReverseAssociatedPeerTable
+    //private let peerTimeoutPropertiesTable: PeerTimeoutPropertiesTable
     
     private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)

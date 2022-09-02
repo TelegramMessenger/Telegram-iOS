@@ -157,7 +157,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum RecentMeUrl: TypeConstructorDescription {
+    indirect enum RecentMeUrl: TypeConstructorDescription {
         case recentMeUrlChat(url: String, chatId: Int64)
         case recentMeUrlChatInvite(url: String, chatInvite: Api.ChatInvite)
         case recentMeUrlStickerSet(url: String, set: Api.StickerSetCovered)

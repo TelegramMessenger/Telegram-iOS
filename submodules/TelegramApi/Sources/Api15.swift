@@ -1,5 +1,5 @@
 public extension Api {
-    enum PageListOrderedItem: TypeConstructorDescription {
+    indirect enum PageListOrderedItem: TypeConstructorDescription {
         case pageListOrderedItemBlocks(num: String, blocks: [Api.PageBlock])
         case pageListOrderedItemText(num: String, text: Api.RichText)
     
@@ -135,7 +135,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum PageTableCell: TypeConstructorDescription {
+    indirect enum PageTableCell: TypeConstructorDescription {
         case pageTableCell(flags: Int32, text: Api.RichText?, colspan: Int32?, rowspan: Int32?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {

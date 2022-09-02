@@ -1451,11 +1451,15 @@ private final class GroupExpandActionButton: UIButton {
         super.touchesCancelled(touches, with: event)
     }
     
-    func update(theme: PresentationTheme, title: String) -> CGSize {
+    func update(theme: PresentationTheme, title: String, useOpaqueTheme: Bool) -> CGSize {
         let textConstrainedWidth: CGFloat = 100.0
         let color = theme.list.itemCheckColors.foregroundColor
         
-        self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.cgColor
+        if useOpaqueTheme {
+            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantOverlayColor.cgColor
+        } else {
+            self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueOverlayColor.cgColor
+        }
         self.tintContainerLayer.backgroundColor = UIColor.white.cgColor
         
         let textSize: CGSize
@@ -1576,6 +1580,7 @@ public final class EmojiPagerContentComponent: Component {
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
         public let externalBackground: ExternalBackground?
+        public let useOpaqueTheme: Bool
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
@@ -1592,7 +1597,8 @@ public final class EmojiPagerContentComponent: Component {
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
-            externalBackground: ExternalBackground?
+            externalBackground: ExternalBackground?,
+            useOpaqueTheme: Bool
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -1609,6 +1615,7 @@ public final class EmojiPagerContentComponent: Component {
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
             self.externalBackground = externalBackground
+            self.useOpaqueTheme = useOpaqueTheme
         }
     }
     
@@ -3385,8 +3392,9 @@ public final class EmojiPagerContentComponent: Component {
                     self.hapticFeedback = HapticFeedback()
                 }
                 
-                let transition = Transition(animation: .curve(duration: longPressDuration, curve: .easeInOut))
-                transition.setScale(layer: itemLayer, scale: 1.3)
+                let _ = itemLayer
+                //let transition = Transition(animation: .curve(duration: longPressDuration, curve: .easeInOut))
+                //transition.setScale(layer: itemLayer, scale: 1.3)
                 
                 self.longPressTimer?.invalidate()
                 self.longPressTimer = SwiftSignalKit.Timer(timeout: longPressDuration, repeat: false, completion: { [weak self] in
@@ -3575,6 +3583,8 @@ public final class EmojiPagerContentComponent: Component {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let keyboardChildEnvironment = self.keyboardChildEnvironment, let itemLayout = self.itemLayout else {
                 return
             }
+            
+            let useOpaqueTheme = component.inputInteractionHolder.inputInteraction?.useOpaqueTheme ?? false
             
             var topVisibleGroupId: AnyHashable?
             var topVisibleSubgroupId: AnyHashable?
@@ -3869,7 +3879,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     
                     let baseItemFrame = itemLayout.frame(groupIndex: groupItems.groupIndex, itemIndex: collapsedItemIndex)
-                    let buttonSize = groupExpandActionButton.update(theme: keyboardChildEnvironment.theme, title: collapsedItemText)
+                    let buttonSize = groupExpandActionButton.update(theme: keyboardChildEnvironment.theme, title: collapsedItemText, useOpaqueTheme: useOpaqueTheme)
                     let buttonFrame = CGRect(origin: CGPoint(x: baseItemFrame.minX + floor((baseItemFrame.width - buttonSize.width) / 2.0), y: baseItemFrame.minY + floor((baseItemFrame.height - buttonSize.height) / 2.0)), size: buttonSize)
                     groupExpandActionButtonTransition.setFrame(view: groupExpandActionButton, frame: buttonFrame)
                 }
@@ -4050,8 +4060,19 @@ public final class EmojiPagerContentComponent: Component {
                                 self.visibleItemSelectionLayers[itemId] = itemSelectionLayer
                             }
                             
-                            itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
-                            itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+                            if item.accentTint {
+                                itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
+                                itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
+                            } else {
+                                if useOpaqueTheme {
+                                    itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
+                                    itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
+                                } else {
+                                    itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor.cgColor
+                                    itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor(white: 1.0, alpha: 0.2).cgColor
+                                }
+                            }
+                            
                             itemSelectionLayer.frame = baseItemFrame
                             
                             itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
@@ -4771,9 +4792,22 @@ public final class EmojiPagerContentComponent: Component {
         
         orderedItemListCollectionIds.append(Namespaces.OrderedItemList.LocalRecentEmoji)
         
+        var iconStatusEmoji: Signal<[TelegramMediaFile], NoError> = .single([])
+        
         if isStatusSelection {
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudFeaturedStatusEmoji)
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentStatusEmoji)
+            
+            iconStatusEmoji = context.engine.stickers.loadedStickerPack(reference: .iconStatusEmoji, forceActualized: false)
+            |> map { result -> [TelegramMediaFile] in
+                switch result {
+                case let .result(_, items, _):
+                    return items.map(\.file)
+                default:
+                    return []
+                }
+            }
+            |> take(1)
         } else if isReactionSelection {
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudTopReactions)
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentReactions)
@@ -4790,9 +4824,10 @@ public final class EmojiPagerContentComponent: Component {
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
             context.account.viewTracker.featuredEmojiPacks(),
-            availableReactions
+            availableReactions,
+            iconStatusEmoji
         )
-        |> map { view, hasPremium, featuredEmojiPacks, availableReactions -> EmojiPagerContentComponent in
+        |> map { view, hasPremium, featuredEmojiPacks, availableReactions, iconStatusEmoji -> EmojiPagerContentComponent in
             struct ItemGroup {
                 var supergroupId: AnyHashable
                 var id: AnyHashable
@@ -4842,10 +4877,49 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
+                    //TODO:localize
+                    itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: "Long tap to set a timer".uppercased(), subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
                 }
                 
                 var existingIds = Set<MediaId>()
+                
+                for file in iconStatusEmoji {
+                    if existingIds.contains(file.fileId) {
+                        continue
+                    }
+                    existingIds.insert(file.fileId)
+                    
+                    var accentTint = false
+                    for attribute in file.attributes {
+                        if case let .CustomEmoji(_, _, packReference) = attribute {
+                            switch packReference {
+                            case let .id(id, _):
+                                if id == 773947703670341676 || id == 2964141614563343 {
+                                    accentTint = true
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    
+                    let resultItem: EmojiPagerContentComponent.Item
+                    
+                    let animationData = EntityKeyboardAnimationData(file: file)
+                    resultItem = EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: file,
+                        subgroupId: nil,
+                        icon: .none,
+                        accentTint: accentTint
+                    )
+                    
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    }
+                }
+                
                 if let recentStatusEmoji = recentStatusEmoji {
                     for item in recentStatusEmoji.items {
                         guard let item = item.contents.get(RecentMediaItem.self) else {
@@ -4863,7 +4937,7 @@ public final class EmojiPagerContentComponent: Component {
                             if case let .CustomEmoji(_, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
-                                    if id == 773947703670341676 {
+                                    if id == 773947703670341676 || id == 2964141614563343 {
                                         accentTint = true
                                     }
                                 default:
@@ -4908,7 +4982,7 @@ public final class EmojiPagerContentComponent: Component {
                             if case let .CustomEmoji(_, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
-                                    if id == 773947703670341676 {
+                                    if id == 773947703670341676 || id == 2964141614563343 {
                                         accentTint = true
                                     }
                                 default:
@@ -5377,7 +5451,7 @@ public final class EmojiPagerContentComponent: Component {
                 },
                 itemLayoutType: .compact,
                 warpContentsOnEdges: isReactionSelection || isStatusSelection,
-                enableLongPress: isReactionSelection && !isQuickReactionSelection,
+                enableLongPress: (isReactionSelection && !isQuickReactionSelection) || isStatusSelection,
                 selectedItems: selectedItems
             )
         }

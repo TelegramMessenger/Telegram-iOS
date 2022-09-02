@@ -67,7 +67,7 @@ extension StickerPackReference {
         case .inputStickerSetEmojiGenericAnimations:
             self = .emojiGenericAnimations
         case .inputStickerSetEmojiDefaultStatuses:
-            return nil
+            self = .iconStatusEmoji
         }
     }
 }

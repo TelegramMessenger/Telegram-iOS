@@ -14,8 +14,8 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOn
             return
         }
         
-        let frameSkip: Int
-        if animation.frameRate >= 60 {
+        let frameSkip: Int = 2
+        /*if animation.frameRate >= 60 {
             if ProcessInfo.processInfo.processorCount > 2 {
                 frameSkip = 1
             } else {
@@ -23,7 +23,7 @@ public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOn
             }
         } else {
             frameSkip = 1
-        }
+        }*/
         
         let frameDuration = Double(frameSkip) / Double(animation.frameRate)
         for i in stride(from: 0, through: animation.frameCount - 1, by: frameSkip) {
