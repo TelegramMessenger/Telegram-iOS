@@ -1129,7 +1129,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             customLayout: emojiContentLayout,
             externalBackground: EmojiPagerContentComponent.ExternalBackground(
                 effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
-            )
+            ),
+            useOpaqueTheme: false
         )
     }
     

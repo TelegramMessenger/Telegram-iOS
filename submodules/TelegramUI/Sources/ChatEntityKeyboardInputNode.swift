@@ -1104,7 +1104,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             chatPeerId: chatPeerId,
             peekBehavior: nil,
             customLayout: nil,
-            externalBackground: nil
+            externalBackground: nil,
+            useOpaqueTheme: false
         )
         
         var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1308,7 +1309,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
             customLayout: nil,
-            externalBackground: nil
+            externalBackground: nil,
+            useOpaqueTheme: false
         )
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
@@ -2017,7 +2019,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: nil,
-            externalBackground: nil
+            externalBackground: nil,
+            useOpaqueTheme: false
         )
         
         let semaphore = DispatchSemaphore(value: 0)

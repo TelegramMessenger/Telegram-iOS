@@ -850,6 +850,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private func openStatusSetup(sourceView: UIView) {
         self.emojiStatusSelectionController?.dismiss()
+        var selectedItems = Set<MediaId>()
+        if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
+            selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+        }
         let controller = EmojiStatusSelectionController(
             context: self.context,
             mode: .statusSelection,
@@ -864,7 +868,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 topReactionItems: [],
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,
-                chatPeerId: self.context.account.peerId
+                chatPeerId: self.context.account.peerId,
+                selectedItems: selectedItems
             ),
             destinationItemView: { [weak sourceView] in
                 return sourceView

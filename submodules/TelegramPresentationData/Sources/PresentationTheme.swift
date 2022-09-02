@@ -1146,6 +1146,8 @@ public final class PresentationThemeInputMediaPanel {
     public let panelContentVibrantOverlayColor: UIColor
     public let panelContentControlVibrantOverlayColor: UIColor
     public let panelContentControlVibrantSelectionColor: UIColor
+    public let panelContentControlOpaqueOverlayColor: UIColor
+    public let panelContentControlOpaqueSelectionColor: UIColor
     public let stickersBackgroundColor: UIColor
     public let stickersSectionTextColor: UIColor
     public let stickersSearchBackgroundColor: UIColor
@@ -1163,6 +1165,8 @@ public final class PresentationThemeInputMediaPanel {
         panelContentVibrantOverlayColor: UIColor,
         panelContentControlVibrantOverlayColor: UIColor,
         panelContentControlVibrantSelectionColor: UIColor,
+        panelContentControlOpaqueOverlayColor: UIColor,
+        panelContentControlOpaqueSelectionColor: UIColor,
         stickersBackgroundColor: UIColor,
         stickersSectionTextColor: UIColor,
         stickersSearchBackgroundColor: UIColor,
@@ -1179,6 +1183,8 @@ public final class PresentationThemeInputMediaPanel {
         self.panelContentVibrantOverlayColor = panelContentVibrantOverlayColor
         self.panelContentControlVibrantOverlayColor = panelContentControlVibrantOverlayColor
         self.panelContentControlVibrantSelectionColor = panelContentControlVibrantSelectionColor
+        self.panelContentControlOpaqueOverlayColor = panelContentControlOpaqueOverlayColor
+        self.panelContentControlOpaqueSelectionColor = panelContentControlOpaqueSelectionColor
         self.stickersBackgroundColor = stickersBackgroundColor
         self.stickersSectionTextColor = stickersSectionTextColor
         self.stickersSearchBackgroundColor = stickersSearchBackgroundColor
@@ -1197,6 +1203,8 @@ public final class PresentationThemeInputMediaPanel {
         panelContentVibrantOverlayColor: UIColor? = nil,
         panelContentControlVibrantOverlayColor: UIColor? = nil,
         panelContentControlVibrantSelectionColor: UIColor? = nil,
+        panelContentControlOpaqueOverlayColor: UIColor? = nil,
+        panelContentControlOpaqueSelectionColor: UIColor? = nil,
         stickersBackgroundColor: UIColor? = nil,
         stickersSectionTextColor: UIColor? = nil,
         stickersSearchBackgroundColor: UIColor? = nil,
@@ -1214,6 +1222,8 @@ public final class PresentationThemeInputMediaPanel {
             panelContentVibrantOverlayColor: panelContentVibrantOverlayColor ?? self.panelContentVibrantOverlayColor,
             panelContentControlVibrantOverlayColor: panelContentControlVibrantOverlayColor ?? self.panelContentControlVibrantOverlayColor,
             panelContentControlVibrantSelectionColor: panelContentControlVibrantSelectionColor ?? self.panelContentControlVibrantSelectionColor,
+            panelContentControlOpaqueOverlayColor: panelContentControlOpaqueOverlayColor ?? self.panelContentControlOpaqueOverlayColor,
+            panelContentControlOpaqueSelectionColor: panelContentControlOpaqueSelectionColor ?? self.panelContentControlOpaqueSelectionColor,
             stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor,
             stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor,
             stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor,
