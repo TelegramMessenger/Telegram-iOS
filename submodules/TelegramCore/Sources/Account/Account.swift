@@ -1182,6 +1182,8 @@ public class Account {
             self.managedOperationsDisposable.add(managedRecentReactions(postbox: self.postbox, network: self.network).start())
             self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
+            
+            self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconStatusEmoji, forceActualized: true).start())
         }
 
         if !supplementary {

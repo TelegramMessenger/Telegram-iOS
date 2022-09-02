@@ -355,6 +355,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[42402760] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmoji($0) }
     dict[215889721] = { return Api.InputStickerSet.parse_inputStickerSetAnimatedEmojiAnimations($0) }
     dict[-427863538] = { return Api.InputStickerSet.parse_inputStickerSetDice($0) }
+    dict[701560302] = { return Api.InputStickerSet.parse_inputStickerSetEmojiDefaultStatuses($0) }
     dict[80008398] = { return Api.InputStickerSet.parse_inputStickerSetEmojiGenericAnimations($0) }
     dict[-4838507] = { return Api.InputStickerSet.parse_inputStickerSetEmpty($0) }
     dict[-1645763991] = { return Api.InputStickerSet.parse_inputStickerSetID($0) }
@@ -697,6 +698,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1954007928] = { return Api.SecureValueType.parse_secureValueTypeRentalAgreement($0) }
     dict[-368907213] = { return Api.SecureValueType.parse_secureValueTypeTemporaryRegistration($0) }
     dict[-63531698] = { return Api.SecureValueType.parse_secureValueTypeUtilityBill($0) }
+    dict[-1206095820] = { return Api.SendAsPeer.parse_sendAsPeer($0) }
     dict[-44119819] = { return Api.SendMessageAction.parse_sendMessageCancelAction($0) }
     dict[1653390447] = { return Api.SendMessageAction.parse_sendMessageChooseContactAction($0) }
     dict[-1336228175] = { return Api.SendMessageAction.parse_sendMessageChooseStickerAction($0) }
@@ -938,7 +940,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-541588713] = { return Api.channels.ChannelParticipant.parse_channelParticipant($0) }
     dict[-1699676497] = { return Api.channels.ChannelParticipants.parse_channelParticipants($0) }
     dict[-266911767] = { return Api.channels.ChannelParticipants.parse_channelParticipantsNotModified($0) }
-    dict[-2091463255] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
+    dict[-191450938] = { return Api.channels.SendAsPeers.parse_sendAsPeers($0) }
     dict[182326673] = { return Api.contacts.Blocked.parse_blocked($0) }
     dict[-513392236] = { return Api.contacts.Blocked.parse_blockedSlice($0) }
     dict[-353862078] = { return Api.contacts.Contacts.parse_contacts($0) }
@@ -1555,6 +1557,8 @@ public extension Api {
             case let _1 as Api.SecureValueHash:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SecureValueType:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.SendAsPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.SendMessageAction:
                 _1.serialize(buffer, boxed)

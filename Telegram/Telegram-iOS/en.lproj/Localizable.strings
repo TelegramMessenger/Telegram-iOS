@@ -8013,3 +8013,12 @@ Sorry for the inconvenience.";
 
 "Premium.PricePerMonth" = "%@/month";
 "Premium.PricePerYear" = "%@/year";
+
+"SetTimeoutFor.Minutes_1" = "Set for 1 minute";
+"SetTimeoutFor.Minutes_any" = "Set for %@ minutes";
+
+"SetTimeoutFor.Hours_1" = "Set for 1 hour";
+"SetTimeoutFor.Hours_any" = "Set for %@ hours";
+
+"SetTimeoutFor.Days_1" = "Set for 1 day";
+"SetTimeoutFor.Days_any" = "Set for %@ days";

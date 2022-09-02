@@ -390,7 +390,7 @@ public final class EmojiStatusComponent: Component {
                             if case let .CustomEmoji(_, _, packReference) = attribute {
                                 switch packReference {
                                 case let .id(id, _):
-                                    if id == 773947703670341676 {
+                                    if id == 773947703670341676 || id == 2964141614563343 {
                                         accentTint = true
                                     }
                                 default:

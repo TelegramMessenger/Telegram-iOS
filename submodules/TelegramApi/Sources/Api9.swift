@@ -677,6 +677,7 @@ public extension Api {
         case inputStickerSetAnimatedEmoji
         case inputStickerSetAnimatedEmojiAnimations
         case inputStickerSetDice(emoticon: String)
+        case inputStickerSetEmojiDefaultStatuses
         case inputStickerSetEmojiGenericAnimations
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
@@ -702,6 +703,12 @@ public extension Api {
                         buffer.appendInt32(-427863538)
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
+                    break
+                case .inputStickerSetEmojiDefaultStatuses:
+                    if boxed {
+                        buffer.appendInt32(701560302)
+                    }
+                    
                     break
                 case .inputStickerSetEmojiGenericAnimations:
                     if boxed {
@@ -745,6 +752,8 @@ public extension Api {
                 return ("inputStickerSetAnimatedEmojiAnimations", [])
                 case .inputStickerSetDice(let emoticon):
                 return ("inputStickerSetDice", [("emoticon", String(describing: emoticon))])
+                case .inputStickerSetEmojiDefaultStatuses:
+                return ("inputStickerSetEmojiDefaultStatuses", [])
                 case .inputStickerSetEmojiGenericAnimations:
                 return ("inputStickerSetEmojiGenericAnimations", [])
                 case .inputStickerSetEmpty:
@@ -774,6 +783,9 @@ public extension Api {
             else {
                 return nil
             }
+        }
+        public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
         }
         public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations

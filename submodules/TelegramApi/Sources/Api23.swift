@@ -692,13 +692,13 @@ public extension Api.channels {
 }
 public extension Api.channels {
     enum SendAsPeers: TypeConstructorDescription {
-        case sendAsPeers(peers: [Api.Peer], chats: [Api.Chat], users: [Api.User])
+        case sendAsPeers(peers: [Api.SendAsPeer], chats: [Api.Chat], users: [Api.User])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .sendAsPeers(let peers, let chats, let users):
                     if boxed {
-                        buffer.appendInt32(-2091463255)
+                        buffer.appendInt32(-191450938)
                     }
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(peers.count))
@@ -727,9 +727,9 @@ public extension Api.channels {
     }
     
         public static func parse_sendAsPeers(_ reader: BufferReader) -> SendAsPeers? {
-            var _1: [Api.Peer]?
+            var _1: [Api.SendAsPeer]?
             if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Peer.self)
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.SendAsPeer.self)
             }
             var _2: [Api.Chat]?
             if let _ = reader.readInt32() {

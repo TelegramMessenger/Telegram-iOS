@@ -45,6 +45,7 @@ enum AccountStateUpdatePinnedItemIdsOperation {
 enum AccountStateUpdateStickerPacksOperation {
     case add(Api.messages.StickerSet)
     case reorder(SynchronizeInstalledStickerPacksOperationNamespace, [Int64])
+    case reorderToTop(SynchronizeInstalledStickerPacksOperationNamespace, [Int64])
     case sync
 }
 

@@ -3105,6 +3105,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 let animationRenderer = context.animationRenderer
                 
                 strongSelf.emojiStatusSelectionController?.dismiss()
+                var selectedItems = Set<MediaId>()
+                if let peer = strongSelf.data?.peer {
+                    if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+                        selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+                    }
+                }
                 let emojiStatusSelectionController = EmojiStatusSelectionController(
                     context: strongSelf.context,
                     mode: .statusSelection,
@@ -3119,7 +3125,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         topReactionItems: [],
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
-                        chatPeerId: strongSelf.context.account.peerId
+                        chatPeerId: strongSelf.context.account.peerId,
+                        selectedItems: selectedItems
                     ),
                     destinationItemView: { [weak sourceView] in
                         return sourceView
