@@ -36,6 +36,9 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
             case .iconStatusEmoji:
                 namespace = Namespaces.ItemCollection.CloudIconStatusEmoji
                 id = 0
+            case .premiumGifts:
+                namespace = Namespaces.ItemCollection.CloudPremiumGifts
+                id = 0
             case .id:
                 break
             default:
