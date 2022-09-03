@@ -105,8 +105,6 @@ extension PeerEmojiStatus {
             self.init(fileId: documentId, expirationDate: until)
         case .emojiStatusEmpty:
             return nil
-        case .emojiStatusUntil:
-            return nil
         }
     }
 }
