@@ -387,7 +387,7 @@ open class BlurredBackgroundView: UIView {
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
     }
 
-    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, maskedCorners: CACornerMask = [.layerMaxXMaxYCorner, .layerMaxXMinYCorner, .layerMinXMaxYCorner, .layerMinXMinYCorner], transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, cornerRadius)
 
         let contentFrame = CGRect(origin: CGPoint(), size: size)
@@ -400,11 +400,19 @@ open class BlurredBackgroundView: UIView {
                 }
             }
         }
+        
+        if #available(iOS 11.0, *) {
+            self.backgroundView.layer.maskedCorners = maskedCorners
+        }
 
         transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: cornerRadius)
         if let effectView = self.effectView {
             transition.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius)
             effectView.clipsToBounds = !cornerRadius.isZero
+            
+            if #available(iOS 11.0, *) {
+                effectView.layer.maskedCorners = maskedCorners
+            }
         }
     }
     

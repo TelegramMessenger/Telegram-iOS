@@ -19,6 +19,8 @@ public final class TelegramSecretChat: Peer, Equatable {
     public let associatedPeerId: PeerId?
     public let notificationSettingsPeerId: PeerId?
     
+    public var timeoutAttribute: UInt32? { return nil }
+    
     public init(id: PeerId, creationDate: Int32, regularPeerId: PeerId, accessHash: Int64, role: SecretChatRole, embeddedState: SecretChatEmbeddedPeerState, messageAutoremoveTimeout: Int32?) {
         self.id = id
         self.regularPeerId = regularPeerId

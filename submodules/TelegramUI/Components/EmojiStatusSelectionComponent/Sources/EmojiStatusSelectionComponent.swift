@@ -744,6 +744,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     component: AnyComponent(EmojiStatusPreviewScreenComponent(
                         theme: self.presentationData.theme,
                         strings: self.presentationData.strings,
+                        bottomInset: layout.insets(options: []).bottom,
                         item: EmojiStatusComponent(
                             context: self.context,
                             animationCache: self.context.animationCache,
@@ -809,10 +810,8 @@ public final class EmojiStatusSelectionController: ViewController {
                                         return
                                     }
                                     
-                                    var expirationDate: Int32?
-                                    if result.timeout > 0 {
-                                        expirationDate = Int32(Date().timeIntervalSince1970) + Int32(result.timeout)
-                                    }
+                                    let expirationDate: Int32? = result.timestamp
+                            
                                     let _ = (strongSelf.context.engine.accountData.setEmojiStatus(file: previewItem.item.itemFile, expirationDate: expirationDate)
                                     |> deliverOnMainQueue).start()
                                     
