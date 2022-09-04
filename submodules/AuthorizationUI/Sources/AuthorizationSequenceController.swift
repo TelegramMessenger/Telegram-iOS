@@ -504,12 +504,10 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
             
             if #available(iOS 13.0, *) {
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
-                let passwordProvider = ASAuthorizationPasswordProvider()
                 let request = appleIdProvider.createRequest()
                 request.user = number
-                let passwordRequest = passwordProvider.createRequest()
                  
-                let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
+                let authorizationController = ASAuthorizationController(authorizationRequests: [request])
                 authorizationController.delegate = strongSelf
                 authorizationController.presentationContextProvider = strongSelf
                 authorizationController.performRequests()

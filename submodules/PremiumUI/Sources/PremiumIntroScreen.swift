@@ -1271,7 +1271,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let layoutOptions = {
                 if state.isPremium == true {
                     
-                } else if let products = state.products {
+                } else if let products = state.products, products.count > 1 {
                     var optionsItems: [SectionGroupComponent.Item] = []
                     let gradientColors: [UIColor] = [
                         UIColor(rgb: 0x8e77ff),
@@ -2113,9 +2113,22 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
             var highlightableLinks = false
             let secondaryTitleText: String
             if let otherPeerName = state.otherPeerName {
-                if case let .emojiStatus(_, _, _, emojiPackTitle) = context.component.source {
+                if case let .emojiStatus(_, _, file, emojiPackTitle) = context.component.source {
                     highlightableLinks = true
-                    secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, emojiPackTitle ?? "").string.replacingOccurrences(of: "#", with: " #  ")
+                    
+                    var packReference: StickerPackReference?
+                    if let file = file {
+                        for attribute in file.attributes {
+                            if case let .CustomEmoji(_, _, reference) = attribute {
+                                packReference = reference
+                            }
+                        }
+                    }
+                    if let packReference = packReference, case let .id(id, _) = packReference, id == 773947703670341676 {
+                        secondaryTitleText = environment.strings.Premium_EmojiStatusShortTitle(otherPeerName).string
+                    } else {
+                        secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, emojiPackTitle ?? "").string.replacingOccurrences(of: "#", with: " #  ")
+                    }
                 } else if case .profile = context.component.source {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
                 } else if case let .gift(fromPeerId, _, duration) = context.component.source {

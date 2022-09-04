@@ -167,6 +167,8 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public var countryCodeTextUpdated: ((String) -> Void)?
     public var numberTextUpdated: ((String) -> Void)?
     
+    public var keyPressed: ((Int) -> Void)?
+    
     public var returnAction: (() -> Void)?
     
     private let phoneFormatter = InteractivePhoneFormatter()
@@ -245,7 +247,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     @objc private func numberTextChanged(_ textField: UITextField) {
         self.updateNumberFromTextFields()
     }
-    
+        
     public func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
         if !self.enableEditing {
             return false
@@ -254,6 +256,11 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
             self.updateNumber(cleanPhoneNumber(string), tryRestoringInputPosition: false)
             return false
         }
+        
+        if string.count == 1, let num = Int(string) {
+            self.keyPressed?(num)
+        }
+        
         return true
     }
     

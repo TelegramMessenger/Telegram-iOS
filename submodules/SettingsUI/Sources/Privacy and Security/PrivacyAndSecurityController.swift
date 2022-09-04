@@ -1199,12 +1199,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         emailController.signInWithApple = { [weak controller, weak emailController] in
             if #available(iOS 13.0, *) {
                 let appleIdProvider = ASAuthorizationAppleIDProvider()
-                let passwordProvider = ASAuthorizationPasswordProvider()
                 let request = appleIdProvider.createRequest()
+                request.requestedScopes = [.email]
 
-                let passwordRequest = passwordProvider.createRequest()
-
-                let authorizationController = ASAuthorizationController(authorizationRequests: [request, passwordRequest])
+                let authorizationController = ASAuthorizationController(authorizationRequests: [request])
                 authorizationController.delegate = controller
                 authorizationController.presentationContextProvider = controller
                 authorizationController.performRequests()

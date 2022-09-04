@@ -208,15 +208,10 @@ class PremiumStarComponent: Component {
                 "rotate",
                 "tapRotate"
             ]
-//            if #available(iOS 11.0, *) {
-//                for key in keys {
-//                    node.removeAnimation(forKey: key, blendOutDuration: 0.1)
-//                }
-//            } else {
-                for key in keys {
-                    node.removeAnimation(forKey: key)
-                }
-//            }
+
+            for key in keys {
+                node.removeAnimation(forKey: key)
+            }
             
             switch gesture.state {
                 case .began:
@@ -454,12 +449,10 @@ class PremiumStarComponent: Component {
                     rightParticleSystem.birthRate = 60.0
                     rightParticleSystem.particleLifeSpan = 4.0
                     
-//                    leftBottomParticleSystem.speedFactor = 2.0
                     leftBottomParticleSystem.particleVelocity = 1.6
                     leftBottomParticleSystem.birthRate = 24.0
                     leftBottomParticleSystem.particleLifeSpan = 7.0
                     
-//                    rightBottomParticleSystem.speedFactor = 2.0
                     rightBottomParticleSystem.particleVelocity = 1.6
                     rightBottomParticleSystem.birthRate = 24.0
                     rightBottomParticleSystem.particleLifeSpan = 7.0

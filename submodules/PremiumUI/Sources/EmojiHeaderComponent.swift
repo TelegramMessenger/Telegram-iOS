@@ -120,10 +120,9 @@ class EmojiHeaderComponent: Component {
             self.statusView.center = targetPosition
             
             animateFrom.alpha = 0.0
-            self.statusView.layer.animateScale(from: 0.24, to: 1.0, duration: 0.36, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
-            
-            let transition = ContainedViewLayoutTransition.animated(duration: 0.36, curve: .linear)
-            transition.animatePositionWithKeyframes(layer: self.statusView.layer, keyframes: generateParabollicMotionKeyframes(from: sourcePosition, to: targetPosition, elevation: 50.0))
+            self.statusView.layer.animateScale(from: 0.24, to: 1.0, duration: 0.3, timingFunction: CAMediaTimingFunctionName.linear.rawValue)
+
+            self.statusView.layer.animatePosition(from: sourcePosition, to: targetPosition, duration: 0.55, timingFunction: kCAMediaTimingFunctionSpring)
             
             Queue.mainQueue().after(0.55, {
                 self.addSubview(self.statusView)

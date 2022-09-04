@@ -22,6 +22,7 @@ import LocalMediaResources
 import WallpaperResources
 import ChatMessageInteractiveMediaBadge
 import ContextUI
+import InvisibleInkDustNode
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -76,6 +77,7 @@ struct ChatMessageDateAndStatus {
 }
 
 private class ExtendedMediaOverlayNode: ASDisplayNode {
+    private let dustNode: MediaDustNode
     private let buttonNode: HighlightTrackingButtonNode
     private let blurNode: NavigationBackgroundNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -83,6 +85,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private let textNode: ImmediateTextNode
         
     override init() {
+        self.dustNode = MediaDustNode()
+        
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 16.0
@@ -105,6 +109,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.cornerRadius = 16.0
         self.isUserInteractionEnabled = false
         
+        self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.blurNode)
         self.buttonNode.addSubnode(self.highlightedBackgroundNode)
@@ -142,6 +147,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
                 
+        self.dustNode.frame = CGRect(origin: .zero, size: size)
+        self.dustNode.update(size: size, color: .white)
+        
         self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(14.0), textColor: .white, paragraphAlignment: .center)
         let textSize = self.textNode.updateLayout(size)
         if let iconSize = self.iconNode.image?.size {
@@ -150,8 +158,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
             self.blurNode.frame = self.highlightedBackgroundNode.frame
             self.blurNode.update(size: self.blurNode.frame.size, transition: .immediate)
-            self.blurNode.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.5), enableBlur: true, transition: .immediate)
-            
+            self.blurNode.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.3), enableBlur: true, transition: .immediate)
+                        
             self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0), size: iconSize)
             self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
         }

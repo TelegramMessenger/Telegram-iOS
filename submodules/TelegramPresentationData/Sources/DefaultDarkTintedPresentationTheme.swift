@@ -791,7 +791,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         infoPrimaryTextColor: UIColor(rgb: 0xffffff),
         infoLinkTextColor: accentColor,
         outgoingCheckColor: outgoingCheckColor,
-        mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.5),
+        mediaDateAndStatusFillColor: UIColor(white: 0.0, alpha: 0.3),
         mediaDateAndStatusTextColor: UIColor(rgb: 0xffffff),
         shareButtonFillColor: PresentationThemeVariableColor(color: additionalBackgroundColor.withAlphaComponent(0.5)),
         shareButtonStrokeColor: PresentationThemeVariableColor(color: buttonStrokeColor),

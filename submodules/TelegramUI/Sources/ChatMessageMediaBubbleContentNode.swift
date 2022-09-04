@@ -363,8 +363,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     }
     
     override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
-        if self.item?.message.id == messageId, let currentMedia = self.media, currentMedia.isSemanticallyEqual(to: media) {
-            return self.interactiveImageNode.transitionNode()
+        if self.item?.message.id == messageId, var currentMedia = self.media {
+            if let invoice = currentMedia as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                currentMedia = fullMedia
+            }
+            if currentMedia.isSemanticallyEqual(to: media) {
+                return self.interactiveImageNode.transitionNode()
+            }
         }
         return nil
     }
@@ -380,7 +385,13 @@ class ChatMessageMediaBubbleContentNode: ChatMessageBubbleContentNode {
     
     override func updateHiddenMedia(_ media: [Media]?) -> Bool {
         var mediaHidden = false
-        if let currentMedia = self.media, let media = media {
+        
+        var currentMedia = self.media
+        if let invoice = currentMedia as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+            currentMedia = fullMedia
+        }
+        
+        if let currentMedia = currentMedia, let media = media {
             for item in media {
                 if item.isSemanticallyEqual(to: currentMedia) {
                     mediaHidden = true
