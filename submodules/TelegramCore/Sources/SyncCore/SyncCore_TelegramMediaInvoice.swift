@@ -194,6 +194,10 @@ public final class TelegramMediaInvoice: Media {
         if self.flags != other.flags {
             return false
         }
+    
+        if self.extendedMedia != other.extendedMedia {
+            return false
+        }
         
         return true
     }
