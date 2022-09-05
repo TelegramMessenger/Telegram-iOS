@@ -1058,9 +1058,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         }
                     }
                     
+                    var isExtendedMedia = false
                     if statusUpdated {
                         var media = media
                         if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                            isExtendedMedia = true
                             media = fullMedia
                         }
                         
@@ -1180,7 +1182,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     
                                     let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let loopVideo = updatedVideoFile.isAnimated
-                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected())
+                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia)
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
@@ -1258,7 +1260,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             
                             if let updateImageSignal = updateImageSignal {
-                                strongSelf.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected()
+                                strongSelf.imageNode.captureProtected = message.id.peerId.namespace == Namespaces.Peer.SecretChat || message.isCopyProtected() || isExtendedMedia
                                 strongSelf.imageNode.setSignal(updateImageSignal(synchronousLoads, false), attemptSynchronously: synchronousLoads)
 
                                 var imageDimensions: CGSize?

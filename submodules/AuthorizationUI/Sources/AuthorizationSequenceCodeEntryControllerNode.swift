@@ -462,8 +462,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         
         if let (layout, _) = self.layoutArguments {
             let errorTextSize = self.errorTextNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: .greatestFiniteMagnitude))
-            self.errorTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - errorTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + 28.0), size: errorTextSize)
-        
+            let yOffset: CGFloat = layout.size.width > 320.0 ? 28.0 : 15.0
+            self.errorTextNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - errorTextSize.width) / 2.0), y: self.codeInputView.frame.maxY + yOffset), size: errorTextSize)
         }
         self.errorTextNode.alpha = 1.0
         self.errorTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
