@@ -1170,6 +1170,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
     let defaultActiveItemId: AnyHashable?
     let forceActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>
+    let activeContentItemMapping: [AnyHashable: AnyHashable]
     let reorderItems: ([Item]) -> Void
     
     init(
@@ -1180,6 +1181,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
         defaultActiveItemId: AnyHashable? = nil,
         forceActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
+        activeContentItemMapping: [AnyHashable: AnyHashable] = [:],
         reorderItems: @escaping ([Item]) -> Void
     ) {
         self.id = id
@@ -1189,6 +1191,7 @@ public final class EntityKeyboardTopPanelComponent: Component {
         self.defaultActiveItemId = defaultActiveItemId
         self.forceActiveItemId = forceActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
+        self.activeContentItemMapping = activeContentItemMapping
         self.reorderItems = reorderItems
     }
     
@@ -2037,9 +2040,10 @@ public final class EntityKeyboardTopPanelComponent: Component {
             }
             
             component.activeContentItemIdUpdated.connect { [weak self] (itemId, subcontentItemId, transition) in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let component = strongSelf.component else {
                     return
                 }
+                let itemId = component.activeContentItemMapping[itemId] ?? itemId
                 strongSelf.activeContentItemIdUpdated(itemId: itemId, subcontentItemId: subcontentItemId, transition: transition)
             }
             

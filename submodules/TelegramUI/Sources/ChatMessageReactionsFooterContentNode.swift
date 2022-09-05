@@ -103,7 +103,9 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb
+                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
+                selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
         case .outgoing:
             themeColors = bubbleColorComponents(theme: presentationData.theme.theme, incoming: false, wallpaper: !presentationData.theme.wallpaper.isEmpty)
@@ -113,7 +115,9 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb
+                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
+                selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
         case .freeform:
             if presentationData.theme.wallpaper.isEmpty {
@@ -128,7 +132,9 @@ final class MessageReactionButtonsNode: ASDisplayNode {
                 deselectedForeground: themeColors.reactionInactiveForeground.argb,
                 selectedForeground: themeColors.reactionActiveForeground.argb,
                 extractedBackground: presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb
+                extractedForeground:  presentationData.theme.theme.contextMenu.primaryColor.argb,
+                deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
+                selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
             )
         }
         

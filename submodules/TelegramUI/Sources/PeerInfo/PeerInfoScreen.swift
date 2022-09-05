@@ -73,6 +73,9 @@ import EmojiStatusSelectionComponent
 import AnimationCache
 import MultiAnimationRenderer
 import EntityKeyboard
+import AvatarNode
+import ComponentFlow
+import EmojiStatusComponent
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -8431,11 +8434,15 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         })))
         
         
-        let avatarSize = CGSize(width: 28.0, height: 28.0)
+        //let avatarSize = CGSize(width: 28.0, height: 28.0)
         
-        items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: primary.0.account, peer: primary.1, size: avatarSize)), action: { _, f in
+        items.append(.custom(AccountPeerContextItem(context: self.context, account: self.context.account, peer: primary.1, action: { _, f in
             f(.default)
-        })))
+        }), true))
+        
+        /*items.append(.action(ContextMenuActionItem(text: primary.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: primary.0.account, peer: primary.1, size: avatarSize)), action: { _, f in
+            f(.default)
+        })))*/
         
         if !other.isEmpty {
             items.append(.separator)
@@ -8443,13 +8450,20 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         
         for account in other {
             let id = account.0.account.id
-            items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: account.0.account, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+            items.append(.custom(AccountPeerContextItem(context: self.context, account: account.0.account, peer: account.1, action: { [weak self] _, f in
                 guard let strongSelf = self else {
                     return
                 }
                 strongSelf.controllerNode.switchToAccount(id: id)
                 f(.dismissWithoutContent)
-            })))
+            }), true))
+            /*items.append(.action(ContextMenuActionItem(text: account.1.displayTitle(strings: strings, displayOrder: presentationData.nameDisplayOrder), badge: account.2 != 0 ? ContextMenuActionBadge(value: "\(account.2)", color: .accent) : nil, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: account.0.account, peer: account.1, size: avatarSize)), action: { [weak self] _, f in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.controllerNode.switchToAccount(id: id)
+                f(.dismissWithoutContent)
+            })))*/
         }
         
         let controller = ContextController(account: primary.0.account, presentationData: self.presentationData, source: .extracted(SettingsTabBarContextExtractedContentSource(controller: self, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), recognizer: nil, gesture: gesture)
@@ -9174,5 +9188,180 @@ struct ClearPeerHistory {
                 canClearForEveryone = .user
             }
         }
+    }
+}
+
+private final class AccountPeerContextItem: ContextMenuCustomItem {
+    let context: AccountContext
+    let account: Account
+    let peer: EnginePeer
+    let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void
+    
+    init(context: AccountContext, account: Account, peer: EnginePeer, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void) {
+        self.context = context
+        self.account = account
+        self.peer = peer
+        self.action = action
+    }
+    
+    public func node(presentationData: PresentationData, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) -> ContextMenuCustomNode {
+        return AccountPeerContextItemNode(presentationData: presentationData, item: self, getController: getController, actionSelected: actionSelected)
+    }
+}
+
+private final class AccountPeerContextItemNode: ASDisplayNode, ContextMenuCustomNode {
+    private let item: AccountPeerContextItem
+    private let presentationData: PresentationData
+    private let getController: () -> ContextControllerProtocol?
+    private let actionSelected: (ContextMenuActionResult) -> Void
+    
+    private let highlightedBackgroundNode: ASDisplayNode
+    private let buttonNode: HighlightTrackingButtonNode
+    private let textNode: ImmediateTextNode
+    private let avatarNode: AvatarNode
+    private let emojiStatusView: ComponentView<Empty>
+    
+    init(presentationData: PresentationData, item: AccountPeerContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
+        self.item = item
+        self.presentationData = presentationData
+        self.getController = getController
+        self.actionSelected = actionSelected
+        
+        let textFont = Font.regular(presentationData.listsFontSize.baseDisplaySize * 17.0 / 17.0)
+        
+        self.highlightedBackgroundNode = ASDisplayNode()
+        self.highlightedBackgroundNode.isAccessibilityElement = false
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        self.highlightedBackgroundNode.alpha = 0.0
+        
+        self.textNode = ImmediateTextNode()
+        self.textNode.isAccessibilityElement = false
+        self.textNode.isUserInteractionEnabled = false
+        self.textNode.displaysAsynchronously = false
+        let peerTitle = item.peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        self.textNode.attributedText = NSAttributedString(string: peerTitle, font: textFont, textColor: presentationData.theme.contextMenu.primaryColor)
+        self.textNode.maximumNumberOfLines = 1
+        
+        self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 14.0))
+        
+        self.emojiStatusView = ComponentView<Empty>()
+        
+        self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.isAccessibilityElement = true
+        self.buttonNode.accessibilityLabel = peerTitle
+        
+        super.init()
+        
+        self.addSubnode(self.highlightedBackgroundNode)
+        self.addSubnode(self.textNode)
+        self.addSubnode(self.avatarNode)
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highligted in
+            guard let strongSelf = self else {
+                return
+            }
+            if highligted {
+                strongSelf.highlightedBackgroundNode.alpha = 1.0
+            } else {
+                strongSelf.highlightedBackgroundNode.alpha = 0.0
+                strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            }
+        }
+        self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
+    }
+
+    func updateLayout(constrainedWidth: CGFloat, constrainedHeight: CGFloat) -> (CGSize, (CGSize, ContainedViewLayoutTransition) -> Void) {
+        let sideInset: CGFloat = 16.0
+        let iconSideInset: CGFloat = 12.0
+        let verticalInset: CGFloat = 12.0
+        
+        let iconSize = CGSize(width: 28.0, height: 28.0)
+        
+        let standardIconWidth: CGFloat = 32.0
+        var rightTextInset: CGFloat = sideInset
+        if !iconSize.width.isZero {
+            rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset - 12.0
+        }
+        
+        self.avatarNode.setPeer(context: self.item.context, account: self.item.account, theme: self.presentationData.theme, peer: self.item.peer)
+        
+        if case let .user(user) = self.item.peer, let _ = user.emojiStatus {
+            rightTextInset += 32.0
+        }
+    
+        let textSize = self.textNode.updateLayout(CGSize(width: constrainedWidth - sideInset - rightTextInset, height: .greatestFiniteMagnitude))
+        
+        return (CGSize(width: textSize.width + sideInset + rightTextInset, height: verticalInset * 2.0 + textSize.height), { size, transition in
+            let verticalOrigin = floor((size.height - textSize.height) / 2.0)
+            let textFrame = CGRect(origin: CGPoint(x: sideInset, y: verticalOrigin), size: textSize)
+            transition.updateFrameAdditive(node: self.textNode, frame: textFrame)
+            
+            if case let .user(user) = self.item.peer, let emojiStatus = user.emojiStatus {
+                let emojiStatusSize = self.emojiStatusView.update(
+                    transition: .immediate,
+                    component: AnyComponent(EmojiStatusComponent(
+                        context: self.item.context,
+                        animationCache: self.item.context.animationCache,
+                        animationRenderer: self.item.context.animationRenderer,
+                        content: .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 28.0, height: 28.0), placeholderColor: self.presentationData.theme.list.mediaPlaceholderColor, themeColor: self.presentationData.theme.list.itemAccentColor, loopMode: .forever),
+                        isVisibleForAnimations: true,
+                        action: nil
+                    )),
+                    environment: {},
+                    containerSize: CGSize(width: 28.0, height: 28.0)
+                )
+                if let view = self.emojiStatusView.view {
+                    if view.superview == nil {
+                        self.view.addSubview(view)
+                    }
+                    transition.updateFrame(view: view, frame: CGRect(origin: CGPoint(x: textFrame.maxX + 2.0, y: textFrame.minY + floor((textFrame.height - emojiStatusSize.height) / 2.0)), size: emojiStatusSize))
+                }
+            }
+            
+            transition.updateFrame(node: self.avatarNode, frame: CGRect(origin: CGPoint(x: size.width - standardIconWidth - iconSideInset + floor((standardIconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
+            
+            transition.updateFrame(node: self.highlightedBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+            transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: size.width, height: size.height)))
+        })
+    }
+    
+    func updateTheme(presentationData: PresentationData) {
+        self.highlightedBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        
+        if let attributedText = self.textNode.attributedText {
+            let updatedAttributedText = NSMutableAttributedString(attributedString: attributedText)
+            updatedAttributedText.addAttribute(.foregroundColor, value: presentationData.theme.contextMenu.primaryColor.cgColor, range: NSRange(location: 0, length: updatedAttributedText.length))
+            self.textNode.attributedText = updatedAttributedText
+        }
+    }
+    
+    @objc private func buttonPressed() {
+        self.performAction()
+    }
+    
+    func canBeHighlighted() -> Bool {
+        return true
+    }
+    
+    func setIsHighlighted(_ value: Bool) {
+        if value {
+            self.highlightedBackgroundNode.alpha = 1.0
+        } else {
+            self.highlightedBackgroundNode.alpha = 0.0
+        }
+    }
+    
+    func updateIsHighlighted(isHighlighted: Bool) {
+        self.setIsHighlighted(isHighlighted)
+    }
+    
+    func performAction() {
+        guard let controller = self.getController() else {
+            return
+        }
+        self.item.action(controller, { [weak self] result in
+            self?.actionSelected(result)
+        })
     }
 }

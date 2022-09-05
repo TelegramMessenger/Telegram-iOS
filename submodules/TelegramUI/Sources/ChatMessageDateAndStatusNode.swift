@@ -386,7 +386,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb
+                    extractedForeground: arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
+                    selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
             case .BubbleOutgoing, .ImageOutgoing, .FreeOutgoing:
                 let themeColors = bubbleColorComponents(theme: arguments.presentationData.theme.theme, incoming: false, wallpaper: !arguments.presentationData.theme.wallpaper.isEmpty)
@@ -397,7 +399,9 @@ class ChatMessageDateAndStatusNode: ASDisplayNode {
                     deselectedForeground: themeColors.reactionInactiveForeground.argb,
                     selectedForeground: themeColors.reactionActiveForeground.argb,
                     extractedBackground: arguments.presentationData.theme.theme.contextMenu.backgroundColor.argb,
-                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb
+                    extractedForeground:  arguments.presentationData.theme.theme.contextMenu.primaryColor.argb,
+                    deselectedMediaPlaceholder: themeColors.reactionInactiveMediaPlaceholder.argb,
+                    selectedMediaPlaceholder: themeColors.reactionActiveMediaPlaceholder.argb
                 )
             }
             

@@ -17031,13 +17031,26 @@ enum AllowedReactions {
 }
 
 func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
-    return context.engine.data.get(
-        TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
-        TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
+    return combineLatest(
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
+            TelegramEngine.EngineData.Item.Peer.AllowedReactions(id: message.id.peerId)
+        ),
+        context.engine.stickers.availableReactions() |> take(1)
     )
-    |> map { peer, allowedReactions -> AllowedReactions? in
+    |> map { data, availableReactions -> AllowedReactions? in
+        let (peer, allowedReactions) = data
+        
         if let effectiveReactions = message.effectiveReactions, effectiveReactions.count >= 11 {
             return .set(Set(effectiveReactions.map(\.value)))
+        }
+        
+        if case let .channel(channel) = peer, case .broadcast = channel.info {
+            if let availableReactions = availableReactions {
+                return .set(Set(availableReactions.reactions.map(\.value)))
+            } else {
+                return .set(Set())
+            }
         }
         
         switch allowedReactions {

@@ -103,8 +103,12 @@ public final class ReactionIconView: PortalSourceView {
             switch reaction {
             case .builtin:
                 iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+                animationLayer.masksToBounds = false
+                animationLayer.cornerRadius = 0.0
             case .custom:
                 iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
+                animationLayer.masksToBounds = true
+                animationLayer.cornerRadius = floor(size.width * 0.2)
             }
             
             transition.updateFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
@@ -153,6 +157,15 @@ public final class ReactionIconView: PortalSourceView {
         )
         self.animationLayer = animationLayer
         self.layer.addSublayer(animationLayer)
+        
+        switch reaction {
+        case .builtin:
+            animationLayer.masksToBounds = false
+            animationLayer.cornerRadius = 0.0
+        case .custom:
+            animationLayer.masksToBounds = true
+            animationLayer.cornerRadius = floor(size.width * 0.3)
+        }
         
         animationLayer.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
         
@@ -763,7 +776,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     fileId: fileId,
                     animationCache: arguments.animationCache,
                     animationRenderer: arguments.animationRenderer,
-                    placeholderColor: layout.spec.component.chosenOrder != nil ? UIColor(argb: layout.spec.component.colors.selectedForeground).withMultipliedAlpha(0.1) : UIColor(argb: layout.spec.component.colors.deselectedForeground).withMultipliedAlpha(0.1),
+                    placeholderColor: layout.spec.component.chosenOrder != nil ? UIColor(argb: layout.spec.component.colors.selectedMediaPlaceholder) : UIColor(argb: layout.spec.component.colors.deselectedMediaPlaceholder),
                     animateIdle: animateIdle,
                     reaction: layout.spec.component.reaction.value,
                     transition: animation.transition
@@ -929,6 +942,8 @@ public final class ReactionButtonComponent: Equatable {
         public var selectedForeground: UInt32
         public var extractedBackground: UInt32
         public var extractedForeground: UInt32
+        public var deselectedMediaPlaceholder: UInt32
+        public var selectedMediaPlaceholder: UInt32
         
         public init(
             deselectedBackground: UInt32,
@@ -936,7 +951,9 @@ public final class ReactionButtonComponent: Equatable {
             deselectedForeground: UInt32,
             selectedForeground: UInt32,
             extractedBackground: UInt32,
-            extractedForeground: UInt32
+            extractedForeground: UInt32,
+            deselectedMediaPlaceholder: UInt32,
+            selectedMediaPlaceholder: UInt32
         ) {
             self.deselectedBackground = deselectedBackground
             self.selectedBackground = selectedBackground
@@ -944,6 +961,8 @@ public final class ReactionButtonComponent: Equatable {
             self.selectedForeground = selectedForeground
             self.extractedBackground = extractedBackground
             self.extractedForeground = extractedForeground
+            self.deselectedMediaPlaceholder = deselectedMediaPlaceholder
+            self.selectedMediaPlaceholder = selectedMediaPlaceholder
         }
     }
     

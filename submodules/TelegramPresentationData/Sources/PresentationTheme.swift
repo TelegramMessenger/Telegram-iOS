@@ -759,6 +759,8 @@ public final class PresentationThemeBubbleColorComponents {
     public let reactionInactiveForeground: UIColor
     public let reactionActiveBackground: UIColor
     public let reactionActiveForeground: UIColor
+    public let reactionInactiveMediaPlaceholder: UIColor
+    public let reactionActiveMediaPlaceholder: UIColor
     
     public init(
         fill: [UIColor],
@@ -768,7 +770,9 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveBackground: UIColor,
         reactionInactiveForeground: UIColor,
         reactionActiveBackground: UIColor,
-        reactionActiveForeground: UIColor
+        reactionActiveForeground: UIColor,
+        reactionInactiveMediaPlaceholder: UIColor,
+        reactionActiveMediaPlaceholder: UIColor
     ) {
         self.fill = fill
         self.highlightedFill = highlightedFill
@@ -778,6 +782,8 @@ public final class PresentationThemeBubbleColorComponents {
         self.reactionInactiveForeground = reactionInactiveForeground
         self.reactionActiveBackground = reactionActiveBackground
         self.reactionActiveForeground = reactionActiveForeground
+        self.reactionInactiveMediaPlaceholder = reactionInactiveMediaPlaceholder
+        self.reactionActiveMediaPlaceholder = reactionActiveMediaPlaceholder
     }
     
     public func withUpdated(
@@ -787,7 +793,9 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveBackground: UIColor? = nil,
         reactionInactiveForeground: UIColor? = nil,
         reactionActiveBackground: UIColor? = nil,
-        reactionActiveForeground: UIColor? = nil
+        reactionActiveForeground: UIColor? = nil,
+        reactionInactiveMediaPlaceholder: UIColor? = nil,
+        reactionActiveMediaPlaceholder: UIColor? = nil
     ) -> PresentationThemeBubbleColorComponents {
         return PresentationThemeBubbleColorComponents(
             fill: fill ?? self.fill,
@@ -797,7 +805,9 @@ public final class PresentationThemeBubbleColorComponents {
             reactionInactiveBackground: reactionInactiveBackground ?? self.reactionInactiveBackground,
             reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
             reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
-            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground
+            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground,
+            reactionInactiveMediaPlaceholder: reactionInactiveMediaPlaceholder ?? self.reactionInactiveMediaPlaceholder,
+            reactionActiveMediaPlaceholder: reactionActiveMediaPlaceholder ?? self.reactionActiveMediaPlaceholder
         )
     }
 }
