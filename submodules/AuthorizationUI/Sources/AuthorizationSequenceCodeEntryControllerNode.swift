@@ -405,8 +405,13 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 } else {
                     self.signInWithAppleButton?.isHidden = true
                     self.dividerNode.isHidden = true
-                    self.nextOptionButtonNode.isHidden = false
-                    items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    
+                    if case .email = codeType {
+                        self.nextOptionButtonNode.isHidden = true
+                    } else {
+                        self.nextOptionButtonNode.isHidden = false
+                        items.append(AuthorizationLayoutItem(node: self.nextOptionButtonNode, size: nextOptionSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 50.0, maxValue: 120.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+                    }
                 }
             }
         } else {

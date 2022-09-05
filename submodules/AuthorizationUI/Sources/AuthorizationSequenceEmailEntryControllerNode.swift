@@ -112,7 +112,8 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         }
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
-
+        self.proceedNode.progressType = .embedded
+        
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
         self.codeSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
@@ -121,9 +122,12 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.codeField.textField.font = Font.regular(20.0)
         self.codeField.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.codeField.textField.textAlignment = .natural
-        self.codeField.textField.keyboardType = .emailAddress
         self.codeField.textField.autocorrectionType = .no
         self.codeField.textField.autocapitalizationType = .none
+        self.codeField.textField.keyboardType = .emailAddress
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.codeField.textField.textContentType = UITextContentType(rawValue: "")
+        }
         self.codeField.textField.returnKeyType = .done
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
