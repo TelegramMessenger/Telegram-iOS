@@ -530,6 +530,7 @@ public final class EntityKeyboardComponent: Component {
                 items: topEmojiItems,
                 containerSideInset: component.containerInsets.left + component.topPanelInsets.left,
                 activeContentItemIdUpdated: emojiContentItemIdUpdated,
+                activeContentItemMapping: ["popular": "recent"],
                 reorderItems: { [weak self] items in
                     guard let strongSelf = self else {
                         return

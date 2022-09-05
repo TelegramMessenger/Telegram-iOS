@@ -695,6 +695,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     currentMaskFrame = maskFrame
                 }
                 
+                if let reaction = self.items[i].reaction, case .custom = reaction.rawValue, self.selectedItems.contains(reaction.rawValue) {
+                    itemNode.layer.masksToBounds = true
+                    itemNode.layer.cornerRadius = 12.0
+                } else {
+                    itemNode.layer.masksToBounds = false
+                    itemNode.layer.cornerRadius = 0.0
+                }
+                
                 if !itemNode.isExtracted {
                     if isPreviewing {
                         if itemNode.supernode !== self.previewingItemContainer {
@@ -923,7 +931,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             }
                         }
                         if let emojiView = reactionSelectionComponentHost.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
-                            var initialPositionAndFrame: [MediaId: (frame: CGRect, frameIndex: Int, placeholder: UIImage)] = [:]
+                            var initialPositionAndFrame: [MediaId: (frame: CGRect, cornerRadius: CGFloat, frameIndex: Int, placeholder: UIImage)] = [:]
                             for (_, itemNode) in self.visibleItemNodes {
                                 guard let itemNode = itemNode as? ReactionNode else {
                                     continue
@@ -936,6 +944,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                                 initialPositionAndFrame[itemNode.item.stillAnimation.fileId] = (
                                     frame: itemNode.frame,
+                                    cornerRadius: itemNode.layer.cornerRadius,
                                     frameIndex: itemNode.currentFrameIndex,
                                     placeholder: placeholder
                                 )
@@ -1140,7 +1149,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     items.append(ActionSheetTextItem(title: "Do you want to clear your recent reaction emoji from suggestions?", parseMarkdown: true))
                     items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
-                        let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
+                        let _ = strongSelf.context.engine.stickers.clearRecentlyUsedReactions().start()
                     }))
                     actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                         ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -1658,6 +1672,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         case .began:
             let point = recognizer.location(in: self.view)
             if let itemNode = self.reactionItemNode(at: point) as? ReactionNode {
+                if self.selectedItems.contains(itemNode.item.reaction.rawValue) {
+                    recognizer.state = .cancelled
+                    return
+                }
+                
                 self.highlightedReaction = itemNode.item.reaction
                 if #available(iOS 13.0, *) {
                     self.continuousHaptic = try? ContinuousHaptic(duration: longPressDuration)
@@ -1935,7 +1954,19 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
         }
         self.itemNode = itemNode
         
-        if !forceSmallEffectAnimation {
+        let switchToInlineImmediately: Bool
+        if itemNode.item.listAnimation.isVideoEmoji || itemNode.item.listAnimation.isVideoSticker || itemNode.item.listAnimation.isAnimatedSticker || itemNode.item.listAnimation.isStaticEmoji {
+            switch itemNode.item.reaction.rawValue {
+            case .builtin:
+                switchToInlineImmediately = false
+            case .custom:
+                switchToInlineImmediately = true
+            }
+        } else {
+            switchToInlineImmediately = false
+        }
+        
+        if !forceSmallEffectAnimation && !switchToInlineImmediately {
             if let targetView = targetView as? ReactionIconView, !isLarge {
                 self.itemNodeIsEmbedded = true
                 targetView.addSubnode(itemNode)
@@ -2160,6 +2191,15 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     intermediateCompletion()
                     return
                 }
+                
+                /*if switchToInlineImmediately {
+                    targetView.updateIsAnimationHidden(isAnimationHidden: false, transition: .immediate)
+                    itemNode.isHidden = true
+                } else {
+                    targetView.updateIsAnimationHidden(isAnimationHidden: true, transition: .immediate)
+                    targetView.addSubnode(itemNode)
+                    itemNode.frame = selfTargetBounds
+                }*/
                 
                 if forceSmallEffectAnimation {
                     if let additionalAnimationNode = additionalAnimationNode {
