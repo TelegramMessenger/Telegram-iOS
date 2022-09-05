@@ -42,7 +42,7 @@ public enum TelegramExtendedMedia: PostboxCoding, Equatable {
         switch type {
             case 0:
                 let width = decoder.decodeOptionalInt32ForKey("width")
-                let height = decoder.decodeOptionalInt32ForKey("width")
+                let height = decoder.decodeOptionalInt32ForKey("height")
                 var dimensions: PixelDimensions?
                 if let width = width, let height = height {
                     dimensions = PixelDimensions(width: width, height: height)

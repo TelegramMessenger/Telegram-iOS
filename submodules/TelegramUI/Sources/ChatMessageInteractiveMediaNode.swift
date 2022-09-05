@@ -76,22 +76,73 @@ struct ChatMessageDateAndStatus {
     var dateText: String
 }
 
+extension UIBezierPath {
+    convenience init(roundRect rect: CGRect, topLeftRadius: CGFloat = 0.0, topRightRadius: CGFloat = 0.0, bottomLeftRadius: CGFloat = 0.0, bottomRightRadius: CGFloat = 0.0) {
+        self.init()
+
+        let path = CGMutablePath()
+
+        let topLeft = rect.origin
+        let topRight = CGPoint(x: rect.maxX, y: rect.minY)
+        let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+        let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+
+        if topLeftRadius != .zero {
+            path.move(to: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y))
+        } else {
+            path.move(to: CGPoint(x: topLeft.x, y: topLeft.y))
+        }
+
+        if topRightRadius != .zero {
+            path.addLine(to: CGPoint(x: topRight.x-topRightRadius, y: topRight.y))
+            path.addCurve(to:  CGPoint(x: topRight.x, y: topRight.y+topRightRadius), control1: CGPoint(x: topRight.x, y: topRight.y), control2:CGPoint(x: topRight.x, y: topRight.y + topRightRadius))
+        } else {
+             path.addLine(to: CGPoint(x: topRight.x, y: topRight.y))
+        }
+
+        if bottomRightRadius != .zero {
+            path.addLine(to: CGPoint(x: bottomRight.x, y: bottomRight.y-bottomRightRadius))
+            path.addCurve(to: CGPoint(x: bottomRight.x-bottomRightRadius, y: bottomRight.y), control1: CGPoint(x: bottomRight.x, y: bottomRight.y), control2: CGPoint(x: bottomRight.x-bottomRightRadius, y: bottomRight.y))
+        } else {
+            path.addLine(to: CGPoint(x: bottomRight.x, y: bottomRight.y))
+        }
+
+        if bottomLeftRadius != .zero {
+            path.addLine(to: CGPoint(x: bottomLeft.x+bottomLeftRadius, y: bottomLeft.y))
+            path.addCurve(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y-bottomLeftRadius), control1: CGPoint(x: bottomLeft.x, y: bottomLeft.y), control2: CGPoint(x: bottomLeft.x, y: bottomLeft.y-bottomLeftRadius))
+        } else {
+            path.addLine(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y))
+        }
+
+        if topLeftRadius != .zero {
+            path.addLine(to: CGPoint(x: topLeft.x, y: topLeft.y+topLeftRadius))
+            path.addCurve(to: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y) , control1: CGPoint(x: topLeft.x, y: topLeft.y) , control2: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y))
+        } else {
+            path.addLine(to: CGPoint(x: topLeft.x, y: topLeft.y))
+        }
+
+        path.closeSubpath()
+        cgPath = path
+    }
+}
+
 private class ExtendedMediaOverlayNode: ASDisplayNode {
     private let dustNode: MediaDustNode
     private let buttonNode: HighlightTrackingButtonNode
-    private let blurNode: NavigationBackgroundNode
     private let highlightedBackgroundNode: ASDisplayNode
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
-        
+    
+    private var maskView: UIView?
+    private var maskLayer: CAShapeLayer?
+    
     override init() {
         self.dustNode = MediaDustNode()
         
         self.buttonNode = HighlightTrackingButtonNode()
+        self.buttonNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.3)
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 16.0
-        
-        self.blurNode = NavigationBackgroundNode(color: .clear)
         
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.2)
@@ -106,12 +157,11 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         super.init()
         
         self.clipsToBounds = true
-        self.cornerRadius = 16.0
         self.isUserInteractionEnabled = false
         
         self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
-        self.buttonNode.addSubnode(self.blurNode)
+
         self.buttonNode.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.iconNode)
         self.addSubnode(self.textNode)
@@ -141,9 +191,19 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         if #available(iOS 13.0, *) {
             self.buttonNode.layer.cornerCurve = .continuous
         }
+        
+        let maskView = UIView()
+        self.maskView = maskView
+        self.dustNode.view.mask = maskView
+        
+        let maskLayer = CAShapeLayer()
+        maskLayer.fillRule = .evenOdd
+        maskLayer.fillColor = UIColor.white.cgColor
+        maskView.layer.addSublayer(maskLayer)
+        self.maskLayer = maskLayer
     }
     
-    func update(size: CGSize, text: String) {
+    func update(size: CGSize, text: String, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
                 
@@ -156,13 +216,25 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             let contentSize = CGSize(width: iconSize.width + textSize.width + spacing + padding * 2.0, height: 32.0)
             self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
             self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
-            self.blurNode.frame = self.highlightedBackgroundNode.frame
-            self.blurNode.update(size: self.blurNode.frame.size, transition: .immediate)
-            self.blurNode.updateColor(color: UIColor(rgb: 0x000000, alpha: 0.3), enableBlur: true, transition: .immediate)
                         
-            self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0), size: iconSize)
+            self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
             self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
         }
+        
+        var leftOffset: CGFloat = 0.0
+        var rightOffset: CGFloat = 0.0
+        let corners = corners ?? ImageCorners(radius: 16.0)
+        if case .Tail = corners.bottomLeft {
+            leftOffset = 4.0
+        } else if case .Tail = corners.bottomRight {
+            rightOffset = 4.0
+        }
+        let rect = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: size.width - leftOffset - rightOffset, height: size.height))
+        let path = UIBezierPath(roundRect: rect, topLeftRadius: corners.topLeft.radius, topRightRadius: corners.topRight.radius, bottomLeftRadius: corners.bottomLeft.radius, bottomRightRadius: corners.bottomRight.radius)
+        let buttonPath = UIBezierPath(roundedRect: self.buttonNode.frame, cornerRadius: 16.0)
+        path.append(buttonPath)
+        path.usesEvenOddFillRule = true
+        self.maskLayer?.path = path.cgPath
     }
 }
 
@@ -1741,7 +1813,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     break
                 }
             }
-            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: paymentText)
+            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: paymentText, corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
             extendedMediaOverlayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak extendedMediaOverlayNode] _ in

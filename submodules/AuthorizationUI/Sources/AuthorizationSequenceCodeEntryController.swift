@@ -54,8 +54,22 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             return false
         }
         self.navigationBar?.backPressed = { [weak self] in
-            self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Login_CancelPhoneVerification, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Login_CancelPhoneVerificationContinue, action: {
-            }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Login_CancelPhoneVerificationStop, action: {
+            let text: String
+            let proceed: String
+            let stop: String
+            
+            if let (_, _, type, _, _) = self?.data, case .email = type {
+                text = presentationData.strings.Login_CancelEmailVerification
+                proceed = presentationData.strings.Login_CancelEmailVerificationContinue
+                stop = presentationData.strings.Login_CancelEmailVerificationStop
+            } else {
+                text = presentationData.strings.Login_CancelPhoneVerification
+                proceed = presentationData.strings.Login_CancelPhoneVerificationContinue
+                stop = presentationData.strings.Login_CancelPhoneVerificationStop
+            }
+            
+            self?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: text, actions: [TextAlertAction(type: .genericAction, title: proceed, action: {
+            }), TextAlertAction(type: .defaultAction, title: stop, action: {
                 back()
             })]), in: .window(.root))
         }

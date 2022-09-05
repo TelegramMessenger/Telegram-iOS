@@ -213,10 +213,10 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         var insets = layout.insets(options: [.statusBar])
         if let inputHeight = layout.inputHeight {
-            insets.bottom += max(inputHeight, layout.standardInputHeight)
+            insets.bottom = max(inputHeight, layout.standardInputHeight)
         }
         
-        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 80.0 : 10.0
+        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 90.0 : 10.0
                 
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
