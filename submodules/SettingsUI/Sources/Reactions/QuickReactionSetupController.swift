@@ -189,11 +189,9 @@ private func quickReactionSetupControllerEntries(
         ))
         entries.append(.demoDescription(presentationData.strings.Settings_QuickReactionSetup_DemoInfo))
         
-        //TODO:localize
-        entries.append(.quickReaction("Choose Your Quick Reaction", reactionSettings.quickReaction, availableReactions))
+        entries.append(.quickReaction(presentationData.strings.Settings_QuickReactionSetup_ChooseQuickReaction, reactionSettings.quickReaction, availableReactions))
         
-        //TODO:localize
-        entries.append(.quickReactionDescription("You can set any emoji as your quick reaction."))
+        entries.append(.quickReactionDescription(presentationData.strings.Settings_QuickReactionSetup_ChooseQuickReactionInfo))
     }
     
     return entries

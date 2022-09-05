@@ -437,10 +437,9 @@ private final class TimeSelectionControlComponent: Component {
             let pickerSize = CGSize(width: availableSize.width, height: 216.0)
             let pickerFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + pickerSpacing), size: pickerSize)
             
-            //TODO:localize
             let titleSize = self.titleView.update(
                 transition: transition,
-                component: AnyComponent(Text(text: "Set Until", font: Font.semibold(17.0), color: component.theme.list.itemPrimaryTextColor)),
+                component: AnyComponent(Text(text: component.strings.EmojiStatusSetup_SetUntil, font: Font.semibold(17.0), color: component.theme.list.itemPrimaryTextColor)),
                 environment: {},
                 containerSize: CGSize(width: availableSize.width, height: 100.0)
             )
@@ -473,11 +472,10 @@ private final class TimeSelectionControlComponent: Component {
                 transition.setFrame(view: leftButtonComponentView, frame: CGRect(origin: CGPoint(x: 16.0, y: floor((topPanelHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
             }
             
-            //TODO:localize
             let actionButtonSize = self.actionButtonView.update(
                 transition: transition,
                 component: AnyComponent(SolidRoundedButtonComponent(
-                    title: "Set Until",
+                    title: component.strings.EmojiStatusSetup_SetUntil,
                     icon: nil,
                     theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
                     font: .bold,
@@ -674,9 +672,8 @@ final class EmojiStatusPreviewScreenComponent: Component {
                     }
                 ))))
             }
-            //TODO:localize
             menuItems.append(AnyComponentWithIdentity(id: "Other", component: AnyComponent(ContextMenuActionItem(
-                title: "Other",
+                title: component.strings.EmojiStatusSetup_TimerOther,
                 action: { [weak self] in
                     self?.toggleState()
                     return .clearHighlight

@@ -278,8 +278,7 @@ private func peerAllowedReactionListControllerEntries(
     
     if let peer = peer, let availableReactions = availableReactions, let allowedReactions = state.updatedAllowedReactions, let mode = state.updatedMode {
         if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-            //TODO:localize
-            entries.append(.allowSwitch(text: "Allow Reactions", value: mode != .empty))
+            entries.append(.allowSwitch(text: presentationData.strings.PeerInfo_AllowedReactions_AllowAllText, value: mode != .empty))
             
             entries.append(.itemsHeader(presentationData.strings.PeerInfo_AllowedReactions_ReactionListHeader))
             var index = 0
@@ -291,32 +290,30 @@ private func peerAllowedReactionListControllerEntries(
                 index += 1
             }
         } else {
-            //TODO:localize
-            entries.append(.allowAllHeader("AVAILABLE REACTIONS"))
+            entries.append(.allowAllHeader(presentationData.strings.PeerInfo_AllowedReactions_ReactionListHeader))
             
-            //TODO:localize
-            entries.append(.allowAll(text: "All Reactions", isEnabled: mode == .all))
-            entries.append(.allowSome(text: "Some Reactions", isEnabled: mode == .some))
-            entries.append(.allowNone(text: "No Reactions", isEnabled: mode == .empty))
+            entries.append(.allowAll(text: presentationData.strings.PeerInfo_AllowedReactions_OptionAllReactions, isEnabled: mode == .all))
+            entries.append(.allowSome(text: presentationData.strings.PeerInfo_AllowedReactions_OptionSomeReactions, isEnabled: mode == .some))
+            entries.append(.allowNone(text: presentationData.strings.PeerInfo_AllowedReactions_OptionNoReactions, isEnabled: mode == .empty))
             
             let allInfoText: String
             if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
                 switch mode {
                 case .all:
-                    allInfoText = "Subscribers of this channel can use any emoji as reactions to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionAllInfo
                 case .some:
-                    allInfoText = "You can select emoji that will allow subscribers of your channel to react to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionSomeInfo
                 case .empty:
-                    allInfoText = "Subscribers of the channel can't add any reactions to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionNoInfo
                 }
             } else {
                 switch mode {
                 case .all:
-                    allInfoText = "Members of this group can use any emoji as reactions to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionAllInfo
                 case .some:
-                    allInfoText = "Members of the group can use only some allowed emoji as reactions to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionSomeInfo
                 case .empty:
-                    allInfoText = "Members of the group can't add any reactions to messages."
+                    allInfoText = presentationData.strings.PeerInfo_AllowedReactions_GroupOptionNoInfo
                 }
             }
             

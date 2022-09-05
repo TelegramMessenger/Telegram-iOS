@@ -4985,7 +4985,6 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    //TODO:localize
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: topStatusTitle?.uppercased(), subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
                 }
                 
@@ -5195,8 +5194,7 @@ public final class EmojiPagerContentComponent: Component {
                     maxRecentLineCount = 5
                 }
                 
-                //TODO:localize
-                let popularTitle = hasRecent ? "Recently Used" : "Popular"
+                let popularTitle = hasRecent ? strings.Chat_ReactionSection_Recent : strings.Chat_ReactionSection_Popular
                 
                 if let availableReactions = availableReactions {
                     for reactionItem in availableReactions.reactions {

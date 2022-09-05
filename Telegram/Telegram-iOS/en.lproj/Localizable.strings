@@ -7237,6 +7237,13 @@ Sorry for the inconvenience.";
 "PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
 "PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
 "PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+"PeerInfo.AllowedReactions.OptionAllReactions" = "All Reactions";
+"PeerInfo.AllowedReactions.OptionSomeReactions" = "Some Reactions";
+"PeerInfo.AllowedReactions.OptionNoReactions" = "No Reactions";
+
+"PeerInfo.AllowedReactions.GroupOptionAllInfo" = "Members of this group can use any emoji as reactions to messages.";
+"PeerInfo.AllowedReactions.GroupOptionSomeInfo" = "Members of the group can use only some allowed emoji as reactions to messages.";
+"PeerInfo.AllowedReactions.GroupOptionNoInfo" = "Members of the group can't add any reactions to messages.";
 
 "PeerInfo.Reactions" = "Reactions";
 "PeerInfo.ReactionsDisabled" = "Disabled";
@@ -7248,6 +7255,9 @@ Sorry for the inconvenience.";
 "Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
 "Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
 "Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Settings.QuickReactionSetup.ChooseQuickReaction" = "Choose Your Quick Reaction";
+"Settings.QuickReactionSetup.ChooseQuickReactionInfo" = "You can set any emoji as your quick reaction.";
 
 "Chat.ContextReactionCount_1" = "1 reaction";
 "Chat.ContextReactionCount_any" = "%@ reactions";
@@ -8040,3 +8050,21 @@ Sorry for the inconvenience.";
 "Login.CancelEmailVerification" = "Do you want to stop the email verification process?";
 "Login.CancelEmailVerificationStop" = "Stop";
 "Login.CancelEmailVerificationContinue" = "Continue";
+
+"PeerStatusSetup.NoTimerTitle" = "Long tap to set a timer";
+"Chat.PremiumReactionToastTitle" = "Subscribe to **Telegram Premium** to unlock this reaction.";
+"Chat.PremiumReactionToastAction" = "More";
+
+"Chat.ClearReactionsAlertText" = "Do you want to clear your recent reaction emoji from suggestions?";
+"Chat.ClearReactionsAlertAction" = "Clear Recent Emoji";
+
+"EmojiStatusSetup.SetUntil" = "Set Until";
+"EmojiStatusSetup.TimerOther" = "Other";
+
+"Chat.ReactionSection.Popular" = "Popular";
+"Chat.ReactionSection.Recent" = "Recently Used";
+
+"PeerInfo.SetEmojiStatus" = "Set Emoji Status";
+"PeerInfo.ChangeEmojiStatus" = "Change Emoji Status";
+
+"PeerInfo.LabelAllReactions" = "All Reactions";
