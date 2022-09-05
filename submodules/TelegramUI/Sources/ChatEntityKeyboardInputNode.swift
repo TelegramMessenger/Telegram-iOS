@@ -1105,6 +1105,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             peekBehavior: nil,
             customLayout: nil,
             externalBackground: nil,
+            externalExpansionView: nil,
             useOpaqueTheme: false
         )
         
@@ -1310,6 +1311,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             peekBehavior: stickerPeekBehavior,
             customLayout: nil,
             externalBackground: nil,
+            externalExpansionView: nil,
             useOpaqueTheme: false
         )
         
@@ -2020,6 +2022,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             peekBehavior: nil,
             customLayout: nil,
             externalBackground: nil,
+            externalExpansionView: nil,
             useOpaqueTheme: false
         )
         

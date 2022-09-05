@@ -17031,6 +17031,10 @@ enum AllowedReactions {
 }
 
 func peerMessageAllowedReactions(context: AccountContext, message: Message) -> Signal<AllowedReactions?, NoError> {
+    if message.containsSecretMedia {
+        return .single(AllowedReactions.set(Set()))
+    }
+    
     return combineLatest(
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId),
