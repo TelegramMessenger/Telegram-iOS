@@ -1381,24 +1381,24 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
         switch self.moreButtonNode.iconNode.iconState {
             case .search:
                 self.requestAttachmentMenuExpansion()
-            self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
-                if let strongSelf = self {
-                    let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
-                    
-                    mediaPicker.presentStickers = strongSelf.presentStickers
-                    mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
-                    mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
-                    mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
-                    mediaPicker.legacyCompletion = strongSelf.legacyCompletion
-                    mediaPicker.dismissAll = { [weak self] in
-                        self?.dismiss(animated: true, completion: nil)
+                self.presentWebSearch(MediaGroupsScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, mediaAssetsContext: self.controllerNode.mediaAssetsContext, openGroup: { [weak self] collection in
+                    if let strongSelf = self {
+                        let mediaPicker = MediaPickerScreen(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, peer: strongSelf.peer, chatLocation: strongSelf.chatLocation, bannedSendMedia: strongSelf.bannedSendMedia, collection: collection, editingContext: strongSelf.interaction?.editingState, selectionContext: strongSelf.interaction?.selectionState)
+                        
+                        mediaPicker.presentStickers = strongSelf.presentStickers
+                        mediaPicker.presentSchedulePicker = strongSelf.presentSchedulePicker
+                        mediaPicker.presentTimerPicker = strongSelf.presentTimerPicker
+                        mediaPicker.getCaptionPanelView = strongSelf.getCaptionPanelView
+                        mediaPicker.legacyCompletion = strongSelf.legacyCompletion
+                        mediaPicker.dismissAll = { [weak self] in
+                            self?.dismiss(animated: true, completion: nil)
+                        }
+                        
+                        mediaPicker._presentedInModal = true
+                        mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
+                        strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
                     }
-                    
-                    mediaPicker._presentedInModal = true
-                    mediaPicker.updateNavigationStack = strongSelf.updateNavigationStack
-                    strongSelf.updateNavigationStack({ _ in return ([strongSelf, mediaPicker], strongSelf.mediaPickerContext)})
-                }
-            }))
+                }))
             case .more:
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount
