@@ -8002,6 +8002,8 @@ Sorry for the inconvenience.";
 "PrivacySettings.LoginEmail" = "Login Email";
 "PrivacySettings.LoginEmailInfo" = "Change your email address for Telegram login codes.";
 "Login.EmailChanged" = "Your email has been changed.";
+"PrivacySettings.LoginEmailAlertText" = "This email address will be used every time you login to your Telegram account from a new device.";
+"PrivacySettings.LoginEmailAlertChange" = "Change Email";
 
 "Login.InvalidEmailAddressError" = "An error occurred. Please try again.";
 "Login.InvalidEmailError" = "Please enter a valid e-mail address.";
@@ -8034,3 +8036,7 @@ Sorry for the inconvenience.";
 "PeerStatusExpiration.AtDate" = "Your status expires on %@";
 
 "Chat.PanelCustomStatusInfo" = "This account uses %@ as a custom status next to its name. Such emoji statuses are available to all subscribers of Telegram Premium.";
+
+"Login.CancelEmailVerification" = "Do you want to stop the email verification process?";
+"Login.CancelEmailVerificationStop" = "Stop";
+"Login.CancelEmailVerificationContinue" = "Continue";

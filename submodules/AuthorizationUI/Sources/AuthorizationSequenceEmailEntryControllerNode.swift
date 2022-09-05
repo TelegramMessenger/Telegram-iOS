@@ -112,7 +112,8 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         }
         
         self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
-
+        self.proceedNode.progressType = .embedded
+        
         self.codeSeparatorNode = ASDisplayNode()
         self.codeSeparatorNode.isLayerBacked = true
         self.codeSeparatorNode.backgroundColor = self.theme.list.itemPlainSeparatorColor
@@ -121,9 +122,12 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         self.codeField.textField.font = Font.regular(20.0)
         self.codeField.textField.textColor = self.theme.list.itemPrimaryTextColor
         self.codeField.textField.textAlignment = .natural
-        self.codeField.textField.keyboardType = .emailAddress
         self.codeField.textField.autocorrectionType = .no
         self.codeField.textField.autocapitalizationType = .none
+        self.codeField.textField.keyboardType = .emailAddress
+        if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
+            self.codeField.textField.textContentType = UITextContentType(rawValue: "")
+        }
         self.codeField.textField.returnKeyType = .done
         self.codeField.textField.keyboardAppearance = self.theme.rootController.keyboardColor.keyboardAppearance
         self.codeField.textField.disableAutomaticKeyboardHandling = [.forward, .backward]
@@ -172,17 +176,17 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
     private func updateButtonsVisibility(transition: ContainedViewLayoutTransition) {
         if self.currentEmail.isEmpty && self.appleSignInAllowed {
             transition.updateAlpha(node: self.proceedNode, alpha: 0.0)
-            if self.proceedNode.isHidden {
+//            if self.proceedNode.isHidden {
                 transition.updateAlpha(node: self.dividerNode, alpha: 1.0)
-            }
+//            }
             if let signInWithAppleButton = self.signInWithAppleButton {
                 transition.updateAlpha(layer: signInWithAppleButton.layer, alpha: 1.0)
             }
         } else {
             transition.updateAlpha(node: self.proceedNode, alpha: 1.0)
-            if self.proceedNode.isHidden {
+//            if self.proceedNode.isHidden {
                 transition.updateAlpha(node: self.dividerNode, alpha: 0.0)
-            }
+//            }
             if let signInWithAppleButton = self.signInWithAppleButton {
                 transition.updateAlpha(layer: signInWithAppleButton.layer, alpha: 0.0)
             }
@@ -250,7 +254,7 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
             self.dividerNode.isHidden = true
         }
         
-        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 110.0)), items: items, transition: transition, failIfDoesNotFit: false)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - 120.0)), items: items, transition: transition, failIfDoesNotFit: false)
         
         if let signInWithAppleButton = self.signInWithAppleButton, self.appleSignInAllowed {
             signInWithAppleButton.isHidden = false

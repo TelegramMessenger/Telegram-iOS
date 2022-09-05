@@ -245,6 +245,9 @@ public final class ContextActionNode: ASDisplayNode, ContextActionNodeProtocol {
         if !iconSize.width.isZero {
             rightTextInset = max(iconSize.width, standardIconWidth) + iconSideInset + sideInset
         }
+        if let iconSize = self.titleIconNode.image?.size {
+            rightTextInset += iconSize.width + 10.0
+        }
         
         let badgeTextSize = self.badgeTextNode.updateLayout(CGSize(width: constrainedWidth, height: .greatestFiniteMagnitude))
         let badgeInset: CGFloat = 4.0

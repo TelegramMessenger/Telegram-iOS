@@ -1700,6 +1700,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         var hadBanPeerId = false
         var disableDelete = false
         var isCopyProtected = false
+        var isShareProtected = false
         
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let maybePeer = peerMap[peerId], let peer = maybePeer {
@@ -1732,7 +1733,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                     isCopyProtected = true
                 }
                 for media in message.media {
-                    if let file = media as? TelegramMediaFile, file.isSticker {
+                    if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                        isShareProtected = true
+                    } else if let file = media as? TelegramMediaFile, file.isSticker {
                         for case let .Sticker(_, packReference, _) in file.attributes {
                             if let _ = packReference {
                                 optionsMap[id]!.insert(.viewStickerPack)
@@ -1917,8 +1920,12 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                     optionsMap[id]!.insert(.deleteLocally)
                 }
             }
+            
+            if !isShareProtected {
+                optionsMap[id]!.insert(.externalShare)
+            }
         }
-        
+                
         if !optionsMap.isEmpty {
             var reducedOptions = optionsMap.values.first!
             for value in optionsMap.values {
