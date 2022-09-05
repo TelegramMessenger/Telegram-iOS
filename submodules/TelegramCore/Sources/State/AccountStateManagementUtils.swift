@@ -3694,8 +3694,9 @@ func replayFinalState(
                         }
                         var updatedInfos: [StickerPackCollectionInfo] = []
                         for id in ids {
-                            let currentInfo = currentDict[ItemCollectionId(namespace: collectionNamespace, id: id)]!
-                            updatedInfos.append(currentInfo)
+                            if let currentInfo = currentDict[ItemCollectionId(namespace: collectionNamespace, id: id)] {
+                                updatedInfos.append(currentInfo)
+                            }
                         }
                         for info in currentInfos {
                             if !updatedInfos.contains(where: { $0.id == info.id }) {
