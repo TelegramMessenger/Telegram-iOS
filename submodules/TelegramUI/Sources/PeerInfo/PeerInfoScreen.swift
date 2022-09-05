@@ -6414,7 +6414,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 self?.blockedPeers.set(.single(blockedPeersContext))
                             }, updatedHasTwoStepAuth: { [weak self] hasTwoStepAuthValue in
                                 self?.hasTwoStepAuth.set(.single(hasTwoStepAuthValue))
-                            }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth, loginEmailPattern: loginEmailPattern))
+                            }, focusOnItemTag: nil, activeSessionsContext: settings.activeSessionsContext, webSessionsContext: settings.webSessionsContext, blockedPeersContext: blockedPeersContext, hasTwoStepAuth: hasTwoStepAuth, loginEmailPattern: loginEmailPattern, updatedTwoStepAuthData: { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.twoStepAuthData.set(
+                                        strongSelf.context.engine.auth.twoStepAuthData()
+                                        |> map(Optional.init)
+                                        |> `catch` { _ -> Signal<TwoStepAuthData?, NoError> in
+                                            return .single(nil)
+                                        }
+                                    )
+                                }
+                            }))
                         }
                     })
                 }

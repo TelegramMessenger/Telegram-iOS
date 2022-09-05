@@ -153,6 +153,7 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
     public static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
     public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
     public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
+    public static let externalShare = ChatAvailableMessageActionOptions(rawValue: 1 << 10)
 }
 
 public struct ChatAvailableMessageActions {

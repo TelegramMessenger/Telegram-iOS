@@ -438,7 +438,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             } else if let fetchStatus = self.fetchStatus, case .Local = fetchStatus {
                 var videoContentMatch = true
                 if let content = self.videoContent, case let .message(stableId, mediaId) = content.nativeId {
-                    videoContentMatch = self.message?.stableId == stableId && self.media?.id == mediaId
+                    var media = self.media
+                    if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                        media = fullMedia
+                    }
+                    videoContentMatch = self.message?.stableId == stableId && media?.id == mediaId
                 }
                 self.activateLocalContent((self.automaticPlayback ?? false) && videoContentMatch ? .automaticPlayback : .default)
             } else {
@@ -1490,6 +1494,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             
             let formatting = DataSizeStringFormatting(strings: strings, decimalSeparator: decimalSeparator)
             
+            var media = self.media
+            if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia {
+                media = fullMedia
+            }
+            
             switch fetchStatus {
                 case let .Fetching(_, progress):
                     let adjustedProgress = max(progress, 0.027)
@@ -1502,8 +1511,8 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     } else {
                         state = .progress(color: messageTheme.mediaOverlayControlColors.foregroundColor, lineWidth: nil, value: CGFloat(adjustedProgress), cancelEnabled: true, animateRotation: true)
                     }
-                    
-                    if let file = self.media as? TelegramMediaFile {
+                                    
+                    if let file = media as? TelegramMediaFile {
                         if file.isVideoSticker {
                             state = .none
                             badgeContent = nil
@@ -1617,7 +1626,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                 case .Remote, .Paused:
                     state = .download(messageTheme.mediaOverlayControlColors.foregroundColor)
-                    if let file = self.media as? TelegramMediaFile, !file.isVideoSticker {
+                    if let file = media as? TelegramMediaFile, !file.isVideoSticker {
                         do {
                             let durationString = file.isAnimated ? gifTitle : stringForDuration(playerDuration > 0 ? playerDuration : (file.duration ?? 0), position: playerPosition)
                             if wideLayout {

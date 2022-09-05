@@ -565,7 +565,7 @@ class PrivacyAndSecurityControllerImpl: ItemListController, ASAuthorizationContr
     }
 }
 
-public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil, loginEmailPattern: Signal<String?, NoError>? = nil) -> ViewController {
+public func privacyAndSecurityController(context: AccountContext, initialSettings: AccountPrivacySettings? = nil, updatedSettings: ((AccountPrivacySettings?) -> Void)? = nil, updatedBlockedPeers: ((BlockedPeersContext?) -> Void)? = nil, updatedHasTwoStepAuth: ((Bool) -> Void)? = nil, focusOnItemTag: PrivacyAndSecurityEntryTag? = nil, activeSessionsContext: ActiveSessionsContext? = nil, webSessionsContext: WebSessionsContext? = nil, blockedPeersContext: BlockedPeersContext? = nil, hasTwoStepAuth: Bool? = nil, loginEmailPattern: Signal<String?, NoError>? = nil, updatedTwoStepAuthData: (() -> Void)? = nil) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
     let updateState: ((PrivacyAndSecurityControllerState) -> PrivacyAndSecurityControllerState) -> Void = { f in
@@ -1005,8 +1005,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         if let emailPattern = emailPattern {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let controller = textAlertController(
-                context: context, title: emailPattern, text: "This email address will be used every time you login to your Telegram account from a new device.", actions: [
-                    TextAlertAction(type: .genericAction, title: "Change Email", action: {
+                context: context, title: emailPattern, text: presentationData.strings.PrivacySettings_LoginEmailAlertText, actions: [
+                    TextAlertAction(type: .genericAction, title: presentationData.strings.PrivacySettings_LoginEmailAlertChange, action: {
                         setupEmailImpl?(emailPattern)
                     }),
                     TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_Cancel, action: {
@@ -1092,8 +1092,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     
     let emailChangeCompletion: (AuthorizationSequenceCodeEntryController?) -> Void = { codeController in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        
         codeController?.animateSuccess()
+        
+        updatedTwoStepAuthData?()
+        
         Queue.mainQueue().after(0.75) {
             if let navigationController = getNavigationControllerImpl?() {
                 let controllers = navigationController.viewControllers.filter { controller in
@@ -1105,9 +1107,11 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 }
                 navigationController.setViewControllers(controllers, animated: true)
                 
-                navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
-                    return false
-                }))
+                Queue.mainQueue().after(0.1, {
+                    navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
+                        return false
+                    }))
+                })
             }
         }
     }
@@ -1115,6 +1119,8 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
     setupEmailImpl = { emailPattern in
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         var dismissEmailControllerImpl: (() -> Void)?
+        var presentControllerImpl: ((ViewController) -> Void)?
+        
         let emailController = AuthorizationSequenceEmailEntryController(presentationData: presentationData, mode: emailPattern != nil ? .change : .setup, back: {
             dismissEmailControllerImpl?()
         })
@@ -1124,9 +1130,15 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
             actionsDisposable.add((sendLoginEmailChangeCode(account: context.account, email: email)
             |> deliverOnMainQueue).start(next: { data in
                 var dismissCodeControllerImpl: (() -> Void)?
+                var presentControllerImpl: ((ViewController) -> Void)?
+                
                 let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, openUrl: { _ in }, back: {
                     dismissCodeControllerImpl?()
                 })
+                
+                presentControllerImpl = { [weak codeController] c in
+                    codeController?.present(c, in: .window(.root), with: nil)
+                }
                  
                 codeController.loginWithCode = { [weak codeController] code in
                     actionsDisposable.add((verifyLoginEmailChange(account: context.account, code: .emailCode(code))
@@ -1247,6 +1259,10 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         }
         emailController.updateData(appleSignInAllowed: true)
         pushControllerImpl?(emailController, true)
+        
+        presentControllerImpl = { [weak emailController] c in
+            emailController?.present(c, in: .window(.root), with: nil)
+        }
         
         dismissEmailControllerImpl = { [weak emailController] in
             emailController?.dismiss()
