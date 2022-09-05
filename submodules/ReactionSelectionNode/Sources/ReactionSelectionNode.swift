@@ -53,6 +53,9 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     private let hasAppearAnimation: Bool
     private let useDirectRendering: Bool
     
+    let selectionTintView: UIView
+    let selectionView: UIView
+    
     private var animateInAnimationNode: AnimatedStickerNode?
     private let staticAnimationNode: AnimatedStickerNode
     private var stillAnimationNode: AnimatedStickerNode?
@@ -86,6 +89,14 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         self.loopIdle = loopIdle
         self.hasAppearAnimation = hasAppearAnimation
         self.useDirectRendering = useDirectRendering
+        
+        self.selectionTintView = UIView()
+        self.selectionTintView.backgroundColor = UIColor(white: 1.0, alpha: 0.2)
+        self.selectionTintView.isHidden = true
+        
+        self.selectionView = UIView()
+        self.selectionView.backgroundColor = theme.chat.inputMediaPanel.panelContentControlVibrantSelectionColor
+        self.selectionView.isHidden = true
         
         self.staticAnimationNode = self.useDirectRendering ? DirectAnimatedStickerNode() : DefaultAnimatedStickerNodeImpl()
     
@@ -147,8 +158,18 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             } else {
                 self.animateInAnimationNode?.visibility = true
             }
+            
+            self.selectionView.alpha = 1.0
+            self.selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.selectionView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
+            
+            self.selectionTintView.alpha = 1.0
+            self.selectionTintView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.selectionTintView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
         } else {
             self.animateInAnimationNode?.completed(true)
+            self.selectionView.alpha = 1.0
+            self.selectionTintView.alpha = 1.0
         }
     }
     

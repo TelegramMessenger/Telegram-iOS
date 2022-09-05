@@ -77,8 +77,8 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
     if displayActionsPanel && (selectedContext == nil || selectedContext! <= .pinnedMessage) {
         if let currentPanel = currentPanel as? ChatReportPeerTitlePanelNode {
             return currentPanel
-        } else {
-            let panel = ChatReportPeerTitlePanelNode()
+        } else if let controllerInteraction = controllerInteraction {
+            let panel = ChatReportPeerTitlePanelNode(context: context, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
             panel.interfaceInteraction = interfaceInteraction
             return panel
         }

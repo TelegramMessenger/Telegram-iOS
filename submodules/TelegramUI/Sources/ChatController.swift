@@ -998,10 +998,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.context.account.peerId)),
                     contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState: strongSelf.presentationInterfaceState, context: strongSelf.context, messages: updatedMessages, controllerInteraction: strongSelf.controllerInteraction, selectAll: selectAll, interfaceInteraction: strongSelf.interfaceInteraction, messageNode: node as? ChatMessageItemView),
                     peerMessageAllowedReactions(context: strongSelf.context, message: topMessage),
-                    peerMessageSelectedReactionFiles(context: strongSelf.context, message: topMessage),
+                    peerMessageSelectedReactions(context: strongSelf.context, message: topMessage),
                     topMessageReactions(context: strongSelf.context, message: topMessage),
                     ApplicationSpecificNotice.getChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager)
-                ).start(next: { peer, actions, allowedReactions, selectedReactionFiles, topReactions, chatTextSelectionTips in
+                ).start(next: { peer, actions, allowedReactions, selectedReactions, topReactions, chatTextSelectionTips in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1062,6 +1062,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     
                     if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                         actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
+                        actions.selectedReactionItems = selectedReactions.reactions
                         
                         if !actions.reactionItems.isEmpty {
                             let reactionItems: [EmojiComponentReactionItem] = actions.reactionItems.compactMap { item -> EmojiComponentReactionItem? in
@@ -1102,7 +1103,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         areUnicodeEmojiEnabled: false,
                                         areCustomEmojiEnabled: true,
                                         chatPeerId: strongSelf.chatLocation.peerId,
-                                        selectedItems: selectedReactionFiles
+                                        selectedItems: selectedReactions.files
                                     )
                                 }
                             }
@@ -17055,14 +17056,19 @@ func peerMessageAllowedReactions(context: AccountContext, message: Message) -> S
     }
 }
 
-func peerMessageSelectedReactionFiles(context: AccountContext, message: Message) -> Signal<Set<MediaId>, NoError> {
+func peerMessageSelectedReactions(context: AccountContext, message: Message) -> Signal<(reactions: Set<MessageReaction.Reaction>, files: Set<MediaId>), NoError> {
     return context.engine.stickers.availableReactions()
     |> take(1)
-    |> map { availableReactions -> Set<MediaId> in
+    |> map { availableReactions -> (reactions: Set<MessageReaction.Reaction>, files: Set<MediaId>) in
         var result = Set<MediaId>()
+        var reactions = Set<MessageReaction.Reaction>()
         
         if let effectiveReactions = message.effectiveReactions {
             for reaction in effectiveReactions {
+                if !reaction.isSelected {
+                    continue
+                }
+                reactions.insert(reaction.value)
                 switch reaction.value {
                 case .builtin:
                     if let availableReaction = availableReactions?.reactions.first(where: { $0.value == reaction.value }) {
@@ -17074,7 +17080,7 @@ func peerMessageSelectedReactionFiles(context: AccountContext, message: Message)
             }
         }
         
-        return result
+        return (reactions, result)
     }
 }
 

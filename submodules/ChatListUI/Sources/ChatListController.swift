@@ -35,6 +35,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
 import EntityKeyboard
+import TelegramStringFormatting
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -851,8 +852,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func openStatusSetup(sourceView: UIView) {
         self.emojiStatusSelectionController?.dismiss()
         var selectedItems = Set<MediaId>()
+        //TODO:localize
+        var topStatusTitle = "Long tap to set a timer"
         if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
             selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+            
+            if let timestamp = emojiStatus.expirationDate {
+                topStatusTitle = peerStatusExpirationString(statusTimestamp: timestamp, relativeTo: Int32(Date().timeIntervalSince1970), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
+            }
         }
         let controller = EmojiStatusSelectionController(
             context: self.context,
@@ -869,7 +876,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 areUnicodeEmojiEnabled: false,
                 areCustomEmojiEnabled: true,
                 chatPeerId: self.context.account.peerId,
-                selectedItems: selectedItems
+                selectedItems: selectedItems,
+                topStatusTitle: topStatusTitle
             ),
             destinationItemView: { [weak sourceView] in
                 return sourceView

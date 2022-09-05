@@ -1527,7 +1527,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
         
         if !items.reactionItems.isEmpty, let context = items.context, let animationCache = items.animationCache {
-            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in }, requestLayout: { _ in })
+            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, selectedItems: items.selectedReactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in }, requestLayout: { _ in })
             self.reactionContextNode = reactionContextNode
             self.addSubnode(reactionContextNode)
             
@@ -2404,17 +2404,19 @@ public final class ContextController: ViewController, StandalonePresentableContr
         public var content: Content
         public var context: AccountContext?
         public var reactionItems: [ReactionContextItem]
+        public var selectedReactionItems: Set<MessageReaction.Reaction>
         public var animationCache: AnimationCache?
         public var getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
         public var disablePositionLock: Bool
         public var tip: Tip?
         public var tipSignal: Signal<Tip?, NoError>?
 
-        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], animationCache: AnimationCache? = nil, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)? = nil, disablePositionLock: Bool = false, tip: Tip? = nil, tipSignal: Signal<Tip?, NoError>? = nil) {
+        public init(content: Content, context: AccountContext? = nil, reactionItems: [ReactionContextItem] = [], selectedReactionItems: Set<MessageReaction.Reaction> = Set(), animationCache: AnimationCache? = nil, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)? = nil, disablePositionLock: Bool = false, tip: Tip? = nil, tipSignal: Signal<Tip?, NoError>? = nil) {
             self.content = content
             self.context = context
             self.animationCache = animationCache
             self.reactionItems = reactionItems
+            self.selectedReactionItems = selectedReactionItems
             self.getEmojiContent = getEmojiContent
             self.disablePositionLock = disablePositionLock
             self.tip = tip
@@ -2425,6 +2427,7 @@ public final class ContextController: ViewController, StandalonePresentableContr
             self.content = .list([])
             self.context = nil
             self.reactionItems = []
+            self.selectedReactionItems = Set()
             self.getEmojiContent = nil
             self.disablePositionLock = false
             self.tip = nil

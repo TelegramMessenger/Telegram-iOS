@@ -10,18 +10,26 @@ import AccountContext
 import ComponentDisplayAdapters
 import MultilineTextComponent
 import EmojiStatusComponent
+import TelegramStringFormatting
+import SolidRoundedButtonComponent
+import PresentationDataUtils
 
 protocol ContextMenuItemWithAction: AnyObject {
-    func performAction()
+    func performAction() -> ContextMenuPerformActionResult
+}
+
+enum ContextMenuPerformActionResult {
+    case none
+    case clearHighlight
 }
 
 private final class ContextMenuActionItem: Component, ContextMenuItemWithAction {
     typealias EnvironmentType = ContextMenuActionItemEnvironment
     
     let title: String
-    let action: () -> Void
+    let action: () -> ContextMenuPerformActionResult
     
-    init(title: String, action: @escaping () -> Void) {
+    init(title: String, action: @escaping () -> ContextMenuPerformActionResult) {
         self.title = title
         self.action = action
     }
@@ -33,8 +41,8 @@ private final class ContextMenuActionItem: Component, ContextMenuItemWithAction 
         return true
     }
     
-    func performAction() {
-        self.action()
+    func performAction() -> ContextMenuPerformActionResult {
+        return self.action()
     }
     
     final class View: UIView {
@@ -169,7 +177,12 @@ private final class ContextMenuActionsComponent: Component {
                 for item in component.items {
                     if item.id == id {
                         if let itemComponent = item.component.wrapped as? ContextMenuItemWithAction {
-                            itemComponent.performAction()
+                            switch itemComponent.performAction() {
+                            case .none:
+                                break
+                            case .clearHighlight:
+                                self.setHighlightedItem(id: nil)
+                            }
                         }
                         break
                     }
@@ -332,9 +345,193 @@ private final class ContextMenuActionsComponent: Component {
     }
 }
 
+private final class TimeSelectionControlComponent: Component {
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let bottomInset: CGFloat
+    let apply: (Int32) -> Void
+    let cancel: () -> Void
+    
+    init(
+        theme: PresentationTheme,
+        strings: PresentationStrings,
+        bottomInset: CGFloat,
+        apply: @escaping (Int32) -> Void,
+        cancel: @escaping () -> Void
+    ) {
+        self.theme = theme
+        self.strings = strings
+        self.bottomInset = bottomInset
+        self.apply = apply
+        self.cancel = cancel
+    }
+    
+    static func ==(lhs: TimeSelectionControlComponent, rhs: TimeSelectionControlComponent) -> Bool {
+        if lhs.theme !== rhs.theme {
+            return false
+        }
+        if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let backgroundView: BlurredBackgroundView
+        private let pickerView: UIDatePicker
+        private let titleView: ComponentView<Empty>
+        private let leftButtonView: ComponentView<Empty>
+        private let actionButtonView: ComponentView<Empty>
+        
+        private var component: TimeSelectionControlComponent?
+        
+        override init(frame: CGRect) {
+            self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
+            self.pickerView = UIDatePicker()
+            
+            self.titleView = ComponentView<Empty>()
+            self.leftButtonView = ComponentView<Empty>()
+            self.actionButtonView = ComponentView<Empty>()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.backgroundView)
+            
+            self.pickerView.timeZone = TimeZone(secondsFromGMT: 0)
+            self.pickerView.datePickerMode = .countDownTimer
+            self.pickerView.datePickerMode = .dateAndTime
+            if #available(iOS 13.4, *) {
+                self.pickerView.preferredDatePickerStyle = .wheels
+            }
+            self.pickerView.minimumDate = Date(timeIntervalSince1970: Date().timeIntervalSince1970 + Double(TimeZone.current.secondsFromGMT()))
+            self.pickerView.maximumDate = Date(timeIntervalSince1970: Double(Int32.max - 1))
+            
+            self.addSubview(self.pickerView)
+            self.pickerView.addTarget(self, action: #selector(self.datePickerUpdated), for: .valueChanged)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc private func datePickerUpdated() {
+        }
+        
+        func update(component: TimeSelectionControlComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+            if self.component?.theme !== component.theme {
+                UILabel.setDateLabel(component.theme.list.itemPrimaryTextColor)
+                
+                self.pickerView.setValue(component.theme.list.itemPrimaryTextColor, forKey: "textColor")
+                
+                self.backgroundView.updateColor(color: component.theme.contextMenu.backgroundColor, transition: .immediate)
+            }
+            
+            self.component = component
+            
+            let topPanelHeight: CGFloat = 54.0
+            let pickerSpacing: CGFloat = 10.0
+            
+            let pickerSize = CGSize(width: availableSize.width, height: 216.0)
+            let pickerFrame = CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight + pickerSpacing), size: pickerSize)
+            
+            //TODO:localize
+            let titleSize = self.titleView.update(
+                transition: transition,
+                component: AnyComponent(Text(text: "Set Until", font: Font.semibold(17.0), color: component.theme.list.itemPrimaryTextColor)),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            if let titleComponentView = self.titleView.view {
+                if titleComponentView.superview == nil {
+                    self.addSubview(titleComponentView)
+                }
+                transition.setFrame(view: titleComponentView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - titleSize.width) / 2.0), y: floor((topPanelHeight - titleSize.height) / 2.0)), size: titleSize))
+            }
+            
+            let leftButtonSize = self.leftButtonView.update(
+                transition: transition,
+                component: AnyComponent(Button(
+                    content: AnyComponent(Text(
+                        text: component.strings.Common_Cancel,
+                        font: Font.regular(17.0),
+                        color: component.theme.list.itemAccentColor
+                    )),
+                    action: { [weak self] in
+                        self?.component?.cancel()
+                    }
+                ).minSize(CGSize(width: 16.0, height: topPanelHeight))),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width, height: 100.0)
+            )
+            if let leftButtonComponentView = self.leftButtonView.view {
+                if leftButtonComponentView.superview == nil {
+                    self.addSubview(leftButtonComponentView)
+                }
+                transition.setFrame(view: leftButtonComponentView, frame: CGRect(origin: CGPoint(x: 16.0, y: floor((topPanelHeight - leftButtonSize.height) / 2.0)), size: leftButtonSize))
+            }
+            
+            //TODO:localize
+            let actionButtonSize = self.actionButtonView.update(
+                transition: transition,
+                component: AnyComponent(SolidRoundedButtonComponent(
+                    title: "Set Until",
+                    icon: nil,
+                    theme: SolidRoundedButtonComponent.Theme(theme: component.theme),
+                    font: .bold,
+                    fontSize: 17.0,
+                    height: 50.0,
+                    cornerRadius: 10.0,
+                    gloss: false,
+                    action: { [weak self] in
+                        guard let strongSelf = self, let component = strongSelf.component else {
+                            return
+                        }
+                        
+                        let timestamp = Int32(strongSelf.pickerView.date.timeIntervalSince1970)
+                        component.apply(timestamp)
+                    }
+                )),
+                environment: {},
+                containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 50.0)
+            )
+            let actionButtonFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - actionButtonSize.width) / 2.0), y: pickerFrame.maxY + pickerSpacing), size: actionButtonSize)
+            if let actionButtonComponentView = self.actionButtonView.view {
+                if actionButtonComponentView.superview == nil {
+                    self.addSubview(actionButtonComponentView)
+                }
+                transition.setFrame(view: actionButtonComponentView, frame: actionButtonFrame)
+            }
+            
+            self.pickerView.frame = pickerFrame
+            
+            var size = CGSize(width: availableSize.width, height: actionButtonFrame.maxY)
+            if component.bottomInset.isZero {
+                size.height += 10.0
+            } else {
+                size.height += max(10.0, component.bottomInset)
+            }
+            
+            self.backgroundView.update(size: size, cornerRadius: 10.0, maskedCorners: [.layerMinXMinYCorner, .layerMaxXMinYCorner], transition: transition.containedViewLayoutTransition)
+            
+            return size
+        }
+    }
+    
+    func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
 final class EmojiStatusPreviewScreenComponent: Component {
     struct StatusResult {
-        let timeout: Int
+        let timestamp: Int32
         let sourceView: UIView
     }
     
@@ -350,21 +547,29 @@ final class EmojiStatusPreviewScreenComponent: Component {
         }
     }
     
+    private enum CurrentState {
+        case menu
+        case timeSelection
+    }
+    
     typealias EnvironmentType = Empty
     
     let theme: PresentationTheme
     let strings: PresentationStrings
+    let bottomInset: CGFloat
     let item: EmojiStatusComponent
     let dismiss: (StatusResult?) -> Void
     
     init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        bottomInset: CGFloat,
         item: EmojiStatusComponent,
         dismiss: @escaping (StatusResult?) -> Void
     ) {
         self.theme = theme
         self.strings = strings
+        self.bottomInset = bottomInset
         self.item = item
         self.dismiss = dismiss
     }
@@ -374,6 +579,9 @@ final class EmojiStatusPreviewScreenComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.bottomInset != rhs.bottomInset {
             return false
         }
         if lhs.item != rhs.item {
@@ -386,13 +594,18 @@ final class EmojiStatusPreviewScreenComponent: Component {
         private let backgroundView: BlurredBackgroundView
         private let itemView: ComponentView<Empty>
         private let actionsView: ComponentView<Empty>
+        private let timeSelectionView: ComponentView<Empty>
+        
+        private var currentState: CurrentState = .menu
         
         private var component: EmojiStatusPreviewScreenComponent?
+        private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
             self.backgroundView = BlurredBackgroundView(color: .clear, enableBlur: true)
             self.itemView = ComponentView<Empty>()
             self.actionsView = ComponentView<Empty>()
+            self.timeSelectionView = ComponentView<Empty>()
             
             super.init(frame: frame)
             
@@ -406,12 +619,29 @@ final class EmojiStatusPreviewScreenComponent: Component {
         
         @objc private func backgroundTapGesture(_ recognizer: UITapGestureRecognizer) {
             if case .ended = recognizer.state {
-                self.component?.dismiss(nil)
+                switch self.currentState {
+                case .menu:
+                    self.component?.dismiss(nil)
+                case .timeSelection:
+                    self.toggleState()
+                }
+            }
+        }
+        
+        private func toggleState() {
+            switch self.currentState {
+            case .menu:
+                self.currentState = .timeSelection
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.5, curve: .spring)))
+            case .timeSelection:
+                self.currentState = .menu
+                self.state?.updated(transition: Transition(animation: .curve(duration: 0.3, curve: .spring)))
             }
         }
         
         func update(component: EmojiStatusPreviewScreenComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.component = component
+            self.state = state
             
             let itemSpacing: CGFloat = 12.0
             
@@ -434,15 +664,25 @@ final class EmojiStatusPreviewScreenComponent: Component {
                     title: setTimeoutForIntervalString(strings: component.strings, value: Int32(duration)),
                     action: { [weak self] in
                         guard let strongSelf = self, let component = strongSelf.component else {
-                            return
+                            return .none
                         }
                         guard let itemComponentView = strongSelf.itemView.view else {
-                            return
+                            return .none
                         }
-                        component.dismiss(StatusResult(timeout: duration, sourceView: itemComponentView))
+                        component.dismiss(StatusResult(timestamp: Int32(Date().timeIntervalSince1970) + Int32(duration), sourceView: itemComponentView))
+                        return .none
                     }
                 ))))
             }
+            //TODO:localize
+            menuItems.append(AnyComponentWithIdentity(id: "Other", component: AnyComponent(ContextMenuActionItem(
+                title: "Other",
+                action: { [weak self] in
+                    self?.toggleState()
+                    return .clearHighlight
+                }
+            ))))
+            
             let actionsSize = self.actionsView.update(
                 transition: transition,
                 component: AnyComponent(ContextMenuActionsComponent(
@@ -453,12 +693,40 @@ final class EmojiStatusPreviewScreenComponent: Component {
                 containerSize: availableSize
             )
             
-            let totalContentHeight = itemSize.height + itemSpacing + actionsSize.height
+            let timeSelectionSize = self.timeSelectionView.update(
+                transition: transition,
+                component: AnyComponent(TimeSelectionControlComponent(
+                    theme: component.theme,
+                    strings: component.strings,
+                    bottomInset: component.bottomInset,
+                    apply: { [weak self] timestamp in
+                        guard let strongSelf = self, let component = strongSelf.component else {
+                            return
+                        }
+                        guard let itemComponentView = strongSelf.itemView.view else {
+                            return
+                        }
+                        component.dismiss(StatusResult(timestamp: timestamp, sourceView: itemComponentView))
+                    },
+                    cancel: { [weak self] in
+                        self?.toggleState()
+                    }
+                )),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            let totalContentHeight = itemSize.height + itemSpacing + max(actionsSize.height, timeSelectionSize.height)
             
             let contentFrame = CGRect(origin: CGPoint(x: 0.0, y: floor((availableSize.height - totalContentHeight) / 2.0)), size: CGSize(width: availableSize.width, height: totalContentHeight))
             
             let itemFrame = CGRect(origin: CGPoint(x: contentFrame.minX + floor((contentFrame.width - itemSize.width) / 2.0), y: contentFrame.minY), size: itemSize)
             let actionsFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - actionsSize.width) / 2.0), y: itemFrame.maxY + itemSpacing), size: actionsSize)
+            
+            var timeSelectionFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - timeSelectionSize.width) / 2.0), y: availableSize.height - timeSelectionSize.height), size: timeSelectionSize)
+            if case .menu = self.currentState {
+                timeSelectionFrame.origin.y = availableSize.height
+            }
             
             if let itemComponentView = self.itemView.view {
                 if itemComponentView.superview == nil {
@@ -471,7 +739,25 @@ final class EmojiStatusPreviewScreenComponent: Component {
                 if actionsComponentView.superview == nil {
                     self.addSubview(actionsComponentView)
                 }
-                transition.setFrame(view: actionsComponentView, frame: actionsFrame)
+                transition.setPosition(view: actionsComponentView, position: actionsFrame.center)
+                transition.setBounds(view: actionsComponentView, bounds: CGRect(origin: CGPoint(), size: actionsFrame.size))
+                
+                if case .menu = self.currentState {
+                    transition.setTransform(view: actionsComponentView, transform: CATransform3DIdentity)
+                    transition.setAlpha(view: actionsComponentView, alpha: 1.0)
+                    actionsComponentView.isUserInteractionEnabled = true
+                } else {
+                    transition.setTransform(view: actionsComponentView, transform: CATransform3DMakeScale(0.001, 0.001, 1.0))
+                    transition.setAlpha(view: actionsComponentView, alpha: 0.0)
+                    actionsComponentView.isUserInteractionEnabled = false
+                }
+            }
+            
+            if let timeSelectionComponentView = self.timeSelectionView.view {
+                if timeSelectionComponentView.superview == nil {
+                    self.addSubview(timeSelectionComponentView)
+                }
+                transition.setFrame(view: timeSelectionComponentView, frame: timeSelectionFrame)
             }
             
             self.backgroundView.updateColor(color: component.theme.contextMenu.dimColor, transition: .immediate)
@@ -507,7 +793,6 @@ final class EmojiStatusPreviewScreenComponent: Component {
                         actionsComponentView.layer.animateSpring(from: (-actionsComponentView.bounds.height / 2.0) as NSNumber, to: 0.0 as NSNumber, keyPath: "transform.translation.y", duration: 0.6)
                         
                         let _ = additionalPositionDifference
-                        //actionsComponentView.layer.animatePosition(from: CGPoint(x: -additionalPositionDifference.x, y: -additionalPositionDifference.y), to: CGPoint(), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
                     }
                 }
             }
@@ -552,12 +837,20 @@ final class EmojiStatusPreviewScreenComponent: Component {
                     actionsComponentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                     })
                 }
+                
+                if let timeSelectionComponentView = self.timeSelectionView.view {
+                    timeSelectionComponentView.layer.animatePosition(from: timeSelectionComponentView.layer.position, to: CGPoint(x: timeSelectionComponentView.layer.position.x, y: self.bounds.height + timeSelectionComponentView.bounds.height / 2.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                }
             } else {
                 self.backgroundView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
                 if let actionsComponentView = self.actionsView.view {
                     actionsComponentView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                         completion()
                     })
+                    
+                    if let timeSelectionComponentView = self.timeSelectionView.view {
+                        timeSelectionComponentView.layer.animatePosition(from: timeSelectionComponentView.layer.position, to: CGPoint(x: timeSelectionComponentView.layer.position.x, y: self.bounds.height + timeSelectionComponentView.bounds.height / 2.0), duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false)
+                    }
                 } else {
                     completion()
                 }

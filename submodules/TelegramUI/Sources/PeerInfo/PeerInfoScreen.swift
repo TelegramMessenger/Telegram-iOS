@@ -3106,11 +3106,17 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 strongSelf.emojiStatusSelectionController?.dismiss()
                 var selectedItems = Set<MediaId>()
+                var topStatusTitle = "Long tap to set a timer"
                 if let peer = strongSelf.data?.peer {
                     if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
                         selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+                        
+                        if let timestamp = emojiStatus.expirationDate {
+                            topStatusTitle = peerStatusExpirationString(statusTimestamp: timestamp, relativeTo: Int32(Date().timeIntervalSince1970), strings: strongSelf.presentationData.strings, dateTimeFormat: strongSelf.presentationData.dateTimeFormat)
+                        }
                     }
                 }
+                //TODO:localize
                 let emojiStatusSelectionController = EmojiStatusSelectionController(
                     context: strongSelf.context,
                     mode: .statusSelection,
@@ -3126,7 +3132,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,
                         chatPeerId: strongSelf.context.account.peerId,
-                        selectedItems: selectedItems
+                        selectedItems: selectedItems,
+                        topStatusTitle: topStatusTitle
                     ),
                     destinationItemView: { [weak sourceView] in
                         return sourceView

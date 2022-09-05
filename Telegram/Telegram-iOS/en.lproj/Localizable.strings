@@ -8027,3 +8027,12 @@ Sorry for the inconvenience.";
 
 "SetTimeoutFor.Days_1" = "Set for 1 day";
 "SetTimeoutFor.Days_any" = "Set for %@ days";
+
+"PeerStatusExpiration.Minutes_1" = "Your status expires in one minute";
+"PeerStatusExpiration.Minutes_any" = "Your status expires in %@ minutes";
+"PeerStatusExpiration.Hours_1" = "Your status expires in one hour";
+"PeerStatusExpiration.Hours_any" = "Your status expires in %@ hours";
+"PeerStatusExpiration.TomorrowAt" = "Your status expires tomorrow at %@";
+"PeerStatusExpiration.AtDate" = "Your status expires on %@";
+
+"Chat.PanelCustomStatusInfo" = "This account uses %@ as a custom status next to its name. Such emoji statuses are available to all subscribers of Telegram Premium.";

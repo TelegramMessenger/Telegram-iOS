@@ -115,6 +115,18 @@ public final class TelegramUser: Peer, Equatable {
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
     
+    public var timeoutAttribute: UInt32? {
+        if let emojiStatus = self.emojiStatus {
+            if let expirationDate = emojiStatus.expirationDate {
+                return UInt32(max(0, expirationDate))
+            } else {
+                return nil
+            }
+        } else {
+            return nil
+        }
+    }
+    
     public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags, emojiStatus: PeerEmojiStatus?) {
         self.id = id
         self.accessHash = accessHash
