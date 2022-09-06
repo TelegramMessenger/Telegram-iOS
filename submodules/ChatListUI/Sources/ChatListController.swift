@@ -852,8 +852,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private func openStatusSetup(sourceView: UIView) {
         self.emojiStatusSelectionController?.dismiss()
         var selectedItems = Set<MediaId>()
-        //TODO:localize
-        var topStatusTitle = "Long tap to set a timer"
+        var topStatusTitle = self.presentationData.strings.PeerStatusSetup_NoTimerTitle
         if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
             selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
             

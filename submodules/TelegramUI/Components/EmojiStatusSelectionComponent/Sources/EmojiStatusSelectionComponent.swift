@@ -345,6 +345,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     peekBehavior: nil,
                     customLayout: nil,
                     externalBackground: nil,
+                    externalExpansionView: nil,
                     useOpaqueTheme: true
                 )
                 

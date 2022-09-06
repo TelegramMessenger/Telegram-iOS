@@ -323,6 +323,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
             let gradientColors: [UIColor] = [
                 UIColor(rgb: 0xF27C30),
                 UIColor(rgb: 0xE36850),
+                UIColor(rgb: 0xda5d63),
                 UIColor(rgb: 0xD15078),
                 UIColor(rgb: 0xC14998),
                 UIColor(rgb: 0xB24CB5),
@@ -332,7 +333,7 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
-                UIColor(rgb: 0x54A3FF)
+                UIColor(rgb: 0x54bdff)
             ]
             
             i = 0

@@ -12,6 +12,7 @@ import StickerResources
 import AccountContext
 import AnimationCache
 import MultiAnimationRenderer
+import ShimmerEffect
 
 private func generateBubbleImage(foreground: UIColor, diameter: CGFloat, shadowBlur: CGFloat) -> UIImage? {
     return generateImage(CGSize(width: diameter + shadowBlur * 2.0, height: diameter + shadowBlur * 2.0), rotatedContext: { size, context in
@@ -48,6 +49,7 @@ protocol ReactionItemNode: ASDisplayNode {
 
 public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let context: AccountContext
+    let theme: PresentationTheme
     let item: ReactionItem
     private let loopIdle: Bool
     private let hasAppearAnimation: Bool
@@ -57,6 +59,7 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
     let selectionView: UIView
     
     private var animateInAnimationNode: AnimatedStickerNode?
+    private var staticAnimationPlaceholderView: UIImageView?
     private let staticAnimationNode: AnimatedStickerNode
     private var stillAnimationNode: AnimatedStickerNode?
     private var customContentsNode: ASDisplayNode?
@@ -83,8 +86,13 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         return self.staticAnimationNode.currentFrameImage
     }
     
+    var isAnimationLoaded: Bool {
+        return self.staticAnimationNode.currentFrameImage != nil
+    }
+    
     public init(context: AccountContext, theme: PresentationTheme, item: ReactionItem, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, loopIdle: Bool, hasAppearAnimation: Bool = true, useDirectRendering: Bool = false) {
         self.context = context
+        self.theme = theme
         self.item = item
         self.loopIdle = loopIdle
         self.hasAppearAnimation = hasAppearAnimation
@@ -361,6 +369,33 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
             if self.animationNode == nil {
                 self.didSetupStillAnimation = true
                 
+                let staticFile: TelegramMediaFile
+                if !self.hasAppearAnimation {
+                    staticFile = self.item.largeListAnimation
+                } else {
+                    staticFile = self.item.stillAnimation
+                }
+                
+                if self.staticAnimationPlaceholderView == nil, let immediateThumbnailData = staticFile.immediateThumbnailData {
+                    let staticAnimationPlaceholderView = UIImageView()
+                    self.view.addSubview(staticAnimationPlaceholderView)
+                    self.staticAnimationPlaceholderView = staticAnimationPlaceholderView
+                    
+                    if let image = generateStickerPlaceholderImage(data: immediateThumbnailData, size: animationDisplaySize, scale: min(2.0, UIScreenScale), imageSize: staticFile.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: self.theme.chat.inputPanel.primaryTextColor.withMultipliedAlpha(0.1)) {
+                        staticAnimationPlaceholderView.image = image
+                    }
+                }
+                
+                self.staticAnimationNode.started = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let staticAnimationPlaceholderView = strongSelf.staticAnimationPlaceholderView {
+                        strongSelf.staticAnimationPlaceholderView = nil
+                        staticAnimationPlaceholderView.removeFromSuperview()
+                    }
+                }
+                
                 self.staticAnimationNode.automaticallyLoadFirstFrame = true
                 if !self.hasAppearAnimation {
                     self.staticAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.largeListAnimation.resource, isVideo: self.item.largeListAnimation.isVideoEmoji || self.item.largeListAnimation.isVideoSticker || self.item.largeListAnimation.isStaticSticker || self.item.largeListAnimation.isStaticEmoji), width: Int(expandedAnimationFrame.width * 2.0), height: Int(expandedAnimationFrame.height * 2.0), playbackMode: .still(.start), mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.largeListAnimation.resource.id)))
@@ -372,6 +407,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                 self.staticAnimationNode.updateLayout(size: animationFrame.size)
                 self.staticAnimationNode.visibility = true
                 
+                if let staticAnimationPlaceholderView = self.staticAnimationPlaceholderView {
+                    staticAnimationPlaceholderView.center = animationFrame.center
+                    staticAnimationPlaceholderView.bounds = CGRect(origin: CGPoint(), size: animationFrame.size)
+                }
+                
                 if let animateInAnimationNode = self.animateInAnimationNode {
                     animateInAnimationNode.setup(source: AnimatedStickerResourceSource(account: self.context.account, resource: self.item.appearAnimation.resource, isVideo: self.item.appearAnimation.isVideoEmoji || self.item.appearAnimation.isVideoSticker || self.item.appearAnimation.isStaticSticker || self.item.appearAnimation.isStaticEmoji), width: Int(animationDisplaySize.width * 2.0), height: Int(animationDisplaySize.height * 2.0), playbackMode: .once, mode: .direct(cachePathPrefix: self.context.account.postbox.mediaBox.shortLivedResourceCachePathPrefix(self.item.appearAnimation.resource.id)))
                     animateInAnimationNode.position = animationFrame.center
@@ -382,6 +422,11 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
         } else {
             transition.updatePosition(node: self.staticAnimationNode, position: animationFrame.center, beginWithCurrentState: true)
             transition.updateTransformScale(node: self.staticAnimationNode, scale: animationFrame.size.width / self.staticAnimationNode.bounds.width, beginWithCurrentState: true)
+            
+            if let staticAnimationPlaceholderView = self.staticAnimationPlaceholderView {
+                transition.updatePosition(layer: staticAnimationPlaceholderView.layer, position: animationFrame.center)
+                transition.updateTransformScale(layer: staticAnimationPlaceholderView.layer, scale: animationFrame.size.width / self.staticAnimationNode.bounds.width)
+            }
             
             if let animateInAnimationNode = self.animateInAnimationNode {
                 transition.updatePosition(node: animateInAnimationNode, position: animationFrame.center, beginWithCurrentState: true)

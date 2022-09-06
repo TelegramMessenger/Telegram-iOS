@@ -1145,9 +1145,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                     var items: [ActionSheetItem] = []
                     let context = strongSelf.context
-                    //TODO:localize
-                    items.append(ActionSheetTextItem(title: "Do you want to clear your recent reaction emoji from suggestions?", parseMarkdown: true))
-                    items.append(ActionSheetButtonItem(title: presentationData.strings.Emoji_ClearRecent, color: .destructive, action: { [weak actionSheet] in
+                    items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
+                    items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
                         actionSheet?.dismissAnimated()
                         guard let strongSelf = self else {
                             return
@@ -1180,6 +1179,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             externalBackground: EmojiPagerContentComponent.ExternalBackground(
                 effectContainerView: self.backgroundNode.vibrancyEffectView?.contentView
             ),
+            externalExpansionView: self.view,
             useOpaqueTheme: false
         )
     }
@@ -1423,13 +1423,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         let expandedFrame = CGRect(origin: CGPoint(x: selfTargetRect.midX - expandedSize.width / 2.0, y: selfTargetRect.midY - expandedSize.height / 2.0), size: expandedSize)
         
-        let effectFrame: CGRect
+        var effectFrame: CGRect
         let incomingMessage: Bool = expandedFrame.midX < self.bounds.width / 2.0
         if self.didTriggerExpandedReaction {
             let expandFactor: CGFloat = 0.5
             effectFrame = expandedFrame.insetBy(dx: -expandedFrame.width * expandFactor, dy: -expandedFrame.height * expandFactor).offsetBy(dx: incomingMessage ? (expandedFrame.width - 50.0) : (-expandedFrame.width + 50.0), dy: 0.0)
         } else {
             effectFrame = expandedFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
+            if itemNode.item.isCustom {
+                effectFrame = effectFrame.insetBy(dx: -expandedSize.width, dy: -expandedSize.height)
+            }
         }
         
         let transition: ContainedViewLayoutTransition = .animated(duration: 0.2, curve: .linear)
@@ -1442,11 +1445,28 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let additionalAnimationNode: DefaultAnimatedStickerNodeImpl?
         var genericAnimationView: AnimationView?
         
-        let additionalAnimation: TelegramMediaFile?
+        var additionalAnimation: TelegramMediaFile?
         if self.didTriggerExpandedReaction {
             additionalAnimation = itemNode.item.largeApplicationAnimation
         } else {
             additionalAnimation = itemNode.item.applicationAnimation
+            
+            if additionalAnimation == nil && itemNode.item.isCustom {
+                outer: for attribute in itemNode.item.stillAnimation.attributes {
+                    if case let .CustomEmoji(_, alt, _) = attribute {
+                        if let availableReactions = self.availableReactions {
+                            for availableReaction in availableReactions.reactions {
+                                if availableReaction.value == .builtin(alt) {
+                                    additionalAnimation = availableReaction.aroundAnimation
+                                    break outer
+                                }
+                            }
+                        }
+                        
+                        break
+                    }
+                }
+            }
         }
         
         if let additionalAnimation = additionalAnimation {
@@ -1676,6 +1696,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     recognizer.state = .cancelled
                     return
                 }
+                if !itemNode.isAnimationLoaded {
+                    recognizer.state = .cancelled
+                    return
+                }
                 
                 self.highlightedReaction = itemNode.item.reaction
                 if #available(iOS 13.0, *) {
@@ -1871,6 +1895,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     public func reaction(at point: CGPoint) -> ReactionContextItem? {
         let itemNode = self.reactionItemNode(at: point)
         if let itemNode = itemNode as? ReactionNode {
+            if !itemNode.isAnimationLoaded {
+                return nil
+            }
             return .reaction(itemNode.item)
         } else if let _ = itemNode as? PremiumReactionsNode {
             return .premium

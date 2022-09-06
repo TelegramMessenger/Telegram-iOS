@@ -1581,6 +1581,7 @@ public final class EmojiPagerContentComponent: Component {
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
         public let externalBackground: ExternalBackground?
+        public let externalExpansionView: UIView?
         public let useOpaqueTheme: Bool
         
         public init(
@@ -1599,6 +1600,7 @@ public final class EmojiPagerContentComponent: Component {
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
             externalBackground: ExternalBackground?,
+            externalExpansionView: UIView?,
             useOpaqueTheme: Bool
         ) {
             self.performItemAction = performItemAction
@@ -1616,6 +1618,7 @@ public final class EmojiPagerContentComponent: Component {
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
             self.externalBackground = externalBackground
+            self.externalExpansionView = externalExpansionView
             self.useOpaqueTheme = useOpaqueTheme
         }
     }
@@ -2201,6 +2204,9 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
+        final class CloneItemLayer: SimpleLayer {
+        }
+        
         public final class ItemLayer: MultiAnimationRenderTarget {
             public struct Key: Hashable {
                 var groupId: AnyHashable
@@ -2244,6 +2250,22 @@ public final class EmojiPagerContentComponent: Component {
             }
             public private(set) var displayPlaceholder: Bool = false
             public let onUpdateDisplayPlaceholder: (Bool, Double) -> Void
+            
+            weak var cloneLayer: CloneItemLayer? {
+                didSet {
+                    if let cloneLayer = self.cloneLayer {
+                        cloneLayer.contents = self.contents
+                    }
+                }
+            }
+            
+            override public var contents: Any? {
+                didSet {
+                    if let cloneLayer = self.cloneLayer {
+                        cloneLayer.contents = self.contents
+                    }
+                }
+            }
         
             public init(
                 item: Item,
@@ -3374,6 +3396,7 @@ public final class EmojiPagerContentComponent: Component {
         
         private let longPressDuration: Double = 0.5
         private var longPressItem: EmojiPagerContentComponent.View.ItemLayer.Key?
+        private var currentLongPressLayer: CloneItemLayer?
         private var hapticFeedback: HapticFeedback?
         private var continuousHaptic: AnyObject?
         private var longPressTimer: SwiftSignalKit.Timer?
@@ -3402,9 +3425,23 @@ public final class EmojiPagerContentComponent: Component {
                     self.hapticFeedback = HapticFeedback()
                 }
                 
-                let _ = itemLayer
-                //let transition = Transition(animation: .curve(duration: longPressDuration, curve: .easeInOut))
-                //transition.setScale(layer: itemLayer, scale: 1.3)
+                if let externalExpansionView = self.component?.inputInteractionHolder.inputInteraction?.externalExpansionView {
+                    if let currentLongPressLayer = self.currentLongPressLayer {
+                        self.currentLongPressLayer = nil
+                        currentLongPressLayer.removeFromSuperlayer()
+                    }
+                    let currentLongPressLayer = CloneItemLayer()
+                    currentLongPressLayer.position = self.scrollView.layer.convert(itemLayer.position, to: externalExpansionView.layer)
+                    currentLongPressLayer.bounds = itemLayer.convert(itemLayer.bounds, to: externalExpansionView.layer)
+                    currentLongPressLayer.transform = itemLayer.transform
+                    externalExpansionView.layer.addSublayer(currentLongPressLayer)
+                    self.currentLongPressLayer = currentLongPressLayer
+                    itemLayer.cloneLayer = currentLongPressLayer
+                    
+                    itemLayer.isHidden = true
+                    let transition = Transition(animation: .curve(duration: longPressDuration, curve: .easeInOut))
+                    transition.setScale(layer: currentLongPressLayer, scale: 1.85)
+                }
                 
                 self.longPressTimer?.invalidate()
                 self.longPressTimer = SwiftSignalKit.Timer(timeout: longPressDuration, repeat: false, completion: { [weak self] in
@@ -3431,7 +3468,23 @@ public final class EmojiPagerContentComponent: Component {
                     if let itemLayer = self.visibleItemLayers[itemKey] {
                         let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
                         transition.setScale(layer: itemLayer, scale: 1.0)
+                        
+                        if let currentLongPressLayer = self.currentLongPressLayer {
+                            self.currentLongPressLayer = nil
+                            
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            transition.setScale(layer: currentLongPressLayer, scale: 1.0, completion: { [weak itemLayer, weak currentLongPressLayer] _ in
+                                itemLayer?.isHidden = false
+                                currentLongPressLayer?.removeFromSuperlayer()
+                            })
+                        }
+                    } else if let currentLongPressLayer = self.currentLongPressLayer {
+                        self.currentLongPressLayer = nil
+                        currentLongPressLayer.removeFromSuperlayer()
                     }
+                } else if let currentLongPressLayer = self.currentLongPressLayer {
+                    self.currentLongPressLayer = nil
+                    currentLongPressLayer.removeFromSuperlayer()
                 }
             case .ended:
                 self.longPressTimer?.invalidate()
@@ -3441,11 +3494,32 @@ public final class EmojiPagerContentComponent: Component {
                     self.longPressItem = nil
                     
                     if let component = self.component, let itemLayer = self.visibleItemLayers[itemKey] {
-                        component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, true)
+                        if let externalExpansionView = self.component?.inputInteractionHolder.inputInteraction?.externalExpansionView, let currentLongPressLayer = self.currentLongPressLayer {
+                            component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, externalExpansionView, currentLongPressLayer.frame, currentLongPressLayer, true)
+                        } else {
+                            component.inputInteractionHolder.inputInteraction?.performItemAction(itemKey.groupId, itemLayer.item, self, self.scrollView.convert(itemLayer.frame, to: self), itemLayer, true)
+                        }
                     } else {
                         if let itemLayer = self.visibleItemLayers[itemKey] {
                             let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
                             transition.setScale(layer: itemLayer, scale: 1.0)
+                            
+                            if let currentLongPressLayer = self.currentLongPressLayer {
+                                self.currentLongPressLayer = nil
+                                
+                                let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                                transition.setScale(layer: currentLongPressLayer, scale: 1.0, completion: { [weak itemLayer, weak currentLongPressLayer] _ in
+                                    itemLayer?.isHidden = false
+                                    currentLongPressLayer?.removeFromSuperlayer()
+                                })
+                            }
+                        } else if let currentLongPressLayer = self.currentLongPressLayer {
+                            self.currentLongPressLayer = nil
+                            
+                            let transition = Transition(animation: .curve(duration: 0.3, curve: .spring))
+                            transition.setScale(layer: currentLongPressLayer, scale: 1.0, completion: { [weak currentLongPressLayer] _ in
+                                currentLongPressLayer?.removeFromSuperlayer()
+                            })
                         }
                     }
                 }
@@ -4911,7 +4985,6 @@ public final class EmojiPagerContentComponent: Component {
                     itemGroups[groupIndex].items.append(resultItem)
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
-                    //TODO:localize
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: topStatusTitle?.uppercased(), subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
                 }
                 
@@ -5121,8 +5194,7 @@ public final class EmojiPagerContentComponent: Component {
                     maxRecentLineCount = 5
                 }
                 
-                //TODO:localize
-                let popularTitle = hasRecent ? "Recently Used" : "Popular"
+                let popularTitle = hasRecent ? strings.Chat_ReactionSection_Recent : strings.Chat_ReactionSection_Popular
                 
                 if let availableReactions = availableReactions {
                     for reactionItem in availableReactions.reactions {

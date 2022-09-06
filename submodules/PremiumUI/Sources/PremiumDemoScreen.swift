@@ -798,7 +798,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     context: component.context,
                                     position: .top,
                                     videoFile: configuration.videos["infinite_reactions"],
-                                    decoration: .badgeStars
+                                    decoration: .swirlStars
                                 )),
                                 title: strings.Premium_InfiniteReactions,
                                 text: strings.Premium_InfiniteReactionsInfo,
@@ -834,7 +834,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     context: component.context,
                                     position: .top,
                                     videoFile: configuration.videos["emoji_status"],
-                                    decoration: .swirlStars
+                                    decoration: .badgeStars
                                 )),
                                 title: strings.Premium_EmojiStatus,
                                 text: strings.Premium_EmojiStatusInfo,

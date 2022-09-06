@@ -1390,6 +1390,12 @@ private func findHigherResolutionFileForAdaptation(itemDirectoryPath: String, ba
 
 public final class AnimationCacheImpl: AnimationCache {
     private final class Impl {
+        private struct ItemKey: Hashable {
+            var id: String
+            var width: Int
+            var height: Int
+        }
+        
         private final class ItemContext {
             let subscribers = Bag<(AnimationCacheItemResult) -> Void>()
             let disposable = MetaDisposable()
@@ -1406,7 +1412,7 @@ public final class AnimationCacheImpl: AnimationCache {
         private let fetchQueues: [Queue]
         private var nextFetchQueueIndex: Int = 0
         
-        private var itemContexts: [String: ItemContext] = [:]
+        private var itemContexts: [ItemKey: ItemContext] = [:]
         
         init(queue: Queue, basePath: String, allocateTempFile: @escaping () -> String) {
             self.queue = queue
@@ -1437,14 +1443,15 @@ public final class AnimationCacheImpl: AnimationCache {
                 
                 return EmptyDisposable
             }
+            let key = ItemKey(id: sourceId, width: Int(size.width), height: Int(size.height))
             
             let itemContext: ItemContext
             var beginFetch = false
-            if let current = self.itemContexts[sourceId] {
+            if let current = self.itemContexts[key] {
                 itemContext = current
             } else {
                 itemContext = ItemContext()
-                self.itemContexts[sourceId] = itemContext
+                self.itemContexts[key] = itemContext
                 beginFetch = true
             }
             
@@ -1459,11 +1466,11 @@ public final class AnimationCacheImpl: AnimationCache {
                 let allocateTempFile = self.allocateTempFile
                 guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[fetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
                     queue.async {
-                        guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
+                        guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[key] else {
                             return
                         }
                         
-                        strongSelf.itemContexts.removeValue(forKey: sourceId)
+                        strongSelf.itemContexts.removeValue(forKey: key)
                         
                         guard let result = result else {
                             return
@@ -1503,13 +1510,13 @@ public final class AnimationCacheImpl: AnimationCache {
             
             return ActionDisposable { [weak self, weak itemContext] in
                 queue.async {
-                    guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
+                    guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[key] else {
                         return
                     }
                     itemContext.subscribers.remove(index)
                     if itemContext.subscribers.isEmpty {
                         itemContext.disposable.dispose()
-                        strongSelf.itemContexts.removeValue(forKey: sourceId)
+                        strongSelf.itemContexts.removeValue(forKey: key)
                     }
                 }
             }

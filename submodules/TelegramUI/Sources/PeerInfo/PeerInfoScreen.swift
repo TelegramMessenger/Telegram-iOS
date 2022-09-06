@@ -633,11 +633,9 @@ private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, p
     if let peer = data.peer as? TelegramUser, peer.isPremium {
         if peer.emojiStatus != nil {
             hasEmojiStatus = true
-            //TODO:localize
-            setStatusTitle = "Change Emoji Status"
+            setStatusTitle = presentationData.strings.PeerInfo_ChangeEmojiStatus
         } else {
-            //TODO:localize
-            setStatusTitle = "Set Emoji Status"
+            setStatusTitle = presentationData.strings.PeerInfo_SetEmojiStatus
         }
         displaySetStatus = true
     } else {
@@ -1301,8 +1299,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
                         switch allowedReactions {
                         case .all:
-                            //TODO:localize
-                            label = "All Reactions"
+                            label = presentationData.strings.PeerInfo_LabelAllReactions
                         case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
                         case let .limited(reactions):
@@ -1467,8 +1464,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
                                 switch allowedReactions {
                                 case .all:
-                                    //TODO:localize
-                                    label = "All Reactions"
+                                    label = presentationData.strings.PeerInfo_LabelAllReactions
                                 case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
                                 case let .limited(reactions):
@@ -1493,8 +1489,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             if let cachedData = data.cachedData as? CachedChannelData, case let .known(allowedReactions) = cachedData.allowedReactions {
                                 switch allowedReactions {
                                 case .all:
-                                    //TODO:localize
-                                    label = "All Reactions"
+                                    label = presentationData.strings.PeerInfo_LabelAllReactions
                                 case .empty:
                                     label = presentationData.strings.PeerInfo_ReactionsDisabled
                                 case let .limited(reactions):
@@ -1607,8 +1602,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     if let cachedData = data.cachedData as? CachedGroupData, case let .known(allowedReactions) = cachedData.allowedReactions {
                         switch allowedReactions {
                         case .all:
-                            //TODO:localize
-                            label = "All Reactions"
+                            label = presentationData.strings.PeerInfo_LabelAllReactions
                         case .empty:
                             label = presentationData.strings.PeerInfo_ReactionsDisabled
                         case let .limited(reactions):
@@ -3119,7 +3113,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
                 }
-                //TODO:localize
+                
                 let emojiStatusSelectionController = EmojiStatusSelectionController(
                     context: strongSelf.context,
                     mode: .statusSelection,

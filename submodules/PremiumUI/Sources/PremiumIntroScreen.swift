@@ -260,7 +260,7 @@ enum PremiumPerk: CaseIterable {
             case .animatedEmoji:
                 return "Premium/Perk/Emoji"
             case .emojiStatus:
-                return "Premium/Perk/Emoji"
+                return "Premium/Perk/Status"
         }
     }
 }
@@ -1261,6 +1261,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
             let gradientColors: [UIColor] = [
                 UIColor(rgb: 0xF27C30),
                 UIColor(rgb: 0xE36850),
+                UIColor(rgb: 0xda5d63),
                 UIColor(rgb: 0xD15078),
                 UIColor(rgb: 0xC14998),
                 UIColor(rgb: 0xB24CB5),
@@ -1270,7 +1271,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                 UIColor(rgb: 0x5A6EEE),
                 UIColor(rgb: 0x548DFF),
                 UIColor(rgb: 0x54A3FF),
-                UIColor(rgb: 0x54A3FF)
+                UIColor(rgb: 0x54bdff)
             ]
                         
             let accountContext = context.component.context
