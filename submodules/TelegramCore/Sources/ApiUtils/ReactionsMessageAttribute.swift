@@ -73,7 +73,7 @@ public func mergedMessageReactionsAndPeers(accountPeer: EnginePeer?, message: Me
                     recentPeers.append((reaction.value, accountPeer))
                 }
             }
-            if reaction.count > selfCount + 1 {
+            if reaction.count >= selfCount + 1 {
                 if let peer = message.peers[message.id.peerId] {
                     recentPeers.append((reaction.value, EnginePeer(peer)))
                 }
