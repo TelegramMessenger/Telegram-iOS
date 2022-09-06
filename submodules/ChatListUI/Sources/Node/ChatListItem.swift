@@ -1533,9 +1533,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
                                 currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                             } else if peer.isScam {
-                                currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                                currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                             } else if peer.isFake {
-                                currentCredibilityIconContent = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                                currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                             } else if peer.isVerified {
                                 currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
@@ -1549,9 +1549,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if case let .user(user) = peer, let emojiStatus = user.emojiStatus {
                         currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                     } else if peer.isScam {
-                        currentCredibilityIconContent = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                        currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                     } else if peer.isFake {
-                        currentCredibilityIconContent = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                        currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if peer.isVerified {
                         currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
@@ -1569,8 +1569,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     titleIconsWidth += 2.0
                 }
                 switch currentCredibilityIconContent {
-                case .fake, .scam:
-                    titleIconsWidth += 14.0
+                case let .text(_, string):
+                    let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                    let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                    titleIconsWidth += floor(stringRect.width) + 11.0
                 default:
                     titleIconsWidth += 8.0
                 }
