@@ -121,6 +121,19 @@ private final class ExpandItemView: UIView {
 }
 
 public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
+    private struct ItemLayout {
+        var itemSize: CGFloat
+        var visibleItemCount: Int
+        
+        init(
+            itemSize: CGFloat,
+            visibleItemCount: Int
+        ) {
+            self.itemSize = itemSize
+            self.visibleItemCount = visibleItemCount
+        }
+    }
+    
     private let context: AccountContext
     private let presentationData: PresentationData
     private let animationCache: AnimationCache
@@ -157,7 +170,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var continuousHaptic: Any?
     private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
     private var isLeftAligned: Bool = true
-    private var visibleItemCount: Int?
+    private var itemLayout: ItemLayout?
     
     private var customReactionSource: (view: UIView, rect: CGRect, layer: CALayer, item: ReactionItem)?
     
@@ -525,13 +538,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private func updateScrolling(transition: ContainedViewLayoutTransition) {
-        guard let visibleItemCount = self.visibleItemCount else {
+        guard let itemLayout = self.itemLayout else {
             return
         }
         
         let sideInset: CGFloat = 6.0
         let itemSpacing: CGFloat = 8.0
-        let itemSize: CGFloat = 36.0
+        let itemSize: CGFloat = itemLayout.itemSize
         
         let containerHeight: CGFloat = 46.0
         var contentHeight: CGFloat = containerHeight
@@ -571,13 +584,13 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         var topVisibleItems: Int
         if self.getEmojiContent != nil {
-            topVisibleItems = min(self.items.count, visibleItemCount)
+            topVisibleItems = min(self.items.count, itemLayout.visibleItemCount)
         } else {
             topVisibleItems = self.items.count
         }
         
         var loopIdle = false
-        for i in 0 ..< min(self.items.count, visibleItemCount) {
+        for i in 0 ..< min(self.items.count, itemLayout.visibleItemCount) {
             if let reaction = self.items[i].reaction {
                 switch reaction.rawValue {
                 case .builtin:
@@ -710,7 +723,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     }
                     
-                    if self.getEmojiContent != nil && i == visibleItemCount - 1 {
+                    if self.getEmojiContent != nil && i == itemLayout.visibleItemCount - 1 {
                         itemFrame.origin.x -= (1.0 - compressionFactor) * selectionItemFrame.width * 0.5
                         selectionItemFrame.origin.x -= (1.0 - compressionFactor) * selectionItemFrame.width * 0.5
                         itemNode.isUserInteractionEnabled = false
@@ -749,7 +762,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         itemNode.appear(animated: !self.context.sharedContext.currentPresentationData.with({ $0 }).reduceMotion)
                     }
                     
-                    if self.getEmojiContent != nil && i == visibleItemCount - 1 {
+                    if self.getEmojiContent != nil && i == itemLayout.visibleItemCount - 1 {
                         transition.updateSublayerTransformScale(node: itemNode, scale: 0.001 * (1.0 - compressionFactor) + normalItemScale * compressionFactor)
                         
                         let alphaFraction = min(compressionFactor, 0.2) / 0.2
@@ -816,7 +829,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         let externalSideInset: CGFloat = 4.0
         let sideInset: CGFloat = 6.0
         let itemSpacing: CGFloat = 8.0
-        let itemSize: CGFloat = 36.0
+        var itemSize: CGFloat = 36.0
         let verticalInset: CGFloat = 13.0
         let rowHeight: CGFloat = 30.0
         
@@ -828,6 +841,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             let totalItemSlotCount = self.items.count + 1
             
             var maxRowItemCount = Int(floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing) / (itemSize + itemSpacing)))
+            
+            if maxRowItemCount < 8 {
+                itemSize = floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing - 8 * itemSpacing) / 8.0)
+                maxRowItemCount = Int(floor((size.width - sideInset * 2.0 - externalSideInset * 2.0 - itemSpacing) / (itemSize + itemSpacing)))
+            }
+            
             maxRowItemCount = min(maxRowItemCount, 8)
             itemCount = min(totalItemSlotCount, maxRowItemCount)
             if self.isExpanded {
@@ -860,7 +879,11 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         
         let (actualBackgroundFrame, visualBackgroundFrame, isLeftAligned, cloudSourcePoint) = self.calculateBackgroundFrame(containerSize: CGSize(width: size.width, height: size.height), insets: backgroundInsets, anchorRect: anchorRect, contentSize: CGSize(width: visibleContentWidth, height: contentHeight))
         self.isLeftAligned = isLeftAligned
-        self.visibleItemCount = itemCount
+        
+        self.itemLayout = ItemLayout(
+            itemSize: itemSize,
+            visibleItemCount: itemCount
+        )
         
         var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? 46.0 : 0.0), size: actualBackgroundFrame.size)
         scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
