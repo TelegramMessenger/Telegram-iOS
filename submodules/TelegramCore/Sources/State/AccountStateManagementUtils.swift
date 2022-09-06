@@ -1629,6 +1629,15 @@ func extractEmojiFileIds(message: StoreMessage, fileIds: inout Set<Int64>) {
                     break
                 }
             }
+        } else if let attribute = attribute as? ReactionsMessageAttribute {
+            for reaction in attribute.reactions {
+                switch reaction.value {
+                case let .custom(fileId):
+                    fileIds.insert(fileId)
+                default:
+                    break
+                }
+            }
         }
     }
 }
@@ -1648,10 +1657,22 @@ private func messagesFromOperations(state: AccountMutableState) -> [StoreMessage
     return messages
 }
 
+private func reactionsFromState(_ state: AccountMutableState) -> [MessageReaction.Reaction] {
+    var result: [MessageReaction.Reaction] = []
+    for operation in state.operations {
+        if case let .UpdateMessageReactions(_, reactions, _) = operation {
+            for reaction in ReactionsMessageAttribute(apiReactions: reactions).reactions {
+                result.append(reaction.value)
+            }
+        }
+    }
+    return result
+}
+
 private func resolveAssociatedMessages(postbox: Postbox, network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     let missingMessageIds = state.referencedMessageIds.subtracting(state.storedMessages)
     if missingMessageIds.isEmpty {
-        return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: messagesFromOperations(state: state), result: state)
+        return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: messagesFromOperations(state: state), reactions: reactionsFromState(state), result: state)
     } else {
         var missingPeers = false
         let _ = missingPeers
@@ -1713,7 +1734,7 @@ private func resolveAssociatedMessages(postbox: Postbox, network: Network, state
             return updatedState
         }
         |> mapToSignal { updatedState -> Signal<AccountMutableState, NoError> in
-            return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: messagesFromOperations(state: updatedState), result: updatedState)
+            return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: messagesFromOperations(state: updatedState), reactions: reactionsFromState(updatedState), result: updatedState)
         }
     }
 }
