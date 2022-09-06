@@ -620,6 +620,14 @@ public final class EmojiStatusSelectionController: ViewController {
                 transition = Transition(animation: .curve(duration: 0.4, curve: .spring)).withUserData(contentAnimation)
             }
             
+            var componentWidth = layout.size.width - sideInset * 2.0
+            let nativeItemSize: CGFloat = 40.0
+            let minSpacing: CGFloat = 9.0
+            let itemsPerRow = Int((componentWidth + minSpacing) / (nativeItemSize + minSpacing))
+            if itemsPerRow > 8 {
+                componentWidth = min(componentWidth, 480.0)
+            }
+            
             let componentSize = self.componentHost.update(
                 transition: transition,
                 component: AnyComponent(EmojiStatusSelectionComponent(
@@ -631,7 +639,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     separatorColor: separatorColor
                 )),
                 environment: {},
-                containerSize: CGSize(width: layout.size.width - sideInset * 2.0, height: min(308.0, layout.size.height))
+                containerSize: CGSize(width: componentWidth, height: min(308.0, layout.size.height))
             )
             if let componentView = self.componentHost.view {
                 var animateIn = false
@@ -643,7 +651,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     componentView.layer.cornerRadius = 24.0
                 }
                 
-                let sourceOrigin: CGPoint
+                var sourceOrigin: CGPoint
                 if let sourceView = self.sourceView {
                     let sourceRect = sourceView.convert(sourceView.bounds, to: self.view)
                     sourceOrigin = CGPoint(x: sourceRect.midX, y: sourceRect.maxY)
@@ -654,7 +662,11 @@ public final class EmojiStatusSelectionController: ViewController {
                     sourceOrigin = CGPoint(x: layout.size.width / 2.0, y: floor(layout.size.height / 2.0 - componentSize.height))
                 }
                 
-                let componentFrame = CGRect(origin: CGPoint(x: sideInset, y: sourceOrigin.y + 5.0), size: componentSize)
+                if sourceOrigin.y + 5.0 + componentSize.height > layout.size.height - layout.insets(options: []).bottom {
+                    sourceOrigin.y = layout.size.height - layout.insets(options: []).bottom - componentSize.height - 5.0
+                }
+                
+                let componentFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - componentSize.width) / 2.0), y: sourceOrigin.y + 5.0), size: componentSize)
                 
                 if self.componentShadowLayer.bounds.size != componentFrame.size {
                     let componentShadowPath = UIBezierPath(roundedRect: CGRect(origin: CGPoint(), size: componentFrame.size), cornerRadius: 24.0).cgPath

@@ -2346,11 +2346,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor)
                 emojiExpandedStatusContent = .verified(fillColor: UIColor(rgb: 0xffffff, alpha: 0.75), foregroundColor: .clear)
             case .fake:
-                emojiRegularStatusContent = .fake(color: presentationData.theme.chat.message.incoming.scamColor)
-                emojiExpandedStatusContent = .fake(color: presentationData.theme.chat.message.incoming.scamColor)
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
+                emojiExpandedStatusContent = emojiRegularStatusContent
             case .scam:
-                emojiRegularStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
-                emojiExpandedStatusContent = .scam(color: presentationData.theme.chat.message.incoming.scamColor)
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
+                emojiExpandedStatusContent = emojiRegularStatusContent
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus
                 emojiRegularStatusContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 80.0, height: 80.0), placeholderColor: presentationData.theme.list.mediaPlaceholderColor, themeColor: presentationData.theme.list.itemAccentColor, loopMode: .forever)
