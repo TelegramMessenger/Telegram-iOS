@@ -1107,7 +1107,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 }
                 navigationController.setViewControllers(controllers, animated: true)
                 
-                Queue.mainQueue().after(0.1, {
+                Queue.mainQueue().after(0.5, {
                     navigationController.presentOverlay(controller: UndoOverlayController(presentationData: presentationData, content: .emoji(name: "IntroLetter", text: presentationData.strings.Login_EmailChanged), elevatedLayout: false, animateInAsReplacement: false, action: { _ in
                         return false
                     }))

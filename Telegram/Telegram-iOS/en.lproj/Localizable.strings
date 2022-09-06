@@ -8040,3 +8040,9 @@ Sorry for the inconvenience.";
 "Login.CancelEmailVerification" = "Do you want to stop the email verification process?";
 "Login.CancelEmailVerificationStop" = "Stop";
 "Login.CancelEmailVerificationContinue" = "Continue";
+
+"Premium.InfiniteReactions" = "Infinite Reactions";
+"Premium.InfiniteReactionsInfo" = "React with thousands of emoji — with multiple reactions per message.";
+
+"Premium.EmojiStatus" = "Emoji Status";
+"Premium.EmojiStatusInfo" = "Add any of thousands emojis next to your name to display current activity.";

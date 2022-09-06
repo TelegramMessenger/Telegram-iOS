@@ -10,6 +10,8 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         return self.displayNode as! AuthorizationSequencePasswordEntryControllerNode
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private let presentationData: PresentationData
     
     var loginWithPassword: ((String) -> Void)?
@@ -33,12 +35,7 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -60,8 +57,6 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         self.navigationBar?.backPressed = {
             back()
         }
-        
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -97,6 +92,19 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
         self.controllerNode.activateInput()
     }
     
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
     func updateData(hint: String, suggestReset: Bool) {
         if self.hint != hint || self.suggestReset != suggestReset {
             self.hint = hint
@@ -109,12 +117,20 @@ final class AuthorizationSequencePasswordEntryController: ViewController {
     
     func passwordIsInvalid() {
         if self.isNodeLoaded {
+            self.hapticFeedback.error()
             self.controllerNode.passwordIsInvalid()
         }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }

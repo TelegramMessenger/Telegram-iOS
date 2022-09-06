@@ -54,7 +54,7 @@ public enum PremiumSource: Equatable {
             case .stickers:
                 return "premium_stickers"
             case .reactions:
-                return "unique_reactions"
+                return "infinite_reactions"
             case .ads:
                 return "no_ads"
             case .upload:
@@ -110,6 +110,7 @@ enum PremiumPerk: CaseIterable {
     case animatedUserpics
     case appIcons
     case animatedEmoji
+    case emojiStatus
     
     static var allCases: [PremiumPerk] {
         return [
@@ -124,7 +125,8 @@ enum PremiumPerk: CaseIterable {
             .profileBadge,
             .animatedUserpics,
             .appIcons,
-            .animatedEmoji
+            .animatedEmoji,
+            .emojiStatus
         ]
     }
     
@@ -151,7 +153,7 @@ enum PremiumPerk: CaseIterable {
             case .noAds:
                 return "no_ads"
             case .uniqueReactions:
-                return "unique_reactions"
+                return "infinite_reactions"
             case .premiumStickers:
                 return "premium_stickers"
             case .advancedChatManagement:
@@ -164,6 +166,8 @@ enum PremiumPerk: CaseIterable {
                 return "app_icons"
             case .animatedEmoji:
                 return "animated_emoji"
+            case .emojiStatus:
+                return "emoji_status"
         }
     }
     
@@ -180,7 +184,7 @@ enum PremiumPerk: CaseIterable {
             case .noAds:
                 return strings.Premium_NoAds
             case .uniqueReactions:
-                return strings.Premium_Reactions
+                return strings.Premium_InfiniteReactions
             case .premiumStickers:
                 return strings.Premium_Stickers
             case .advancedChatManagement:
@@ -193,6 +197,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AppIcon
             case .animatedEmoji:
                 return strings.Premium_AnimatedEmoji
+            case .emojiStatus:
+                return strings.Premium_EmojiStatus
         }
     }
     
@@ -209,7 +215,7 @@ enum PremiumPerk: CaseIterable {
             case .noAds:
                 return strings.Premium_NoAdsInfo
             case .uniqueReactions:
-                return strings.Premium_ReactionsInfo
+                return strings.Premium_InfiniteReactionsInfo
             case .premiumStickers:
                 return strings.Premium_StickersInfo
             case .advancedChatManagement:
@@ -222,6 +228,8 @@ enum PremiumPerk: CaseIterable {
                 return strings.Premium_AppIconInfo
             case .animatedEmoji:
                 return strings.Premium_AnimatedEmojiInfo
+            case .emojiStatus:
+                return strings.Premium_EmojiStatusInfo
         }
     }
     
@@ -251,6 +259,8 @@ enum PremiumPerk: CaseIterable {
                 return "Premium/Perk/AppIcon"
             case .animatedEmoji:
                 return "Premium/Perk/Emoji"
+            case .emojiStatus:
+                return "Premium/Perk/Emoji"
         }
     }
 }
@@ -263,6 +273,7 @@ struct PremiumIntroConfiguration {
             .fasterDownload,
             .voiceToText,
             .noAds,
+            .emojiStatus,
             .uniqueReactions,
             .premiumStickers,
             .animatedEmoji,
@@ -1445,6 +1456,8 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .appIcons
                             case .animatedEmoji:
                                 demoSubject = .animatedEmoji
+                            case .emojiStatus:
+                                demoSubject = .emojiStatus
                             }
                             
                             let controller = PremiumDemoScreen(

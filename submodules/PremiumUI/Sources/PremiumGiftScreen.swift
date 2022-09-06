@@ -397,6 +397,8 @@ private final class PremiumGiftScreenContentComponent: CombinedComponent {
                             demoSubject = .appIcons
                         case .animatedEmoji:
                             demoSubject = .animatedEmoji
+                        case .emojiStatus:
+                            demoSubject = .emojiStatus
                         }
                         
                         let controller = PremiumDemoScreen(
