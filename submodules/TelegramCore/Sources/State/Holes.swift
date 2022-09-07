@@ -43,11 +43,17 @@ enum FetchMessageHistoryHoleSource {
     }
 }
 
-func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, messages: [StoreMessage], result: T) -> Signal<T, NoError> {
+func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, messages: [StoreMessage], reactions: [MessageReaction.Reaction], result: T) -> Signal<T, NoError> {
     var fileIds = Set<Int64>()
     
     for message in messages {
         extractEmojiFileIds(message: message, fileIds: &fileIds)
+    }
+    
+    for reaction in reactions {
+        if case let .custom(fileId) = reaction {
+            fileIds.insert(fileId)
+        }
     }
     
     if fileIds.isEmpty {
@@ -111,7 +117,7 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
         referencedIds.subtract(transaction.filterStoredMessageIds(referencedIds))
         
         if referencedIds.isEmpty {
-            return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, result: Void())
+            return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, reactions: [], result: Void())
             |> mapToSignal { _ -> Signal<T, NoError> in
                 return postbox.transaction { transaction -> T in
                     return f(transaction, [], [])
@@ -174,7 +180,7 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
                     }
                 }
                 
-                return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, result: Void())
+                return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages + additionalMessages, reactions: [], result: Void())
                 |> mapToSignal { _ -> Signal<T, NoError> in
                     return postbox.transaction { transaction -> T in
                         return f(transaction, additionalPeers, additionalMessages)

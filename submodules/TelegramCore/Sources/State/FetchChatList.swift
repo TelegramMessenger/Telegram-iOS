@@ -390,7 +390,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         folderSummaries: folderSummaries,
                         peerGroupIds: peerGroupIds
                     )
-                    return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, result: result)
+                    return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, reactions: [], result: result)
                 }
             }
         }

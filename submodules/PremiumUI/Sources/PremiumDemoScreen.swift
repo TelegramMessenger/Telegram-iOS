@@ -712,7 +712,7 @@ private final class DemoSheetContent: CombinedComponent {
                 isStandalone = true
             }
             
-            if let reactions = state.reactions, let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
+            if let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
@@ -794,15 +794,14 @@ private final class DemoSheetContent: CombinedComponent {
                         id: PremiumDemoScreen.Subject.uniqueReactions,
                         component: AnyComponent(
                             PageComponent(
-                                content: AnyComponent(
-                                    ReactionsCarouselComponent(
-                                        context: component.context,
-                                        theme: environment.theme,
-                                        reactions: reactions
-                                    )
-                                ),
-                                title: isStandalone ? strings.Premium_ReactionsStandalone : strings.Premium_Reactions,
-                                text: isStandalone ? strings.Premium_ReactionsStandaloneInfo : strings.Premium_ReactionsInfo,
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["infinite_reactions"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_InfiniteReactions,
+                                text: strings.Premium_InfiniteReactionsInfo,
                                 textColor: textColor
                             )
                         )
@@ -821,6 +820,24 @@ private final class DemoSheetContent: CombinedComponent {
                                 ),
                                 title: strings.Premium_Stickers,
                                 text: strings.Premium_StickersInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.emojiStatus] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.emojiStatus,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["emoji_status"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_EmojiStatus,
+                                text: strings.Premium_EmojiStatusInfo,
                                 textColor: textColor
                             )
                         )
@@ -1171,6 +1188,7 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case animatedUserpics
         case appIcons
         case animatedEmoji
+        case emojiStatus
     }
     
     public enum Source: Equatable {

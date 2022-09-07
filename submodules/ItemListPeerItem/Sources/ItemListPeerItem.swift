@@ -642,9 +642,9 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             if case .threatSelfAsSaved = item.aliasHandling, item.peer.id == item.context.account.peerId {
             } else {
                 if item.peer.isScam {
-                    credibilityIcon = .scam(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                    credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                 } else if item.peer.isFake {
-                    credibilityIcon = .fake(color: item.presentationData.theme.chat.message.incoming.scamColor)
+                    credibilityIcon = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                 } else if case let .user(user) = item.peer, let emojiStatus = user.emojiStatus {
                     credibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                 } else if item.peer.isVerified {
@@ -658,8 +658,10 @@ public class ItemListPeerItemNode: ItemListRevealOptionsItemNode, ItemListItemNo
             if let credibilityIcon = credibilityIcon {
                 titleIconsWidth += 4.0
                 switch credibilityIcon {
-                case .scam, .fake:
-                    titleIconsWidth += 30.0
+                case let .text(_, string):
+                    let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                    let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                    titleIconsWidth += floor(stringRect.width) + 11.0
                 default:
                     titleIconsWidth += 16.0
                 }

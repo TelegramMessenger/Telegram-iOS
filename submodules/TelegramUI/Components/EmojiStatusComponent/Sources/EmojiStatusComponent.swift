@@ -41,8 +41,7 @@ public final class EmojiStatusComponent: Component {
         case none
         case premium(color: UIColor)
         case verified(fillColor: UIColor, foregroundColor: UIColor)
-        case fake(color: UIColor)
-        case scam(color: UIColor)
+        case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
     }
     
@@ -239,10 +238,27 @@ public final class EmojiStatusComponent: Component {
                     } else {
                         iconImage = nil
                     }
-                case .fake:
-                    iconImage = nil
-                case .scam:
-                    iconImage = nil
+                case let .text(color, string):
+                    let titleString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: color, paragraphAlignment: .center)
+                    let stringRect = titleString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                    
+                    iconImage = generateImage(CGSize(width: floor(stringRect.width) + 11.0, height: 16.0), contextGenerator: { size, context in
+                        let bounds = CGRect(origin: CGPoint(), size: size)
+                        context.clear(bounds)
+                        
+                        context.setFillColor(color.cgColor)
+                        context.setStrokeColor(color.cgColor)
+                        context.setLineWidth(1.0)
+                        
+                        context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 0.5, dy: 0.5), cornerRadius: 2.0).cgPath)
+                        context.strokePath()
+                        
+                        let titlePath = CGMutablePath()
+                        titlePath.addRect(bounds.offsetBy(dx: 0.0, dy: -2.0 + UIScreenPixel))
+                        let titleFramesetter = CTFramesetterCreateWithAttributedString(titleString as CFAttributedString)
+                        let titleFrame = CTFramesetterCreateFrame(titleFramesetter, CFRangeMake(0, titleString.length), titlePath, nil)
+                        CTFrameDraw(titleFrame, context)
+                    })
                 case let .animation(animationContent, size, placeholderColor, themeColor, loopMode):
                     iconImage = nil
                     emojiFileId = animationContent.fileId.id

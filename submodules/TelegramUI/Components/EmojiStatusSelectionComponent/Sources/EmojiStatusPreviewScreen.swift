@@ -488,7 +488,7 @@ private final class TimeSelectionControlComponent: Component {
                             return
                         }
                         
-                        let timestamp = Int32(strongSelf.pickerView.date.timeIntervalSince1970)
+                        let timestamp = Int32(strongSelf.pickerView.date.timeIntervalSince1970 - Double(TimeZone.current.secondsFromGMT()))
                         component.apply(timestamp)
                     }
                 )),

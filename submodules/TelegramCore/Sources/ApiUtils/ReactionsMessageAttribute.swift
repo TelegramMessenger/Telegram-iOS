@@ -66,12 +66,17 @@ public func mergedMessageReactionsAndPeers(accountPeer: EnginePeer?, message: Me
     
     if message.id.peerId.namespace == Namespaces.Peer.CloudUser {
         for reaction in attribute.reactions {
+            var selfCount: Int32 = 0
             if reaction.isSelected {
+                selfCount += 1
                 if let accountPeer = accountPeer {
                     recentPeers.append((reaction.value, accountPeer))
                 }
-            } else if let peer = message.peers[message.id.peerId] {
-                recentPeers.append((reaction.value, EnginePeer(peer)))
+            }
+            if reaction.count >= selfCount + 1 {
+                if let peer = message.peers[message.id.peerId] {
+                    recentPeers.append((reaction.value, EnginePeer(peer)))
+                }
             }
         }
     } else {

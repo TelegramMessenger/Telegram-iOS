@@ -451,6 +451,16 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     let canReadHistory = Promise<Bool>()
     private var canReadHistoryValue: Bool = false
     private var canReadHistoryDisposable: Disposable?
+    
+    var suspendReadingReactions: Bool = false {
+        didSet {
+            if self.suspendReadingReactions != oldValue {
+                if !self.suspendReadingReactions {
+                    self.attemptReadingReactions()
+                }
+            }
+        }
+    }
 
     private var messageIdsScheduledForMarkAsSeen = Set<MessageId>()
     private var messageIdsWithReactionsScheduledForMarkAsSeen = Set<MessageId>()
@@ -728,7 +738,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             guard let strongSelf = self else {
                 return
             }
-            if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
+            if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory {
                 strongSelf.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
             } else {
                 strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.formUnion(messageIds)
@@ -1365,20 +1375,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.canReadHistoryValue = value
                     strongSelf.updateReadHistoryActions()
 
-                    if strongSelf.canReadHistoryValue && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
+                    if strongSelf.canReadHistoryValue && !strongSelf.suspendReadingReactions && !strongSelf.messageIdsScheduledForMarkAsSeen.isEmpty {
                         let messageIds = strongSelf.messageIdsScheduledForMarkAsSeen
                         strongSelf.messageIdsScheduledForMarkAsSeen.removeAll()
                         context?.account.viewTracker.updateMarkMentionsSeenForMessageIds(messageIds: messageIds)
                     }
                     
-                    if strongSelf.canReadHistoryValue && !strongSelf.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
-                        let messageIds = strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen
-                        
-                        let _ = strongSelf.displayUnseenReactionAnimations(messageIds: Array(messageIds))
-                        
-                        strongSelf.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
-                        context?.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
-                    }
+                    strongSelf.attemptReadingReactions()
                 }
             }
         })
@@ -1596,6 +1599,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.preloadAdPeerDisposable.dispose()
         self.refreshDisplayedItemRangeTimer?.invalidate()
         self.genericReactionEffectDisposable?.dispose()
+    }
+    
+    private func attemptReadingReactions() {
+        if self.canReadHistoryValue && !self.suspendReadingReactions && !self.context.sharedContext.immediateExperimentalUISettings.skipReadHistory && !self.messageIdsWithReactionsScheduledForMarkAsSeen.isEmpty {
+            let messageIds = self.messageIdsWithReactionsScheduledForMarkAsSeen
+            
+            let _ = self.displayUnseenReactionAnimations(messageIds: Array(messageIds))
+            
+            self.messageIdsWithReactionsScheduledForMarkAsSeen.removeAll()
+            self.context.account.viewTracker.updateMarkReactionsSeenForMessageIds(messageIds: messageIds)
+        }
     }
     
     func takeGenericReactionEffect() -> String? {
@@ -2754,32 +2768,20 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             
             visibleNewIncomingReactionMessageIds.append(item.content.firstMessage.id)
             
-            if let availableReactions = item.associatedData.availableReactions, let targetView = itemNode.targetReactionView(value: updatedReaction) {
-                for reaction in availableReactions.reactions {
-                    guard let centerAnimation = reaction.centerAnimation else {
-                        continue
-                    }
-                    guard let aroundAnimation = reaction.aroundAnimation else {
-                        continue
-                    }
-                    
-                    if reaction.value == updatedReaction {
-                        let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
-                        
-                        chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                        
-                        var avatarPeers: [EnginePeer] = []
-                        if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updateReactionPeer = updateReactionPeer {
-                            avatarPeers = [updateReactionPeer]
+            var reactionItem: ReactionItem?
+            
+            switch updatedReaction {
+            case .builtin:
+                if let availableReactions = item.associatedData.availableReactions {
+                    for reaction in availableReactions.reactions {
+                        guard let centerAnimation = reaction.centerAnimation else {
+                            continue
                         }
-                        
-                        chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                        standaloneReactionAnimation.frame = chatDisplayNode.bounds
-                        standaloneReactionAnimation.animateReactionSelection(
-                            context: self.context,
-                            theme: item.presentationData.theme.theme,
-                            animationCache: self.controllerInteraction.presentationContext.animationCache,
-                            reaction: ReactionItem(
+                        guard let aroundAnimation = reaction.aroundAnimation else {
+                            continue
+                        }
+                        if reaction.value == updatedReaction {
+                            reactionItem = ReactionItem(
                                 reaction: ReactionItem.Reaction(rawValue: reaction.value),
                                 appearAnimation: reaction.appearAnimation,
                                 stillAnimation: reaction.selectAnimation,
@@ -2788,25 +2790,59 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 applicationAnimation: aroundAnimation,
                                 largeApplicationAnimation: reaction.effectAnimation,
                                 isCustom: false
-                            ),
-                            avatarPeers: avatarPeers,
-                            playHaptic: true,
-                            isLarge: updatedReactionIsLarge,
-                            targetView: targetView,
-                            addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
-                                guard let strongSelf = self, let chatDisplayNode = strongSelf.controllerInteraction.chatControllerNode() as? ChatControllerNode else {
-                                    return
-                                }
-                                chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
-                                standaloneReactionAnimation.frame = chatDisplayNode.bounds
-                                chatDisplayNode.addSubnode(standaloneReactionAnimation)
-                            },
-                            completion: { [weak standaloneReactionAnimation] in
-                                standaloneReactionAnimation?.removeFromSupernode()
-                            }
-                        )
+                            )
+                            break
+                        }
                     }
                 }
+            case let .custom(fileId):
+                if let itemFile = item.message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                    reactionItem = ReactionItem(
+                        reaction: ReactionItem.Reaction(rawValue: updatedReaction),
+                        appearAnimation: itemFile,
+                        stillAnimation: itemFile,
+                        listAnimation: itemFile,
+                        largeListAnimation: itemFile,
+                        applicationAnimation: nil,
+                        largeApplicationAnimation: nil,
+                        isCustom: true
+                    )
+                }
+            }
+            
+            if let reactionItem = reactionItem, let targetView = itemNode.targetReactionView(value: updatedReaction) {
+                let standaloneReactionAnimation = StandaloneReactionAnimation(genericReactionEffect: self.genericReactionEffect)
+                
+                chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                
+                var avatarPeers: [EnginePeer] = []
+                if item.message.id.peerId.namespace != Namespaces.Peer.CloudUser, let updateReactionPeer = updateReactionPeer {
+                    avatarPeers = [updateReactionPeer]
+                }
+                
+                chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                standaloneReactionAnimation.frame = chatDisplayNode.bounds
+                standaloneReactionAnimation.animateReactionSelection(
+                    context: self.context,
+                    theme: item.presentationData.theme.theme,
+                    animationCache: self.controllerInteraction.presentationContext.animationCache,
+                    reaction: reactionItem,
+                    avatarPeers: avatarPeers,
+                    playHaptic: true,
+                    isLarge: updatedReactionIsLarge,
+                    targetView: targetView,
+                    addStandaloneReactionAnimation: { [weak self] standaloneReactionAnimation in
+                        guard let strongSelf = self, let chatDisplayNode = strongSelf.controllerInteraction.chatControllerNode() as? ChatControllerNode else {
+                            return
+                        }
+                        chatDisplayNode.messageTransitionNode.addMessageStandaloneReactionAnimation(messageId: item.message.id, standaloneReactionAnimation: standaloneReactionAnimation)
+                        standaloneReactionAnimation.frame = chatDisplayNode.bounds
+                        chatDisplayNode.addSubnode(standaloneReactionAnimation)
+                    },
+                    completion: { [weak standaloneReactionAnimation] in
+                        standaloneReactionAnimation?.removeFromSupernode()
+                    }
+                )
             }
         }
         return visibleNewIncomingReactionMessageIds

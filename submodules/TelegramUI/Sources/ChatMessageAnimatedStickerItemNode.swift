@@ -555,7 +555,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
             }
             
-            if item.message.text.count == 1, item.message.associatedMedia.isEmpty && emojiFile != nil {
+            if item.message.text.count == 1, (item.message.textEntitiesAttribute?.entities ?? []).isEmpty && emojiFile != nil {
                 emojiString = nil
             } else if emojiString != nil {
                 emojiFile = nil
