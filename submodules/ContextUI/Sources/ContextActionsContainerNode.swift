@@ -473,6 +473,33 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         })
     }
     
+    func animateTransitionInside(other: InnerTextSelectionTipContainerNode) {
+        let nodes: [ASDisplayNode] = [
+            self.textNode.textNode,
+            self.iconNode,
+            self.placeholderNode
+        ]
+        
+        for node in nodes {
+            other.addSubnode(node)
+            node.layer.animateAlpha(from: node.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak node] _ in
+                node?.removeFromSupernode()
+            })
+        }
+    }
+    
+    func animateContentIn() {
+        let nodes: [ASDisplayNode] = [
+            self.textNode.textNode,
+            self.iconNode,
+            self.placeholderNode
+        ]
+        
+        for node in nodes {
+            node.layer.animateAlpha(from: 0.0, to: node.alpha, duration: 0.2)
+        }
+    }
+    
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         switch widthClass {
         case .compact:

@@ -1595,7 +1595,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         
                         if customReactionEmojiPacks.count == 1, let firstCustomEmojiReaction = firstCustomEmojiReaction {
                             tip = .animatedEmoji(
-                                text: presentationData.strings.ChatContextMenu_EmojiSetSingle(customReactionEmojiPacks[0].title).string,
+                                text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(customReactionEmojiPacks[0].title).string,
                                 arguments: TextNodeWithEntities.Arguments(
                                     context: context,
                                     cache: controllerInteraction.presentationContext.animationCache,
@@ -1609,7 +1609,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 }
                             )
                         } else if customReactionEmojiPacks.count > 1 {
-                            tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(customReactionEmojiPacks.count)), arguments: nil, file: nil, action: {
+                            tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_ReactionEmojiSet(Int32(customReactionEmojiPacks.count)), arguments: nil, file: nil, action: {
                                 (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
                             })
                         }

@@ -14,15 +14,18 @@ import LocalizedPeerData
 public final class EntityKeyboardChildEnvironment: Equatable {
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let isContentInFocus: Bool
     public let getContentActiveItemUpdated: (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        isContentInFocus: Bool,
         getContentActiveItemUpdated: @escaping (AnyHashable) -> ActionSlot<(AnyHashable, AnyHashable?, Transition)>?
     ) {
         self.theme = theme
         self.strings = strings
+        self.isContentInFocus = isContentInFocus
         self.getContentActiveItemUpdated = getContentActiveItemUpdated
     }
     
@@ -31,6 +34,9 @@ public final class EntityKeyboardChildEnvironment: Equatable {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.isContentInFocus != rhs.isContentInFocus {
             return false
         }
         
@@ -81,6 +87,7 @@ public final class EntityKeyboardComponent: Component {
     
     public let theme: PresentationTheme
     public let strings: PresentationStrings
+    public let isContentInFocus: Bool
     public let containerInsets: UIEdgeInsets
     public let topPanelInsets: UIEdgeInsets
     public let emojiContent: EmojiPagerContentComponent
@@ -104,6 +111,7 @@ public final class EntityKeyboardComponent: Component {
     public init(
         theme: PresentationTheme,
         strings: PresentationStrings,
+        isContentInFocus: Bool,
         containerInsets: UIEdgeInsets,
         topPanelInsets: UIEdgeInsets,
         emojiContent: EmojiPagerContentComponent,
@@ -126,6 +134,7 @@ public final class EntityKeyboardComponent: Component {
     ) {
         self.theme = theme
         self.strings = strings
+        self.isContentInFocus = isContentInFocus
         self.containerInsets = containerInsets
         self.topPanelInsets = topPanelInsets
         self.emojiContent = emojiContent
@@ -152,6 +161,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.strings !== rhs.strings {
+            return false
+        }
+        if lhs.isContentInFocus != rhs.isContentInFocus {
             return false
         }
         if lhs.containerInsets != rhs.containerInsets {
@@ -620,6 +632,7 @@ public final class EntityKeyboardComponent: Component {
                     EntityKeyboardChildEnvironment(
                         theme: component.theme,
                         strings: component.strings,
+                        isContentInFocus: component.isContentInFocus,
                         getContentActiveItemUpdated: { id in
                             if id == AnyHashable("gifs") {
                                 return gifsContentItemIdUpdated

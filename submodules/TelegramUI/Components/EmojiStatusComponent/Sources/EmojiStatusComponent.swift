@@ -341,8 +341,14 @@ public final class EmojiStatusComponent: Component {
                     }
                 }
                 iconView.image = iconImage
-                size = iconImage.size.aspectFilled(availableSize)
-                iconView.frame = CGRect(origin: CGPoint(), size: size)
+                
+                if case .text = component.content {
+                    size = CGSize(width: iconImage.size.width, height: availableSize.height)
+                    iconView.frame = CGRect(origin: CGPoint(x: floor((size.width - iconImage.size.width) / 2.0), y: floor((size.height - iconImage.size.height) / 2.0)), size: iconImage.size)
+                } else {
+                    size = iconImage.size.aspectFilled(availableSize)
+                    iconView.frame = CGRect(origin: CGPoint(), size: size)
+                }
             } else {
                 if let iconView = self.iconView {
                     self.iconView = nil

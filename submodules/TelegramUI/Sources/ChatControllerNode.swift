@@ -762,6 +762,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.isInFocus = isInFocus
         
         self.inputMediaNode?.simulateUpdateLayout(isVisible: isInFocus)
+        if let inputNode = self.inputNode as? ChatEntityKeyboardInputNode {
+            inputNode.simulateUpdateLayout(isVisible: isInFocus)
+        }
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition protoTransition: ContainedViewLayoutTransition, listViewTransaction: (ListViewUpdateSizeAndInsets, CGFloat, Bool, @escaping () -> Void) -> Void, updateExtraNavigationBarBackgroundHeight: (CGFloat, ContainedViewLayoutTransition) -> Void) {
