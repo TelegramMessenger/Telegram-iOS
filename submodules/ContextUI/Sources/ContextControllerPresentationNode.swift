@@ -17,6 +17,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
     func replaceItems(items: ContextController.Items, animated: Bool)
     func pushItems(items: ContextController.Items)
     func popItems()
+    func wantsDisplayBelowKeyboard() -> Bool
     
     func update(
         presentationData: PresentationData,

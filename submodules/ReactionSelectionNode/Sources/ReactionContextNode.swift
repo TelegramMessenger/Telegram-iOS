@@ -134,6 +134,36 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
+    private final class ContentScrollView: UIScrollView {
+        override static var layerClass: AnyClass {
+            return EmojiPagerContentComponent.View.ContentScrollLayer.self
+        }
+        
+        init(mirrorView: UIView) {
+            super.init(frame: CGRect())
+            
+            (self.layer as? EmojiPagerContentComponent.View.ContentScrollLayer)?.mirrorLayer = mirrorView.layer
+        }
+        
+        required init(coder: NSCoder) {
+            preconditionFailure()
+        }
+    }
+    
+    private final class ContentScrollNode: ASDisplayNode {
+        override var view: ContentScrollView {
+            return super.view as! ContentScrollView
+        }
+        
+        init(mirrorView: UIView) {
+            super.init()
+            
+            self.setViewBlock({
+                return ContentScrollView(mirrorView: mirrorView)
+            })
+        }
+    }
+    
     private let context: AccountContext
     private let presentationData: PresentationData
     private let animationCache: AnimationCache
@@ -143,6 +173,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?
     private let isExpandedUpdated: (ContainedViewLayoutTransition) -> Void
     private let requestLayout: (ContainedViewLayoutTransition) -> Void
+    private let requestUpdateOverlayWantsToBeBelowKeyboard: (ContainedViewLayoutTransition) -> Void
     
     private let backgroundNode: ReactionContextBackgroundNode
     
@@ -152,7 +183,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private let leftBackgroundMaskNode: ASDisplayNode
     private let rightBackgroundMaskNode: ASDisplayNode
     private let backgroundMaskNode: ASDisplayNode
-    private let scrollNode: ASScrollNode
+    private let mirrorContentScrollView: UIView
+    private let scrollNode: ContentScrollNode
     private let previewingItemContainer: ASDisplayNode
     private var visibleItemNodes: [Int: ReactionItemNode] = [:]
     private var disappearingVisibleItemNodes: [Int: ReactionItemNode] = [:]
@@ -253,7 +285,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void) {
+    public init(context: AccountContext, animationCache: AnimationCache, presentationData: PresentationData, items: [ReactionContextItem], selectedItems: Set<MessageReaction.Reaction>, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?, isExpandedUpdated: @escaping (ContainedViewLayoutTransition) -> Void, requestLayout: @escaping (ContainedViewLayoutTransition) -> Void, requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void) {
         self.context = context
         self.presentationData = presentationData
         self.items = items
@@ -261,6 +293,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.getEmojiContent = getEmojiContent
         self.isExpandedUpdated = isExpandedUpdated
         self.requestLayout = requestLayout
+        self.requestUpdateOverlayWantsToBeBelowKeyboard = requestUpdateOverlayWantsToBeBelowKeyboard
         
         self.animationCache = animationCache
         self.animationRenderer = MultiAnimationRendererImpl()
@@ -274,7 +307,10 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.backgroundMaskNode.addSubnode(self.leftBackgroundMaskNode)
         self.backgroundMaskNode.addSubnode(self.rightBackgroundMaskNode)
         
-        self.scrollNode = ASScrollNode()
+        self.mirrorContentScrollView = UIView()
+        self.mirrorContentScrollView.isUserInteractionEnabled = false
+        
+        self.scrollNode = ContentScrollNode(mirrorView: self.mirrorContentScrollView)
         self.scrollNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         self.scrollNode.view.showsHorizontalScrollIndicator = false
@@ -296,6 +332,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.contentTintContainer = ASDisplayNode()
         self.contentTintContainer.clipsToBounds = true
         self.contentTintContainer.isUserInteractionEnabled = false
+        
+        self.contentTintContainer.view.addSubview(self.mirrorContentScrollView)
         
         self.contentContainerMask = UIImageView()
         self.contentContainerMask.image = generateImage(CGSize(width: 46.0, height: 46.0), rotatedContext: { size, context in
@@ -488,6 +526,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             if let (size, insets, anchorRect) = self.validLayout {
                 self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, isAnimatingOut: false, transition: .immediate, animateInFromAnchorRect: nil, animateOutToAnchorRect: nil)
             }
+        }
+    }
+    
+    public func wantsDisplayBelowKeyboard() -> Bool {
+        if let emojiView = self.reactionSelectionComponentHost?.findTaggedView(tag: EmojiPagerContentComponent.Tag(id: AnyHashable("emoji"))) as? EmojiPagerContentComponent.View {
+            return emojiView.wantsDisplayBelowKeyboard()
+        } else {
+            return false
         }
     }
     
@@ -690,7 +736,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     self.scrollNode.addSubnode(itemNode)
                     if let itemNode = itemNode as? ReactionNode {
                         if let reaction = self.items[i].reaction, self.selectedItems.contains(reaction.rawValue) {
-                            self.contentTintContainer.view.addSubview(itemNode.selectionTintView)
+                            self.mirrorContentScrollView.addSubview(itemNode.selectionTintView)
                             self.scrollNode.view.addSubview(itemNode.selectionView)
                         }
                     }
@@ -784,7 +830,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 expandItemSize = 30.0
                 expandTintOffset = 0.0
             }
-            let baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0) + (self.isExpanded ? 46.0 : 0.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
+            let baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0) + (self.isExpanded ? (46.0 + 54.0 - 4.0) : 0.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
             
             transition.updateFrame(view: expandItemView, frame: baseNextFrame)
             transition.updateFrame(view: expandItemView.tintView, frame: baseNextFrame.offsetBy(dx: 0.0, dy: expandTintOffset))
@@ -885,7 +931,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             visibleItemCount: itemCount
         )
         
-        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? 46.0 : 0.0), size: actualBackgroundFrame.size)
+        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? (46.0 + 54.0 - 4.0) : 0.0), size: actualBackgroundFrame.size)
         scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
         
         transition.updateFrame(node: self.contentContainer, frame: visualBackgroundFrame, beginWithCurrentState: true)
@@ -977,7 +1023,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             if let mirrorContentClippingView = emojiView.mirrorContentClippingView {
                                 mirrorContentClippingView.clipsToBounds = false
-                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: 46.0), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
+                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: 46.0 + 54.0 - 4.0), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
                                     mirrorContentClippingView?.clipsToBounds = true
                                 })
                             }
@@ -1007,7 +1053,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     componentTransition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                     
                     if animateIn {
-                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -46.0 + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
+                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -(46.0 + 54.0 - 4.0) + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
                     }
                 }
             }
@@ -1194,6 +1240,12 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             },
             navigationController: {
                 return nil
+            },
+            requestUpdate: { [weak self] transition in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition.containedViewLayoutTransition)
             },
             sendSticker: nil,
             chatPeerId: nil,

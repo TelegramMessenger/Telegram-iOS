@@ -898,7 +898,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         panelContentVibrantOverlayColor: UIColor(white: 0.7, alpha: 0.65),
         panelContentControlVibrantOverlayColor: UIColor(white: 0.85, alpha: 0.65),
         panelContentControlVibrantSelectionColor: UIColor(white: 0.85, alpha: 0.1),
-        panelContentControlOpaqueOverlayColor: UIColor(white: 0.0, alpha: 0.3),
+        panelContentControlOpaqueOverlayColor: UIColor(white: 0.0, alpha: 0.2),
         panelContentControlOpaqueSelectionColor: UIColor(white: 0.0, alpha: 0.1),
         stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
         stickersSectionTextColor: UIColor(rgb: 0x9099a2),

@@ -2543,7 +2543,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.currentEmojiSuggestionView = nil
                 
                 currentEmojiSuggestionView.alpha = 0.0
-                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak currentEmojiSuggestionView] _ in
+                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
                     currentEmojiSuggestionView?.removeFromSuperview()
                 })
             }

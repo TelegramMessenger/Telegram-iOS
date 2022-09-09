@@ -7886,6 +7886,10 @@ Sorry for the inconvenience.";
 "ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
 "ChatContextMenu.EmojiSet_any" = "This message contains emoji from [%@ packs]().";
 
+"ChatContextMenu.ReactionEmojiSetSingle" = "This message contains\n#[%@]() reactions.";
+"ChatContextMenu.ReactionEmojiSet_1" = "This message contains reactions from [%@ pack]().";
+"ChatContextMenu.ReactionEmojiSet_any" = "This message contains reactions from [%@ packs]().";
+
 "EmojiPack.Title" = "Emoji";
 "EmojiPack.Emoji_1" = "%@ emoji";
 "EmojiPack.Emoji_any" = "%@ emoji";
