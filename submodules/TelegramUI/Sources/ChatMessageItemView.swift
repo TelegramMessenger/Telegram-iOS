@@ -210,7 +210,7 @@ final class ChatMessageAccessibilityData {
                 let suppressForeignAgentNotice = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
                 let message_ = suppressForeignAgentNotice ? removeForeignAgentNotice(message: message) : message
                 
-                let (_, _, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
+                let (_, _, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 

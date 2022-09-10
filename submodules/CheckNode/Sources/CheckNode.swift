@@ -312,6 +312,15 @@ public class CheckLayer: CALayer {
         }
     }
 
+    public override init() {
+        self.theme = CheckNodeTheme(backgroundColor: .white, strokeColor: .blue, borderColor: .white, overlayBorder: false, hasInset: false, hasShadow: false)
+        self.content = .check
+        
+        super.init()
+        
+        self.isOpaque = false
+    }
+    
     public init(theme: CheckNodeTheme, content: CheckNodeContent = .check) {
         self.theme = theme
         self.content = content

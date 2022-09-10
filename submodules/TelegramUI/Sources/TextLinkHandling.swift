@@ -67,7 +67,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                                 controller?.present(c, in: .window(.root), with: a)
                             }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
                         }
-                    case let .stickerPack(name):
+                    case let .stickerPack(name, _):
                         let packReference: StickerPackReference = .name(name)
                         controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .instantView(webpage, anchor):
@@ -76,12 +76,6 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId, peekData in
                             openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil, peekData: peekData))
                         }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
-                    #if ENABLE_WALLET
-                    case let .wallet(address, amount, comment):
-                        context.sharedContext.openWallet(context: context, walletContext: .send(address: address, amount: amount, comment: comment)) { c in
-                            (controller.navigationController as? NavigationController)?.pushViewController(c)
-                        }
-                    #endif
                     default:
                         break
                 }

@@ -3,7 +3,7 @@ import Postbox
 import SwiftSignalKit
 
 
-private let topSupportedLayer: SecretChatSequenceBasedLayer = .layer101
+private let topSupportedLayer: SecretChatSequenceBasedLayer = .layer144
 
 func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBasedLayer {
     switch remoteLayer {
@@ -13,6 +13,8 @@ func secretChatCommonSupportedLayer(remoteLayer: Int32) -> SecretChatSequenceBas
             return .layer73
         case 101:
             return .layer101
+        case 144:
+            return .layer144
         default:
             return topSupportedLayer
     }

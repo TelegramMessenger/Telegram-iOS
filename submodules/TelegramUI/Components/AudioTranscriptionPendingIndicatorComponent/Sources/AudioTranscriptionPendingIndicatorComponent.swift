@@ -142,13 +142,13 @@ public final class AudioTranscriptionPendingLottieIndicatorComponent: Component 
                 component: AnyComponent(LottieAnimationComponent(
                     animation: LottieAnimationComponent.AnimationItem(
                         name: "animated_text_dots",
-                        colors: [
-                            "Comp 1.Point 3.Group 1.Fill 1": component.color,
-                            "Comp 1.Point 2.Group 1.Fill 1": component.color,
-                            "Comp 1.Point 1.Group 1.Fill 1": component.color
-                        ],
                         mode: .animating(loop: true)
                     ),
+                    colors: [
+                        "Comp 1.Point 3.Group 1.Fill 1": component.color,
+                        "Comp 1.Point 2.Group 1.Fill 1": component.color,
+                        "Comp 1.Point 1.Group 1.Fill 1": component.color
+                    ],
                     size: animationSize
                 )),
                 environment: {},

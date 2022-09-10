@@ -328,34 +328,118 @@ private func updatedContextQueryResultStateForQuery(context: AccountContext, pee
             
             return signal |> then(contextBot)
         case let .emojiSearch(query, languageCode, range):
-            var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: query.count < 2)
-            if !languageCode.lowercased().hasPrefix("en") {
-                signal = signal
-                |> mapToSignal { keywords in
-                    return .single(keywords)
-                    |> then(
-                        context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
-                        |> map { englishKeywords in
-                            return keywords + englishKeywords
-                        }
-                    )
+            if query.isSingleEmoji {
+                let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> map { peer -> Bool in
+                    guard case let .user(user) = peer else {
+                        return false
+                    }
+                    return user.isPremium
                 }
-            }
-            
-            return signal
-            |> map { keywords -> [(String, String)] in
-                var result: [(String, String)] = []
-                for keyword in keywords {
-                    for emoticon in keyword.emoticons {
-                        result.append((emoticon, keyword.keyword))
+                |> distinctUntilChanged
+                
+                return combineLatest(
+                    context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                    hasPremium
+                )
+                |> map { view, hasPremium -> [(String, TelegramMediaFile?, String)] in
+                    var result: [(String, TelegramMediaFile?, String)] = []
+                    
+                    for entry in view.entries {
+                        guard let item = entry.item as? StickerPackItem else {
+                            continue
+                        }
+                        for attribute in item.file.attributes {
+                            switch attribute {
+                            case let .CustomEmoji(_, alt, _):
+                                if alt == query {
+                                    if !item.file.isPremiumEmoji || hasPremium {
+                                        result.append((alt, item.file, alt))
+                                    }
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    return result
+                }
+                |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                    return { _ in return .emojis(result, range) }
+                }
+                |> castError(ChatContextQueryError.self)
+            } else {
+                var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: query.count < 2)
+                if !languageCode.lowercased().hasPrefix("en") {
+                    signal = signal
+                    |> mapToSignal { keywords in
+                        return .single(keywords)
+                        |> then(
+                            context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                            |> map { englishKeywords in
+                                return keywords + englishKeywords
+                            }
+                        )
                     }
                 }
-                return result
+            
+                let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                |> map { peer -> Bool in
+                    guard case let .user(user) = peer else {
+                        return false
+                    }
+                    return user.isPremium
+                }
+                |> distinctUntilChanged
+                
+                return signal
+                |> castError(ChatContextQueryError.self)
+                |> mapToSignal { keywords -> Signal<(ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult?, ChatContextQueryError> in
+                    return combineLatest(
+                        context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                        hasPremium
+                    )
+                    |> map { view, hasPremium -> [(String, TelegramMediaFile?, String)] in
+                        var result: [(String, TelegramMediaFile?, String)] = []
+                        
+                        var allEmoticons: [String: String] = [:]
+                        for keyword in keywords {
+                            for emoticon in keyword.emoticons {
+                                allEmoticons[emoticon] = keyword.keyword
+                            }
+                        }
+                        
+                        for entry in view.entries {
+                            guard let item = entry.item as? StickerPackItem else {
+                                continue
+                            }
+                            for attribute in item.file.attributes {
+                                switch attribute {
+                                case let .CustomEmoji(_, alt, _):
+                                    if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                        if !item.file.isPremiumEmoji || hasPremium {
+                                            result.append((alt, item.file, keyword))
+                                        }
+                                    }
+                                default:
+                                    break
+                                }
+                            }
+                        }
+                        
+                        for keyword in keywords {
+                            for emoticon in keyword.emoticons {
+                                result.append((emoticon, nil, keyword.keyword))
+                            }
+                        }
+                        return result
+                    }
+                    |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
+                        return { _ in return .emojis(result, range) }
+                    }
+                    |> castError(ChatContextQueryError.self)
+                }
             }
-            |> map { result -> (ChatPresentationInputQueryResult?) -> ChatPresentationInputQueryResult? in
-                return { _ in return .emojis(result, range) }
-            }
-            |> castError(ChatContextQueryError.self)
     }
 }
 

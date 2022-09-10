@@ -74,7 +74,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let textNode: ASTextNode
 
     public var toggleSelection: (() -> Void)?
-    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)? {
+    public var contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? {
         didSet {
             self.contextContainer.isGestureEnabled = self.contextAction != nil
         }
@@ -83,6 +83,8 @@ public final class SelectablePeerNode: ASDisplayNode {
     private var currentSelected = false
     
     private var peer: EngineRenderedPeer?
+    
+    public var compact = false
     
     public var theme: SelectablePeerNodeTheme = SelectablePeerNodeTheme(textColor: .black, secretTextColor: .green, selectedTextColor: .blue, checkBackgroundColor: .white, checkFillColor: .blue, checkColor: .white, avatarPlaceholderColor: .white) {
         didSet {
@@ -131,7 +133,7 @@ public final class SelectablePeerNode: ASDisplayNode {
                 gesture.cancel()
                 return
             }
-            contextAction(strongSelf.contextContainer, gesture)
+            contextAction(strongSelf.contextContainer, gesture, nil)
         }
     }
     
@@ -147,7 +149,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         let text: String
         var overrideImage: AvatarNodeImageOverride?
         if peer.peerId == context.account.peerId {
-            text = strings.DialogList_SavedMessages
+            text = self.compact ? strings.DeleteAccount_SavedMessages : strings.DialogList_SavedMessages
             overrideImage = .savedMessagesIcon
         } else if peer.peerId.isReplies {
             text = strings.DialogList_Replies

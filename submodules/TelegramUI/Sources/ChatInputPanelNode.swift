@@ -7,15 +7,21 @@ import TelegramCore
 import AccountContext
 import ChatPresentationInterfaceState
 
+protocol ChatInputPanelViewForOverlayContent: UIView {
+    func maybeDismissContent(point: CGPoint)
+}
+
 class ChatInputPanelNode: ASDisplayNode {
     var context: AccountContext?
     var interfaceInteraction: ChatPanelInterfaceInteraction?
     var prevInputPanelNode: ChatInputPanelNode?
     
+    var viewForOverlayContent: ChatInputPanelViewForOverlayContent?
+    
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
     }
     
-    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
+    func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
         return 0.0
     }
     

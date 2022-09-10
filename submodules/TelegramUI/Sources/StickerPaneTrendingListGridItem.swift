@@ -525,7 +525,7 @@ class StickerPaneTrendingListGridItemNode: GridItemNode {
         self.listView.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if currentItem?.theme !== item.theme {
-            self.dismissButtonNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(item.theme), for: [])
+            self.dismissButtonNode.setImage(PresentationResourcesChat.chatInputMediaPanelGridDismissImage(item.theme, color: item.theme.chat.inputMediaPanel.stickersSectionTextColor), for: [])
         }
         
         let leftInset: CGFloat = 9.0

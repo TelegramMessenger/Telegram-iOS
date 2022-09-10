@@ -130,6 +130,29 @@ extension KeypathSearchable {
       child.logKeypaths(for: newKeypath)
     }
   }
+    
+  func allKeypaths(for keyPath: AnimationKeypath?, predicate: (AnimationKeypath) -> Bool) -> [String] {
+      var result: [String] = []
+      let newKeypath: AnimationKeypath
+      if let previousKeypath = keyPath {
+        newKeypath = previousKeypath.appendingKey(keypathName)
+      } else {
+        newKeypath = AnimationKeypath(keys: [keypathName])
+      }
+      if predicate(newKeypath) {
+          result.append(newKeypath.fullPath)
+      }
+      for key in keypathProperties.keys {
+          let subKey = newKeypath.appendingKey(key)
+          if predicate(subKey) {
+              result.append(subKey.fullPath)
+          }
+      }
+      for child in childKeypaths {
+        result.append(contentsOf: child.allKeypaths(for: newKeypath, predicate: predicate))
+      }
+      return result
+  }
 }
 
 extension AnimationKeypath {

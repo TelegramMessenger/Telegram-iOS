@@ -408,7 +408,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
 
     let rootTabBar = PresentationThemeRootTabBar(
         backgroundColor: rootNavigationBar.blurredBackgroundColor,
-        separatorColor: UIColor(rgb: 0xa3a3a3),
+        separatorColor: UIColor(rgb: 0xb2b2b2),
         iconColor: UIColor(rgb: 0x959595),
         selectedIconColor: defaultDayAccentColor,
         textColor: UIColor(rgb: 0x959595),
@@ -849,7 +849,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         inputStrokeColor: UIColor(rgb: 0x000000, alpha: 0.1),
         inputPlaceholderColor: UIColor(rgb: 0xbebec0),
         inputTextColor: UIColor(rgb: 0x000000),
-        inputControlColor: UIColor(rgb: 0xa0a7b0),
+        inputControlColor: UIColor(rgb: 0x868D98),
         actionControlFillColor: defaultDayAccentColor,
         actionControlForegroundColor: UIColor(rgb: 0xffffff),
         primaryTextColor: UIColor(rgb: 0x000000),
@@ -862,13 +862,16 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         panelSeparatorColor: UIColor(rgb: 0xbec2c6),
         panelIconColor: UIColor(rgb: 0x858e99),
         panelHighlightedIconBackgroundColor: UIColor(rgb: 0x858e99, alpha: 0.2),
+        panelHighlightedIconColor: UIColor(rgb: 0x4D5561),
+        panelContentVibrantOverlayColor: day ? UIColor(white: 0.0, alpha: 0.3) : UIColor(white: 0.65, alpha: 0.65),
         stickersBackgroundColor: UIColor(rgb: 0xe8ebf0),
         stickersSectionTextColor: UIColor(rgb: 0x9099a2),
         stickersSearchBackgroundColor: UIColor(rgb: 0xd9dbe1),
         stickersSearchPlaceholderColor: UIColor(rgb: 0x8e8e93),
         stickersSearchPrimaryColor: UIColor(rgb: 0x000000),
         stickersSearchControlColor: UIColor(rgb: 0x8e8e93),
-        gifsBackgroundColor: UIColor(rgb: 0xffffff)
+        gifsBackgroundColor: UIColor(rgb: 0xffffff),
+        backgroundColor: UIColor(rgb: 0xffffff, alpha: 0.7)
     )
     
     let inputButtonPanel = PresentationThemeInputButtonPanel(

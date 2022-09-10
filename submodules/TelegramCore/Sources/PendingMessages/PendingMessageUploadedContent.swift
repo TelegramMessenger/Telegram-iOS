@@ -544,6 +544,8 @@ func inputDocumentAttributesFromFileAttributes(_ fileAttributes: [TelegramMediaF
                 break
             case .NoPremium:
                 break
+        case .CustomEmoji:
+                break
         }
     }
     return attributes

@@ -1,8 +1,10 @@
 import Foundation
+import Postbox
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
 import PlatformRestrictionMatching
+import TextFormat
 
 public enum MessageContentKindKey {
     case text
@@ -26,7 +28,7 @@ public enum MessageContentKindKey {
 }
 
 public enum MessageContentKind: Equatable {
-    case text(String)
+    case text(NSAttributedString)
     case image
     case video
     case videoMessage
@@ -87,6 +89,40 @@ public enum MessageContentKind: Equatable {
     }
 }
 
+public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedString {
+    var attributedText = NSAttributedString(string: message.text)
+    
+    var entities: TextEntitiesMessageAttribute?
+    for attribute in message.attributes {
+        if let attribute = attribute as? TextEntitiesMessageAttribute {
+            entities = attribute
+            break
+        }
+    }
+    if let entities = entities?.entities {
+        let updatedString = NSMutableAttributedString(attributedString: attributedText)
+        
+        for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
+            guard case let .CustomEmoji(stickerPack, fileId) = entity.type else {
+                continue
+            }
+            
+            let range = NSRange(location: entity.range.lowerBound, length: entity.range.upperBound - entity.range.lowerBound)
+            
+            let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
+            var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
+            //updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
+            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+            
+            let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
+            updatedString.replaceCharacters(in: range, with: insertString)
+        }
+        attributedText = updatedString
+    }
+    
+    return attributedText
+}
+
 public func messageContentKind(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> MessageContentKind {
     for attribute in message.attributes {
         if let attribute = attribute as? RestrictedContentMessageAttribute {
@@ -101,7 +137,7 @@ public func messageContentKind(contentSettings: ContentSettings, message: Engine
             return kind
         }
     }
-    return .text(message.text)
+    return .text(messageTextWithAttributes(message: message))
 }
 
 public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil, strings: PresentationStrings? = nil, nameDisplayOrder: PresentationPersonNameOrder? = nil, dateTimeFormat: PresentationDateTimeFormat? = nil, accountPeerId: EnginePeer.Id? = nil) -> MessageContentKind? {
@@ -170,7 +206,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .action:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false)?.0 ?? "")
+            return .text(NSAttributedString(string: plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false)?.0 ?? ""))
         } else {
             return nil
         }
@@ -189,59 +225,59 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
     }
 }
 
-public func stringForMediaKind(_ kind: MessageContentKind, strings: PresentationStrings) -> (String, Bool) {
+public func stringForMediaKind(_ kind: MessageContentKind, strings: PresentationStrings) -> (NSAttributedString, Bool) {
     switch kind {
     case let .text(text):
         return (foldLineBreaks(text), false)
     case .image:
-        return (strings.Message_Photo, true)
+        return (NSAttributedString(string: strings.Message_Photo), true)
     case .video:
-        return (strings.Message_Video, true)
+        return (NSAttributedString(string: strings.Message_Video), true)
     case .videoMessage:
-        return (strings.Message_VideoMessage, true)
+        return (NSAttributedString(string: strings.Message_VideoMessage), true)
     case .audioMessage:
-        return (strings.Message_Audio, true)
+        return (NSAttributedString(string: strings.Message_Audio), true)
     case let .sticker(text):
         if text.isEmpty {
-            return (strings.Message_Sticker, true)
+            return (NSAttributedString(string: strings.Message_Sticker), true)
         } else {
-            return (strings.Message_StickerText(text).string, true)
+            return (NSAttributedString(string: strings.Message_StickerText(text).string), true)
         }
     case .animation:
-        return (strings.Message_Animation, true)
+        return (NSAttributedString(string: strings.Message_Animation), true)
     case let .file(text):
         if text.isEmpty {
-            return (strings.Message_File, true)
+            return (NSAttributedString(string: strings.Message_File), true)
         } else {
-            return (text, true)
+            return (NSAttributedString(string: text), true)
         }
     case .contact:
-        return (strings.Message_Contact, true)
+        return (NSAttributedString(string: strings.Message_Contact), true)
     case let .game(text):
-        return (text, true)
+        return (NSAttributedString(string: text), true)
     case .location:
-        return (strings.Message_Location, true)
+        return (NSAttributedString(string: strings.Message_Location), true)
     case .liveLocation:
-        return (strings.Message_LiveLocation, true)
+        return (NSAttributedString(string: strings.Message_LiveLocation), true)
     case .expiredImage:
-        return (strings.Message_ImageExpired, true)
+        return (NSAttributedString(string: strings.Message_ImageExpired), true)
     case .expiredVideo:
-        return (strings.Message_VideoExpired, true)
+        return (NSAttributedString(string: strings.Message_VideoExpired), true)
     case let .poll(text):
-        return ("📊 \(text)", false)
+        return (NSAttributedString(string: "📊 \(text)"), false)
     case let .restricted(text):
-        return (text, false)
+        return (NSAttributedString(string: text), false)
     case let .dice(emoji):
-        return (emoji, true)
+        return (NSAttributedString(string: emoji), true)
     case let .invoice(text):
-        return (text, true)
+        return (NSAttributedString(string: text), true)
     }
 }
 
-public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (String, Bool, Bool) {
+public func descriptionStringForMessage(contentSettings: ContentSettings, message: EngineMessage, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, accountPeerId: EnginePeer.Id) -> (NSAttributedString, Bool, Bool) {
     let contentKind = messageContentKind(contentSettings: contentSettings, message: message, strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: accountPeerId)
     if !message.text.isEmpty && ![.expiredImage, .expiredVideo].contains(contentKind.key) {
-        return (foldLineBreaks(message.text), false, true)
+        return (foldLineBreaks(messageTextWithAttributes(message: message)), false, true)
     }
     let result = stringForMediaKind(contentKind, strings: strings)
     return (result.0, result.1, false)
@@ -263,6 +299,49 @@ public func foldLineBreaks(_ text: String) -> String {
     return result
 }
 
+public func foldLineBreaks(_ text: NSAttributedString) -> NSAttributedString {
+    let remainingString = NSMutableAttributedString(attributedString: text)
+    var lines: [NSAttributedString] = []
+    while true {
+        if let range = remainingString.string.range(of: "\n") {
+            let mappedRange = NSRange(range, in: remainingString.string)
+            lines.append(remainingString.attributedSubstring(from: NSRange(location: 0, length: mappedRange.upperBound)))
+            remainingString.replaceCharacters(in: NSRange(location: 0, length: mappedRange.upperBound), with: "")
+        } else {
+            if lines.isEmpty {
+                return text
+            }
+            if !remainingString.string.isEmpty {
+                lines.append(remainingString)
+            }
+            break
+        }
+    }
+    
+    let result = NSMutableAttributedString()
+    
+    for line in lines {
+        if line.string.isEmpty {
+            continue
+        }
+        if result.string.isEmpty {
+            result.append(line)
+        } else {
+            let currentAttributes = line.attributes(at: 0, effectiveRange: nil).filter { key, _ in
+                switch key {
+                case .font, .foregroundColor:
+                    return true
+                default:
+                    return false
+                }
+            }
+            result.append(NSAttributedString(string: " ", attributes: currentAttributes))
+            result.append(line)
+        }
+    }
+    
+    return result
+}
 
 public func trimToLineCount(_ text: String, lineCount: Int) -> String {
     if lineCount < 1 {

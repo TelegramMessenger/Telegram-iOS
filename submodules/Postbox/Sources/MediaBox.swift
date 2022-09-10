@@ -188,7 +188,8 @@ public final class MediaBox {
         
         self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
             self.basePath,
-            self.basePath + "/cache"
+            self.basePath + "/cache",
+            self.basePath + "/animation-cache"
         ], shortLivedPaths: [
             self.basePath + "/short-cache"
         ])
@@ -1237,6 +1238,27 @@ public final class MediaBox {
                         }
                     }
                 }
+                
+                func processRecursive(directoryPath: String, subdirectoryPath: String) {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: directoryPath), includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                        loop: for url in enumerator {
+                            if let url = url as? URL {
+                                if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                    continue loop
+                                }
+                                
+                                if let isDirectory = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectory {
+                                    processRecursive(directoryPath: url.path, subdirectoryPath: subdirectoryPath + "/\(url.lastPathComponent)")
+                                } else if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    paths.append("\(subdirectoryPath)/" + url.lastPathComponent)
+                                    cacheResult += Int64(value)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                processRecursive(directoryPath: self.basePath + "/animation-cache", subdirectoryPath: "animation-cache")
                 
                 if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/short-cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
                     loop: for url in enumerator {

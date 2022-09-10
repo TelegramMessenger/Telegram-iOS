@@ -405,11 +405,10 @@ public class ContactsController: ViewController {
                     let controller = strongSelf.context.sharedContext.makePeersNearbyController(context: strongSelf.context)
                     controller.navigationPresentation = .master
                     if let navigationController = strongSelf.context.sharedContext.mainWindow?.viewController as? NavigationController {
-                        navigationController.pushViewController(controller, animated: true, completion: { [weak self] in
-                            if let strongSelf = self {
-                                strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
-                            }
-                        })
+                        var controllers = navigationController.viewControllers.filter { !($0 is PermissionController) }
+                        controllers.append(controller)
+                        navigationController.setViewControllers(controllers, animated: true)
+                        strongSelf.contactsNode.contactListNode.listNode.clearHighlightAnimated(true)
                     }
                 }
                 

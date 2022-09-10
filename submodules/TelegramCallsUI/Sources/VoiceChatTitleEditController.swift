@@ -460,7 +460,7 @@ func voiceChatTitleEditController(sharedContext: SharedAccountContext, account: 
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
         contentNode?.inputFieldNode.updateTheme(presentationData.theme)
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
     }
     dismissImpl = { [weak controller, weak contentNode] animated in
@@ -758,7 +758,7 @@ func voiceChatUserNameController(sharedContext: SharedAccountContext, account: A
         contentNode?.firstNameInputFieldNode.updateTheme(presentationData.theme)
         contentNode?.lastNameInputFieldNode.updateTheme(presentationData.theme)
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
     }
     dismissImpl = { [weak controller, weak contentNode] animated in

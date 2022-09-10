@@ -93,11 +93,12 @@ public struct AccountPrivacySettings: Equatable {
     public let forwards: SelectivePrivacySettings
     public let phoneNumber: SelectivePrivacySettings
     public let phoneDiscoveryEnabled: Bool
+    public let voiceMessages: SelectivePrivacySettings
     
     public let automaticallyArchiveAndMuteNonContacts: Bool
     public let accountRemovalTimeout: Int32
     
-    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32) {
+    public init(presence: SelectivePrivacySettings, groupInvitations: SelectivePrivacySettings, voiceCalls: SelectivePrivacySettings, voiceCallsP2P: SelectivePrivacySettings, profilePhoto: SelectivePrivacySettings, forwards: SelectivePrivacySettings, phoneNumber: SelectivePrivacySettings, phoneDiscoveryEnabled: Bool, voiceMessages: SelectivePrivacySettings, automaticallyArchiveAndMuteNonContacts: Bool, accountRemovalTimeout: Int32) {
         self.presence = presence
         self.groupInvitations = groupInvitations
         self.voiceCalls = voiceCalls
@@ -106,6 +107,7 @@ public struct AccountPrivacySettings: Equatable {
         self.forwards = forwards
         self.phoneNumber = phoneNumber
         self.phoneDiscoveryEnabled = phoneDiscoveryEnabled
+        self.voiceMessages = voiceMessages
         self.automaticallyArchiveAndMuteNonContacts = automaticallyArchiveAndMuteNonContacts
         self.accountRemovalTimeout = accountRemovalTimeout
     }
@@ -133,6 +135,9 @@ public struct AccountPrivacySettings: Equatable {
             return false
         }
         if lhs.phoneDiscoveryEnabled != rhs.phoneDiscoveryEnabled {
+            return false
+        }
+        if lhs.voiceMessages != rhs.voiceMessages {
             return false
         }
         if lhs.automaticallyArchiveAndMuteNonContacts != rhs.automaticallyArchiveAndMuteNonContacts {

@@ -226,6 +226,11 @@ final class AuthorizedApplicationContext {
                             }
                         }
                         strongSelf.mainWindow.forEachViewController(f)
+                        if let globalOverlayController = strongSelf.rootController.globalOverlayControllers.last {
+                            if !f(globalOverlayController) {
+                                return
+                            }
+                        }
                     })
                 }
             }
@@ -486,7 +491,7 @@ final class AuthorizedApplicationContext {
                     }
                     let accountId = strongSelf.context.account.id
                     let accountManager = strongSelf.context.sharedContext.accountManager
-                    let _ = (strongSelf.context.engine.auth.deleteAccount(reason: "GDPR")
+                    let _ = (strongSelf.context.engine.auth.deleteAccount(reason: "GDPR", password: nil)
                     |> deliverOnMainQueue).start(error: { _ in
                         guard let strongSelf = self else {
                             return
@@ -844,7 +849,7 @@ final class AuthorizedApplicationContext {
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(id: peerId), subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput))
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(id: peerId), subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput ? .text : nil))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }

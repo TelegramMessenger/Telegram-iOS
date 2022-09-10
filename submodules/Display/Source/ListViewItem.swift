@@ -96,4 +96,7 @@ public extension ListViewItem {
     
     func selected(listView: ListView) {
     }
+    
+    func performSecondaryAction(listView: ListView) {
+    }
 }

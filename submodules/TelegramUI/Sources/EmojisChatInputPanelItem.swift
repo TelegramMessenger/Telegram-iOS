@@ -6,19 +6,32 @@ import TelegramCore
 import SwiftSignalKit
 import Postbox
 import TelegramPresentationData
+import AnimationCache
+import MultiAnimationRenderer
+import EmojiTextAttachmentView
+import AccountContext
+import TextFormat
 
 final class EmojisChatInputPanelItem: ListViewItem {
+    fileprivate let context: AccountContext
     fileprivate let theme: PresentationTheme
     fileprivate let symbol: String
     fileprivate let text: String
-    private let emojiSelected: (String) -> Void
+    fileprivate let file: TelegramMediaFile?
+    fileprivate let animationCache: AnimationCache
+    fileprivate let animationRenderer: MultiAnimationRenderer
+    private let emojiSelected: (String, TelegramMediaFile?) -> Void
     
     let selectable: Bool = true
     
-    public init(theme: PresentationTheme, symbol: String, text: String, emojiSelected: @escaping (String) -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, symbol: String, text: String, file: TelegramMediaFile?, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, emojiSelected: @escaping (String, TelegramMediaFile?) -> Void) {
+        self.context = context
         self.theme = theme
         self.symbol = symbol
         self.text = text
+        self.file = file
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
         self.emojiSelected = emojiSelected
     }
     
@@ -70,7 +83,7 @@ final class EmojisChatInputPanelItem: ListViewItem {
     }
     
     func selected(listView: ListView) {
-        self.emojiSelected(self.symbol)
+        self.emojiSelected(self.symbol, self.file)
     }
 }
 
@@ -79,6 +92,7 @@ private let textFont = Font.regular(32.0)
 final class EmojisChatInputPanelItemNode: ListViewItemNode {
     static let itemSize = CGSize(width: 45.0, height: 45.0)
     private let symbolNode: TextNode
+    private var emojiView: EmojiTextAttachmentView?
     
     init() {
         self.symbolNode = TextNode()
@@ -111,6 +125,45 @@ final class EmojisChatInputPanelItemNode: ListViewItemNode {
                 if let strongSelf = self {
                     let _ = symbolApply()
                     strongSelf.symbolNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((EmojisChatInputPanelItemNode.itemSize.width - symbolLayout.size.width) / 2.0), y: 0.0), size: symbolLayout.size)
+                    
+                    if let file = item.file {
+                        strongSelf.symbolNode.isHidden = true
+                        
+                        let emojiView: EmojiTextAttachmentView
+                        if let current = strongSelf.emojiView {
+                            emojiView = current
+                        } else {
+                            emojiView = EmojiTextAttachmentView(
+                                context: item.context,
+                                emoji: ChatTextInputTextCustomEmojiAttribute(
+                                    stickerPack: nil,
+                                    fileId: file.fileId.id,
+                                    file: file
+                                ),
+                                file: file,
+                                cache: item.animationCache,
+                                renderer: item.animationRenderer,
+                                placeholderColor: item.theme.list.mediaPlaceholderColor,
+                                pointSize: CGSize(width: 40.0, height: 40.0)
+                            )
+                            emojiView.layer.transform = CATransform3DMakeRotation(CGFloat.pi / 2.0, 0.0, 0.0, 1.0)
+                            strongSelf.emojiView = emojiView
+                            strongSelf.view.addSubview(emojiView)
+                            
+                            let emojiSize = CGSize(width: 40.0, height: 40.0)
+                            let emojiFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((EmojisChatInputPanelItemNode.itemSize.width - emojiSize.width) / 2.0) + 1.0, y: floorToScreenPixels((EmojisChatInputPanelItemNode.itemSize.height - emojiSize.height) / 2.0)), size: emojiSize)
+                            
+                            emojiView.center = emojiFrame.center
+                            emojiView.bounds = CGRect(origin: CGPoint(), size: emojiFrame.size)
+                        }
+                    } else {
+                        strongSelf.symbolNode.isHidden = false
+                        
+                        if let emojiView = strongSelf.emojiView {
+                            strongSelf.emojiView = nil
+                            emojiView.removeFromSuperview()
+                        }
+                    }
                 }
             })
         }

@@ -6,7 +6,7 @@ public protocol ActionSheetGroupOverlayNode: ASDisplayNode {
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
 }
 
-open class ActionSheetController: ViewController, PresentableController, StandalonePresentableController {
+open class ActionSheetController: ViewController, PresentableController, StandalonePresentableController, KeyShortcutResponder {
     private var actionSheetNode: ActionSheetControllerNode {
         return self.displayNode as! ActionSheetControllerNode
     }
@@ -93,5 +93,45 @@ open class ActionSheetController: ViewController, PresentableController, Standal
         if self.isViewLoaded {
             self.actionSheetNode.setItemGroupOverlayNode(groupIndex: groupIndex, node: node)
         }
+    }
+    
+    public var keyShortcuts: [KeyShortcut] {
+        return [
+            KeyShortcut(
+                input: UIKeyCommand.inputEscape,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.dismissAnimated()
+                }
+            ),
+            KeyShortcut(
+                input: "W",
+                modifiers: [.command],
+                action: { [weak self] in
+                    self?.dismissAnimated()
+                }
+            ),
+            KeyShortcut(
+                input: "\r",
+                modifiers: [],
+                action: { [weak self] in
+                    self?.actionSheetNode.performHighlightedAction()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputUpArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.actionSheetNode.decreaseHighlightedIndex()
+                }
+            ),
+            KeyShortcut(
+                input: UIKeyCommand.inputDownArrow,
+                modifiers: [],
+                action: { [weak self] in
+                    self?.actionSheetNode.increaseHighlightedIndex()
+                }
+            )
+        ]
     }
 }

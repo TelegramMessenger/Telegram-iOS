@@ -48,9 +48,8 @@ func apiEntitiesFromMessageTextEntities(_ entities: [MessageTextEntity], associa
                 apiEntities.append(.messageEntityBankCard(offset: offset, length: length))
             case .Spoiler:
                 apiEntities.append(.messageEntitySpoiler(offset: offset, length: length))
-            case .AnimatedEmoji:
-                //apiEntities.append(.messageEntityAnimatedEmoji(offset: offset, length: length))
-                break
+            case let .CustomEmoji(_, fileId):
+                apiEntities.append(.messageEntityCustomEmoji(offset: offset, length: length, documentId: fileId))
             case .Custom:
                 break
         }

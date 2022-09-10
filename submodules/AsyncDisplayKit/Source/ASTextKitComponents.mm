@@ -19,14 +19,14 @@
 - (CGRect)lineFragmentRectForProposedRect:(CGRect)proposedRect atIndex:(NSUInteger)characterIndex writingDirection:(NSWritingDirection)baseWritingDirection remainingRect:(nullable CGRect *)remainingRect {
     CGRect result = [super lineFragmentRectForProposedRect:proposedRect atIndex:characterIndex writingDirection:baseWritingDirection remainingRect:remainingRect];
     
-#if DEBUG
+/*#if DEBUG
     if (result.origin.y < 10.0f) {
         result.size.width -= 21.0f;
         if (result.size.width < 0.0f) {
             result.size.width = 0.0f;
         }
     }
-#endif
+#endif*/
     
     return result;
 }
@@ -39,16 +39,17 @@
 
 @implementation ASCustomLayoutManager
 
-- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
-    /*CGGlyph glyph = [self glyphAtIndex:glyphsToShow.location];
-    if (glyph) {
+- (void)showCGGlyphs:(const CGGlyph *)glyphs positions:(const CGPoint *)positions count:(NSUInteger)glyphCount font:(UIFont *)font matrix:(CGAffineTransform)textMatrix attributes:(NSDictionary<NSAttributedStringKey,id> *)attributes inContext:(CGContextRef)graphicsContext {
+    for (NSUInteger i = 0; i < glyphCount; i++) {
+        if (attributes[@"Attribute__CustomEmoji"] != nil) {
+            continue;
+        }
+        
+        [super showCGGlyphs:&glyphs[i] positions:&positions[i] count:1 font:font matrix:textMatrix attributes:attributes inContext:graphicsContext];
     }
-    
-    CGRect bounds = [self boundingRectForGlyphRange:glyphsToShow inTextContainer:[self textContainerForGlyphAtIndex:glyphsToShow.location effectiveRange:nil]];
-    CGContextRef context = UIGraphicsGetCurrentContext();
-    CGContextSetFillColorWithColor(context, [UIColor grayColor].CGColor);
-    CGContextFillRect(context, bounds);*/
-    
+}
+
+- (void)drawGlyphsForGlyphRange:(NSRange)glyphsToShow atPoint:(CGPoint)origin {
     [super drawGlyphsForGlyphRange:glyphsToShow atPoint:origin];
 }
 
@@ -171,8 +172,10 @@
 
   // If our text-view's width is already the constrained width, we can use our existing TextKit stack for this sizing calculation.
   // Otherwise, we create a temporary stack to size for `constrainedWidth`.
+  UIEdgeInsets additionalInsets = UIEdgeInsetsZero;
   if (CGRectGetWidth(components.textView.threadSafeBounds) != constrainedWidth) {
-    components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth, CGFLOAT_MAX)];
+    additionalInsets = self.textView.textContainerInset;
+    components = [ASTextKitComponents componentsWithAttributedSeedString:components.textStorage textContainerSize:CGSizeMake(constrainedWidth - additionalInsets.left - additionalInsets.right, CGFLOAT_MAX)];
   }
 
   // Force glyph generation and layout, which may not have happened yet (and isn't triggered by -usedRectForTextContainer:).

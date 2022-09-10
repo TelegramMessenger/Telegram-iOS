@@ -880,7 +880,7 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
             let _ = (context.account.postbox.loadedPeerWithId(participantPeerId)
             |> take(1)
             |> deliverOnMainQueue).start(next: { peer in
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, updateTextInputState: nil, activateInput: false, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer), ""), animated: true))
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer), ""), animated: true))
             })
         }
     }

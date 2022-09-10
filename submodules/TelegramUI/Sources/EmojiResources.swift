@@ -192,7 +192,7 @@ private func matchingEmojiEntry(_ emoji: String) -> (UInt8, UInt8, UInt8)? {
 }
 
 func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
-    if !message.text.isEmpty && message.text.containsOnlyEmoji && message.text.emojis.count < 4 {
+    if !message.text.isEmpty && message.text.containsOnlyEmoji {
         if !(message.textEntitiesAttribute?.entities.isEmpty ?? true) {
             return false
         }
@@ -207,6 +207,29 @@ func messageIsElligibleForLargeEmoji(_ message: Message) -> Bool {
     } else {
         return false
     }
+}
+
+func messageIsElligibleForLargeCustomEmoji(_ message: Message) -> Bool {
+    let text = message.text.replacingOccurrences(of: "\n", with: "").replacingOccurrences(of: " ", with: "")
+    guard !text.isEmpty && text.containsOnlyEmoji else {
+        return false
+    }
+    let entities = message.textEntitiesAttribute?.entities ?? []
+    guard entities.count > 0 else {
+        return false
+    }
+    for entity in entities {
+        if case let .CustomEmoji(_, fileId) = entity.type {
+            if let _ = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
+                
+            } else {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    return true
 }
 
 func largeEmoji(postbox: Postbox, emoji: String, outline: Bool = true) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {

@@ -71,7 +71,8 @@ func chatHistoryEntriesForView(
             media: [TelegramMediaAction(action: .joinedByRequest)],
             peers: SimpleDictionary<PeerId, Peer>(),
             associatedMessages: SimpleDictionary<MessageId, Message>(),
-            associatedMessageIds: []
+            associatedMessageIds: [],
+            associatedMedia: [:]
         )
     }
         
@@ -134,10 +135,12 @@ func chatHistoryEntriesForView(
         }
         
         if presentationData.largeEmoji, message.media.isEmpty {
-            if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
+            if messageIsElligibleForLargeCustomEmoji(message) {
                 contentTypeHint = .animatedEmoji
-            } else if message.text.count < 10 && messageIsElligibleForLargeEmoji(message) {
-                contentTypeHint = .largeEmoji
+            } else if stickersEnabled && message.text.count == 1, let _ = associatedData.animatedEmojiStickers[message.text.basicEmoji.0], (message.textEntitiesAttribute?.entities.isEmpty ?? true) {
+                contentTypeHint = .animatedEmoji
+            } else if messageIsElligibleForLargeEmoji(message) {
+                contentTypeHint = .animatedEmoji
             }
         }
     
@@ -215,10 +218,12 @@ func chatHistoryEntriesForView(
                     
                     var contentTypeHint: ChatMessageEntryContentType = .generic
                     if presentationData.largeEmoji, topMessage.media.isEmpty {
-                        if stickersEnabled && topMessage.text.count == 1, let _ = associatedData.animatedEmojiStickers[topMessage.text.basicEmoji.0] {
+                        if messageIsElligibleForLargeCustomEmoji(topMessage) {
                             contentTypeHint = .animatedEmoji
-                        } else if topMessage.text.count < 10 && messageIsElligibleForLargeEmoji(topMessage) {
-                            contentTypeHint = .largeEmoji
+                        } else if stickersEnabled && topMessage.text.count == 1, let _ = associatedData.animatedEmojiStickers[topMessage.text.basicEmoji.0] {
+                            contentTypeHint = .animatedEmoji
+                        } else if messageIsElligibleForLargeEmoji(topMessage) {
+                            contentTypeHint = .animatedEmoji
                         }
                     }
                     
@@ -323,7 +328,8 @@ func chatHistoryEntriesForView(
                         media: message.media,
                         peers: message.peers,
                         associatedMessages: message.associatedMessages,
-                        associatedMessageIds: message.associatedMessageIds
+                        associatedMessageIds: message.associatedMessageIds,
+                        associatedMedia: message.associatedMedia
                     )
                     nextAdMessageId += 1
                     entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

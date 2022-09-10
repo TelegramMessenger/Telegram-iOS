@@ -240,6 +240,10 @@
   return [super textInputMode];
 }
 
+- (void)scrollRectToVisible:(CGRect)rect animated:(BOOL)animated {
+    [super scrollRectToVisible:rect animated:false];
+}
+
 #endif
 
 - (BOOL)gestureRecognizerShouldBegin:(UIGestureRecognizer *)gestureRecognizer
@@ -756,7 +760,16 @@
   NSRange range = [self selectedRange];
   range.location = range.location + range.length - 1;
   range.length = 1;
-  [self.textView scrollRangeToVisible:range];
+    
+  UITextPosition *caretPosition = [self.textView positionFromPosition:self.textView.beginningOfDocument offset:range.location];
+  if (caretPosition) {
+    CGRect caretRect = [self.textView caretRectForPosition:caretPosition];
+    caretRect.origin.y -= self.textView.contentInset.top;
+    caretRect.size.height += self.textView.contentInset.top + self.textView.contentInset.bottom + 4.0f;
+    [self.textView scrollRectToVisible:caretRect animated:false];
+  }
+    
+  //[self.textView scrollRangeToVisible:range];
 }
 
 #pragma mark - Keyboard

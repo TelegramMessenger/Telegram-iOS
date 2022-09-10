@@ -1,9 +1,13 @@
 import Foundation
 import AsyncDisplayKit
 import Display
+import TelegramCore
 import TelegramPresentationData
 import TextSelectionNode
+import Markdown
 import AppBundle
+import TextFormat
+import TextNodeWithEntities
 
 private final class ContextActionsSelectionGestureRecognizer: UIPanGestureRecognizer {
     var updateLocation: ((CGPoint, Bool) -> Void)?
@@ -340,17 +344,37 @@ private final class InnerActionsContainerNode: ASDisplayNode {
 final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
     private var effectView: UIVisualEffectView?
-    private let textNode: TextNode
+    private let highlightBackgroundNode: ASDisplayNode
+    private let buttonNode: HighlightTrackingButtonNode
+    private let textNode: TextNodeWithEntities
     private var textSelectionNode: TextSelectionNode?
     private let iconNode: ASImageNode
+    private let placeholderNode: ASDisplayNode
     
     private let text: String
+    private var arguments: TextNodeWithEntities.Arguments?
+    private var file: TelegramMediaFile?
     private let targetSelectionIndex: Int?
+    
+    private var hapticFeedback: HapticFeedback?
+    
+    private var action: (() -> Void)?
+    var requestDismiss: (@escaping () -> Void) -> Void = { _ in }
     
     init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.presentationData = presentationData
-        self.textNode = TextNode()
+        
+        self.highlightBackgroundNode = ASDisplayNode()
+        self.highlightBackgroundNode.isAccessibilityElement = false
+        self.highlightBackgroundNode.alpha = 0.0
+        
+        self.buttonNode = HighlightTrackingButtonNode()
+        
+        self.textNode = TextNodeWithEntities()
+        self.textNode.textNode.displaysAsynchronously = false
+        self.textNode.textNode.isUserInteractionEnabled = false
 
+        var isUserInteractionEnabled = false
         var icon: UIImage?
         switch tip {
         case .textSelection:
@@ -372,12 +396,25 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.text = isChannel ? self.presentationData.strings.Conversation_CopyProtectionInfoChannel : self.presentationData.strings.Conversation_CopyProtectionInfoGroup
             self.targetSelectionIndex = nil
             icon = UIImage(bundleImageName: "Chat/Context Menu/ReportCopyright")
+        case let .animatedEmoji(text, arguments, file, action):
+            self.action = action
+            self.text = text ?? ""
+            self.arguments = arguments
+            self.file = file
+            self.targetSelectionIndex = nil
+            icon = nil
+            isUserInteractionEnabled = text != nil
         }
         
         self.iconNode = ASImageNode()
         self.iconNode.displaysAsynchronously = false
         self.iconNode.displayWithoutProcessing = true
         self.iconNode.image = generateTintedImage(image: icon, color: presentationData.theme.contextMenu.primaryColor)
+        
+        self.placeholderNode = ASDisplayNode()
+        self.placeholderNode.clipsToBounds = true
+        self.placeholderNode.cornerRadius = 4.0
+        self.placeholderNode.isUserInteractionEnabled = false
         
         super.init()
         
@@ -386,18 +423,50 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         self.backgroundColor = presentationData.theme.contextMenu.backgroundColor
         
-        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0), strings: presentationData.strings, textNode: self.textNode, updateIsActive: { _ in
+        let textSelectionNode = TextSelectionNode(theme: TextSelectionTheme(selection: presentationData.theme.contextMenu.primaryColor.withAlphaComponent(0.15), knob: presentationData.theme.contextMenu.primaryColor, knobDiameter: 8.0), strings: presentationData.strings, textNode: self.textNode.textNode, updateIsActive: { _ in
         }, present: { _, _ in
         }, rootNode: self, performAction: { _, _ in
         })
         self.textSelectionNode = textSelectionNode
         
-        self.addSubnode(self.textNode)
+        self.addSubnode(self.highlightBackgroundNode)
+        self.addSubnode(self.textNode.textNode)
         self.addSubnode(self.iconNode)
+        self.addSubnode(self.placeholderNode)
         
         self.textSelectionNode.flatMap(self.addSubnode)
         
         self.addSubnode(textSelectionNode.highlightAreaNode)
+        
+        self.addSubnode(self.buttonNode)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isButtonHighlighted = highlighted
+            strongSelf.updateHighlight(animated: false)
+        }
+        
+        self.buttonNode.addTarget(self, action: #selector(self.pressed), forControlEvents: .touchUpInside)
+        
+        let shimmeringForegroundColor: UIColor
+        if presentationData.theme.overallDarkAppearance {
+            let backgroundColor = presentationData.theme.contextMenu.backgroundColor.blitOver(presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+        } else {
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
+        }
+        
+        self.placeholderNode.backgroundColor = shimmeringForegroundColor
+        
+        self.isUserInteractionEnabled = isUserInteractionEnabled
+    }
+    
+    @objc func pressed() {
+        self.requestDismiss({
+            self.action?()
+        })
     }
     
     func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -432,17 +501,63 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         let iconSideInset: CGFloat = 12.0
         
         let textFont = Font.regular(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
+        let boldTextFont = Font.bold(floor(presentationData.listsFontSize.baseDisplaySize * 14.0 / 17.0))
+        let textColor = self.presentationData.theme.contextMenu.primaryColor
+        let accentColor = self.presentationData.theme.contextMenu.badgeFillColor
         
         let iconSize = self.iconNode.image?.size ?? CGSize(width: 16.0, height: 16.0)
+                
+        let text = self.text.replacingOccurrences(of: "#", with: "# ")
+        let attributedText = NSMutableAttributedString(attributedString: parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: textFont, textColor: textColor), bold: MarkdownAttributeSet(font: boldTextFont, textColor: textColor), link: MarkdownAttributeSet(font: boldTextFont, textColor: accentColor), linkAttribute: { _ in
+            return nil
+        })))
+        if let file = self.file {
+            let range = (attributedText.string as NSString).range(of: "#")
+            if range.location != NSNotFound {
+                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+            }
+        }
         
-        let makeTextLayout = TextNode.asyncLayout(self.textNode)
-        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: self.text, font: textFont, textColor: self.presentationData.theme.contextMenu.primaryColor), backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalInset * 2.0 - iconSize.width - 8.0, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
-        let _ = textApply()
+        let shimmeringForegroundColor: UIColor
+        if presentationData.theme.overallDarkAppearance {
+            let backgroundColor = presentationData.theme.contextMenu.backgroundColor.blitOver(presentationData.theme.list.plainBackgroundColor, alpha: 1.0)
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.blitOver(backgroundColor, alpha: 0.1)
+        } else {
+            shimmeringForegroundColor = presentationData.theme.contextMenu.primaryColor.withMultipliedAlpha(0.07)
+        }
+        
+        let textRightInset: CGFloat
+        if let _ = self.iconNode.image {
+            textRightInset = iconSize.width - 8.0
+        } else {
+            textRightInset = 0.0
+        }
+        
+        let makeTextLayout = TextNodeWithEntities.asyncLayout(self.textNode)
+        let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, minimumNumberOfLines: 0, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - horizontalInset * 2.0 - textRightInset, height: .greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets(), lineColor: nil, textShadowColor: nil, textStroke: nil))
+        let _ = textApply(self.arguments?.withUpdatedPlaceholderColor(shimmeringForegroundColor))
         
         let textFrame = CGRect(origin: CGPoint(x: horizontalInset, y: verticalInset), size: textLayout.size)
-        transition.updateFrame(node: self.textNode, frame: textFrame)
+        transition.updateFrame(node: self.textNode.textNode, frame: textFrame)
+        if textFrame.size.height.isZero {
+            self.textNode.textNode.alpha = 0.0
+        } else if self.textNode.textNode.alpha.isZero {
+            self.textNode.textNode.alpha = 1.0
+            self.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.placeholderNode.layer.animateAlpha(from: self.placeholderNode.alpha, to: 1.0, duration: 0.2)
+        }
+        self.textNode.visibilityRect = CGRect.infinite
         
-        let size = CGSize(width: width, height: textLayout.size.height + verticalInset * 2.0)
+        var contentHeight = textLayout.size.height
+        if contentHeight.isZero {
+            contentHeight = 32.0
+        }
+        
+        let size = CGSize(width: width, height: contentHeight + verticalInset * 2.0)
+        
+        let lineHeight: CGFloat = 8.0
+        transition.updateFrame(node: self.placeholderNode, frame: CGRect(origin: CGPoint(x: horizontalInset, y: floorToScreenPixels((size.height - lineHeight) / 2.0)), size: CGSize(width: width - horizontalInset * 2.0, height: lineHeight)))
+        transition.updateAlpha(node: self.placeholderNode, alpha: textFrame.height.isZero ? 1.0 : 0.0)
         
         let iconFrame = CGRect(origin: CGPoint(x: size.width - standardIconWidth - iconSideInset + floor((standardIconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
         transition.updateFrame(node: self.iconNode, frame: iconFrame)
@@ -455,6 +570,10 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         if let effectView = self.effectView {
             transition.updateFrame(view: effectView, frame: CGRect(origin: CGPoint(), size: size))
         }
+        
+        self.highlightBackgroundNode.backgroundColor = presentationData.theme.contextMenu.itemHighlightedBackgroundColor
+        self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
         
         return size
     }
@@ -472,6 +591,55 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
                 }
                 strongSelf.textSelectionNode?.pretendExtendSelection(to: targetSelectionIndex)
             })
+        }
+    }
+    
+    func updateHighlight(animated: Bool) {
+        if self.isButtonHighlighted || self.isHighlighted {
+            self.highlightBackgroundNode.alpha = 1.0
+        } else {
+            if animated {
+                let previousAlpha = self.highlightBackgroundNode.alpha
+                self.highlightBackgroundNode.alpha = 0.0
+                self.highlightBackgroundNode.layer.animateAlpha(from: previousAlpha, to: 0.0, duration: 0.2)
+            } else {
+                self.highlightBackgroundNode.alpha = 0.0
+            }
+        }
+    }
+    
+    private var isButtonHighlighted = false
+    private var isHighlighted = false
+    func setHighlighted(_ highlighted: Bool) {
+        guard self.isHighlighted != highlighted else {
+            return
+        }
+        self.isHighlighted = highlighted
+        
+        if highlighted {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.tap()
+        }
+        
+        self.updateHighlight(animated: false)
+    }
+    
+    func highlightGestureMoved(location: CGPoint) {
+        if self.bounds.contains(location) && self.isUserInteractionEnabled {
+            self.setHighlighted(true)
+        } else {
+            self.setHighlighted(false)
+        }
+    }
+    
+    func highlightGestureFinished(performAction: Bool) {
+        if self.isHighlighted {
+            self.setHighlighted(false)
+            if performAction {
+                self.pressed()
+            }
         }
     }
 }
@@ -532,7 +700,9 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.actionsNode = InnerActionsContainerNode(presentationData: presentationData, items: itemList, getController: getController, actionSelected: actionSelected, requestLayout: requestLayout, feedbackTap: feedbackTap, blurBackground: blurBackground)
         if let tip = items.tip {
             let textSelectionTipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-            textSelectionTipNode.isUserInteractionEnabled = false
+            textSelectionTipNode.requestDismiss = { completion in
+                getController()?.dismiss(completion: completion)
+            }
             self.textSelectionTipNode = textSelectionTipNode
         } else {
             self.textSelectionTipNode = nil

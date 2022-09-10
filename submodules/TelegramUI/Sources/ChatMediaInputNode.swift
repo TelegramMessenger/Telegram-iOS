@@ -11,6 +11,7 @@ import TelegramNotices
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import PeerInfoUI
 import SettingsUI
 import ContextUI
@@ -278,7 +279,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
     if view.lower == nil {
         var savedStickerIds = Set<Int64>()
         if let savedStickers = savedStickers, !savedStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.savedStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FavoriteStickers.uppercased(), shortName: "", thumbnail: nil, thumbnailFileId: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             for i in 0 ..< savedStickers.items.count {
                 if let item = savedStickers.items[i].contents.get(SavedStickerItem.self) {
                     savedStickerIds.insert(item.file.fileId.id)
@@ -295,11 +296,11 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         
         let filteredTrending = trendingPacks.filter { !installedPacks.contains($0.info.id) }
         if !trendingIsDismissed && !filteredTrending.isEmpty {
-            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending, isPremium: false))
+            entries.append(.trendingList(theme: theme, strings: strings, packs: filteredTrending, isPremium: trendingIsPremium))
         }
         
         if let recentStickers = recentStickers, !recentStickers.items.isEmpty {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.recentStickers.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_FrequentlyUsed.uppercased(), shortName: "", thumbnail: nil, thumbnailFileId: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             var addedCount = 0
             for i in 0 ..< recentStickers.items.count {
                 if addedCount >= 20 {
@@ -333,7 +334,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         }
         
         if let peerSpecificPack = peerSpecificPack {
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.peerSpecific.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_GroupStickers, shortName: "", thumbnail: nil, thumbnailFileId: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             
             for i in 0 ..< peerSpecificPack.items.count {
                 if let item = peerSpecificPack.items[i] as? StickerPackItem {
@@ -350,7 +351,7 @@ func chatMediaInputGridEntries(view: ItemCollectionsView, savedStickers: Ordered
         
         if hasPremium && !isPremiumDisabled {
             var existingStickerIds = Set<Int64>()
-            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers.uppercased(), shortName: "", thumbnail: nil, immediateThumbnailData: nil, hash: 0, count: 0)
+            let packInfo = StickerPackCollectionInfo(id: ItemCollectionId(namespace: ChatMediaInputPanelAuxiliaryNamespace.premium.rawValue, id: 0), flags: [], accessHash: 0, title: strings.Stickers_PremiumStickers.uppercased(), shortName: "", thumbnail: nil, thumbnailFileId: nil, immediateThumbnailData: nil, hash: 0, count: 0)
             
             if let premiumStickers = premiumStickers {
                 for i in 0 ..< premiumStickers.items.count {
@@ -577,7 +578,7 @@ final class ChatMediaInputNode: ChatInputNode {
     
     var requestDisableStickerAnimations: ((Bool) -> Void)?
     
-    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, DeviceMetrics, Bool)?
+    private var validLayout: (CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, CGFloat, ChatPresentationInterfaceState, DeviceMetrics, Bool, Bool)?
     private var paneArrangement: ChatMediaInputPaneArrangement
     private var initializedArrangement = false
     
@@ -796,7 +797,7 @@ final class ChatMediaInputNode: ChatInputNode {
                         sendSticker: {
                             fileReference, sourceNode, sourceRect in
                             if let strongSelf = self {
-                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
+                                return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
                             } else {
                                 return false
                             }
@@ -864,7 +865,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     sendSticker: {
                         fileReference, sourceNode, sourceRect in
                         if let strongSelf = self {
-                            return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
+                            return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
                         } else {
                             return false
                         }
@@ -958,7 +959,7 @@ final class ChatMediaInputNode: ChatInputNode {
         
         getItemIsPreviewedImpl = { [weak self] item in
             if let strongSelf = self {
-                return strongSelf.inputNodeInteraction.previewedStickerPackItem == .pack(item)
+                return strongSelf.inputNodeInteraction.previewedStickerPackItem == .pack(item.file)
             }
             return false
         }
@@ -1096,7 +1097,7 @@ final class ChatMediaInputNode: ChatInputNode {
             let packReference: StickerPackReference = .id(id: info.id.id, accessHash: info.accessHash)
             let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { fileReference, sourceNode, sourceRect in
                 if let strongSelf = self {
-                    return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect)
+                    return strongSelf.controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil)
                 } else {
                     return false
                 }
@@ -1455,7 +1456,7 @@ final class ChatMediaInputNode: ChatInputNode {
             }
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
-            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [])
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
             
             let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
             }, baseNavigationController: nil)
@@ -1467,13 +1468,13 @@ final class ChatMediaInputNode: ChatInputNode {
             }, action: { _, f in
                 f(.default)
                 if isSaved {
-                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, false, false)
+                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, false, false)
                 } else if let (collection, result) = file.contextResult {
-                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, false)
+                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, false)
                 }
             })))
             
-            if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+            if let (_, _, _, _, _, _, _, _, interfaceState, _, _, _) = strongSelf.validLayout {
                 var isScheduledMessages = false
                 if case .scheduledMessages = interfaceState.subject {
                     isScheduledMessages = true
@@ -1486,9 +1487,9 @@ final class ChatMediaInputNode: ChatInputNode {
                             }, action: { _, f in
                                 f(.default)
                                 if isSaved {
-                                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, true, false)
+                                    let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, true, false)
                                 } else if let (collection, result) = file.contextResult {
-                                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode, sourceRect, true)
+                                    let _ = self?.controllerInteraction.sendBotContextResultAsGif(collection, result, sourceNode.view, sourceRect, true)
                                 }
                             })))
                         }
@@ -1499,7 +1500,7 @@ final class ChatMediaInputNode: ChatInputNode {
                             }, action: { _, f in
                                 f(.default)
                                 
-                                let _ = self?.controllerInteraction.sendGif(file.file, sourceNode, sourceRect, false, true)
+                                let _ = self?.controllerInteraction.sendGif(file.file, sourceNode.view, sourceRect, false, true)
                             })))
                         }
                     }
@@ -1592,10 +1593,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         if let item = item as? StickerPreviewPeekItem {
                             return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                             |> deliverOnMainQueue
-                            |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                            |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                                 if let strongSelf = self {
                                     var menuItems: [ContextMenuItem] = []                                    
-                                    if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+                                    if let (_, _, _, _, _, _, _, _, interfaceState, _, _, _) = strongSelf.validLayout {
                                         var isScheduledMessages = false
                                         if case .scheduledMessages = interfaceState.subject {
                                             isScheduledMessages = true
@@ -1608,9 +1609,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }, action: { _, f in
                                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode, animationNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode.view, animationNode.bounds, nil)
                                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode, imageNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode.view, imageNode.bounds, nil)
                                                             }
                                                         }
                                                         f(.default)
@@ -1622,9 +1623,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }, action: { _, f in
                                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode, animationNode.bounds)
+                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil)
                                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode, imageNode.bounds)
+                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil)
                                                         }
                                                     }
                                                     f(.default)
@@ -1642,7 +1643,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 |> deliverOnMainQueue).start(next: { result in
                                                     switch result {
                                                         case .generic:
-                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                         case let .limitExceeded(limit, premiumLimit):
                                                             let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                             let text: String
@@ -1651,7 +1652,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                             } else {
                                                                 text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                             }
-                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                            strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                                 if let strongSelf = self {
                                                                     if case .info = action {
                                                                         let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -1678,7 +1679,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         if let packReference = packReference {
                                                             let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData,  mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                 if let strongSelf = self {
-                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
+                                                                    return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect, nil)
                                                                 } else {
                                                                     return false
                                                                 }
@@ -1694,7 +1695,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }
                                     })))
-                                    return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
+                                    return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: item, menu: menuItems, openPremiumIntro: { [weak self] in
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -1744,10 +1745,10 @@ final class ChatMediaInputNode: ChatInputNode {
                                     }
                                 )
                                 |> deliverOnMainQueue
-                                |> map { isStarred, hasPremium -> (ASDisplayNode, PeekControllerContent)? in
+                                |> map { isStarred, hasPremium -> (UIView, CGRect, PeekControllerContent)? in
                                     if let strongSelf = self {
                                         var menuItems: [ContextMenuItem] = []
-                                        if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = strongSelf.validLayout {
+                                        if let (_, _, _, _, _, _, _, _, interfaceState, _, _, _) = strongSelf.validLayout {
                                             var isScheduledMessages = false
                                             if case .scheduledMessages = interfaceState.subject {
                                                 isScheduledMessages = true
@@ -1760,9 +1761,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         }, action: { _, f in
                                                             if let strongSelf = self, let peekController = strongSelf.peekController {
                                                                 if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode, animationNode.bounds)
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, animationNode.view, animationNode.bounds, nil)
                                                                 } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode, imageNode.bounds)
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, false, imageNode.view, imageNode.bounds, nil)
                                                                 }
                                                             }
                                                             f(.default)
@@ -1774,9 +1775,9 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     }, action: { _, f in
                                                         if let strongSelf = self, let peekController = strongSelf.peekController {
                                                             if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode, animationNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil)
                                                             } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode, imageNode.bounds)
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil)
                                                             }
                                                         }
                                                         f(.default)
@@ -1795,7 +1796,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     |> deliverOnMainQueue).start(next: { result in
                                                         switch result {
                                                             case .generic:
-                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                             case let .limitExceeded(limit, premiumLimit):
                                                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                                 let text: String
@@ -1804,7 +1805,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                                 } else {
                                                                     text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                                 }
-                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                                strongSelf.controllerInteraction.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                                     if let strongSelf = self {
                                                                         if case .info = action {
                                                                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -1832,7 +1833,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                             if let packReference = packReference {
                                                                 let controller = StickerPackScreen(context: strongSelf.context, updatedPresentationData: strongSelf.controllerInteraction.updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                                     if let strongSelf = self {
-                                                                        return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect)
+                                                                        return strongSelf.controllerInteraction.sendSticker(file, false, false, nil, false, sourceNode, sourceRect, nil)
                                                                     } else {
                                                                         return false
                                                                     }
@@ -1849,7 +1850,7 @@ final class ChatMediaInputNode: ChatInputNode {
                                                 }
                                             }))
                                         )
-                                        return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
+                                        return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), isLocked: item.file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: { [weak self] in
                                             guard let strongSelf = self else {
                                                 return
                                             }
@@ -1866,11 +1867,11 @@ final class ChatMediaInputNode: ChatInputNode {
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 controller.visibilityUpdated = { [weak self] visible in
                     self?.previewingStickersPromise.set(visible)
@@ -1922,8 +1923,8 @@ final class ChatMediaInputNode: ChatInputNode {
             self.paneArrangement = self.paneArrangement.withIndexTransition(0.0).withCurrentIndex(index)
             let updatedGifPanelWasActive = self.paneArrangement.panes[self.paneArrangement.currentIndex] == .gifs
   
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: transition, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: transition, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
                 self.updateAppearanceTransition(transition: transition)
             }
             if updatedGifPanelWasActive != previousGifPanelWasActive {
@@ -1940,8 +1941,8 @@ final class ChatMediaInputNode: ChatInputNode {
                     }
             }
         } else {
-            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
-                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+            if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.validLayout {
+                let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
             }
         }
     }
@@ -2179,20 +2180,20 @@ final class ChatMediaInputNode: ChatInputNode {
     }
     
     func simulateUpdateLayout(isVisible: Bool) {
-        if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _) = self.validLayout {
-            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+        if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _, isExpanded) = self.validLayout {
+            let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool) -> (CGFloat, CGFloat) {
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
         var searchMode: ChatMediaInputSearchMode?
-        if let (_, _, _, _, _, _, _, _, interfaceState, _, _) = self.validLayout, case let .media(_, maybeExpanded, _) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {
+        if let (_, _, _, _, _, _, _, _, interfaceState, _, _, _) = self.validLayout, case let .media(_, maybeExpanded, _) = interfaceState.inputMode, let expanded = maybeExpanded, case let .search(mode) = expanded {
             searchMode = mode
         }
         
         let wasVisible = self.validLayout?.10 ?? false
         
-        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible)
+        self.validLayout = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
         
         if self.theme !== interfaceState.theme || self.strings !== interfaceState.strings {
             self.updateThemeAndStrings(chatWallpaper: interfaceState.chatWallpaper, theme: interfaceState.theme, strings: interfaceState.strings)
@@ -2545,7 +2546,7 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.stickerPane.removeFromSupernode()
                 }
             case .changed:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.validLayout {
                     let translationX = -recognizer.translation(in: self.view).x
                     var indexTransition = translationX / width
                     if self.paneArrangement.currentIndex == 0 {
@@ -2554,10 +2555,10 @@ final class ChatMediaInputNode: ChatInputNode {
                         indexTransition = min(0.0, indexTransition)
                     }
                     self.paneArrangement = self.paneArrangement.withIndexTransition(indexTransition)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
                 }
             case .ended:
-                if let (width, _, _, _, _, _, _, _, _, _, _) = self.validLayout {
+                if let (width, _, _, _, _, _, _, _, _, _, _, _) = self.validLayout {
                     var updatedIndex = self.paneArrangement.currentIndex
                     if abs(self.paneArrangement.indexTransition * width) > 30.0 {
                         if self.paneArrangement.indexTransition < 0.0 {
@@ -2570,9 +2571,9 @@ final class ChatMediaInputNode: ChatInputNode {
                     self.setCurrentPane(self.paneArrangement.panes[updatedIndex], transition: .animated(duration: 0.25, curve: .spring))
                 }
             case .cancelled:
-                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible) = self.validLayout {
+                if let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded) = self.validLayout {
                     self.paneArrangement = self.paneArrangement.withIndexTransition(0.0)
-                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible)
+                    let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .animated(duration: 0.25, curve: .spring), interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
                 }
             default:
                 break
@@ -2658,6 +2659,15 @@ final class ChatMediaInputNode: ChatInputNode {
         self.updatePaneClippingContainer(size: self.paneClippingContainer.bounds.size, offset: collectionListPanelOffset, transition: transition)
     }
     
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        if self.panelIsFocused {
+            if point.y > -41.0 {
+                return true
+            }
+        }
+        return super.point(inside: point, with: event)
+    }
+    
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if self.panelIsFocused {
             if point.y > -41.0 && point.y < 38.0 {
@@ -2725,7 +2735,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
         let sourceRect = self.sourceRect
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
             if let sourceNode = sourceNode {
-                return (sourceNode, sourceRect)
+                return (sourceNode.view, sourceRect)
             } else {
                 return nil
             }

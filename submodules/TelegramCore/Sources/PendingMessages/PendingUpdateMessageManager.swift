@@ -64,7 +64,7 @@ private final class PendingUpdateMessageManagerImpl {
         }
     }
     
-    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, disableUrlPreview: Bool) {
+    func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], disableUrlPreview: Bool) {
         if let context = self.contexts[messageId] {
             self.contexts.removeValue(forKey: messageId)
             context.disposable.dispose()
@@ -75,7 +75,7 @@ private final class PendingUpdateMessageManagerImpl {
         self.contexts[messageId] = context
         
         let queue = self.queue
-        disposable.set((requestEditMessage(postbox: self.postbox, network: self.network, stateManager: self.stateManager, transformOutgoingMessageMedia: self.transformOutgoingMessageMedia, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview, scheduleTime: nil)
+        disposable.set((requestEditMessage(postbox: self.postbox, network: self.network, stateManager: self.stateManager, transformOutgoingMessageMedia: self.transformOutgoingMessageMedia, messageMediaPreuploadManager: self.messageMediaPreuploadManager, mediaReferenceRevalidationContext: self.mediaReferenceRevalidationContext, messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview, scheduleTime: nil)
         |> deliverOn(self.queue)).start(next: { [weak self, weak context] value in
             queue.async {
                 guard let strongSelf = self, let initialContext = context else {
@@ -163,9 +163,9 @@ public final class PendingUpdateMessageManager {
         })
     }
     
-    public func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute? = nil, disableUrlPreview: Bool = false) {
+    public func add(messageId: MessageId, text: String, media: RequestEditMessageMedia, entities: TextEntitiesMessageAttribute?, inlineStickers: [MediaId: Media], disableUrlPreview: Bool = false) {
         self.impl.with { impl in
-            impl.add(messageId: messageId, text: text, media: media, entities: entities, disableUrlPreview: disableUrlPreview)
+            impl.add(messageId: messageId, text: text, media: media, entities: entities, inlineStickers: inlineStickers, disableUrlPreview: disableUrlPreview)
         }
     }
     

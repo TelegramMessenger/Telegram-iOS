@@ -60,7 +60,7 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     
     private let presentationData: PresentationData
     private let content: PeekControllerContent
-    var sourceNode: () -> ASDisplayNode?
+    var sourceView: () -> (UIView, CGRect)?
     
     public var visibilityUpdated: ((Bool) -> Void)?
     
@@ -68,10 +68,15 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     
     private var animatedIn = false
     
-    public init(presentationData: PresentationData, content: PeekControllerContent, sourceNode: @escaping () -> ASDisplayNode?) {
+    private let _ready = Promise<Bool>()
+    override public var ready: Promise<Bool> {
+        return self._ready
+    }
+    
+    public init(presentationData: PresentationData, content: PeekControllerContent, sourceView: @escaping () -> (UIView, CGRect)?) {
         self.presentationData = presentationData
         self.content = content
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
         
         super.init(navigationBarPresentationData: nil)
         
@@ -90,8 +95,8 @@ public final class PeekController: ViewController, ContextControllerProtocol {
     }
     
     private func getSourceRect() -> CGRect {
-        if let sourceNode = self.sourceNode() {
-            return sourceNode.view.convert(sourceNode.bounds, to: self.view)
+        if let (sourceView, sourceRect) = self.sourceView() {
+            return sourceView.convert(sourceRect, to: self.view)
         } else {
             let size = self.displayNode.bounds.size
             return CGRect(origin: CGPoint(x: floor((size.width - 10.0) / 2.0), y: floor((size.height - 10.0) / 2.0)), size: CGSize(width: 10.0, height: 10.0))

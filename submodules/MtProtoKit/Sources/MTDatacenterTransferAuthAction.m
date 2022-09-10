@@ -91,6 +91,8 @@
     requestService.forceBackgroundRequests = true;
     [_sourceDatacenterMtProto addMessageService:requestService];
     
+    [_sourceDatacenterMtProto resume];
+    
     MTRequest *request = [[MTRequest alloc] init];
     
     NSData *exportAuthRequestData = nil;
@@ -129,6 +131,8 @@
     MTRequestMessageService *requestService = [[MTRequestMessageService alloc] initWithContext:context];
     requestService.forceBackgroundRequests = true;
     [_destinationDatacenterMtProto addMessageService:requestService];
+    
+    [_destinationDatacenterMtProto resume];
     
     MTRequest *request = [[MTRequest alloc] init];
     

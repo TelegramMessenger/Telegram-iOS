@@ -4,21 +4,91 @@ import SwiftSignalKit
 import StoreKit
 import Postbox
 import TelegramCore
+import TelegramStringFormatting
+
+private let productIdentifiers = [
+    "org.telegram.telegramPremium.monthly",
+    "org.telegram.telegramPremium.twelveMonths",
+    "org.telegram.telegramPremium.sixMonths",
+    "org.telegram.telegramPremium.threeMonths"
+]
+
+private extension NSDecimalNumber {
+    func round(_ decimals: Int) -> NSDecimalNumber {
+        return self.rounding(accordingToBehavior:
+                            NSDecimalNumberHandler(roundingMode: .down,
+                                   scale: Int16(decimals),
+                                   raiseOnExactness: false,
+                                   raiseOnOverflow: false,
+                                   raiseOnUnderflow: false,
+                                   raiseOnDivideByZero: false))
+    }
+}
 
 public final class InAppPurchaseManager: NSObject {
-    public final class Product {
+    public final class Product: Equatable {
+        private lazy var numberFormatter: NumberFormatter = {
+            let numberFormatter = NumberFormatter()
+            numberFormatter.numberStyle = .currency
+            numberFormatter.locale = self.skProduct.priceLocale
+            return numberFormatter
+        }()
+        
         let skProduct: SKProduct
         
         init(skProduct: SKProduct) {
             self.skProduct = skProduct
         }
         
-        public var price: String {
-            let numberFormatter = NumberFormatter()
-            numberFormatter.numberStyle = .currency
-            numberFormatter.locale = self.skProduct.priceLocale
-            return numberFormatter.string(from: self.skProduct.price) ?? ""
+        public var id: String {
+            return self.skProduct.productIdentifier
         }
+        
+        public var isSubscription: Bool {
+            if #available(iOS 12.0, *) {
+                return self.skProduct.subscriptionGroupIdentifier != nil
+            } else if #available(iOS 11.2, *) {
+                return self.skProduct.subscriptionPeriod != nil
+            } else {
+                return self.id.contains(".monthly")
+            }
+        }
+        
+        public var price: String {
+            return self.numberFormatter.string(from: self.skProduct.price) ?? ""
+        }
+        
+        public func pricePerMonth(_ monthsCount: Int) -> String {
+            let price = self.skProduct.price.dividing(by: NSDecimalNumber(value: monthsCount)).round(2)
+            return self.numberFormatter.string(from: price) ?? ""
+        }
+        
+        public var priceValue: NSDecimalNumber {
+            return self.skProduct.price
+        }
+        
+        public var priceCurrencyAndAmount: (currency: String, amount: Int64) {
+            if let currencyCode = self.numberFormatter.currencyCode,
+                let amount = fractionalToCurrencyAmount(value: self.priceValue.doubleValue, currency: currencyCode) {
+                return (currencyCode, amount)
+            } else {
+                return ("", 0)
+            }
+        }
+        
+        public static func ==(lhs: Product, rhs: Product) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.isSubscription != rhs.isSubscription {
+                return false
+            }
+            if lhs.priceValue != rhs.priceValue {
+                return false
+            }
+            return true
+        }
+        
     }
     
     public enum PurchaseState {
@@ -41,9 +111,11 @@ public final class InAppPurchaseManager: NSObject {
     
     private final class PaymentTransactionContext {
         var state: SKPaymentTransactionState?
+        var targetPeerId: PeerId?
         let subscriber: (TransactionState) -> Void
         
-        init(subscriber: @escaping (TransactionState) -> Void) {
+        init(targetPeerId: PeerId?, subscriber: @escaping (TransactionState) -> Void) {
+            self.targetPeerId = targetPeerId
             self.subscriber = subscriber
         }
     }
@@ -58,7 +130,6 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private let engine: TelegramEngine
-    private let premiumProductId: String
     
     private var products: [Product] = []
     private var productsPromise = Promise<[Product]>([])
@@ -71,10 +142,9 @@ public final class InAppPurchaseManager: NSObject {
     
     private let disposableSet = DisposableDict<String>()
     
-    public init(engine: TelegramEngine, premiumProductId: String) {
+    public init(engine: TelegramEngine) {
         self.engine = engine
-        self.premiumProductId = premiumProductId
-        
+                
         super.init()
         
         SKPaymentQueue.default().add(self)
@@ -90,11 +160,8 @@ public final class InAppPurchaseManager: NSObject {
     }
     
     private func requestProducts() {
-        guard !self.premiumProductId.isEmpty else {
-            return
-        }
         Logger.shared.log("InAppPurchaseManager", "Requesting products")
-        let productRequest = SKProductsRequest(productIdentifiers: Set([self.premiumProductId]))
+        let productRequest = SKProductsRequest(productIdentifiers: Set(productIdentifiers))
         productRequest.delegate = self
         productRequest.start()
         
@@ -126,10 +193,15 @@ public final class InAppPurchaseManager: NSObject {
         }
     }
     
-    public func buyProduct(_ product: Product) -> Signal<PurchaseState, PurchaseError> {
+    public func buyProduct(_ product: Product, targetPeerId: PeerId? = nil) -> Signal<PurchaseState, PurchaseError> {
         if !self.canMakePayments {
             return .fail(.cantMakePayments)
         }
+        
+        if !product.isSubscription && targetPeerId == nil {
+            return .fail(.cantMakePayments)
+        }
+        
         let accountPeerId = "\(self.engine.account.peerId.toInt64())"
         
         Logger.shared.log("InAppPurchaseManager", "Buying: account \(accountPeerId), product \(product.skProduct.productIdentifier), price \(product.price)")
@@ -143,7 +215,7 @@ public final class InAppPurchaseManager: NSObject {
             let disposable = MetaDisposable()
             
             self.stateQueue.async {
-                let paymentContext = PaymentTransactionContext(subscriber: { state in
+                let paymentContext = PaymentTransactionContext(targetPeerId: targetPeerId, subscriber: { state in
                     switch state {
                         case let .purchased(transactionId), let .restored(transactionId):
                             if let transactionId = transactionId {
@@ -221,6 +293,9 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
     public func paymentQueue(_ queue: SKPaymentQueue, updatedTransactions transactions: [SKPaymentTransaction]) {
         self.stateQueue.async {
             let accountPeerId = "\(self.engine.account.peerId.toInt64())"
+            
+            let paymentContexts = self.paymentContexts
+            
             var transactionsToAssign: [SKPaymentTransaction] = []
             for transaction in transactions {
                 if let applicationUsername = transaction.payment.applicationUsername, applicationUsername != accountPeerId {
@@ -263,8 +338,33 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 let transactionIds = transactionsToAssign.compactMap({ $0.transactionIdentifier }).joined(separator: ", ")
                 Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), sending receipt for transactions [\(transactionIds)]")
                 
+                let transaction = transactionsToAssign.first
+                let purposeSignal: Signal<AppStoreTransactionPurpose, NoError>
+                if let productIdentifier = transaction?.payment.productIdentifier, let targetPeerId = paymentContexts[productIdentifier]?.targetPeerId {
+                    purposeSignal = self.availableProducts
+                    |> filter { products in
+                        return !products.isEmpty
+                    }
+                    |> take(1)
+                    |> map { products -> AppStoreTransactionPurpose in
+                        if let product = products.first(where: { $0.id == productIdentifier }) {
+                            let (currency, amount) = product.priceCurrencyAndAmount
+                            return .gift(peerId: targetPeerId, currency: currency, amount: amount)
+                        } else {
+                            return .gift(peerId: targetPeerId, currency: "", amount: 0)
+                        }
+                    }
+                } else {
+                    purposeSignal = .single(.subscription)
+                }
+            
+                let receiptData = getReceiptData() ?? Data()
                 self.disposableSet.set(
-                    self.engine.payments.sendAppStoreReceipt(receipt: getReceiptData() ?? Data(), restore: false).start(error: { [weak self] _ in
+                    (purposeSignal
+                    |> castError(AssignAppStoreTransactionError.self)
+                    |> mapToSignal { purpose -> Signal<Never, AssignAppStoreTransactionError> in
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: purpose)
+                    }).start(error: { [weak self] _ in
                         Logger.shared.log("InAppPurchaseManager", "Account \(accountPeerId), transactions [\(transactionIds)] failed to assign")
                         for transaction in transactions {
                             self?.stateQueue.async {
@@ -294,7 +394,7 @@ extension InAppPurchaseManager: SKPaymentTransactionObserver {
                 
                 if let receiptData = getReceiptData() {
                     self.disposableSet.set(
-                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, restore: true).start(error: { error in
+                        self.engine.payments.sendAppStoreReceipt(receipt: receiptData, purpose: .restore).start(error: { error in
                             Queue.mainQueue().async {
                                 if case .serverProvided = error {
                                     onRestoreCompletion(.succeed(true))

@@ -5,18 +5,22 @@ import SwiftSignalKit
 
 private struct SearchStickersConfiguration {
     static var defaultValue: SearchStickersConfiguration {
-        return SearchStickersConfiguration(cacheTimeout: 86400)
+        return SearchStickersConfiguration(cacheTimeout: 86400, normalStickersPerPremium: 2, premiumStickersCount: 0)
     }
     
     public let cacheTimeout: Int32
+    public let normalStickersPerPremiumCount: Int32
+    public let premiumStickersCount: Int32
     
-    fileprivate init(cacheTimeout: Int32) {
+    fileprivate init(cacheTimeout: Int32, normalStickersPerPremium: Int32, premiumStickersCount: Int32) {
         self.cacheTimeout = cacheTimeout
+        self.normalStickersPerPremiumCount = normalStickersPerPremium
+        self.premiumStickersCount = premiumStickersCount
     }
     
     static func with(appConfiguration: AppConfiguration) -> SearchStickersConfiguration {
-        if let data = appConfiguration.data, let value = data["stickers_emoji_cache_time"] as? Double {
-            return SearchStickersConfiguration(cacheTimeout: Int32(value))
+        if let data = appConfiguration.data, let cacheTimeoutValue = data["stickers_emoji_cache_time"] as? Double, let normalStickersPerPremiumValue = data["stickers_normal_by_emoji_per_premium_num"] as? Double, let premiumStickersCountValue = data["stickers_premium_by_emoji_num "] as? Double {
+            return SearchStickersConfiguration(cacheTimeout: Int32(cacheTimeoutValue), normalStickersPerPremium: Int32(normalStickersPerPremiumValue), premiumStickersCount: Int32(premiumStickersCountValue))
         } else {
             return .defaultValue
         }
@@ -85,7 +89,7 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
     if query == "\u{2764}" {
         query = "\u{2764}\u{FE0F}"
     }
-    return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?, Bool) in
+    return account.postbox.transaction { transaction -> ([FoundStickerItem], CachedStickerQueryResult?, Bool, SearchStickersConfiguration) in
         let isPremium = transaction.getPeer(account.peerId)?.isPremium ?? false
         
         var result: [FoundStickerItem] = []
@@ -138,12 +142,10 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             
             var installedItems: [FoundStickerItem] = []
             var installedAnimatedItems: [FoundStickerItem] = []
+            var installedPremiumItems: [FoundStickerItem] = []
+            
             for item in transaction.searchItemCollection(namespace: Namespaces.ItemCollection.CloudStickerPacks, query: searchQuery) {
                 if let item = item as? StickerPackItem {
-                    if item.file.isPremiumSticker && !isPremium {
-                        continue
-                    }
-                    
                     if !currentItems.contains(item.file.fileId) {
                         var stringRepresentations: [String] = []
                         for key in item.indexKeys {
@@ -154,7 +156,9 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                             }
                         }
                         if !recentItemsIds.contains(item.file.fileId) {
-                            if item.file.isAnimatedSticker || item.file.isVideoSticker {
+                            if item.file.isPremiumSticker {
+                                installedPremiumItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
+                            } else if item.file.isAnimatedSticker || item.file.isVideoSticker {
                                 installedAnimatedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
                             } else {
                                 installedItems.append(FoundStickerItem(file: item.file, stringRepresentations: stringRepresentations))
@@ -198,24 +202,36 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             cached = nil
         }
         
-        return (result, cached, isPremium)
-    } |> mapToSignal { localItems, cached, isPremium -> Signal<[FoundStickerItem], NoError> in
-        var tempResult: [FoundStickerItem] = localItems
+        return (result, cached, isPremium, searchStickersConfiguration)
+    } |> mapToSignal { localItems, cached, isPremium, searchStickersConfiguration -> Signal<[FoundStickerItem], NoError> in
         if !scope.contains(.remote) {
-            return .single(tempResult)
+            return .single(localItems)
         }
+        
+        var tempResult: [FoundStickerItem] = []
         let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
+        
+        var premiumItems: [FoundStickerItem] = []
+        var otherItems: [FoundStickerItem] = []
+        
+        for item in localItems {
+            if item.file.isPremiumSticker {
+                premiumItems.append(item)
+            } else {
+                otherItems.append(item)
+            }
+        }
         
         if let cached = cached {
             var cachedItems: [FoundStickerItem] = []
             var cachedAnimatedItems: [FoundStickerItem] = []
-            
+            var cachedPremiumItems: [FoundStickerItem] = []
+                        
             for file in cached.items {
-                if file.isPremiumSticker && !isPremium {
-                    continue
-                }
                 if !currentItemIds.contains(file.fileId) {
-                    if file.isAnimatedSticker || file.isVideoSticker {
+                    if file.isPremiumSticker {
+                        cachedPremiumItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                    } else if file.isAnimatedSticker || file.isVideoSticker {
                         cachedAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                     } else {
                         cachedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
@@ -223,8 +239,42 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
                 }
             }
             
-            tempResult.append(contentsOf: cachedAnimatedItems)
-            tempResult.append(contentsOf: cachedItems)
+            otherItems.append(contentsOf: cachedAnimatedItems)
+            otherItems.append(contentsOf: cachedItems)
+            
+            let allPremiumItems = premiumItems + cachedPremiumItems
+            let allOtherItems = otherItems + cachedAnimatedItems + cachedItems
+            
+            if isPremium {
+                let batchCount = Int(searchStickersConfiguration.normalStickersPerPremiumCount)
+                if batchCount == 0 {
+                    tempResult.append(contentsOf: allPremiumItems)
+                    tempResult.append(contentsOf: allOtherItems)
+                } else {
+                    if allPremiumItems.isEmpty {
+                        tempResult.append(contentsOf: allOtherItems)
+                    } else {
+                        var i = 0
+                        for premiumItem in allPremiumItems {
+                            if i < allOtherItems.count {
+                                for j in i ..< min(i + batchCount, allOtherItems.count) {
+                                    tempResult.append(allOtherItems[j])
+                                }
+                                i += batchCount
+                            }
+                            tempResult.append(premiumItem)
+                        }
+                        if i < allOtherItems.count {
+                            for j in i ..< allOtherItems.count {
+                                tempResult.append(allOtherItems[j])
+                            }
+                        }
+                    }
+                }
+            } else {
+                tempResult.append(contentsOf: allOtherItems)
+                tempResult.append(contentsOf: allPremiumItems.prefix(max(0, Int(searchStickersConfiguration.premiumStickersCount))))
+            }
         }
         
         let remote = account.network.request(Api.functions.messages.getStickers(emoticon: query, hash: cached?.hash ?? 0))
@@ -235,32 +285,74 @@ func _internal_searchStickers(account: Account, query: String, scope: SearchStic
             return account.postbox.transaction { transaction -> [FoundStickerItem] in
                 switch result {
                     case let .stickers(hash, stickers):
-                        var items: [FoundStickerItem] = []
-                        var animatedItems: [FoundStickerItem] = []
+                        var result: [FoundStickerItem] = []
+                        let currentItemIds = Set<MediaId>(localItems.map { $0.file.fileId })
                         
-                        var result: [FoundStickerItem] = localItems
-                        let currentItemIds = Set<MediaId>(result.map { $0.file.fileId })
+                        var premiumItems: [FoundStickerItem] = []
+                        var otherItems: [FoundStickerItem] = []
                         
+                        for item in localItems {
+                            if item.file.isPremiumSticker {
+                                premiumItems.append(item)
+                            } else {
+                                otherItems.append(item)
+                            }
+                        }
+                    
+                        var foundItems: [FoundStickerItem] = []
+                        var foundAnimatedItems: [FoundStickerItem] = []
+                        var foundPremiumItems: [FoundStickerItem] = []
+                    
                         var files: [TelegramMediaFile] = []
                         for sticker in stickers {
                             if let file = telegramMediaFileFromApiDocument(sticker), let id = file.id {
-                                if file.isPremiumSticker && !isPremium {
-                                    continue
-                                }
                                 files.append(file)
                                 if !currentItemIds.contains(id) {
-                                    if file.isAnimatedSticker || file.isVideoSticker {
-                                        animatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    if file.isPremiumSticker {
+                                        foundPremiumItems.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                    } else if file.isAnimatedSticker || file.isVideoSticker {
+                                        foundAnimatedItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                                     } else {
-                                        items.append(FoundStickerItem(file: file, stringRepresentations: []))
+                                        foundItems.append(FoundStickerItem(file: file, stringRepresentations: []))
                                     }
                                 }
                             }
                         }
+                    
+                        let allPremiumItems = premiumItems + foundPremiumItems
+                        let allOtherItems = otherItems + foundAnimatedItems + foundItems
                         
-                        result.append(contentsOf: animatedItems)
-                        result.append(contentsOf: items)
-                        
+                        if isPremium {
+                            let batchCount = Int(searchStickersConfiguration.normalStickersPerPremiumCount)
+                            if batchCount == 0 {
+                                result.append(contentsOf: allPremiumItems)
+                                result.append(contentsOf: allOtherItems)
+                            } else {
+                                if allPremiumItems.isEmpty {
+                                    result.append(contentsOf: allOtherItems)
+                                } else {
+                                    var i = 0
+                                    for premiumItem in allPremiumItems {
+                                        if i < allOtherItems.count {
+                                            for j in i ..< min(i + batchCount, allOtherItems.count) {
+                                                result.append(allOtherItems[j])
+                                            }
+                                            i += batchCount
+                                        }
+                                        result.append(premiumItem)
+                                    }
+                                    if i < allOtherItems.count {
+                                        for j in i ..< allOtherItems.count {
+                                            result.append(allOtherItems[j])
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            result.append(contentsOf: allOtherItems)
+                            result.append(contentsOf: allPremiumItems.prefix(max(0, Int(searchStickersConfiguration.premiumStickersCount))))
+                        }
+                    
                         let currentTime = Int32(CFAbsoluteTimeGetCurrent() + kCFAbsoluteTimeIntervalSince1970)
                         if let entry = CodableEntry(CachedStickerQueryResult(items: files, hash: hash, timestamp: currentTime)) {
                             transaction.putItemCacheEntry(id: ItemCacheEntryId(collectionId: Namespaces.CachedItemCollection.cachedStickerQueryResults, key: CachedStickerQueryResult.cacheKey(query)), entry: entry)
@@ -306,7 +398,7 @@ func _internal_searchStickerSetsRemotely(network: Network, query: String) -> Sig
             case let .foundStickerSets(_, sets: sets):
                 var result = FoundStickerSets()
                 for set in sets {
-                    let parsed = parsePreviewStickerSet(set)
+                    let parsed = parsePreviewStickerSet(set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                     let values = parsed.1.map({ ItemCollectionViewEntry(index: ItemCollectionViewEntryIndex(collectionIndex: index, collectionId: parsed.0.id, itemIndex: $0.index), item: $0) })
                     result = result.withUpdatedInfosAndEntries(infos: [(parsed.0.id, parsed.0, parsed.1.first, false)], entries: values)
                     index += 1

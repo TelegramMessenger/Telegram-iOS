@@ -62,6 +62,8 @@ extension StickerPackReference {
                 self = .dice(emoticon)
             case .inputStickerSetAnimatedEmojiAnimations:
                 self = .animatedEmojiAnimations
+            case .inputStickerSetPremiumGifts:
+                self = .premiumGifts
         }
     }
 }
@@ -102,6 +104,9 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 let isVoice = (flags & (1 << 10)) != 0
                 let waveformBuffer: Data? = waveform?.makeData()
                 result.append(.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer))
+            case let .documentAttributeCustomEmoji(flags, alt, stickerSet):
+                let isFree = (flags & (1 << 0)) != 0
+                result.append(.CustomEmoji(isPremium: !isFree, alt: alt, packReference: StickerPackReference(apiInputSet: stickerSet)))
         }
     }
     return result

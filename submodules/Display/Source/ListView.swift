@@ -3347,6 +3347,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                                 
                                 if progress == 1.0 {
                                     for itemNode in temporaryPreviousNodes {
+                                        itemNode.visibility = .none
                                         itemNode.removeFromSupernode()
                                         itemNode.extractedBackgroundNode?.removeFromSupernode()
                                     }
@@ -3360,6 +3361,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                     } else {
                         animation.completion = { _ in
                             for itemNode in temporaryPreviousNodes {
+                                itemNode.visibility = .none
                                 itemNode.removeFromSupernode()
                                 itemNode.extractedBackgroundNode?.removeFromSupernode()
                             }
@@ -3442,6 +3444,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     private func removeItemNodeAtIndex(_ index: Int) {
         let node = self.itemNodes[index]
         self.itemNodes.remove(at: index)
+        node.visibility = .none
         node.removeFromSupernode()
         node.extractedBackgroundNode?.removeFromSupernode()
         node.accessoryItemNode?.removeFromSupernode()
@@ -4620,38 +4623,61 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     }
     
     override open func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent?) {
+        let isSecondary: Bool
+        if #available(iOS 13.4, *) {
+            isSecondary = event?.buttonMask == .secondary
+        } else {
+            isSecondary = false
+        }
+        
         if let selectionTouchLocation = self.selectionTouchLocation {
             let index = self.itemIndexAtPoint(selectionTouchLocation)
-            if index != self.highlightedItemIndex {
-                self.clearHighlightAnimated(false)
-            }
             
-            if let index = index {
-                if self.items[index].selectable {
-                    self.highlightedItemIndex = index
-                    for itemNode in self.itemNodes {
-                        if itemNode.index == index {
-                            if itemNode.canBeSelected {
-                                if !itemNode.isLayerBacked {
-                                    self.reorderItemNodeToFront(itemNode)
-                                    for (_, headerNode) in self.itemHeaderNodes {
-                                        self.reorderHeaderNodeToFront(headerNode)
-                                    }
-                                }
-                                let itemNodeFrame = itemNode.frame
-                                itemNode.setHighlighted(true, at: selectionTouchLocation.offsetBy(dx: -itemNodeFrame.minX, dy: -itemNodeFrame.minY), animated: false)
-                            } else {
-                                self.highlightedItemIndex = nil
-                                itemNode.tapped()
+            if isSecondary {
+                if let index = index {
+                    if self.items[index].selectable {
+                        self.highlightedItemIndex = index
+                        for itemNode in self.itemNodes {
+                            if itemNode.index == index {
+                                itemNode.secondaryAction(at: selectionTouchLocation)
+                                self.items[index].performSecondaryAction(listView: self)
+                                break
                             }
-                            break
+                        }
+                    }
+                }
+            } else {
+                if index != self.highlightedItemIndex {
+                    self.clearHighlightAnimated(false)
+                }
+                
+                if let index = index {
+                    if self.items[index].selectable {
+                        self.highlightedItemIndex = index
+                        for itemNode in self.itemNodes {
+                            if itemNode.index == index {
+                                if itemNode.canBeSelected {
+                                    if !itemNode.isLayerBacked {
+                                        self.reorderItemNodeToFront(itemNode)
+                                        for (_, headerNode) in self.itemHeaderNodes {
+                                            self.reorderHeaderNodeToFront(headerNode)
+                                        }
+                                    }
+                                    let itemNodeFrame = itemNode.frame
+                                    itemNode.setHighlighted(true, at: selectionTouchLocation.offsetBy(dx: -itemNodeFrame.minX, dy: -itemNodeFrame.minY), animated: false)
+                                } else {
+                                    self.highlightedItemIndex = nil
+                                    itemNode.tapped()
+                                }
+                                break
+                            }
                         }
                     }
                 }
             }
         }
-        
-        if let highlightedItemIndex = self.highlightedItemIndex {
+                
+        if !isSecondary, let highlightedItemIndex = self.highlightedItemIndex {
             for itemNode in self.itemNodes {
                 if itemNode.index == highlightedItemIndex {
                     itemNode.selected()

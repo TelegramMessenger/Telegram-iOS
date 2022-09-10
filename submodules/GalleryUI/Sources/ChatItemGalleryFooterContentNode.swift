@@ -22,6 +22,10 @@ import UndoUI
 import ManagedAnimationNode
 import TelegramUniversalVideoContent
 import InvisibleInkDustNode
+import TextNodeWithEntities
+import AnimationCache
+import MultiAnimationRenderer
+
 import PtgForeignAgentNoticeRemoval
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
@@ -134,9 +138,12 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private let scrollWrapperNode: CaptionScrollWrapperNode
     private let scrollNode: ASScrollNode
 
-    private let textNode: ImmediateTextNode
-    private var spoilerTextNode: ImmediateTextNode?
+    private let textNode: ImmediateTextNodeWithEntities
+    private var spoilerTextNode: ImmediateTextNodeWithEntities?
     private var dustNode: InvisibleInkDustNode?
+    
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
     
     private let authorNameNode: ASTextNode
     private let dateNode: ASTextNode
@@ -320,7 +327,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         
         self.maskNode = ASDisplayNode()
         
-        self.textNode = ImmediateTextNode()
+        self.textNode = ImmediateTextNodeWithEntities()
         self.textNode.maximumNumberOfLines = 0
         self.textNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
         
@@ -351,6 +358,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.statusNode.isUserInteractionEnabled = false
         
+        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
+        
         super.init()
         
         self.addSubnode(self.contentNode)
@@ -380,6 +392,15 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 strongSelf.openActionOptions?(action, message)
             }
         }
+        
+        self.textNode.arguments = TextNodeWithEntities.Arguments(
+            context: self.context,
+            cache: self.animationCache,
+            renderer: self.animationRenderer,
+            placeholderColor: defaultDarkPresentationTheme.list.mediaPlaceholderColor,
+            attemptSynchronous: false
+        )
+        self.textNode.visibility = true
         
         self.contentNode.view.addSubview(self.deleteButton)
         self.contentNode.view.addSubview(self.fullscreenButton)
@@ -686,7 +707,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 }
             }
             let (text_, entities_) = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
-            messageText = galleryCaptionStringWithAppliedEntities(text_, entities: entities_)
+            messageText = galleryCaptionStringWithAppliedEntities(text_, entities: entities_, message: message)
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {
@@ -725,7 +746,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
     private func updateSpoilers(textFrame: CGRect) {
         if let textLayout = self.textNode.cachedLayout, !textLayout.spoilers.isEmpty {
             if self.spoilerTextNode == nil {
-                let spoilerTextNode = ImmediateTextNode()
+                let spoilerTextNode = ImmediateTextNodeWithEntities()
                 spoilerTextNode.attributedText = textNode.attributedText
                 spoilerTextNode.maximumNumberOfLines = 0
                 spoilerTextNode.linkHighlightColor = UIColor(rgb: 0x5ac8fa, alpha: 0.2)
@@ -1717,7 +1738,7 @@ private final class PlaybackButtonNode: HighlightTrackingButtonNode {
         self.textNode = ImmediateTextNode()
         self.textNode.attributedText = NSAttributedString(string: "15", font: Font.with(size: 11.0, design: .round, weight: .semibold, traits: []), textColor: .white)
         
-        super.init(pointerStyle: .circle)
+        super.init(pointerStyle: nil)
         
         self.addSubnode(self.backgroundIconNode)
         self.addSubnode(self.textNode)
