@@ -14,6 +14,7 @@ import TelegramStringFormatting
 import InvisibleInkDustNode
 import TextFormat
 import ChatPresentationInterfaceState
+import PtgForeignAgentNoticeRemoval
 
 final class ReplyAccessoryPanelNode: AccessoryPanelNode {
     private let messageDisposable = MetaDisposable()
@@ -112,6 +113,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                 }
                 
                 let isMedia: Bool
+                var message_: Message!
                 if let message = message {
                     switch messageContentKind(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId) {
                         case .text:
@@ -119,15 +121,17 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                         default:
                             isMedia = true
                     }
-                    (text, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
+
+                    message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+                    (text, _, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
                 } else {
                     isMedia = false
                 }
 
                 let textFont = Font.regular(14.0)
                 let messageText: NSAttributedString
-                if isText, let message = message {
-                    let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                if isText, let _ = message {
+                    let entities = (message_.textEntitiesAttribute?.entities ?? []).filter { entity in
                         if case .Spoiler = entity.type {
                             return true
                         } else {
@@ -136,7 +140,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                     }
                     let textColor = strongSelf.theme.chat.inputPanel.primaryTextColor
                     if entities.count > 0 {
-                        messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
+                        messageText = stringWithAppliedEntities(trimToLineCount(message_.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false)
                     } else {
                         messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? strongSelf.theme.chat.inputPanel.secondaryTextColor : strongSelf.theme.chat.inputPanel.primaryTextColor)
                     }

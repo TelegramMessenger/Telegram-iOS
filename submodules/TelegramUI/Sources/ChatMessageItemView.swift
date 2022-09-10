@@ -9,6 +9,7 @@ import LocalizedPeerData
 import ContextUI
 import ChatListUI
 import TelegramPresentationData
+import PtgForeignAgentNoticeRemoval
 
 struct ChatMessageItemWidthFill {
     var compactInset: CGFloat
@@ -206,7 +207,10 @@ final class ChatMessageAccessibilityData {
             if let chatPeer = message.peers[item.message.id.peerId] {
                 let authorName = message.author.flatMap(EnginePeer.init)?.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
-                let (_, _, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
+                let suppressForeignAgentNotice = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
+                let message_ = suppressForeignAgentNotice ? removeForeignAgentNotice(message: message) : message
+                
+                let (_, _, messageText, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: [EngineMessage(message_)], chatPeer: EngineRenderedPeer(peer: EnginePeer(chatPeer)), accountPeerId: item.context.account.peerId)
                 
                 var text = messageText
                 
@@ -222,10 +226,10 @@ final class ChatMessageAccessibilityData {
                             label = item.presentationData.strings.VoiceOver_Chat_YourPhoto
                         }
                         text = ""
-                        if !message.text.isEmpty {
+                        if !message_.text.isEmpty {
                             text.append("\n")
                             
-                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message.text).string)
+                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message_.text).string)
                         }
                     } else if let file = media as? TelegramMediaFile {
                         var isSpecialFile = false
@@ -340,9 +344,9 @@ final class ChatMessageAccessibilityData {
                             text = "\(file.fileName ?? ""). "
                             text.append(item.presentationData.strings.VoiceOver_Chat_Size(sizeString).string)
                         }
-                        if !message.text.isEmpty {
+                        if !message_.text.isEmpty {
                             text.append("\n")
-                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message.text).string)
+                            text.append(item.presentationData.strings.VoiceOver_Chat_Caption(message_.text).string)
                         }
                         break loop
                     } else if let webpage = media as? TelegramMediaWebpage, case let .Loaded(content) = webpage.content {
@@ -351,10 +355,13 @@ final class ChatMessageAccessibilityData {
                             contentText.append(item.presentationData.strings.VoiceOver_Chat_Title(title).string)
                             contentText.append(". ")
                         }
-                        if let text = content.text, !text.isEmpty {
-                            contentText.append(text)
+                        if let text = content.text {
+                            let text_ = suppressForeignAgentNotice ? removeForeignAgentNotice(text: text, mayRemoveWholeText: true) : text
+                            if !text_.isEmpty {
+                                contentText.append(text_)
+                            }
                         }
-                        text = "\(message.text)\n\(contentText)"
+                        text = "\(message_.text)\n\(contentText)"
                     } else if let contact = media as? TelegramMediaContact {
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {

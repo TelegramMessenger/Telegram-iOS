@@ -22,6 +22,7 @@ swift_library(
         "//submodules/GZip:GZip",
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/FakePasscode:FakePasscode",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     
     ],
     visibility = [

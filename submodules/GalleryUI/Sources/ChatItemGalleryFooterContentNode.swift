@@ -22,6 +22,7 @@ import UndoUI
 import ManagedAnimationNode
 import TelegramUniversalVideoContent
 import InvisibleInkDustNode
+import PtgForeignAgentNoticeRemoval
 
 private let deleteImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionTrash"), color: .white)
 private let actionImage = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: .white)
@@ -684,7 +685,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     break
                 }
             }
-            messageText = galleryCaptionStringWithAppliedEntities(message.text, entities: entities)
+            let (text_, entities_) = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, entities: entities, media: message.media) : (message.text, entities)
+            messageText = galleryCaptionStringWithAppliedEntities(text_, entities: entities_)
         }
                         
         if self.currentMessageText != messageText || canDelete != !self.deleteButton.isHidden || canFullscreen != !self.fullscreenButton.isHidden || canShare != !self.actionButton.isHidden || canEdit != !self.editButton.isHidden || self.currentAuthorNameText != authorNameText || self.currentDateText != dateText {

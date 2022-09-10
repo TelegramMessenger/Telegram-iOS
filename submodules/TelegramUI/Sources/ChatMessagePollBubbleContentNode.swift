@@ -10,6 +10,7 @@ import SwiftSignalKit
 import AccountContext
 import AvatarNode
 import TelegramPresentationData
+import PtgForeignAgentNoticeRemoval
 
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
     if poll.isClosed {
@@ -1095,7 +1096,14 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
 
                 let messageTheme = incoming ? item.presentationData.theme.theme.chat.message.incoming : item.presentationData.theme.theme.chat.message.outgoing
                 
-                let attributedText = NSAttributedString(string: poll?.text ?? "", font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
+                let pollText: String
+                if let poll = poll, item.context.sharedContext.currentPtgSettings.with({ $0.suppressForeignAgentNotice }) {
+                    pollText = removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false)
+                } else {
+                    pollText = poll?.text ?? ""
+                }
+                
+                let attributedText = NSAttributedString(string: pollText, font: item.presentationData.messageBoldFont, textColor: messageTheme.primaryTextColor)
                 
                 let textInsets = UIEdgeInsets(top: 2.0, left: 0.0, bottom: 5.0, right: 0.0)
                 

@@ -28,6 +28,7 @@ import ChatListSearchRecentPeersNode
 import UndoUI
 import Postbox
 import FetchManagerImpl
+import PtgForeignAgentNoticeSearchFiltering
 
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
@@ -767,6 +768,7 @@ private struct ChatListSearchMessagesResult {
     let hasMore: Bool
     let totalCount: Int32
     let state: SearchMessagesState
+    let matchesOnlyBcOfFAN: Set<MessageId>
 }
 
 private struct ChatListSearchMessagesContext {
@@ -1337,50 +1339,90 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             updateSearchContext { _ in
                 return (nil, true)
             }
-            let foundRemoteMessages: Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError>
+            let foundRemoteMessages: Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32, Set<MessageId>), Bool), NoError>
             if peersFilter.contains(.doNotSearchMessages) {
-                foundRemoteMessages = .single((([], [:], 0), false))
+                foundRemoteMessages = .single((([], [:], 0, []), false))
             } else {
                 if !finalQuery.isEmpty {
                     addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
                 let searchSignal = context.engine.messages.searchMessages(location: location, query: finalQuery, state: nil, limit: 50)
+                |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
-                    return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
+                    let matchesOnlyBcOfFAN = context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages, query: finalQuery) : []
+
+                    return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN)
                 }
                 
                 let loadMore = searchContext.get()
-                |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError> in
+                |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32, Set<MessageId>), Bool), NoError> in
                     if let searchContext = searchContext, searchContext.result.hasMore {
                         if let _ = searchContext.loadMoreIndex {
                             return context.engine.messages.searchMessages(location: location, query: finalQuery, state: searchContext.result.state, limit: 80)
-                            |> map { result, updatedState -> ChatListSearchMessagesResult in
-                                return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
+                            |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
+                            |> map { result, updatedState -> (ChatListSearchMessagesResult, Bool) in
+                                var matchesOnlyBcOfFAN = searchContext.result.matchesOnlyBcOfFAN
+                                
+                                let shouldTryLoadMore: Bool
+                                if context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                                    let alreadyKnownIds = Set(searchContext.result.messages.lazy.map { $0.id })
+                                    
+                                    let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: result.messages.filter { !alreadyKnownIds.contains($0.id) }, query: finalQuery)
+                                    matchesOnlyBcOfFAN.formUnion(newMatchesOnlyBcOfFAN)
+                                    
+                                    let allNewResultsMatchOnlyBcOfFAN = matchesOnlyBcOfFAN.count - searchContext.result.matchesOnlyBcOfFAN.count == result.messages.count - alreadyKnownIds.count && result.messages.count - alreadyKnownIds.count > 0
+                                    shouldTryLoadMore = allNewResultsMatchOnlyBcOfFAN
+                                } else {
+                                    shouldTryLoadMore = false
+                                }
+
+                                return (ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN), shouldTryLoadMore)
                             }
-                            |> mapToSignal { foundMessages -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError> in
+                            |> mapToSignal { foundMessages, shouldTryLoadMore -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32, Set<MessageId>), Bool), NoError> in
                                 updateSearchContext { previous in
                                     let updated = ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil)
                                     return (updated, true)
                                 }
+
+                                if shouldTryLoadMore && foundMessages.hasMore {
+                                    Queue.mainQueue().async {
+                                        if let strongSelf = self {
+                                            strongSelf.listNode.visibleBottomContentOffsetChanged(strongSelf.listNode.visibleBottomContentOffset())
+                                        }
+                                    }
+                                }
+
                                 return .complete()
                             }
                         } else {
-                            return .single(((searchContext.result.messages, searchContext.result.readStates, searchContext.result.totalCount), false))
+                            return .single(((searchContext.result.messages, searchContext.result.readStates, searchContext.result.totalCount, searchContext.result.matchesOnlyBcOfFAN), false))
                         }
                     } else {
                         return .complete()
                     }
                 }
                 
-                foundRemoteMessages = .single((([], [:], 0), true))
+                foundRemoteMessages = .single((([], [:], 0, []), true))
                 |> then(
                     searchSignal
-                    |> map { foundMessages -> (([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool) in
+                    |> map { foundMessages -> (([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32, Set<MessageId>), Bool) in
                         updateSearchContext { _ in
                             return (ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil), true)
                         }
-                        return ((foundMessages.messages, foundMessages.readStates, foundMessages.totalCount), false)
+
+                        let allResultsMatchOnlyBcOfFAN = foundMessages.matchesOnlyBcOfFAN.count == foundMessages.messages.count && foundMessages.messages.count > 0
+                        let shouldTryLoadMore = allResultsMatchOnlyBcOfFAN
+                        
+                        if shouldTryLoadMore && foundMessages.hasMore {
+                            Queue.mainQueue().async {
+                                if let strongSelf = self {
+                                    strongSelf.listNode.visibleBottomContentOffsetChanged(strongSelf.listNode.visibleBottomContentOffset())
+                                }
+                            }
+                        }
+
+                        return ((foundMessages.messages, foundMessages.readStates, foundMessages.totalCount, foundMessages.matchesOnlyBcOfFAN), false)
                     }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     |> then(loadMore)
@@ -1608,6 +1650,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         if searchState.deletedMessageIds.contains(message.id) {
                             continue
                         } else if message.id.namespace == Namespaces.Message.Cloud && searchState.deletedGlobalMessageIds.contains(message.id.id) {
+                            continue
+                        }
+                        if foundRemoteMessages.0.3.contains(message.id) { // matchesOnlyBcOfFAN
                             continue
                         }
                         let headerId = listMessageDateHeaderId(timestamp: message.timestamp)

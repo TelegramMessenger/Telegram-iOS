@@ -19,6 +19,7 @@ import AnimationCache
 import LottieAnimationCache
 import MultiAnimationRenderer
 import EmojiTextAttachmentView
+import PtgForeignAgentNoticeRemoval
 
 private final class CachedChatMessageText {
     let text: String
@@ -260,13 +261,15 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     rawText = item.presentationData.strings.Conversation_UnsupportedMediaPlaceholder
                     messageEntities = [MessageTextEntity(range: 0..<rawText.count, type: .Italic)]
                 } else {
+                    let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: item.message) : item.message
+
                     if let updatingMedia = item.attributes.updatingMedia {
                         rawText = updatingMedia.text
                     } else {
-                        rawText = item.message.text
+                        rawText = message_.text
                     }
                     
-                    for attribute in item.message.attributes {
+                    for attribute in message_.attributes {
                         if let attribute = attribute as? TextEntitiesMessageAttribute {
                             messageEntities = attribute.entities
                         } else if mediaDuration == nil, let attribute = attribute as? ReplyMessageAttribute {

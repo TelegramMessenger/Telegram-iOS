@@ -12,6 +12,7 @@ import DeviceLocationManager
 import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
+import PtgSettings
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -677,6 +678,8 @@ public protocol SharedAccountContext: AnyObject {
     var immediateExperimentalUISettings: ExperimentalUISettings { get }
     var currentInAppNotificationSettings: Atomic<InAppNotificationSettings> { get }
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
+    var ptgSettings: Signal<PtgSettings, NoError> { get }
+    var currentPtgSettings: Atomic<PtgSettings> { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     

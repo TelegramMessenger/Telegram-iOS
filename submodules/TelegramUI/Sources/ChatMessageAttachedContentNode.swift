@@ -15,6 +15,7 @@ import PhotoResources
 import WebsiteType
 import ChatMessageInteractiveMediaBadge
 import GalleryData
+import PtgForeignAgentNoticeRemoval
 
 private let buttonFont = Font.semibold(13.0)
 
@@ -389,15 +390,18 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             
             if let text = text, !text.isEmpty {
-                if notEmpty {
-                    string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
+                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities ?? [], mayRemoveWholeText: true) : (text, entities ?? [])
+                if !text_.isEmpty {
+                    if notEmpty {
+                        string.append(NSAttributedString(string: "\n", font: textFont, textColor: messageTheme.primaryTextColor))
+                    }
+                    if let _ = entities {
+                        string.append(stringWithAppliedEntities(text_, entities: entities_, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont))
+                    } else {
+                        string.append(NSAttributedString(string: text_ + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
+                    }
+                    notEmpty = true
                 }
-                if let entities = entities {
-                    string.append(stringWithAppliedEntities(text, entities: entities, baseColor: messageTheme.primaryTextColor, linkColor: messageTheme.linkTextColor, baseFont: textFont, linkFont: textFont, boldFont: textBoldFont, italicFont: textItalicFont, boldItalicFont: textBoldItalicFont, fixedFont: textFixedFont, blockQuoteFont: textBlockQuoteFont))
-                } else {
-                    string.append(NSAttributedString(string: text + "\n", font: textFont, textColor: messageTheme.primaryTextColor))
-                }
-                notEmpty = true
             }
             
             textString = string

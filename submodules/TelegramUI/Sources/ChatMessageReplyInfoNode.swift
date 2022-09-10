@@ -12,6 +12,7 @@ import PhotoResources
 import TelegramStringFormatting
 import TextFormat
 import InvisibleInkDustNode
+import PtgForeignAgentNoticeRemoval
 
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
@@ -67,7 +68,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
+            let message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+            
+            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: context.account.peerId)
             
             let placeholderColor: UIColor = message.effectivelyIncoming(context.account.peerId) ? presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
@@ -120,7 +123,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText {
-                let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                let entities = (message_.textEntitiesAttribute?.entities ?? []).filter { entity in
                     if case .Spoiler = entity.type {
                         return true
                     } else {
@@ -128,7 +131,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
+                    messageText = stringWithAppliedEntities(trimToLineCount(message_.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false)
                 } else {
                     messageText = NSAttributedString(string: textString, font: textFont, textColor: textColor)
                 }

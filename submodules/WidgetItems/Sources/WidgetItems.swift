@@ -302,6 +302,8 @@ public struct WidgetPresentationData: Codable, Equatable {
     
     public var chatSavedMessages: String
     
+    public let suppressForeignAgentNotice: Bool
+    
     public init(
         widgetChatsGalleryTitle: String,
         widgetChatsGalleryDescription: String,
@@ -324,7 +326,8 @@ public struct WidgetPresentationData: Codable, Equatable {
         autodeleteTimerRemoved: String,
         generalLockedTitle: String,
         generalLockedText: String,
-        chatSavedMessages: String
+        chatSavedMessages: String,
+        suppressForeignAgentNotice: Bool
     ) {
         self.widgetChatsGalleryTitle = widgetChatsGalleryTitle
         self.widgetChatsGalleryDescription = widgetChatsGalleryDescription
@@ -348,6 +351,7 @@ public struct WidgetPresentationData: Codable, Equatable {
         self.generalLockedTitle = generalLockedTitle
         self.generalLockedText = generalLockedText
         self.chatSavedMessages = chatSavedMessages
+        self.suppressForeignAgentNotice = suppressForeignAgentNotice
     }
     
     public static func getForExtension() -> WidgetPresentationData {
@@ -397,7 +401,8 @@ public extension WidgetPresentationData {
         autodeleteTimerRemoved: "Auto-delete timer disabled",
         generalLockedTitle: "Locked",
         generalLockedText: "Open Telegram and enter passcode to edit widget.",
-        chatSavedMessages: "Saved Messages"
+        chatSavedMessages: "Saved Messages",
+        suppressForeignAgentNotice: false
     )
 }
 

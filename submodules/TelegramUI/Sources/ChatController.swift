@@ -78,6 +78,7 @@ import ChatTextLinkEditUI
 import WebUI
 import PremiumUI
 import ImageTransparency
+import PtgForeignAgentNoticeSearchFiltering
 
 #if DEBUG
 import os.signpost
@@ -506,6 +507,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var inviteRequestsContext: PeerInvitationImportersContext?
     private var inviteRequestsDisposable = MetaDisposable()
     
+    private var loadMoreCounter: Int = 0
+
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
@@ -7062,6 +7065,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if let strongSelf = self, let searchData = strongSelf.presentationInterfaceState.search, let _ = searchData.resultsState {
                 if let controller = strongSelf.searchResultsController {
                     strongSelf.chatDisplayNode.dismissInput()
+                    (controller.displayNode as! ChatSearchResultsControllerNode).willShowAgain(loadMorePaused: strongSelf.loadMoreCounter > 0)
                     if case let .inline(navigationController) = strongSelf.presentationInterfaceState.mode {
                         navigationController?.pushViewController(controller)
                     } else {
@@ -7072,13 +7076,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     |> take(1)
                     |> deliverOnMainQueue).start(next: { [weak self] searchResult in
                         if let strongSelf = self, let (searchResult, searchState, searchLocation) = searchResult {
+                            let matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
                             
-                            let controller = ChatSearchResultsController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, navigateToMessageIndex: { index in
+                            let controller = ChatSearchResultsController(context: strongSelf.context, updatedPresentationData: strongSelf.updatedPresentationData, location: searchLocation, searchQuery: searchData.query, searchResult: searchResult, searchState: searchState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN, loadMorePaused: strongSelf.loadMoreCounter > 0, navigateToMessageIndex: { index in
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 strongSelf.interfaceInteraction?.navigateMessageSearch(.index(index))
-                            }, resultsUpdated: { results, state in
+                            }, resultsUpdated: { results, state, matchesOnlyBcOfFAN in
                                 guard let strongSelf = self else {
                                     return
                                 }
@@ -7087,16 +7092,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                     if let data = current.search {
                                         let messageIndices = results.messages.map({ $0.index }).sorted()
-                                        var currentIndex = messageIndices.last
+                                        var currentIndex = messageIndices.last(where: { !matchesOnlyBcOfFAN.contains($0.id) })
                                         if let previousResultId = data.resultsState?.currentId {
                                             for index in messageIndices {
-                                                if index.id >= previousResultId {
+                                                if index.id >= previousResultId && !matchesOnlyBcOfFAN.contains(index.id) {
                                                     currentIndex = index
                                                     break
                                                 }
                                             }
                                         }
-                                        return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: state, totalCount: results.totalCount, completed: results.completed)))
+                                        return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: state, totalCount: results.totalCount, completed: results.completed, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN)))
                                     } else {
                                         return current
                                     }
@@ -7122,12 +7127,20 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             var updatedIndex: Int?
                             switch action {
                                 case .earlier:
-                                    if index != 0 {
-                                        updatedIndex = index - 1
+                                    var prevIndex = index - 1
+                                    while prevIndex >= 0 && resultsState.matchesOnlyBcOfFAN.contains(resultsState.messageIndices[prevIndex].id) {
+                                        prevIndex -= 1
+                                    }
+                                    if prevIndex >= 0 {
+                                        updatedIndex = prevIndex
                                     }
                                 case .later:
-                                    if index != resultsState.messageIndices.count - 1 {
-                                        updatedIndex = index + 1
+                                    var nextIndex = index + 1
+                                    while nextIndex < resultsState.messageIndices.count && resultsState.matchesOnlyBcOfFAN.contains(resultsState.messageIndices[nextIndex].id) {
+                                        nextIndex += 1
+                                    }
+                                    if nextIndex < resultsState.messageIndices.count {
+                                        updatedIndex = nextIndex
                                     }
                                 case let .index(index):
                                     if index >= 0 && index < resultsState.messageIndices.count {
@@ -7136,7 +7149,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                             if let updatedIndex = updatedIndex {
                                 navigateIndex = resultsState.messageIndices[updatedIndex]
-                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: resultsState.messageIndices[updatedIndex].id, state: resultsState.state, totalCount: resultsState.totalCount, completed: resultsState.completed)))
+                                return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: resultsState.messageIndices, currentId: resultsState.messageIndices[updatedIndex].id, state: resultsState.state, totalCount: resultsState.totalCount, completed: resultsState.completed, matchesOnlyBcOfFAN: resultsState.matchesOnlyBcOfFAN)))
                             }
                         }
                     }
@@ -10003,9 +10016,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func updateItemNodesSearchTextHighlightStates() {
         var searchString: String?
         var resultsMessageIndices: [MessageIndex]?
-        if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState, !resultsState.messageIndices.isEmpty {
-            searchString = search.query
-            resultsMessageIndices = resultsState.messageIndices
+        if let search = self.presentationInterfaceState.search, let resultsState = search.resultsState {
+            let messageIndices = resultsState.matchesOnlyBcOfFAN.isEmpty ? resultsState.messageIndices : resultsState.messageIndices.filter({ !resultsState.matchesOnlyBcOfFAN.contains($0.id) })
+            if !messageIndices.isEmpty {
+                searchString = search.query
+                resultsMessageIndices = messageIndices
+            }
         }
         if searchString != self.controllerInteraction?.searchTextHighightState?.0 || resultsMessageIndices?.count != self.controllerInteraction?.searchTextHighightState?.1.count {
             var searchTextHighightState: (String, [MessageIndex])?
@@ -13182,12 +13198,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         var derivedSearchState: ChatSearchState?
         if let search = interfaceState.search {
             func loadMoreStateFromResultsState(_ resultsState: ChatSearchResultsState?) -> SearchMessagesState? {
-                guard let resultsState = resultsState, let currentId = resultsState.currentId else {
+                guard let resultsState = resultsState else {
                     return nil
+                }
+                guard let currentId = resultsState.currentId else {
+                    // need to load more if all results were filtered out and hence currentId is nil
+                    return self.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } && !resultsState.messageIndices.isEmpty && !resultsState.completed ? resultsState.state : nil
                 }
                 if let index = resultsState.messageIndices.firstIndex(where: { $0.id == currentId }) {
                     if index <= limit / 2 {
                         return resultsState.state
+                    }
+                }
+                if !resultsState.matchesOnlyBcOfFAN.isEmpty {
+                    // use much lower limit because many results may be filtered out and that will require many loads
+                    if let index2 = resultsState.messageIndices.filter({ !resultsState.matchesOnlyBcOfFAN.contains($0.id) }).firstIndex(where: { $0.id == currentId }) {
+                        if index2 <= limit / 20 {
+                            return resultsState.state
+                        }
                     }
                 }
                 return nil
@@ -13252,7 +13280,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                         
                         searchDisposable.set((search
-                        |> deliverOnMainQueue).start(next: { [weak self] results, updatedState in
+                        |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
+                        // queue must be serial because of signal 'completed' handler
+                        |> map { [weak self] results, updatedState -> (SearchMessagesResult, SearchMessagesState, Set<MessageId>) in
+                            let matchesOnlyBcOfFAN = self?.context.sharedContext.currentPtgSettings.with { $0.effectiveEnableForeignAgentNoticeSearchFiltering } ?? false ? findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages, query: searchState.query) : []
+                            return (results, updatedState, matchesOnlyBcOfFAN)
+                        }
+                        |> deliverOnMainQueue).start(next: { [weak self] results, updatedState, matchesOnlyBcOfFAN in
                             guard let strongSelf = self else {
                                 return
                             }
@@ -13260,17 +13294,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()
-                                    var currentIndex = messageIndices.last
+                                    var currentIndex = messageIndices.last(where: { !matchesOnlyBcOfFAN.contains($0.id) })
                                     if let previousResultId = data.resultsState?.currentId {
                                         for index in messageIndices {
-                                            if index.id >= previousResultId {
+                                            if index.id >= previousResultId && !matchesOnlyBcOfFAN.contains(index.id) {
                                                 currentIndex = index
                                                 break
                                             }
                                         }
                                     }
                                     navigateIndex = currentIndex
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: updatedState, totalCount: results.totalCount, completed: results.completed)))
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: currentIndex?.id, state: updatedState, totalCount: results.totalCount, completed: results.completed, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN)))
                                 } else {
                                     return current
                                 }
@@ -13290,6 +13324,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 } else if previousSearchState?.loadMoreState != searchState.loadMoreState {
                     if let loadMoreState = searchState.loadMoreState {
+                        self.loadMoreCounter += 1
                         self.searching.set(true)
                         let searchDisposable: MetaDisposable
                         if let current = self.searchDisposable {
@@ -13300,18 +13335,54 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         searchDisposable.set((self.context.engine.messages.searchMessages(location: searchState.location, query: searchState.query, state: loadMoreState, limit: limit)
                         |> delay(0.2, queue: Queue.mainQueue())
-                        |> deliverOnMainQueue).start(next: { [weak self] results, updatedState in
+                        |> deliverOn(Queue()) // offload rather cpu-intensive findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice to separate queue
+                        // queue must be serial because of signal 'completed' handler
+                        |> map { [weak self] results, updatedState -> (SearchMessagesResult, SearchMessagesState, Set<MessageId>) in
+                            guard let strongSelf = self else {
+                                return (results, updatedState, [])
+                            }
+                            
+                            var matchesOnlyBcOfFAN = strongSelf.presentationInterfaceState.search?.resultsState?.matchesOnlyBcOfFAN ?? []
+                            
+                            if strongSelf.context.sharedContext.currentPtgSettings.with({ $0.effectiveEnableForeignAgentNoticeSearchFiltering }) {
+                                let alreadyKnownIds = Set(strongSelf.presentationInterfaceState.search?.resultsState?.messageIndices.lazy.map { $0.id } ?? [])
+                                
+                                let newMatchesOnlyBcOfFAN = findSearchResultsMatchedOnlyBecauseOfForeignAgentNotice(messages: results.messages.filter { !alreadyKnownIds.contains($0.id) }, query: searchState.query)
+                                matchesOnlyBcOfFAN.formUnion(newMatchesOnlyBcOfFAN)
+                            }
+
+                            return (results, updatedState, matchesOnlyBcOfFAN)
+                        }
+                        |> deliverOnMainQueue).start(next: { [weak self] results, updatedState, matchesOnlyBcOfFAN in
                             guard let strongSelf = self else {
                                 return
                             }
+                            
+                            let updatedValue: (SearchMessagesResult, SearchMessagesState, SearchMessagesLocation)? = (results, updatedState, searchState.location)
+                            strongSelf.searchResult.set(.single(updatedValue))
+                            
+                            var navigateIndex: MessageIndex?
                             strongSelf.updateChatPresentationInterfaceState(animated: true, interactive: true, { current in
                                 if let data = current.search, let previousResultsState = data.resultsState {
                                     let messageIndices = results.messages.map({ $0.index }).sorted()
-                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: previousResultsState.currentId, state: updatedState, totalCount: results.totalCount, completed: results.completed)))
+                                    if previousResultsState.currentId == nil {
+                                        navigateIndex = messageIndices.last(where: { !matchesOnlyBcOfFAN.contains($0.id) })
+                                    }
+                                    return current.updatedSearch(data.withUpdatedResultsState(ChatSearchResultsState(messageIndices: messageIndices, currentId: previousResultsState.currentId ?? navigateIndex?.id, state: updatedState, totalCount: results.totalCount, completed: results.completed, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN)))
                                 } else {
                                     return current
                                 }
                             })
+                            strongSelf.loadMoreCounter -= 1
+                            if strongSelf.loadMoreCounter == 0 {
+                                (strongSelf.searchResultsController?.displayNode as? ChatSearchResultsControllerNode)?.externalLoadMoreCompleted(searchResult: results, searchState: updatedState, matchesOnlyBcOfFAN: matchesOnlyBcOfFAN)
+                            }
+                            if let navigateIndex = navigateIndex {
+                                switch strongSelf.chatLocation {
+                                case .peer, .replyThread, .feed:
+                                    strongSelf.navigateToMessage(from: nil, to: .index(navigateIndex), forceInCurrentChat: true)
+                                }
+                            }
                         }, completed: { [weak self] in
                             if let strongSelf = self {
                                 strongSelf.searching.set(false)

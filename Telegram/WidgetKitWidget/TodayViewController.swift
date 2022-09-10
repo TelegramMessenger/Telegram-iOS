@@ -16,6 +16,8 @@ import TelegramCore
 import OpenSSLEncryptionProvider
 import WidgetItemsUtils
 
+import PtgForeignAgentNoticeRemoval
+
 import GeneratedSources
 
 struct ParsedPeer {
@@ -377,31 +379,31 @@ struct WidgetView: View {
         switch content {
         case let .peer(peer):
             if let message = peer.peer.message {
-                text = message.text
+                text = self.presentationData.suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, mayRemoveWholeText: message.content != .text) : message.text
                 switch message.content {
                 case .text:
                     break
                 case .image:
-                    if !message.text.isEmpty {
-                        text = "🖼 \(message.text)"
+                    if !text.isEmpty {
+                        text = "🖼 \(text)"
                     } else {
                         text = "🖼 \(self.presentationData.messagePhoto)"
                     }
                 case .video:
-                    if !message.text.isEmpty {
-                        text = "📹 \(message.text)"
+                    if !text.isEmpty {
+                        text = "📹 \(text)"
                     } else {
                         text = "📹 \(self.presentationData.messageVideo)"
                     }
                 case .gif:
-                    if !message.text.isEmpty {
-                        text = "\(message.text)"
+                    if !text.isEmpty {
+                        text = "\(text)"
                     } else {
                         text = "\(self.presentationData.messageAnimation)"
                     }
                 case let .file(file):
-                    if !message.text.isEmpty {
-                        text = "📹 \(message.text)"
+                    if !text.isEmpty {
+                        text = "📹 \(text)"
                     } else {
                         text = "📎 \(file.name)"
                     }

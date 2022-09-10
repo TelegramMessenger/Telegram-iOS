@@ -167,13 +167,14 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         var resultCount: Int?
         var resultsText: String?
         if let results = interfaceState.search?.resultsState {
-            resultCount = results.messageIndices.count
-            let displayTotalCount = results.completed ? results.messageIndices.count : Int(results.totalCount)
-            if let currentId = results.currentId, let index = results.messageIndices.firstIndex(where: { $0.id == currentId }) {
-                let adjustedIndex = results.messageIndices.count - 1 - index
+            resultCount = results.messageIndices.count - results.matchesOnlyBcOfFAN.count
+            let displayTotalCount = results.completed ? results.messageIndices.count - results.matchesOnlyBcOfFAN.count : Int(results.totalCount) - results.matchesOnlyBcOfFAN.count
+            let messageIndices = results.matchesOnlyBcOfFAN.isEmpty ? results.messageIndices : results.messageIndices.filter { !results.matchesOnlyBcOfFAN.contains($0.id) }
+            if let currentId = results.currentId, let index = messageIndices.firstIndex(where: { $0.id == currentId }) {
+                let adjustedIndex = messageIndices.count - 1 - index
                 resultIndex = index
                 resultsText = interfaceState.strings.Items_NOfM("\(adjustedIndex + 1)", "\(displayTotalCount)").string
-            } else {
+            } else if results.completed {
                 resultsText = interfaceState.strings.Conversation_SearchNoResults
             }
         }
