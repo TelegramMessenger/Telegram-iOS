@@ -10,3 +10,5 @@
 "NSMicrophoneUsageDescription" = "We need this so that you can record and share voice messages and videos with sound.";
 "NSSiriUsageDescription" = "You can use Siri to send messages.";
 "NSFaceIDUsageDescription" = "You can use Face ID to unlock the app.";
+
+"NSSpeechRecognitionUsageDescription" = "We need this to transcribe voice messages on your request.";
