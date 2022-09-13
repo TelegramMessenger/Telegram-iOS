@@ -535,6 +535,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                     )
                 },
                 itemLayoutType: .detailed,
+                itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
                 displaySearch: false,
                 enableLongPress: false,
@@ -1120,13 +1121,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return controllerInteraction?.navigationController()
             },
             requestUpdate: { _ in
-                
             },
-            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
+            updateSearchQuery: { _ in
             },
             chatPeerId: chatPeerId,
             peekBehavior: nil,
@@ -1329,13 +1325,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return controllerInteraction?.navigationController()
             },
             requestUpdate: { _ in
-                
             },
-            sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets in
-                guard let controllerInteraction = controllerInteraction else {
-                    return
-                }
-                let _ = controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
+            updateSearchQuery: { _ in
             },
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
@@ -1592,6 +1583,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         strongSelf.hideInputUpdated?(transition.containedViewLayoutTransition)
                     }
                 },
+                hideTopPanelUpdated: { _, _ in
+                },
                 switchToTextInput: { [weak self] in
                     self?.switchToTextInput?()
                 },
@@ -1721,9 +1714,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private func processInputData(inputData: InputData) -> InputData {
         return InputData(
-            emoji: inputData.emoji.withUpdatedItemGroups(self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.itemGroups)),
+            emoji: inputData.emoji.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.itemGroups), itemContentUniqueId: nil),
             stickers: inputData.stickers.flatMap { stickers in
-                return stickers.withUpdatedItemGroups(self.processStableItemGroupList(category: .stickers, itemGroups: stickers.itemGroups))
+                return stickers.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.itemGroups), itemContentUniqueId: nil)
             },
             gifs: inputData.gifs,
             availableGifSearchEmojies: inputData.availableGifSearchEmojies
@@ -2057,10 +2050,10 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             navigationController: {
                 return nil
             },
-            requestUpdate: { _ in
-                
+            requestUpdate: { _ in   
             },
-            sendSticker: nil,
+            updateSearchQuery: { _ in
+            },
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: nil,

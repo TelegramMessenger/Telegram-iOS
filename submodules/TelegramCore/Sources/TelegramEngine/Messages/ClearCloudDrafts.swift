@@ -13,7 +13,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
             switch updates {
                 case let .updates(updates, users, chats, _, _):
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     for chat in chats {
                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                             peers.append(groupOrChannel)
@@ -22,9 +22,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     for user in users {
                         let telegramUser = TelegramUser(user: user)
                         peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
+                        peerPresences[telegramUser.id] = user
                     }
                     for update in updates {
                         switch update {

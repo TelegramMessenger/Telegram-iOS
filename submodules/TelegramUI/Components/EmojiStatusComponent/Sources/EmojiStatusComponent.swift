@@ -37,10 +37,15 @@ public final class EmojiStatusComponent: Component {
         case count(Int)
     }
     
+    public enum SizeType {
+        case compact
+        case large
+    }
+    
     public enum Content: Equatable {
         case none
         case premium(color: UIColor)
-        case verified(fillColor: UIColor, foregroundColor: UIColor)
+        case verified(fillColor: UIColor, foregroundColor: UIColor, sizeType: SizeType)
         case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
     }
@@ -217,8 +222,16 @@ public final class EmojiStatusComponent: Component {
                     } else {
                         iconImage = nil
                     }
-                case let .verified(fillColor, foregroundColor):
-                    if let backgroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconBackground"), let foregroundImage = UIImage(bundleImageName: "Peer Info/VerifiedIconForeground") {
+                case let .verified(fillColor, foregroundColor, sizeType):
+                    let imageNamePrefix: String
+                    switch sizeType {
+                    case .compact:
+                        imageNamePrefix = "Chat List/PeerVerifiedIcon"
+                    case .large:
+                        imageNamePrefix = "Peer Info/VerifiedIcon"
+                    }
+                    
+                    if let backgroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Background"), let foregroundImage = UIImage(bundleImageName: "\(imageNamePrefix)Foreground") {
                         iconImage = generateImage(backgroundImage.size, contextGenerator: { size, context in
                             if let backgroundCgImage = backgroundImage.cgImage, let foregroundCgImage = foregroundImage.cgImage {
                                 context.clear(CGRect(origin: CGPoint(), size: size))
@@ -342,7 +355,16 @@ public final class EmojiStatusComponent: Component {
                 }
                 iconView.image = iconImage
                 
-                if case .text = component.content {
+                var useFit = false
+                switch component.content {
+                case .text:
+                    useFit = true
+                case .verified(_, _, sizeType: .compact):
+                    useFit = true
+                default:
+                    break
+                }
+                if useFit {
                     size = CGSize(width: iconImage.size.width, height: availableSize.height)
                     iconView.frame = CGRect(origin: CGPoint(x: floor((size.width - iconImage.size.width) / 2.0), y: floor((size.height - iconImage.size.height) / 2.0)), size: iconImage.size)
                 } else {

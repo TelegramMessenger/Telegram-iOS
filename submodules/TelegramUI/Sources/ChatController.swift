@@ -1237,6 +1237,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return
                         }
                         
+                        controller?.view.endEditing(true)
+                        
                         let chosenReaction: MessageReaction.Reaction = chosenUpdatedReaction.reaction
                         
                         let currentReactions = mergedMessageReactions(attributes: message.attributes)?.reactions ?? []

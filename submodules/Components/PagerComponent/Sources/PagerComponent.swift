@@ -44,13 +44,16 @@ public final class PagerComponentChildEnvironment: Equatable {
     
     public let containerInsets: UIEdgeInsets
     public let onChildScrollingUpdate: (ContentScrollingUpdate) -> Void
+    public let onWantsExclusiveModeUpdated: (Bool) -> Void
     
     init(
         containerInsets: UIEdgeInsets,
-        onChildScrollingUpdate: @escaping (ContentScrollingUpdate) -> Void
+        onChildScrollingUpdate: @escaping (ContentScrollingUpdate) -> Void,
+        onWantsExclusiveModeUpdated: @escaping (Bool) -> Void
     ) {
         self.containerInsets = containerInsets
         self.onChildScrollingUpdate = onChildScrollingUpdate
+        self.onWantsExclusiveModeUpdated = onWantsExclusiveModeUpdated
     }
     
     public static func ==(lhs: PagerComponentChildEnvironment, rhs: PagerComponentChildEnvironment) -> Bool {
@@ -180,6 +183,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?
     public let panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?
     public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
+    public let isTopPanelHiddenUpdated: (Bool, Transition) -> Void
     public let panelHideBehavior: PagerComponentPanelHideBehavior
     
     public init(
@@ -196,6 +200,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?,
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
         isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
+        isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
         panelHideBehavior: PagerComponentPanelHideBehavior
     ) {
         self.contentInsets = contentInsets
@@ -211,6 +216,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.bottomPanel = bottomPanel
         self.panelStateUpdated = panelStateUpdated
         self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
+        self.isTopPanelHiddenUpdated = isTopPanelHiddenUpdated
         self.panelHideBehavior = panelHideBehavior
     }
     
@@ -255,6 +261,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var scrollingPanelOffsetToTopEdge: CGFloat = 0.0
             var scrollingPanelOffsetToBottomEdge: CGFloat = .greatestFiniteMagnitude
             var scrollingPanelOffsetFraction: CGFloat = 0.0
+            var wantsExclusiveMode: Bool = false
                                             
             init(view: ComponentHostView<(ChildEnvironmentType, PagerComponentChildEnvironment)>) {
                 self.view = view
@@ -431,9 +438,12 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             
             var contentInsets = component.contentInsets
             contentInsets.bottom = 0.0
+            var contentInsetTopPanelValue: CGFloat = 0.0
             
             var scrollingPanelOffsetFraction: CGFloat
-            if case .show = component.panelHideBehavior {
+            if let centralId = centralId, let centralContentView = self.contentViews[centralId], centralContentView.wantsExclusiveMode {
+                scrollingPanelOffsetFraction = 1.0
+            } else if case .show = component.panelHideBehavior {
                 scrollingPanelOffsetFraction = 0.0
             } else if let centralId = centralId, let centralContentView = self.contentViews[centralId] {
                 scrollingPanelOffsetFraction = centralContentView.scrollingPanelOffsetFraction
@@ -514,6 +524,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelOffset), size: topPanelSize))
                 }
                 
+                contentInsetTopPanelValue = topPanelSize.height
                 contentInsets.top += topPanelSize.height
             } else {
                 if let topPanelView = self.topPanelView {
@@ -668,13 +679,25 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             }
                         }
                         
+                        let childContentInsets = contentInsets
+                        if contentView.wantsExclusiveMode {
+                            let _ = contentInsetTopPanelValue
+                            //childContentInsets.top -= contentInsetTopPanelValue
+                        }
+                        
                         let pagerChildEnvironment = PagerComponentChildEnvironment(
-                            containerInsets: contentInsets,
+                            containerInsets: childContentInsets,
                             onChildScrollingUpdate: { [weak self] update in
                                 guard let strongSelf = self else {
                                     return
                                 }
                                 strongSelf.onChildScrollingUpdate(id: id, update: update)
+                            },
+                            onWantsExclusiveModeUpdated: { [weak self] wantsExclusiveMode in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.onChildWantsExclusiveModeUpdated(id: id, wantsExclusiveMode: wantsExclusiveMode)
                             }
                         )
                         
@@ -807,6 +830,18 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     self.isTopPanelExpanded = false
                     self.component?.isTopPanelExpandedUpdated(self.isTopPanelExpanded, Transition(animation: .curve(duration: 0.25, curve: .easeInOut)))
                 }
+            }
+        }
+        
+        private func onChildWantsExclusiveModeUpdated(id: AnyHashable, wantsExclusiveMode: Bool) {
+            guard let contentView = self.contentViews[id] else {
+                return
+            }
+            
+            if contentView.wantsExclusiveMode != wantsExclusiveMode {
+                contentView.wantsExclusiveMode = wantsExclusiveMode
+                //self.state?.updated(transition: Transition(animation: .curve(duration: 0.4, curve: .spring)))
+                self.component?.isTopPanelHiddenUpdated(wantsExclusiveMode, Transition(animation: .curve(duration: 0.4, curve: .spring)))
             }
         }
         

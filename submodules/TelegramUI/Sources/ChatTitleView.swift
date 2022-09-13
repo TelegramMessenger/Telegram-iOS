@@ -673,7 +673,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
         case .premium:
             titleCredibilityContent = .premium(color: self.theme.list.itemAccentColor)
         case .verified:
-            titleCredibilityContent = .verified(fillColor: self.theme.list.itemCheckColors.fillColor, foregroundColor: self.theme.list.itemCheckColors.foregroundColor)
+            titleCredibilityContent = .verified(fillColor: self.theme.list.itemCheckColors.fillColor, foregroundColor: self.theme.list.itemCheckColors.foregroundColor, sizeType: .large)
         case .fake:
             titleCredibilityContent = .text(color: self.theme.chat.message.incoming.scamColor, string: self.strings.Message_FakeAccount.uppercased())
         case .scam:

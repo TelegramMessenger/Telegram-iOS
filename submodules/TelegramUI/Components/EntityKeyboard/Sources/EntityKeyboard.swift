@@ -99,6 +99,7 @@ public final class EntityKeyboardComponent: Component {
     public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let topPanelExtensionUpdated: (CGFloat, Transition) -> Void
     public let hideInputUpdated: (Bool, Bool, Transition) -> Void
+    public let hideTopPanelUpdated: (Bool, Transition) -> Void
     public let switchToTextInput: () -> Void
     public let switchToGifSubject: (GifPagerContentComponent.Subject) -> Void
     public let reorderItems: (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void
@@ -123,6 +124,7 @@ public final class EntityKeyboardComponent: Component {
         externalTopPanelContainer: PagerExternalTopPanelContainer?,
         topPanelExtensionUpdated: @escaping (CGFloat, Transition) -> Void,
         hideInputUpdated: @escaping (Bool, Bool, Transition) -> Void,
+        hideTopPanelUpdated: @escaping (Bool, Transition) -> Void,
         switchToTextInput: @escaping () -> Void,
         switchToGifSubject: @escaping (GifPagerContentComponent.Subject) -> Void,
         reorderItems: @escaping (ReorderCategory, [EntityKeyboardTopPanelComponent.Item]) -> Void,
@@ -146,6 +148,7 @@ public final class EntityKeyboardComponent: Component {
         self.externalTopPanelContainer = externalTopPanelContainer
         self.topPanelExtensionUpdated = topPanelExtensionUpdated
         self.hideInputUpdated = hideInputUpdated
+        self.hideTopPanelUpdated = hideTopPanelUpdated
         self.switchToTextInput = switchToTextInput
         self.switchToGifSubject = switchToGifSubject
         self.reorderItems = reorderItems
@@ -222,6 +225,7 @@ public final class EntityKeyboardComponent: Component {
         
         private var topPanelExtension: CGFloat?
         private var isTopPanelExpanded: Bool = false
+        private var isTopPanelHidden: Bool = false
         
         public var centralId: AnyHashable? {
             if let pagerView = self.pagerView.findTaggedView(tag: PagerComponentViewTag()) as? PagerComponent<EntityKeyboardChildEnvironment, EntityKeyboardTopContainerPanelEnvironment>.View {
@@ -626,6 +630,12 @@ public final class EntityKeyboardComponent: Component {
                         }
                         strongSelf.isTopPanelExpandedUpdated(isExpanded: isExpanded, transition: transition)
                     },
+                    isTopPanelHiddenUpdated: { [weak self] isTopPanelHidden, transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.isTopPanelHiddenUpdated(isTopPanelHidden: isTopPanelHidden, transition: transition)
+                    },
                     panelHideBehavior: panelHideBehavior
                 )),
                 environment: {
@@ -725,6 +735,18 @@ public final class EntityKeyboardComponent: Component {
             }
             
             component.hideInputUpdated(self.isTopPanelExpanded, false, transition)
+        }
+        
+        private func isTopPanelHiddenUpdated(isTopPanelHidden: Bool, transition: Transition) {
+            if self.isTopPanelHidden != isTopPanelHidden {
+                self.isTopPanelHidden = isTopPanelHidden
+            }
+            
+            guard let component = self.component else {
+                return
+            }
+            
+            component.hideTopPanelUpdated(self.isTopPanelHidden, transition)
         }
         
         private func openSearch() {

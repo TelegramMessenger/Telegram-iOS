@@ -171,7 +171,7 @@ private class ReplyThreadHistoryContextImpl {
                         }
                         
                         var peers: [Peer] = []
-                        var peerPresences: [PeerId: PeerPresence] = [:]
+                        var peerPresences: [PeerId: Api.User] = [:]
                         
                         for chat in chats {
                             if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
@@ -181,9 +181,7 @@ private class ReplyThreadHistoryContextImpl {
                         for user in users {
                             let telegramUser = TelegramUser(user: user)
                             peers.append(telegramUser)
-                            if let presence = TelegramUserPresence(apiUser: user) {
-                                peerPresences[telegramUser.id] = presence
-                            }
+                            peerPresences[telegramUser.id] = user
                         }
                         
                         let _ = transaction.addMessages(parsedMessages, location: .Random)
@@ -608,7 +606,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     }
                     
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     
                     for chat in chats {
                         if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
@@ -618,9 +616,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     for user in users {
                         let telegramUser = TelegramUser(user: user)
                         peers.append(telegramUser)
-                        if let presence = TelegramUserPresence(apiUser: user) {
-                            peerPresences[telegramUser.id] = presence
-                        }
+                        peerPresences[telegramUser.id] = user
                     }
                     
                     let _ = transaction.addMessages(parsedMessages, location: .Random)

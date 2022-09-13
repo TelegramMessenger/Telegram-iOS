@@ -79,7 +79,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                 |> retryRequest
                 |> mapToSignal { peerSettings -> Signal<Bool, NoError> in
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     
                     let peerStatusSettings: PeerStatusSettings
                     switch peerSettings {
@@ -93,9 +93,7 @@ func fetchAndUpdateSupplementalCachedPeerData(peerId rawPeerId: PeerId, accountP
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                             }
                     }
    
@@ -198,7 +196,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                         case let .userFull(fullUser, chats, users):
                             var accountUser: Api.User?
                             var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
+                            var peerPresences: [PeerId: Api.User] = [:]
                             for chat in chats {
                                 if let peer = parseTelegramGroupOrChannel(chat: chat) {
                                     peers.append(peer)
@@ -207,9 +205,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                                 if telegramUser.id == accountPeerId {
                                     accountUser = user
                                 }
@@ -327,7 +323,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 let pinnedMessageId = chatFullPinnedMsgId.flatMap({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) })
                             
                                 var peers: [Peer] = []
-                                var peerPresences: [PeerId: PeerPresence] = [:]
+                                var peerPresences: [PeerId: Api.User] = [:]
                                 for chat in chats {
                                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                         peers.append(groupOrChannel)
@@ -336,9 +332,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                 for user in users {
                                     if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                         peers.append(telegramUser)
-                                        if let presence = TelegramUserPresence(apiUser: user) {
-                                            peerPresences[telegramUser.id] = presence
-                                        }
+                                        peerPresences[telegramUser.id] = user
                                     }
                                 }
                                 
@@ -515,7 +509,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             }
                                             
                                             var peers: [Peer] = []
-                                            var peerPresences: [PeerId: PeerPresence] = [:]
+                                            var peerPresences: [PeerId: Api.User] = [:]
                                             for chat in chats {
                                                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                                                     peers.append(groupOrChannel)
@@ -524,9 +518,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                             for user in users {
                                                 if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                                     peers.append(telegramUser)
-                                                    if let presence = TelegramUserPresence(apiUser: user) {
-                                                        peerPresences[telegramUser.id] = presence
-                                                    }
+                                                    peerPresences[telegramUser.id] = user
                                                 }
                                             }
                                             
@@ -536,9 +528,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     for user in users {
                                                         if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
                                                             peers.append(telegramUser)
-                                                            if let presence = TelegramUserPresence(apiUser: user) {
-                                                                peerPresences[telegramUser.id] = presence
-                                                            }
+                                                            peerPresences[telegramUser.id] = user
                                                         }
                                                     }
                                                     for chat in chats {
