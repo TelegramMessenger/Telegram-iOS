@@ -7988,7 +7988,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             let icon: UIImage?
-            if layout.deviceMetrics.hasTopNotch {
+            if layout.deviceMetrics.hasTopNotch || layout.deviceMetrics.hasDynamicIsland {
                 icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIconX")
             } else {
                 icon = UIImage(bundleImageName: "Chat/Message/VolumeButtonIcon")
