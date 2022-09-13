@@ -31,7 +31,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
     }
     
-    var micButtonPointerInteraction: PointerInteraction?
+    private var micButtonPointerInteraction: PointerInteraction?
+    private var sendButtonPointerInteraction: PointerInteraction?
     
     private var validLayout: CGSize?
     
@@ -50,9 +51,9 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.backgroundNode.backgroundColor = theme.chat.inputPanel.actionControlFillColor
         self.backgroundNode.clipsToBounds = true
         self.backdropNode = ChatMessageBubbleBackdrop()
-        self.sendButton = HighlightTrackingButtonNode(pointerStyle: .lift)
+        self.sendButton = HighlightTrackingButtonNode(pointerStyle: nil)
         
-        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .default)
+        self.expandMediaInputButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         
         super.init()
         
@@ -107,7 +108,8 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             }
         }
         
-        self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle)
+        self.micButtonPointerInteraction = PointerInteraction(view: self.micButton, style: .circle(36.0))
+        self.sendButtonPointerInteraction = PointerInteraction(view: self.sendButton.view, customInteractionView: self.backgroundNode.view, style: .lift)
     }
     
     func updateTheme(theme: PresentationTheme, wallpaper: TelegramWallpaper) {
@@ -132,7 +134,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         self.backdropNode.update(rect: rect, within: containerSize, transition: transition)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
+    func updateLayout(size: CGSize, isMediaInputExpanded: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState) {
         self.validLayout = size
         transition.updateFrame(layer: self.micButton.layer, frame: CGRect(origin: CGPoint(), size: size))
         self.micButton.layoutItems()
@@ -183,10 +185,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
         }
         
         transition.updateFrame(node: self.expandMediaInputButton, frame: CGRect(origin: CGPoint(), size: size))
-        var expanded = false
-        if case let .media(_, maybeExpanded, _) = interfaceState.inputMode, maybeExpanded != nil {
-            expanded = true
-        }
+        let expanded = isMediaInputExpanded
         transition.updateSublayerTransformScale(node: self.expandMediaInputButton, scale: CGPoint(x: 1.0, y: expanded ? 1.0 : -1.0))
     }
     

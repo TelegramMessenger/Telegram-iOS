@@ -9,6 +9,7 @@
 "Nicegram.Assistant.NicegramCommunity.Telegram" = "Telegram";
 "Nicegram.Assistant.NicegramCommunity.OfficialChannel" = "Official Channel";
 "Nicegram.Assistant.NicegramCommunity.OfficialСhat" = "Official Chat";
+"Nicegram.Assistant.NicegramCommunity.AllChannels" = "All Channels";
 "Nicegram.Assistant.Support" = "Support";
 "Nicegram.Assistant.Rate us" = "Rate us";
 "Nicegram.Assistant.Logout" = "Log out";
@@ -128,3 +129,6 @@
 "Auth.ErrorAlreadyInUse" = "The email address is already in use by another account.";
 "Error.EsimProfileBlocked" = "Your esim profile is blocked";
 "Error.EsimProfileExpired" = "Your esim profile is expired";
+
+/*Push Notifications*/
+"NicegramPush.SpecialOffer.Body" = "New special offer is available for you, check it out!";

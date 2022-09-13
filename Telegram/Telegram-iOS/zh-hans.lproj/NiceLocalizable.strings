@@ -1,5 +1,9 @@
 "AppName" = "Nicegram";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "隐私政策";
+"Nicegram.EULA" = "EULA";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "机器人";
 "ChatFilter.Channels" = "频道";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "使用后置摄像头(圆形视频)";
 
 "NiceFeatures.Folders.Header" = "分组";
+"NiceFeatures.Account.Header" = "账户设置";
 "NiceFeatures.Folders.TgFolders" = "分组显示在底部";
 "NiceFeatures.Folders.TgFolders.Notice" = "iOS 风格分组列表";
 
@@ -107,6 +112,9 @@
 "Messages.UndoSpeechToText" = "撤销语音转文本";
 "Messages.SpeechToText.LowAccuracyError" = "语音识别失败。\n\n这可能是由于录音质量太差或应用程序的语言与录音中的语言不同造成的。";
 "Messages.SelectAllFromUser" = "选择来自该用户的所有消息";
+"Messages.ToLanguage" = "为语言";
+"Messages.ToLanguage.WithCode" = "为语言: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "我们无法确定您希望将文本翻译为的语言。请手动选择，然后重试。";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "获取注册日期";
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "大约";
 "NiceFeatures.RegDate.NewerThan" = "晚于";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "快速回复";
+"NiceFeatures.QuickReplies.Description" = "您可以使用下方按钮添加无限数量的回复。如需使用快速回复，请在消息输入框中输入** \"&\"符**。";
+"NiceFeatures.QuickReplies.AddNew" = "新增";
+"NiceFeatures.QuickReplies.Placeholder" = "输入文本";
+
 /*Telegram Premium*/
 "TelegramPremium.Description" = "遗憾的是，您无法在登录 Nicegram 应用后获取 **Telegram 高级功能**。请前往官方 Telegram 应用并订阅 **Telegram 高级版**。在您返回 Nicegram 后，所有**高级功能**将可用。";
+"TelegramPremium.Title" = "恢复高级版";
+"TelegramPremium.Failure.Title" = "失败";
+"TelegramPremium.Failure.Description" = "出现了问题。请使用 Nicegram 机器人恢复你的高级版终身订阅。";
+"TelegramPremium.Failure.Pending" = "你的请求待处理。请等待 Nicegram 机器人批准它";
+"TelegramPremium.Success.Title" = "成功";
+"TelegramPremium.Success.Description" = "你的高级版终身订阅已成功恢复！";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "双底";
+"DoubleBottom.Description" = "要启用此功能，你需有超过一个账户，并将密码锁切换到打开状态（ 转向设置 → 隐私与安全  → 密码锁）";
+"DoubleBottom.Enabled.Title" = "双底已启用";
+"DoubleBottom.Enabled.Description" = "请记住你刚设置的密码，并重启应用，以便“双底”可以正常运作";
+"DoubleBottom.Enabled.OK" = "确认";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**高级版功能**";
+
+"NicePremium.Translator" = "内置翻译器";
+"NicePremium.Translator.Desc" = "即时翻译应用程序中的任何消息，无需切换到第 3 方翻译器";
+
+"NicePremium.SpeechToText.Desc" = "在几秒内转录任何语音消息，节省出大量的空闲时间";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "快速通知所有群组成员并确保每个人都会阅读您的消息";
+
+"NicePremium.Renews" = "订阅自动续订";

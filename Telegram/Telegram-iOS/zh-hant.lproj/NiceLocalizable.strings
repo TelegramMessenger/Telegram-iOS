@@ -1,5 +1,9 @@
 "AppName" = "Nicegram";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "隱私政策";
+"Nicegram.EULA" = "EULA";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "機器人";
 "ChatFilter.Channels" = "頻道";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "使用後置鏡頭 (圓形影片)";
 
 "NiceFeatures.Folders.Header" = "資料夾";
+"NiceFeatures.Account.Header" = "帳戶設定";
 "NiceFeatures.Folders.TgFolders" = "底部資料夾";
 "NiceFeatures.Folders.TgFolders.Notice" = "iOS 風格資料夾列表";
 
@@ -103,10 +108,13 @@
 "Messages.Translate" = "翻譯";
 "Messages.UndoTranslate" = "取消翻譯";
 "Messages.TranslateError" = "抱歉，無法翻譯。";
-"Messages.SpeechToText" = "Speech2Text";
+"Messages.SpeechToText" = "نص البيان2";
 "Messages.UndoSpeechToText" = "Undo Speech2Text";
 "Messages.SpeechToText.LowAccuracyError" = "語音辨識失敗。\n\n這可能是由於錄音品質不好，或應用程式和錄音語言之間的差異。";
 "Messages.SelectAllFromUser" = "選擇來自這位使用者的所有訊息";
+"Messages.ToLanguage" = "翻譯為";
+"Messages.ToLanguage.WithCode" = "翻譯為：%@";
+"Messages.TranslateError.ToLanguageNotFound" = "我們無法確定您希望將文字翻譯成何種語言。請手動選擇語言並再試一次。";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "取得註冊日期";
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "大約";
 "NiceFeatures.RegDate.NewerThan" = "較新於";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "快速回覆";
+"NiceFeatures.QuickReplies.Description" = "您可以使用下面的按鈕新增無限數量的回覆。如要使用快速回覆，請在訊息輸入欄中輸入**符號「&」**。";
+"NiceFeatures.QuickReplies.AddNew" = "新增";
+"NiceFeatures.QuickReplies.Placeholder" = "輸入文字";
+
 /*Telegram Premium*/
 "TelegramPremium.Description" = "很遺憾地，當你登入 Nicegram 應用程式時，你沒有辦法取得**Telegram Premium Features**。\n請到官方的 Telegram 應用程式並訂閱** Telegram Premium**。當你再度回到 Nicegram 時，你將可以使用所有的**Premium Festures**。";
+"TelegramPremium.Title" = "恢復 Premium";
+"TelegramPremium.Failure.Title" = "失敗";
+"TelegramPremium.Failure.Description" = "出現問題。請使用 Nicegram Bot 以恢復您的終生 Premium 訂閱";
+"TelegramPremium.Failure.Pending" = "您的要求正待處理。 請等待直到 Nicegram Bot 核准之";
+"TelegramPremium.Success.Title" = "成功 ";
+"TelegramPremium.Success.Description" = "您的終生 Premium 已成功恢復了！";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Double Bottom";
+"DoubleBottom.Description" = "要啟用此功能，您必須擁有一個以上的帳號並啟用密碼鎖 (前往設定→隱私與安全→密碼鎖)";
+"DoubleBottom.Enabled.Title" = "Double Bottom 已啟用";
+"DoubleBottom.Enabled.Description" = "為了使 Double Bottom正常運作，請記住您剛才設定的密碼並重新開啟應用程式 ";
+"DoubleBottom.Enabled.OK" = "好";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**進階功能**";
+
+"NicePremium.Translator" = "內置翻譯器";
+"NicePremium.Translator.Desc" = "立即翻譯應用程式中的任何消息，而無需切換到第3方翻譯器";
+
+"NicePremium.SpeechToText.Desc" = "在幾秒鐘內轉錄任何語音消息，並節省大量時間";
+
+"NicePremium.MentionAll" = "@提及所有人";
+"NicePremium.MentionAll.Desc" = "立刻通知所有小組成員，並確保每個人都會閱讀您的訊息";
+
+"NicePremium.Renews" = "自動續訂";

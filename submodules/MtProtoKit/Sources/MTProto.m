@@ -171,9 +171,11 @@ static const NSUInteger MTMaxUnacknowledgedMessageCount = 64;
         
         _sessionInfo = [[MTSessionInfo alloc] initWithRandomSessionIdAndContext:_context];
         
-        
-        
         _shouldStayConnected = true;
+        
+        _mtState |= MTProtoStatePaused;
+        
+        [self setMtState:_mtState | MTProtoStatePaused];
     }
     return self;
 }

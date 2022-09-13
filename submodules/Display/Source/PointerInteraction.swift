@@ -3,8 +3,9 @@ import AsyncDisplayKit
 
 public enum PointerStyle {
     case `default`
+    case insetRectangle(CGFloat, CGFloat)
     case rectangle(CGSize)
-    case circle
+    case circle(CGFloat?)
     case caret
     case lift
     case hover
@@ -12,7 +13,8 @@ public enum PointerStyle {
 
 @available(iOSApplicationExtension 13.4, iOS 13.4, *)
 private final class PointerInteractionImpl: NSObject, UIPointerInteractionDelegate {
-    weak var pointerInteraction: UIPointerInteraction?
+    private weak var pointerInteraction: UIPointerInteraction?
+    private weak var customInteractionView: UIView?
     
     private let style: PointerStyle
     
@@ -33,7 +35,9 @@ private final class PointerInteractionImpl: NSObject, UIPointerInteractionDelega
         }
     }
     
-    func setup(view: UIView) {
+    func setup(view: UIView, customInteractionView: UIView?) {
+        self.customInteractionView = customInteractionView
+        
         let pointerInteraction = UIPointerInteraction(delegate: self)
         view.addInteraction(pointerInteraction)
         self.pointerInteraction = pointerInteraction
@@ -41,7 +45,10 @@ private final class PointerInteractionImpl: NSObject, UIPointerInteractionDelega
     
     func pointerInteraction(_ interaction: UIPointerInteraction, styleFor region: UIPointerRegion) -> UIPointerStyle? {
         var pointerStyle: UIPointerStyle? = nil
-        if let interactionView = interaction.view {
+        
+        let interactionView = self.customInteractionView ?? interaction.view
+        
+        if let interactionView = interactionView {
             let targetedPreview = UITargetedPreview(view: interactionView)
             switch self.style {
                 case .default:
@@ -50,11 +57,15 @@ private final class PointerInteractionImpl: NSObject, UIPointerInteractionDelega
                     let minHeight: CGFloat = 40.0
                     let size: CGSize = CGSize(width: targetedPreview.size.width + horizontalPadding * 2.0, height: max(minHeight, targetedPreview.size.height + verticalPadding * 2.0))
                     pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview), shape: .roundedRect(CGRect(origin: CGPoint(x: targetedPreview.view.center.x - size.width / 2.0, y: targetedPreview.view.center.y - size.height / 2.0), size: size), radius: UIPointerShape.defaultCornerRadius))
+                case let .insetRectangle(x, y):
+                    let insetSize = CGSize(width: targetedPreview.size.width - x * 2.0, height: targetedPreview.size.height - y * 2.0)
+                    pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview), shape: .roundedRect(CGRect(origin: CGPoint(x: targetedPreview.view.center.x - insetSize.width / 2.0, y: targetedPreview.view.center.y - insetSize.height / 2.0), size: insetSize), radius: UIPointerShape.defaultCornerRadius))
                 case let .rectangle(size):
                     pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview), shape: .roundedRect(CGRect(origin: CGPoint(x: targetedPreview.view.center.x - size.width / 2.0, y: targetedPreview.view.center.y - size.height / 2.0), size: size), radius: UIPointerShape.defaultCornerRadius))
-                case .circle:
+                case let .circle(diameter):
                     let maxSide = max(targetedPreview.size.width, targetedPreview.size.height)
-                    pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview), shape: .path(UIBezierPath(ovalIn: CGRect(origin: CGPoint(), size: CGSize(width: maxSide, height: maxSide)))))
+                    let finalDiameter = diameter ?? maxSide
+                    pointerStyle = UIPointerStyle(effect: .highlight(targetedPreview), shape: .path(UIBezierPath(ovalIn: CGRect(origin: CGPoint(x: floorToScreenPixels(targetedPreview.view.center.x - finalDiameter / 2.0), y: floorToScreenPixels(targetedPreview.view.center.y - finalDiameter / 2.0)), size: CGSize(width: finalDiameter, height: finalDiameter)))))
                 case .caret:
                     pointerStyle = UIPointerStyle(shape: .verticalBeam(length: 24.0), constrainedAxes: .vertical)
                 case .lift:
@@ -106,13 +117,13 @@ public final class PointerInteraction {
         self.init(view: node.view, style: style, willEnter: willEnter, willExit: willExit)
     }
     
-    public init(view: UIView, style: PointerStyle = .default, willEnter: @escaping () -> Void = {}, willExit: @escaping () -> Void = {}) {
+    public init(view: UIView, customInteractionView: UIView? = nil, style: PointerStyle = .default, willEnter: @escaping () -> Void = {}, willExit: @escaping () -> Void = {}) {
         self.style = style
         self.willEnter = willEnter
         self.willExit = willExit
         if #available(iOSApplicationExtension 13.4, iOS 13.4, *) {
             self.withImpl { impl in
-                impl.setup(view: view)
+                impl.setup(view: view, customInteractionView: customInteractionView)
             }
         }
     }

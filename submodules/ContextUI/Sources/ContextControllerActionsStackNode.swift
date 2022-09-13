@@ -21,6 +21,9 @@ public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     
     func highlightGestureMoved(location: CGPoint)
     func highlightGestureFinished(performAction: Bool)
+    
+    func decreaseHighlightedIndex()
+    func increaseHighlightedIndex()
 }
 
 public protocol ContextControllerActionsStackItem: AnyObject {
@@ -235,7 +238,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         
         self.subtitleNode.attributedText = subtitle.flatMap { subtitle in
             return NSAttributedString(
-                string: self.item.text,
+                string: subtitle,
                 font: subtitleFont,
                 textColor: subtitleColor
             )
@@ -627,6 +630,34 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
                 }
             }
         }
+        
+        func decreaseHighlightedIndex() {
+            let previousHighlightedItemNode: Item? = self.highlightedItemNode
+            if let highlightedItemNode = self.highlightedItemNode, let index = self.itemNodes.firstIndex(where: { $0 === highlightedItemNode }) {
+                self.highlightedItemNode = self.itemNodes[max(0, index - 1)]
+            } else {
+                self.highlightedItemNode = self.itemNodes.first
+            }
+            
+            if previousHighlightedItemNode !== self.highlightedItemNode {
+                previousHighlightedItemNode?.node.updateIsHighlighted(isHighlighted: false)
+                self.highlightedItemNode?.node.updateIsHighlighted(isHighlighted: true)
+            }
+        }
+        
+        func increaseHighlightedIndex() {
+            let previousHighlightedItemNode: Item? = self.highlightedItemNode
+            if let highlightedItemNode = self.highlightedItemNode, let index = self.itemNodes.firstIndex(where: { $0 === highlightedItemNode }) {
+                self.highlightedItemNode = self.itemNodes[min(self.itemNodes.count - 1, index + 1)]
+            } else {
+                self.highlightedItemNode = self.itemNodes.first
+            }
+            
+            if previousHighlightedItemNode !== self.highlightedItemNode {
+                previousHighlightedItemNode?.node.updateIsHighlighted(isHighlighted: false)
+                self.highlightedItemNode?.node.updateIsHighlighted(isHighlighted: true)
+            }
+        }
     }
     
     private let items: [ContextMenuItem]
@@ -704,6 +735,12 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
         }
         
         func highlightGestureFinished(performAction: Bool) {
+        }
+        
+        func decreaseHighlightedIndex() {
+        }
+        
+        func increaseHighlightedIndex() {
         }
     }
     
@@ -849,6 +886,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     }
     
     final class ItemContainer: ASDisplayNode {
+        let getController: () -> ContextControllerProtocol?
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
         let node: ContextControllerActionsStackItemNode
         let dimNode: ASDisplayNode
@@ -868,6 +906,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
             positionLock: CGFloat?
         ) {
+            self.getController = getController
             self.requestUpdate = requestUpdate
             self.node = item.node(
                 getController: getController,
@@ -927,7 +966,9 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 if self.tipNode == nil {
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
-                    tipNode.isUserInteractionEnabled = false
+                    tipNode.requestDismiss = { [weak self] completion in
+                        self?.getController()?.dismiss(completion: completion)
+                    }
                     self.tipNode = tipNode
                 }
                 
@@ -950,11 +991,26 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         
         func highlightGestureMoved(location: CGPoint) {
+            if let tipNode = self.tipNode {
+                let tipLocation = self.view.convert(location, to: tipNode.view)
+                tipNode.highlightGestureMoved(location: tipLocation)
+            }
             self.node.highlightGestureMoved(location: self.view.convert(location, to: self.node.view))
         }
         
         func highlightGestureFinished(performAction: Bool) {
+            if let tipNode = self.tipNode {
+                tipNode.highlightGestureFinished(performAction: performAction)
+            }
             self.node.highlightGestureFinished(performAction: performAction)
+        }
+        
+        func decreaseHighlightedIndex() {
+            self.node.decreaseHighlightedIndex()
+        }
+        
+        func increaseHighlightedIndex() {
+            self.node.increaseHighlightedIndex()
         }
     }
     
@@ -1035,6 +1091,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             if animated {
                 self.dismissingItemContainers.append((itemContainer, false))
             } else {
+                itemContainer.tipNode?.removeFromSupernode()
                 itemContainer.removeFromSupernode()
             }
         }
@@ -1236,6 +1293,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 itemContainer?.removeFromSupernode()
             })
             if let tipNode = itemContainer.tipNode {
+                transition.updateFrame(node: tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: tipNode.frame.size), beginWithCurrentState: true)
                 transition.updateAlpha(node: tipNode, alpha: 0.0, completion: { [weak tipNode] _ in
                     tipNode?.removeFromSupernode()
                 })
@@ -1255,6 +1313,18 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     func highlightGestureFinished(performAction: Bool) {
         if let topItemContainer = self.itemContainers.last {
             topItemContainer.highlightGestureFinished(performAction: performAction)
+        }
+    }
+    
+    func decreaseHighlightedIndex() {
+        if let topItemContainer = self.itemContainers.last {
+            topItemContainer.decreaseHighlightedIndex()
+        }
+    }
+    
+    func increaseHighlightedIndex() {
+        if let topItemContainer = self.itemContainers.last {
+            topItemContainer.increaseHighlightedIndex()
         }
     }
     

@@ -43,6 +43,9 @@ swift_library(
         "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
         "//submodules/TranslateUI:TranslateUI",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

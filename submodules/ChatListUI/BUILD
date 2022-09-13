@@ -82,6 +82,9 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities",
         # Nicegram downloading feature
         "//submodules/SaveToCameraRoll:SaveToCameraRoll",
     ] + NGDEPS,

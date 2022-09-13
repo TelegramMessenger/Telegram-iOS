@@ -92,7 +92,7 @@ private extension SetupEsimInteractor {
         case "pt": url = "https://youtube.com/shorts/ermMaMaNYzA"
         case "ru": url = "https://youtube.com/shorts/Ve6CnHqYMnI"
         case "tr": url = "https://youtube.com/shorts/FKT5lTblBZs"
-        case "zh", "zh-hans", "zh-hant": url = defaultUrl
+        case "zh", "zh-hans", "zh-hant": url = "https://youtube.com/shorts/6Afz7RwNee0"
         default: url = defaultUrl
             
         }

@@ -62,8 +62,8 @@ final class AssistantPresenter: AssistantPresenterInput {
         
         let telegramChatItem = PersonalAssistantItem(
             image: UIImage(named: "ng.telegram"),
-            title: ngLocalized("Nicegram.Assistant.NicegramCommunity.OfficialСhat"), 
-            subtitle: nil, 
+            title: ngLocalized("Nicegram.Assistant.NicegramCommunity.AllChannels"),
+            subtitle: nil,
             description: nil, 
             item: .chat
         )

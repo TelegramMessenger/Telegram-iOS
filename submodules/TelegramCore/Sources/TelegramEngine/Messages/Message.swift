@@ -75,6 +75,9 @@ public final class EngineMessage {
     public var associatedMessageIds: [EngineMessage.Id] {
         return self.impl.associatedMessageIds
     }
+    public var associatedMedia: [MediaId: Media] {
+        return self.impl.associatedMedia
+    }
     
     public var index: MessageIndex {
         return self.impl.index
@@ -100,7 +103,8 @@ public final class EngineMessage {
         media: [EngineMedia],
         peers: [EnginePeer.Id: EnginePeer],
         associatedMessages: [EngineMessage.Id: EngineMessage],
-        associatedMessageIds: [EngineMessage.Id]
+        associatedMessageIds: [EngineMessage.Id],
+        associatedMedia: [MediaId: Media]
     ) {
         var mappedPeers: [PeerId: Peer] = [:]
         for (id, peer) in peers {
@@ -132,7 +136,8 @@ public final class EngineMessage {
             media: media.map { $0._asMedia() },
             peers: SimpleDictionary(mappedPeers),
             associatedMessages: SimpleDictionary(mappedAssociatedMessages),
-            associatedMessageIds: associatedMessageIds
+            associatedMessageIds: associatedMessageIds,
+            associatedMedia: associatedMedia
         )
     }
 

@@ -26,6 +26,7 @@ swift_library(
         "//submodules/PresentationDataUtils:PresentationDataUtils",
         "//submodules/PeersNearbyIconNode:PeersNearbyIconNode",
         "//submodules/TelegramPermissionsUI:TelegramPermissionsUI",
+        "//submodules/TranslateUI:TranslateUI",
         "//submodules/UndoUI:UndoUI",
         "//submodules/ContextUI:ContextUI",
         "//Nicegram/NGData:NGData",
@@ -37,6 +38,7 @@ swift_library(
         "//Nicegram/NGLoadingIndicator:NGLoadingIndicator",
         "//Nicegram/NGWebUtils:NGWebUtils",
         "//Nicegram/NGEnv:NGEnv",
+        "//Nicegram/NGQuickReplies:NGQuickReplies",
     ],
     visibility = [
         "//visibility:public",

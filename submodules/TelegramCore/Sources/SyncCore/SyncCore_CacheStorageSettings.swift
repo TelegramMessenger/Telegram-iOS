@@ -5,7 +5,8 @@ public struct CacheStorageSettings: Codable, Equatable {
     public let defaultCacheStorageLimitGigabytes: Int32
 
     public static var defaultSettings: CacheStorageSettings {
-        return CacheStorageSettings(defaultCacheStorageTimeout: Int32.max, defaultCacheStorageLimitGigabytes: Int32.max)
+        // MARK: Nicegram CacheSettings, change default values
+        return CacheStorageSettings(defaultCacheStorageTimeout: 3 * 24 * 60 * 60, defaultCacheStorageLimitGigabytes: 2)
     }
     
     public init(defaultCacheStorageTimeout: Int32, defaultCacheStorageLimitGigabytes: Int32) {

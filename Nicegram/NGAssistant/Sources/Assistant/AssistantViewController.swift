@@ -229,7 +229,7 @@ final class AssistantViewController: UIViewController {
         telegramChatView.onTouchUpInside = { [weak self] itemTag in
             guard let self = self else { return }
             self.triggerDismiss { [weak self] _ in 
-                let url = URL(string: "ncg://resolve?domain=nicegramchat")
+                let url = URL(string: "ncg://resolve?domain=NicegramNetwork")
                 self?.output.handleChat(chatURL: url)
             }
         }

@@ -254,14 +254,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _ in
-            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame)
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _, location in
+            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, location: location)
         }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -517,7 +517,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, displayPollSolution: { _, _ in
         }, displayPsa: { _, _ in
         }, displayDiceTooltip: { _ in
-        }, animateDiceSuccess: { _ in
+        }, animateDiceSuccess: { _, _ in
         }, displayPremiumStickerTooltip: { _, _ in
         }, openPeerContextMenu: { _, _, _, _, _ in
         }, openMessageReplies: { _, _, _ in
@@ -537,6 +537,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, openWebView: { _, _, _, _ in
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
+        }, dismissTextInput: {
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction
@@ -794,7 +795,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }))
     }
     
-    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect) {
+    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, location: CGPoint?) {
         var actions: [ContextMenuAction] = []
         if !message.text.isEmpty {
             actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
@@ -898,7 +899,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(message: replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                         }
-                    case let .stickerPack(name):
+                    case let .stickerPack(name, type):
+                        let _ = type
                         let packReference: StickerPackReference = .name(name)
                         strongSelf.presentController(StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.getNavigationController()), .window(.root), nil)
                     case let .invoice(slug, invoice):

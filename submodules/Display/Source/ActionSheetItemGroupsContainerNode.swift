@@ -13,6 +13,8 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         }
     }
     
+    private var highlightedItemIndex: Int? = nil
+    
     private var groups: [ActionSheetItemGroup] = []
     var groupNodes: [ActionSheetItemGroupNode] = []
     
@@ -26,6 +28,66 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         super.init()
     }
     
+    func setHighlightedItemIndex(_ index: Int?, update: Bool = false) {
+        self.highlightedItemIndex = index
+        
+        if update {
+            var groupIndex = 0
+            var i = 0
+            for _ in self.groups {
+                for itemNode in self.groupNodes[groupIndex].itemNodes {
+                    if i == index {
+                        itemNode.setHighlighted(true, animated: false)
+                    } else {
+                        itemNode.setHighlighted(false, animated: false)
+                    }
+                    i += 1
+                }
+                groupIndex += 1
+            }
+        }
+    }
+    
+    func decreaseHighlightedIndex() {
+        let currentHighlightedIndex = self.highlightedItemIndex ?? 0
+        
+        self.setHighlightedItemIndex(max(0, currentHighlightedIndex - 1), update: true)
+    }
+    
+    func increaseHighlightedIndex() {
+        let currentHighlightedIndex = self.highlightedItemIndex ?? -1
+        
+        var groupIndex = 0
+        var maxAvailabledIndex = 0
+        for _ in self.groups {
+            for _ in self.groupNodes[groupIndex].itemNodes {
+                maxAvailabledIndex += 1
+            }
+            groupIndex += 1
+        }
+        
+        self.setHighlightedItemIndex(min(maxAvailabledIndex - 1, currentHighlightedIndex + 1), update: true)
+    }
+    
+    func performHighlightedAction() {
+        guard let highlightedItemIndex = self.highlightedItemIndex else {
+            return
+        }
+        
+        var i = 0
+        var groupIndex = 0
+        for _ in self.groups {
+            for itemNode in self.groupNodes[groupIndex].itemNodes {
+                if i == highlightedItemIndex {
+                    itemNode.performAction()
+                    return
+                }
+                i += 1
+            }
+            groupIndex += 1
+        }
+    }
+        
     func setGroups(_ groups: [ActionSheetItemGroup]) {
         self.groups = groups
         
@@ -34,6 +96,7 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
         }
         self.groupNodes.removeAll()
         
+        var i = 0
         for group in groups {
             let groupNode = ActionSheetItemGroupNode(theme: self.theme)
             let itemNodes = group.items.map({ $0.node(theme: self.theme) })
@@ -42,6 +105,13 @@ final class ActionSheetItemGroupsContainerNode: ASDisplayNode {
                 node.requestLayout = { [weak self] in
                     self?.requestLayout?()
                 }
+                let index = i
+                node.highlightedUpdated = { [weak self] highlighted in
+                    if highlighted {
+                        self?.highlightedItemIndex = index
+                    }
+                }
+                i += 1
             }
             groupNode.updateItemNodes(itemNodes, leadingVisibleNodeCount: group.leadingVisibleNodeCount ?? 1000.0)
             self.groupNodes.append(groupNode)

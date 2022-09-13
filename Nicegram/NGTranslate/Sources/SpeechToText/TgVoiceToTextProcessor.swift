@@ -62,10 +62,14 @@ public class TgVoiceToTextProcessor {
                 
                 self.googleProcessor.recognize(audioData: audioData, config: config) { result in
                     let result = self.mapGoogleRecognitionResponse(result)
-                    completion?(result)
+                    DispatchQueue.main.async {
+                        completion?(result)
+                    }
                 }
             } catch {
-                completion?(.failure(.underlying(error)))
+                DispatchQueue.main.async {
+                    completion?(.failure(.underlying(error)))
+                }
             }
         }
     }

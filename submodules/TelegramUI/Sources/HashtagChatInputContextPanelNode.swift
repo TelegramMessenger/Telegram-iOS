@@ -20,6 +20,9 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     let index: Int
     let theme: PresentationTheme
     let text: String
+    // MARK: Nicegram QuickReplies
+    let canDelete: Bool
+    //
     let revealed: Bool
     
     var stableId: HashtagChatInputContextPanelEntryStableId {
@@ -27,7 +30,8 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     func withUpdatedTheme(_ theme: PresentationTheme) -> HashtagChatInputContextPanelEntry {
-        return HashtagChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text, revealed: self.revealed)
+        // MARK: Nicegram QuickReplies, canDelete added
+        return HashtagChatInputContextPanelEntry(index: self.index, theme: theme, text: self.text, canDelete: self.canDelete, revealed: self.revealed)
     }
     
     static func ==(lhs: HashtagChatInputContextPanelEntry, rhs: HashtagChatInputContextPanelEntry) -> Bool {
@@ -39,7 +43,8 @@ private struct HashtagChatInputContextPanelEntry: Comparable, Identifiable {
     }
     
     func item(account: Account, presentationData: PresentationData, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) -> ListViewItem {
-        return HashtagChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), text: self.text, revealed: self.revealed, setHashtagRevealed: setHashtagRevealed, hashtagSelected: hashtagSelected, removeRequested: removeRequested)
+        // MARK: Nicegram QuickReplies, canDelete added
+        return HashtagChatInputPanelItem(presentationData: ItemListPresentationData(presentationData), text: self.text, canDelete: self.canDelete, revealed: self.revealed, setHashtagRevealed: setHashtagRevealed, hashtagSelected: hashtagSelected, removeRequested: removeRequested)
     }
 }
 
@@ -69,7 +74,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(HashtagChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.listView = ListView()
         self.listView.isOpaque = false
         self.listView.stackFromBottom = true
@@ -80,7 +85,7 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -88,14 +93,16 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
         self.addSubnode(self.listView)
     }
     
-    func updateResults(_ results: [String]) {
+    // MARK: Nicegram QuickReplies, canDelete added
+    func updateResults(_ results: [String], canDelete: Bool = true) {
         self.currentResults = results
         
         var entries: [HashtagChatInputContextPanelEntry] = []
         var index = 0
         var stableIds = Set<HashtagChatInputContextPanelEntryStableId>()
         for text in results {
-            let entry = HashtagChatInputContextPanelEntry(index: index, theme: self.theme, text: text, revealed: text == self.revealedHashtag)
+            // MARK: Nicegram QuickReplies, canDelete added
+            let entry = HashtagChatInputContextPanelEntry(index: index, theme: self.theme, text: text, canDelete: canDelete, revealed: text == self.revealedHashtag)
             if stableIds.contains(entry.stableId) {
                 continue
             }
@@ -123,6 +130,21 @@ final class HashtagChatInputContextPanelNode: ChatInputContextPanelNode {
                             hashtagQueryRange = range
                             break inner
                         }
+                        // MARK: Nicegram QuickReplies
+                        if type == [.quickReply] {
+                            let location: Int
+                            let length: Int
+                            if range.location - 1 >= 0 {
+                                location = range.location - 1
+                                length = range.length + 1
+                            } else {
+                                location = range.location
+                                length = range.length
+                            }
+                            hashtagQueryRange = NSRange(location: location, length: length)
+                            break inner
+                        }
+                        //
                     }
                     
                     if let range = hashtagQueryRange {

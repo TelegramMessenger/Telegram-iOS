@@ -1,3 +1,9 @@
+// MARK: Nicegram Imports
+import NGData
+import NGStrings
+import NGTranslate
+import NGUI
+//
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -373,7 +379,42 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
                 
-                if context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                // MARK: Nicegram Speech2Text
+                let isTelegramPremium = arguments?.associatedData.isPremium ?? false
+                let isNicegramPremium = isPremium()
+                let shouldUseNicegramTranscribe = !isTelegramPremium && isNicegramPremium
+                if shouldUseNicegramTranscribe {
+                    let appLocale = presentationData.strings.baseLanguageCode
+                    if let mediaFile = message.media.compactMap({ $0 as? TelegramMediaFile }).first(where: { $0.isVoice }) {
+                        let processor = TgVoiceToTextProcessor(mediaBox: context.account.postbox.mediaBox, additionalLanguageCodes: [appLocale])
+                        processor.recognize(mediaFile: mediaFile) { [weak self] result in
+                            switch result {
+                            case let .success(text):
+                                message.updateAudioTranscriptionAttribute(text: text, error: nil, context: context)
+                            case let .failure(error):
+                                message.updateAudioTranscriptionAttribute(text: "", error: error, context: context)
+                                
+                                let errorDescription: String?
+                                switch error {
+                                case .needPremium:
+                                    errorDescription = nil
+                                case .lowAccuracy:
+                                    errorDescription = l("Messages.SpeechToText.LowAccuracyError", appLocale)
+                                case .underlying(let error):
+                                    errorDescription = error.localizedDescription
+                                }
+                                if let errorDescription = errorDescription {
+                                    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+                                    let c = getIAPErrorController(context: context, errorDescription, presentationData)
+                                    self?.arguments?.controllerInteraction.presentGlobalOverlayController(c, nil)
+                                }
+                            }
+                            self?.audioTranscriptionState = .expanded
+                        }
+                    }
+                }
+                //
+                else if context.sharedContext.immediateExperimentalUISettings.localTranscription {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
                     let signal: Signal<LocallyTranscribedAudio?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
@@ -416,6 +457,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         
                         if let result = result {
                             let _ = arguments.context.engine.messages.storeLocallyTranscribedAudio(messageId: arguments.message.id, text: result.text, isFinal: result.isFinal, error: nil).start()
+                            // MARK: Nicegram Speech2Text
+                            strongSelf.audioTranscriptionState = .expanded
+                            //
                         } else {
                             strongSelf.audioTranscriptionState = .collapsed
                             strongSelf.requestUpdateLayout(true)
@@ -432,6 +476,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         guard let strongSelf = self else {
                             return
                         }
+                        // MARK: Nicegram Speech2Text
+                        strongSelf.audioTranscriptionState = .expanded
+                        //
                         strongSelf.transcribeDisposable = nil
                     })
                 }
@@ -545,7 +592,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let canTranscribe = arguments.associatedData.isPremium && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
+                // MARK: Nicegram Speech2Text (line changed)
+                let canTranscribe = (arguments.associatedData.isPremium || isPremium()) && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
+                //
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
@@ -643,7 +692,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 switch audioTranscriptionState {
                 case .inProgress:
-                    if transcribedText != nil {
+                    // MARK: Nicegram Speech2Text (line changed)
+                    if case .success(_, _) = transcribedText {
                         updatedAudioTranscriptionState = .expanded
                     }
                 default:
@@ -1496,7 +1546,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                     
-                    image = playerAlbumArt(postbox: context.account.postbox, engine: context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
+                    image = playerAlbumArt(postbox: context.account.postbox, engine: context.engine, fileReference: .message(message: MessageReference(message), media: file), albumArt: .init(thumbnailResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: true), fullSizeResource: ExternalMusicAlbumArtResource(file: .message(message: MessageReference(message), media: file), title: title ?? "", performer: performer ?? "", isThumbnail: false)), thumbnail: true, overlayColor: UIColor(white: 0.0, alpha: 0.3), drawPlaceholderWhenEmpty: false, attemptSynchronously: !animated)
                 }
             }
             let statusNode = SemanticStatusNode(backgroundNodeColor: backgroundNodeColor, foregroundNodeColor: foregroundNodeColor, image: image, overlayForegroundNodeColor:  presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor)

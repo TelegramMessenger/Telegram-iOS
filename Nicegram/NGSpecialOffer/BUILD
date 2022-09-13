@@ -12,6 +12,7 @@ swift_library(
         "//Nicegram/EsimModule/EsimPropertyWrappers:EsimPropertyWrappers",
         "//Nicegram/NGButton:NGButton",
         "//Nicegram/NGCustomViews:NGCustomViews",
+        "//Nicegram/NGData:NGData",
         "//Nicegram/NGLogging:NGLogging",
         "//Nicegram/NGRemoteConfig:NGRemoteConfig",
         "//Nicegram/NGTheme:NGTheme",

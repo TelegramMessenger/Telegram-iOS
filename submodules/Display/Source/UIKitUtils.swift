@@ -387,7 +387,7 @@ public func assertNotOnMainThread(_ file: String = #file, line: Int = #line) {
 }
 
 public extension UIImage {
-    func precomposed() -> UIImage {
+    func precomposed() -> UIImage {        
         UIGraphicsBeginImageContextWithOptions(self.size, false, self.scale)
         self.draw(at: CGPoint())
         let result = UIGraphicsGetImageFromCurrentImageContext()!
@@ -483,6 +483,38 @@ private func makeLayerSubtreeSnapshot(layer: CALayer) -> CALayer? {
     return view
 }
 
+private func makeLayerSubtreeSnapshotAsView(layer: CALayer) -> UIView? {
+    if layer is AVSampleBufferDisplayLayer {
+        return nil
+    }
+    let view = UIView()
+    view.layer.isHidden = layer.isHidden
+    view.layer.opacity = layer.opacity
+    view.layer.contents = layer.contents
+    view.layer.contentsRect = layer.contentsRect
+    view.layer.contentsScale = layer.contentsScale
+    view.layer.contentsCenter = layer.contentsCenter
+    view.layer.contentsGravity = layer.contentsGravity
+    view.layer.masksToBounds = layer.masksToBounds
+    view.layer.cornerRadius = layer.cornerRadius
+    view.layer.backgroundColor = layer.backgroundColor
+    if let sublayers = layer.sublayers {
+        for sublayer in sublayers {
+            let subtree = makeLayerSubtreeSnapshotAsView(layer: sublayer)
+            if let subtree = subtree {
+                subtree.layer.transform = sublayer.transform
+                subtree.layer.frame = sublayer.frame
+                subtree.layer.bounds = sublayer.bounds
+                view.addSubview(subtree)
+            } else {
+                return nil
+            }
+        }
+    }
+    return view
+}
+
+
 public extension UIView {
     func snapshotContentTree(unhide: Bool = false, keepTransform: Bool = false) -> UIView? {
         let wasHidden = self.isHidden
@@ -523,6 +555,26 @@ public extension CALayer {
     }
 }
 
+public extension CALayer {
+    func snapshotContentTreeAsView(unhide: Bool = false) -> UIView? {
+        let wasHidden = self.isHidden
+        if unhide && wasHidden {
+            self.isHidden = false
+        }
+        let snapshot = makeLayerSubtreeSnapshotAsView(layer: self)
+        if unhide && wasHidden {
+            self.isHidden = true
+        }
+        if let snapshot = snapshot {
+            snapshot.frame = self.frame
+            snapshot.bounds = self.bounds
+            return snapshot
+        }
+        
+        return nil
+    }
+}
+
 public extension CGRect {
     var topLeft: CGPoint {
         return self.origin
@@ -538,10 +590,6 @@ public extension CGRect {
     
     var bottomRight: CGPoint {
         return CGPoint(x: self.maxX, y: self.maxY)
-    }
-    
-    var center: CGPoint {
-        return CGPoint(x: self.midX, y: self.midY)
     }
 }
 

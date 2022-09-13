@@ -67,7 +67,9 @@ public class AssistantBuilderImpl: AssistantBuilder {
             deeplink: deeplink,
             esimAuth: auth,
             userEsimsRepository: esimRepository,
-            specialOfferService: specialOfferService,
+            getSpecialOfferUseCase: GetSpecialOfferUseCaseImpl(
+                specialOfferService: specialOfferService
+            ),
             eventsLogger: LoggersFactory().createDefaultEventsLogger()
         )
         interactor.output = presenter

@@ -1,5 +1,6 @@
 import AccountContext
 import Postbox
+import TelegramCore
 
 private let speechToTextSeparator = "🗨 Speech2Text\n"
 private let speechToTextLoading = "Loading..."
@@ -24,6 +25,45 @@ public extension Message {
     func isSpeechToTextLoading() -> Bool {
         return text.contains(speechToTextLoading)
     }
+    
+    func textToTranslate() -> String {
+        return (transcribedText() ?? "")
+            .appending("\n")
+            .appending(text)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+    
+    func transcribedText() -> String? {
+        for attribute in attributes {
+            if let attribute = attribute as? AudioTranscriptionMessageAttribute {
+                if !attribute.text.isEmpty {
+                    return attribute.text
+                } else {
+                    return nil
+                }
+            }
+        }
+        return nil
+    }
+    
+    func updateAudioTranscriptionAttribute(text: String, error: Error?, context: AccountContext) {
+        updateAudioTranscriptionMessageAttribute(message: self, text: text, error: error, context: context)
+    }
+}
+
+private func updateAudioTranscriptionMessageAttribute(message: Message, text: String, error: Error?, context: AccountContext) {
+    let updatedAttribute = AudioTranscriptionMessageAttribute(id: 0, text: text, isPending: false, didRate: false, error: (error != nil) ? .generic : nil)
+    
+    let _ = (context.account.postbox.transaction { transaction -> Void in
+        transaction.updateMessage(message.id, update: { currentMessage in
+            let storeForwardInfo = currentMessage.forwardInfo.flatMap(StoreMessageForwardInfo.init)
+            var attributes = currentMessage.attributes.filter { !($0 is AudioTranscriptionMessageAttribute) }
+            
+            attributes.append(updatedAttribute)
+            
+            return .update(StoreMessage(id: currentMessage.id, globallyUniqueId: currentMessage.globallyUniqueId, groupingKey: currentMessage.groupingKey, threadId: currentMessage.threadId, timestamp: currentMessage.timestamp, flags: StoreMessageFlags(currentMessage.flags), tags: currentMessage.tags, globalTags: currentMessage.globalTags, localTags: currentMessage.localTags, forwardInfo: storeForwardInfo, authorId: currentMessage.author?.id, text: currentMessage.text, attributes: attributes, media: currentMessage.media))
+        })
+    }).start()
 }
 
 private func updateMessageText(message: Message, newMessageText: String, context: AccountContext) {

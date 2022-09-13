@@ -85,6 +85,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var longPressTimer: SwiftSignalKit.Timer?
     
     private var highlightedReaction: ReactionItem.Reaction?
+    private var highlightedByHover = false
     private var didTriggerExpandedReaction: Bool = false
     private var continuousHaptic: Any?
     private var validLayout: (CGSize, UIEdgeInsets, CGRect)?
@@ -467,7 +468,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             size: visualBackgroundFrame.size,
             cloudSourcePoint: cloudSourcePoint - visualBackgroundFrame.minX,
             isLeftAligned: isLeftAligned,
-            isMinimized: self.highlightedReaction != nil,
+            isMinimized: self.highlightedReaction != nil && !self.highlightedByHover,
             transition: transition
         )
         
@@ -846,14 +847,18 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    public func highlightGestureMoved(location: CGPoint) {
+    public func highlightGestureMoved(location: CGPoint, hover: Bool) {
         let highlightedReaction = self.previewReaction(at: location)?.reaction
         if self.highlightedReaction != highlightedReaction {
             self.highlightedReaction = highlightedReaction
-            if self.hapticFeedback == nil {
-                self.hapticFeedback = HapticFeedback()
+            self.highlightedByHover = hover && highlightedReaction != nil
+            
+            if !hover {
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                self.hapticFeedback?.tap()
             }
-            self.hapticFeedback?.tap()
             
             if let (size, insets, anchorRect) = self.validLayout {
                 self.updateLayout(size: size, insets: insets, anchorRect: anchorRect, transition: .animated(duration: 0.18, curve: .easeInOut), animateInFromAnchorRect: nil, animateOutToAnchorRect: nil, animateReactionHighlight: true)

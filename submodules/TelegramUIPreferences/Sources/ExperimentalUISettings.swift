@@ -55,7 +55,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
             crashOnLongQueries: false,
             chatListPhotos: false,
             knockoutWallpaper: false,
-            foldersTabAtBottom: false,
+            // MARK: Nicegram foldersTabAtBottom, change (true by default)
+            foldersTabAtBottom: true,
             playerEmbedding: false,
             playlistPlayback: false,
             preferredVideoCodec: nil,

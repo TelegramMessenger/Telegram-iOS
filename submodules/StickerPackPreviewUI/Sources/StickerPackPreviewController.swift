@@ -48,12 +48,12 @@ public final class StickerPackPreviewController: ViewController, StandalonePrese
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
         
-    public var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)? {
+    public var sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? {
         didSet {
             if self.isNodeLoaded {
                 if let sendSticker = self.sendSticker {
-                    self.controllerNode.sendSticker = { [weak self] file, sourceNode, sourceRect in
-                        if sendSticker(file, sourceNode, sourceRect) {
+                    self.controllerNode.sendSticker = { [weak self] file, sourceView, sourceRect in
+                        if sendSticker(file, sourceView, sourceRect) {
                             self?.dismiss()
                             return true
                         } else {

@@ -2,13 +2,13 @@ name: CI
 
 on:
   push:
-    branches: [ master ]
+    branches: [ nicegram-plus ]
 
   workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-11
+    runs-on: macos-12
 
     steps:
       - uses: actions/checkout@v2
@@ -17,7 +17,9 @@ jobs:
           fetch-depth: '0'
 
       - name: Set active Xcode path
-        run: sudo xcode-select -s /Applications/Xcode_12.5.1.app/Contents/Developer
+        run: |
+          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
+          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
 
       - name: Create canonical source directory
         run: |
@@ -28,8 +30,6 @@ jobs:
           mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
 
       - name: Build the App
-        env:
-          NG_ENV: ${{ secrets.NG_ENV }}
         run: |
           set -x
 
@@ -39,15 +39,6 @@ jobs:
           # use canonical bazel root
           BAZEL_USER_ROOT="/private/var/tmp/_bazel_telegram"
 
-          # download bazel
-          mkdir -p $HOME/bazel-dist
-          pushd $HOME/bazel-dist
-          curl -O -L https://github.com/bazelbuild/bazel/releases/download/4.0.0/bazel-4.0.0-darwin-x86_64
-          mv bazel-4.0.0* bazel
-          chmod +x bazel
-          ./bazel --version
-          popd
-
           cd $SOURCE_DIR
 
           BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
@@ -56,10 +47,8 @@ jobs:
           export COMMIT_COUNT=$(git rev-list --count HEAD)
           export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
           export BUILD_NUMBER="$COMMIT_COUNT"
-          export NG_ENV="$NG_ENV"
           echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
           echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
-          echo "NG_ENV=$(echo $NG_ENV)" >> $GITHUB_ENV
 
           # prepare temporary keychain
           export MY_KEYCHAIN="temp.keychain"
@@ -72,11 +61,10 @@ jobs:
           # install fake certificates
           export CERTS_PATH="build-system/fake-codesigning/certs/distribution"
           for f in "$CERTS_PATH"/*.p12; do
-            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security
+            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security || true
           done
-          # fake certificates are self-signed, so we need to manually mark them as trusted (otherwise bazel will not pick them up)
           for f in "$CERTS_PATH"/*.cer; do
-            sudo security add-trusted-cert -d -r trustRoot -p codeSign -k "$MY_KEYCHAIN" "$f"
+            security import "$f" -k "$MY_KEYCHAIN" -P "" -T /usr/bin/codesign -T /usr/bin/security || true
           done
           security set-key-partition-list -S apple-tool:,apple: -k "$MY_KEYCHAIN_PASSWORD" "$MY_KEYCHAIN"
 
@@ -88,7 +76,6 @@ jobs:
 
           # build the app
           python3 build-system/Make/Make.py \
-            --bazel="$HOME/bazel-dist/bazel" \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             build \
             --disableParallelSwiftmoduleGeneration \
@@ -125,7 +112,7 @@ jobs:
           prerelease: false
 
       - name: Upload Release IPA
-        id: upload-release-ipa 
+        id: upload-release-ipa
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -136,7 +123,7 @@ jobs:
           asset_content_type: application/zip
 
       - name: Upload Release DSYM
-        id: upload-release-dsym 
+        id: upload-release-dsym
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

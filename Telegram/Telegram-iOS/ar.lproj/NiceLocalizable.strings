@@ -1,4 +1,8 @@
-"AppName" = "Nicegram";
+"AppName" = "NiceGram";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "سياسة الخصوصية";
+"Nicegram.EULA" = "اتفاقية ترخيص المستخدم النهائي\n";
 
 /*ChatFilter*/
 "ChatFilter.Bots" = "بوتات";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "استخدام الكاميرا الخلفية (فيديوهات مستديرة)";
 
 "NiceFeatures.Folders.Header" = "المجلدات";
+"NiceFeatures.Account.Header" = "إعدادات الحساب";
 "NiceFeatures.Folders.TgFolders" = "المجلدات في الأسفل";
 "NiceFeatures.Folders.TgFolders.Notice" = "قائمة مجلدات بأسلوب iOS";
 
@@ -107,6 +112,9 @@
 "Messages.UndoSpeechToText" = "إلغاء نص البيان2";
 "Messages.SpeechToText.LowAccuracyError" = "فشل التعرّف على الحديث.\n\nيُمكن أن يحدث ذلك نتيجة لجودة التسجيل الصوتي الرديئة أو بسبب الاختلاف بين لغة التطبيق ولغة التسجيل الصوتي.";
 "Messages.SelectAllFromUser" = "حدد كافة الرسائل الواردة من هذا المستخدم";
+"Messages.ToLanguage" = "إلى اللغة";
+"Messages.ToLanguage.WithCode" = "إلى اللغة: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "تعذر علينا تحديد اللغة التي ترغب في ترجمة النص إليها. يرجى تحديد اللغة يدوياً وإعادة المحاولة.";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "الحصول على تاريخ التسجيل";
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "تقريباً";
 "NiceFeatures.RegDate.NewerThan" = "أحدث من";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "الردود السريعة";
+"NiceFeatures.QuickReplies.Description" = "يمكنك إضافة عدد غير محدود من الردود باستخدام الزر أدناه. لاستخدام الرد السريع، أدخل **الرمز \"&\"** في حقل إدخال الرسالة.";
+"NiceFeatures.QuickReplies.AddNew" = "أضف رداً جديداً";
+"NiceFeatures.QuickReplies.Placeholder" = "أدخل النص";
+
 /*Telegram Premium*/
 "TelegramPremium.Description" = "للأسف، لا يمكنك الحصول على**ميزات تيليجرام المُميّز** أثناء تسجيلك الدخول في تطبيق Nicegram. يرجى الانتقال إلى تطبيق تيليجرام الرسمي والاشتراك في **تيليجرام المُميّز**. وعندما تعود إلى تطبيق Nicegram، ستجد جميع **ميزات تيليجرام المُميّز** متاحة للاستخدام.";
+"TelegramPremium.Title" = "استعادة اشتراك premium";
+"TelegramPremium.Failure.Title" = "خطأ";
+"TelegramPremium.Failure.Description" = "لقد حدث خطأ ما. يرجى استخدم Nicegram Bot لاستعادة اشتراك Premium Lifetime الخاص بك";
+"TelegramPremium.Failure.Pending" = "طلبك معلق. يرجى الانتظار حتى تتم الموافقة عليه من قبل Nicegram Bot";
+"TelegramPremium.Success.Title" = "تم بنجاح";
+"TelegramPremium.Success.Description" = "تمت استعادة اشتراك Premium Lifetime الخاص بك بنجاح!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Double bottom";
+"DoubleBottom.Description" = "لتمكين هذه الميزة، يجب أن يكون لديك أكثر من حساب وتشغيل قفل رمز المرور (انتقل إلى الإعدادات ← الخصوصية والأمان ← قفل رمز المرور)";
+"DoubleBottom.Enabled.Title" = "تم تفعيل Double Bottom";
+"DoubleBottom.Enabled.Description" = "يرجى تذكر رمز المرور الذي عينته للتو وأعد تشغيل التطبيق حتى يعمل Double Bottom بشكل جيد";
+"DoubleBottom.Enabled.OK" = "موافق";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "تطبيق Nicegram\n**ميزات فائقة الجودة**";
+
+"NicePremium.Translator" = "برنامج مدمج للترجمة";
+"NicePremium.Translator.Desc" = "ترجم أي رسالة في التطبيق فوراً دون الحاجة إلى الانتقال إلى برامج ترجمة خارجية";
+
+"NicePremium.SpeechToText.Desc" = "حوّل أي رسالة صوتية إلى نص مكتوب في ثوانٍ ووفر الكثير من وقت فراغك";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "أبلغ جميع أعضاء المجموعة سريعاً وتأكد من أن جميعهم سيقرأ رسالتك";
+
+"NicePremium.Renews" = "الاشتراك يتجدد تلقائياً";

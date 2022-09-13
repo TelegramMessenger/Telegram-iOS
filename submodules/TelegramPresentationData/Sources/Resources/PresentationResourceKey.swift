@@ -315,4 +315,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case chatMessageCommentsArrowIcon(incoming: Bool)
     case chatMessageCommentsUnreadDotIcon(incoming: Bool)
     case chatMessageRepliesIcon(incoming: Bool)
+    
+    case chatEntityKeyboardLock(color: UInt32)
+    case chatInputMediaPanelGridDismissImage(color: UInt32)
 }

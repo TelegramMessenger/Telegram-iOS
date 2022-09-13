@@ -12,6 +12,9 @@ import ItemListUI
 final class HashtagChatInputPanelItem: ListViewItem {
     fileprivate let presentationData: ItemListPresentationData
     fileprivate let text: String
+    // MARK: Nicegram QuickReplies
+    fileprivate let canDelete: Bool
+    //
     fileprivate let revealed: Bool
     fileprivate let setHashtagRevealed: (String?) -> Void
     private let hashtagSelected: (String) -> Void
@@ -19,9 +22,13 @@ final class HashtagChatInputPanelItem: ListViewItem {
     
     let selectable: Bool = true
     
-    public init(presentationData: ItemListPresentationData, text: String, revealed: Bool, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) {
+    // MARK: Nicegram QuickReplies, canDelete added
+    public init(presentationData: ItemListPresentationData, text: String, canDelete: Bool, revealed: Bool, setHashtagRevealed: @escaping (String?) -> Void, hashtagSelected: @escaping (String) -> Void, removeRequested: @escaping (String) -> Void) {
         self.presentationData = presentationData
         self.text = text
+        // MARK: Nicegram QuickReplies
+        self.canDelete = canDelete
+        //
         self.revealed = revealed
         self.setHashtagRevealed = setHashtagRevealed
         self.hashtagSelected = hashtagSelected
@@ -146,11 +153,12 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
         return { [weak self] item, params, mergedTop, mergedBottom in
             let textFont = Font.medium(floor(item.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0))
             
-            let baseWidth = params.width - params.leftInset - params.rightInset
-            
+            // MARK: Nicegram QuickReplies, baseWidth fix
             let leftInset: CGFloat = 15.0 + params.leftInset
+            let baseWidth = params.width - leftInset - params.rightInset
             
-            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "#\(item.text)", font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            // MARK: Nicegram QuickReplies, # removed
+            let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "\(item.text)", font: textFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: baseWidth, height: 100.0), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: HashtagChatInputPanelItemNode.itemHeight), insets: UIEdgeInsets())
             
@@ -177,7 +185,8 @@ final class HashtagChatInputPanelItemNode: ListViewItemNode {
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: params.width, height: nodeLayout.size.height + UIScreenPixel))
                     
-                    strongSelf.setRevealOptions([ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)])
+                    // MARK: Nicegram QuickReplies, !item.canDelete ? [] : added
+                    strongSelf.setRevealOptions(!item.canDelete ? [] : [ItemListRevealOption(key: 0, title: item.presentationData.strings.Common_Delete, icon: .none, color: item.presentationData.theme.list.itemDisclosureActions.destructive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.destructive.foregroundColor)])
                     strongSelf.setRevealOptionsOpened(item.revealed, animated: animation.isAnimated)
                 }
             })

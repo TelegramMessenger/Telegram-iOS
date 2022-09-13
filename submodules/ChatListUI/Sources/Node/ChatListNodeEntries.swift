@@ -325,8 +325,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         }
 
         var draftState: ChatListItemContent.DraftState?
-        if let draftText = entry.draftText {
-            draftState = ChatListItemContent.DraftState(text: draftText)
+        if let draft = entry.draft {
+            draftState = ChatListItemContent.DraftState(draft: draft)
         }
 
         result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, hasUnseenReactions: entry.hasUnseenReactions, editing: state.editing, hasActiveRevealControls: entry.index.messageIndex.id.peerId == state.peerIdWithRevealedOptions, selected: state.selectedPeerIds.contains(entry.index.messageIndex.id.peerId), inputActivities: state.peerInputActivities?.activities[entry.index.messageIndex.id.peerId], promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact))
@@ -380,7 +380,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     case let .psa(type, message):
                         promoInfo = .psa(type: type, message: message)
                     }
-                    let draftState = item.item.draftText.flatMap(ChatListItemContent.DraftState.init(text:))
+                    let draftState = item.item.draft.flatMap(ChatListItemContent.DraftState.init)
                     result.append(.PeerEntry(
                         index: EngineChatList.Item.Index(pinningIndex: pinningIndex, messageIndex: item.item.index.messageIndex),
                         presentationData: state.presentationData,

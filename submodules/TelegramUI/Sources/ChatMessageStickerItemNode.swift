@@ -57,6 +57,25 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
 
     private var enableSynchronousImageApply: Bool = false
     
+    override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = oldValue != .none
+            let isVisible = self.visibility != .none
+            
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool? {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.replyInfoNode?.visibility = self.visibilityStatus == true
+            }
+        }
+    }
+    
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -122,7 +141,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 case .action, .optionalAction:
                     break
                 case let .openContextMenu(tapMessage, selectAll, subFrame):
-                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture)
+                    item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, strongSelf, subFrame, gesture, nil)
                 }
             }
         }
@@ -241,7 +260,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
         
         if self.telegramFile == nil && item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
-            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text))
+            self.imageNode.setSignal(largeEmoji(postbox: item.context.account.postbox, emoji: item.message.text, outline: false))
         }
     }
     
@@ -303,7 +322,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 case .options:
                     if let item = self.item {
-                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+                        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
                     }
             }
         }
@@ -344,7 +363,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var isEmoji = false
             if item.presentationData.largeEmoji && messageIsElligibleForLargeEmoji(item.message) {
                 let attributedText = NSAttributedString(string: item.message.text, font: item.presentationData.messageEmojiFont, textColor: .black)
-                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: 180.0, height: 90.0), alignment: .natural))
+                textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: params.width, height: 90.0), alignment: .natural))
                 
                 imageSize = CGSize(width: textLayoutAndApply!.0.size.width, height: textLayoutAndApply!.0.size.height)
                 isEmoji = true
@@ -526,7 +545,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
-            var replyInfoApply: (CGSize, () -> ChatMessageReplyInfoNode)?
+            var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
             var replyMarkup: ReplyMarkupMessageAttribute?
             
             var availableWidth = max(60.0, params.width - params.leftInset - params.rightInset - max(imageSize.width, 160.0) - 20.0 - layoutConstants.bubble.edgeInset * 2.0 - avatarInset - layoutConstants.bubble.contentInsets.left)
@@ -570,7 +589,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                     } else {
-                        replyInfoApply = makeReplyInfoLayout(item.presentationData, item.presentationData.strings, item.context, .standalone, replyMessage, item.message, CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude))
+                        replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                            presentationData: item.presentationData,
+                            strings: item.presentationData.strings,
+                            context: item.context,
+                            type: .standalone,
+                            message: replyMessage,
+                            parentMessage: item.message,
+                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                            animationCache: item.controllerInteraction.presentationContext.animationCache,
+                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                        ))
                     }
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
@@ -752,7 +781,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, _ in
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, synchronousLoads in
                 if let strongSelf = self {
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration, _) = animation {
@@ -882,7 +911,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                     
                     if let (replyInfoSize, replyInfoApply) = replyInfoApply {
-                        let replyInfoNode = replyInfoApply()
+                        let replyInfoNode = replyInfoApply(synchronousLoads)
                         if strongSelf.replyInfoNode == nil {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.contextSourceNode.contentNode.addSubnode(replyInfoNode)
@@ -1076,7 +1105,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         if canAddMessageReactions(message: item.message) {
                             item.controllerInteraction.updateMessageReaction(tapMessage, .default)
                         } else {
-                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil)
+                            item.controllerInteraction.openMessageContextMenu(tapMessage, selectAll, self, subFrame, nil, nil)
                         }
                     }
                 } else if case .tap = gesture {
@@ -1136,7 +1165,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             
                 return nil
-            case .longTap, .doubleTap:
+            case .longTap, .doubleTap, .secondaryTap:
                 if let item = self.item, self.imageNode.frame.contains(location) {
                     return .openContextMenu(tapMessage: item.message, selectAll: false, subFrame: self.imageNode.frame)
                 }
@@ -1487,17 +1516,17 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
 
         let localSourceContentFrame = CGRect(
             origin: CGPoint(
-                x: self.imageNode.frame.minX + self.imageNode.frame.size.width / 2.0 - stickerSource.imageNode.frame.size.width / 2.0,
-                y: self.imageNode.frame.minY + self.imageNode.frame.size.height / 2.0 - stickerSource.imageNode.frame.size.height / 2.0
+                x: self.imageNode.frame.minX + self.imageNode.frame.size.width / 2.0 - stickerSource.sourceFrame.size.width / 2.0,
+                y: self.imageNode.frame.minY + self.imageNode.frame.size.height / 2.0 - stickerSource.sourceFrame.size.height / 2.0
             ),
-            size: stickerSource.imageNode.frame.size
+            size: stickerSource.sourceFrame.size
         )
 
         var snapshotView: UIView?
         if let animationNode = stickerSource.animationNode {
             snapshotView = animationNode.view.snapshotContentTree()
         } else {
-            snapshotView = stickerSource.imageNode.view.snapshotContentTree()
+            snapshotView = stickerSource.snapshotContentTree()
         }
         snapshotView?.frame = localSourceContentFrame
 
@@ -1518,7 +1547,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             y: localSourceCenter.y - localSourceContentFrame.height / 2.0
         )
 
-        let sourceScale: CGFloat = stickerSource.imageNode.frame.height / self.imageNode.frame.height
+        let sourceScale: CGFloat = stickerSource.sourceFrame.height / self.imageNode.frame.height
 
         let offset = CGPoint(
             x: sourceCenter.x - self.imageNode.frame.midX,
@@ -1554,8 +1583,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             animationNode.layer.animateAlpha(from: 0.0, to: animationNode.alpha, duration: 0.4)
         }
 
-        stickerSource.imageNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
-        stickerSource.imageNode.layer.animateAlpha(from: 0.0, to: stickerSource.imageNode.alpha, duration: 0.4)
+        if let sourceLayer = stickerSource.sourceLayer {
+            sourceLayer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+            sourceLayer.animateAlpha(from: 0.0, to: CGFloat(sourceLayer.opacity), duration: 0.4)
+        }
 
         if let placeholderNode = stickerSource.placeholderNode {
             placeholderNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
@@ -1579,7 +1610,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         guard let item = self.item else {
             return
         }
-        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil)
+        item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
     override func targetReactionView(value: String) -> UIView? {

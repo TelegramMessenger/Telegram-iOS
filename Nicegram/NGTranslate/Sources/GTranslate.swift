@@ -11,10 +11,20 @@ import SwiftSignalKit
 import UIKit
 import NGData
 import NGLogging
+import TelegramCore
+import TelegramPresentationData
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
 public var gTranslateSeparator = "🗨 GTranslate"
+
+public func getPreferredTranslationTargetLanguage(_ presentationData: PresentationData) -> String {
+    return getSavedTranslationTargetLanguage() ?? presentationData.strings.baseLanguageCode
+}
+
+public func setPreferredTranslationTargetLanguage(code: String) {
+    setSavedTranslationTargetLanguage(code: code)
+}
 
 public func getTranslateUrl(_ message: String,_ toLang: String) -> String {
     var sanitizedMessage = message.replaceCharactersFromSet(characterSet:CharacterSet.newlines, replacementString: "¦")
@@ -57,6 +67,7 @@ public func getGoogleLang(_ userLang: String) -> String {
     if lang.hasSuffix(rawSuffix) {
         lang = String(lang.dropLast(rawSuffix.count))
     }
+    lang = lang.lowercased()
     
     // Google lang for Chineses
     switch (lang) {

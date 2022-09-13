@@ -22,10 +22,14 @@ private func inputQueryResultPriority(_ result: ChatPresentationInputQueryResult
             return (4, nonEmpty)
         case let .emojis(items, _):
             return (5, !items.isEmpty)
+        // MARK: Nicegram QuickReplies
+        case let .quickReplies(items):
+            return (6, !items.isEmpty)
+        //
     }
 }
 
-func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, controllerInteraction: ChatControllerInteraction, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPresentationContext: ChatPresentationContext) -> ChatInputContextPanelNode? {
     guard let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
@@ -34,7 +38,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
         if let currentPanel = currentPanel as? CommandMenuChatInputContextPanelNode {
             return currentPanel
         } else {
-            let panel = CommandMenuChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: renderedPeer.peerId)
+            let panel = CommandMenuChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: renderedPeer.peerId, chatPresentationContext: chatPresentationContext)
             panel.interfaceInteraction = interfaceInteraction
             return panel
         }
@@ -68,7 +72,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                 if let currentPanel = currentPanel as? DisabledContextResultsChatInputContextPanelNode {
                     return currentPanel
                 } else {
-                    let panel = DisabledContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = DisabledContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     return panel
             }
@@ -86,20 +90,34 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(results: results.map({ $0.file }), query: query)
                     return currentPanel
                 } else {
-                    let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: chatPresentationInterfaceState.renderedPeer?.peerId)
+                    let panel = InlineReactionSearchPanel(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, peerId: chatPresentationInterfaceState.renderedPeer?.peerId, chatPresentationContext: chatPresentationContext)
                     panel.controllerInteraction = controllerInteraction
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results: results.map({ $0.file }), query: query)
                     return panel
                 }
             }
+        // MARK: Nicegram QuickReplies
+        case let .quickReplies(results):
+            if !results.isEmpty {
+                if let currentPanel = currentPanel as? HashtagChatInputContextPanelNode {
+                    currentPanel.updateResults(results, canDelete: false)
+                    return currentPanel
+                } else {
+                    let panel = HashtagChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
+                    panel.interfaceInteraction = interfaceInteraction
+                    panel.updateResults(results, canDelete: false)
+                    return panel
+                }
+            }
+        //
         case let .hashtags(results):
             if !results.isEmpty {
                 if let currentPanel = currentPanel as? HashtagChatInputContextPanelNode {
                     currentPanel.updateResults(results)
                     return currentPanel
                 } else {
-                    let panel = HashtagChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = HashtagChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results)
                     return panel
@@ -111,7 +129,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(results)
                     return currentPanel
                 } else {
-                    let panel = EmojisChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = EmojisChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: chatPresentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(results)
                     return panel
@@ -123,7 +141,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(peers)
                     return currentPanel
                 } else {
-                    let panel = MentionChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, mode: .input)
+                    let panel = MentionChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, mode: .input, chatPresentationContext: chatPresentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(peers)
                     return panel
@@ -137,7 +155,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                     currentPanel.updateResults(commands)
                     return currentPanel
                 } else {
-                    let panel = CommandChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                    let panel = CommandChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(commands)
                     return panel
@@ -153,7 +171,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                             currentPanel.updateResults(results)
                             return currentPanel
                         } else {
-                            let panel = VerticalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                            let panel = VerticalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                             panel.interfaceInteraction = interfaceInteraction
                             panel.updateResults(results)
                             return panel
@@ -163,7 +181,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
                             currentPanel.updateResults(results)
                             return currentPanel
                         } else {
-                            let panel = HorizontalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize)
+                            let panel = HorizontalListContextResultsChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, chatPresentationContext: controllerInteraction.presentationContext)
                             panel.interfaceInteraction = interfaceInteraction
                             panel.updateResults(results)
                             return panel
@@ -177,7 +195,7 @@ func inputContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfa
     return nil
 }
 
-func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?) -> ChatInputContextPanelNode? {
+func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentPanel: ChatInputContextPanelNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPresentationContext: ChatPresentationContext) -> ChatInputContextPanelNode? {
     guard let searchQuerySuggestionResult = chatPresentationInterfaceState.searchQuerySuggestionResult, let _ = chatPresentationInterfaceState.renderedPeer?.peer else {
         return nil
     }
@@ -189,7 +207,7 @@ func chatOverlayContextPanelForChatPresentationIntefaceState(_ chatPresentationI
                     currentPanel.updateResults(peers)
                     return currentPanel
                 } else {
-                    let panel = MentionChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, mode: .search)
+                    let panel = MentionChatInputContextPanelNode(context: context, theme: chatPresentationInterfaceState.theme, strings: chatPresentationInterfaceState.strings, fontSize: chatPresentationInterfaceState.fontSize, mode: .search, chatPresentationContext: chatPresentationContext)
                     panel.interfaceInteraction = interfaceInteraction
                     panel.updateResults(peers)
                     return panel

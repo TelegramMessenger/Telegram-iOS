@@ -1,5 +1,9 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
+NGDEPS = [
+    "//Nicegram/NGTranslate:NGTranslate",
+]
+
 swift_library(
     name = "ChatSendMessageActionUI",
     module_name = "ChatSendMessageActionUI",
@@ -9,7 +13,7 @@ swift_library(
     copts = [
         "-warnings-as-errors",
     ],
-    deps = [
+    deps = NGDEPS + [
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/AsyncDisplayKit:AsyncDisplayKit",
         "//submodules/Display:Display",
@@ -19,6 +23,8 @@ swift_library(
         "//submodules/ChatPresentationInterfaceState:ChatPresentationInterfaceState",
         "//submodules/ContextUI:ContextUI",
         "//submodules/AppBundle:AppBundle",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
     ],
     visibility = [
         "//visibility:public",

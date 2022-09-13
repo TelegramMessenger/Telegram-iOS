@@ -1,5 +1,6 @@
 import UIKit
 import SnapKit
+import NGButton
 
 open class GradientView: UIView {
     
@@ -40,5 +41,19 @@ open class GradientView: UIView {
         super.layoutSubviews()
         
         gradientLayer.frame = self.bounds
+    }
+}
+
+public extension CustomButton {
+    func setGradientBackground(
+        colors: [UIColor],
+        startPoint: CGPoint = CGPoint(x: 0, y: 0.5),
+        endPoint: CGPoint = CGPoint(x: 1, y: 0.5)
+    ) {
+        let gradientView = GradientView()
+        gradientView.colors = colors
+        gradientView.startPoint = startPoint
+        gradientView.endPoint = endPoint
+        self.backgrounView = gradientView
     }
 }

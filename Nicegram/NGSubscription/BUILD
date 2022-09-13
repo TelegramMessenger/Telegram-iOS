@@ -8,8 +8,11 @@ swift_library(
     ]),
     deps = [
         "//Vendor/SnapKit:SnapKit",
+        "//submodules/Markdown:Markdown",
         "//Nicegram/NGButton:NGButton",
+        "//Nicegram/NGCustomViews:NGCustomViews",
         "//Nicegram/NGExtensions:NGExtensions",
+        "//Nicegram/NGStrings:NGStrings",
         "//Nicegram/SubscriptionAnalytics:SubscriptionAnalytics",
         "//Nicegram/NGLoadingIndicator:NGLoadingIndicator",
         "//Nicegram/NGIAP:NGIAP",

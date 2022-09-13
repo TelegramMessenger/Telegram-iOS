@@ -122,12 +122,14 @@ open class TooltipController: ViewController, StandalonePresentableController {
     private let dismissImmediatelyOnLayoutUpdate: Bool
     private var timeoutTimer: SwiftSignalKit.Timer?
     
+    private var padding: CGFloat
+    
     private var layout: ContainerViewLayout?
     private var initialArrowOnBottom: Bool
     
     public var dismissed: ((Bool) -> Void)?
     
-    public init(content: TooltipControllerContent, baseFontSize: CGFloat, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true) {
+    public init(content: TooltipControllerContent, baseFontSize: CGFloat, timeout: Double = 2.0, dismissByTapOutside: Bool = false, dismissByTapOutsideSource: Bool = false, dismissImmediatelyOnLayoutUpdate: Bool = false, arrowOnBottom: Bool = true, padding: CGFloat = 8.0) {
         self.content = content
         self.baseFontSize = baseFontSize
         self.timeout = timeout
@@ -135,6 +137,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
         self.dismissByTapOutsideSource = dismissByTapOutsideSource
         self.dismissImmediatelyOnLayoutUpdate = dismissImmediatelyOnLayoutUpdate
         self.initialArrowOnBottom = arrowOnBottom
+        self.padding = padding
         
         super.init(navigationBarPresentationData: nil)
         
@@ -153,6 +156,7 @@ open class TooltipController: ViewController, StandalonePresentableController {
         self.displayNode = TooltipControllerNode(content: self.content, baseFontSize: self.baseFontSize, dismiss: { [weak self] tappedInside in
             self?.dismiss(tappedInside: tappedInside)
         }, dismissByTapOutside: self.dismissByTapOutside, dismissByTapOutsideSource: self.dismissByTapOutsideSource)
+        self.controllerNode.padding = self.padding
         self.controllerNode.arrowOnBottom = self.initialArrowOnBottom
         self.displayNodeDidLoad()
     }

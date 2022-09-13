@@ -97,6 +97,9 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
             }
             return .right
         })
+        if #available(iOS 13.4, *) {
+            panRecognizer.allowedScrollTypesMask = .continuous
+        }
         self.panRecognizer = panRecognizer
         if let layout = self.validLayout {
             switch layout.metrics.widthClass {
@@ -112,6 +115,24 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         if !self.isFlat {
             self.view.addGestureRecognizer(panRecognizer)
             self.dim.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+        }
+    }
+    
+    public override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if gestureRecognizer == self.panRecognizer, let gestureRecognizer = self.panRecognizer, gestureRecognizer.numberOfTouches == 0 {
+            let translation = gestureRecognizer.velocity(in: gestureRecognizer.view)
+            if abs(translation.y) > 4.0 && abs(translation.y) > abs(translation.x) * 2.5 {
+                return false
+            }
+            if translation.x < 4.0 {
+                return false
+            }
+            if self.isDismissed {
+                return false
+            }
+            return true
+        } else {
+            return true
         }
     }
     

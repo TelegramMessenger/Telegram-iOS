@@ -28,7 +28,7 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     
     private var needsSearchResultsTooltip = true
     
-    private var validLayout: (width: CGFloat, leftInset: CGFloat,  rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool)?
+    private var validLayout: (width: CGFloat, leftInset: CGFloat,  rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool, isMediaInputExpanded: Bool)?
     
     override var interfaceInteraction: ChatPanelInterfaceInteraction? {
         didSet {
@@ -38,8 +38,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
                     if let strongSelf = self, strongSelf.displayActivity != value {
                         strongSelf.displayActivity = value
                         strongSelf.activityIndicator.isHidden = !value
-                        if let interfaceState = strongSelf.presentationInterfaceState, let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout {
-                            let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                        if let interfaceState = strongSelf.presentationInterfaceState, let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = strongSelf.validLayout {
+                            let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
                         }
                     }
                 }))
@@ -50,12 +50,12 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
     }
     
     init(theme: PresentationTheme) {
-        self.upButton = HighlightableButtonNode(pointerStyle: .default)
+        self.upButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.upButton.isEnabled = false
-        self.downButton = HighlightableButtonNode(pointerStyle: .default)
+        self.downButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.downButton.isEnabled = false
         self.calendarButton = HighlightableButtonNode()
-        self.membersButton = HighlightableButtonNode(pointerStyle: .default)
+        self.membersButton = HighlightableButtonNode(pointerStyle: .circle(36.0))
         self.measureResultsLabel = TextNode()
         self.measureResultsLabel.displaysAsynchronously = false
         self.resultsButton = HighlightableButtonNode(pointerStyle: .default)
@@ -127,8 +127,8 @@ final class ChatSearchInputPanelNode: ChatInputPanelNode {
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
         
         if self.presentationInterfaceState != interfaceState {
             let themeUpdated = self.presentationInterfaceState?.theme !== interfaceState.theme

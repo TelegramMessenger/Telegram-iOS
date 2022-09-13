@@ -1,190 +1,96 @@
 import UIKit
 import SnapKit
 import NGButton
+import NGCustomViews
 import NGExtensions
 import NGLoadingIndicator
-import SubscriptionAnalytics
-import NGIAP
+import Markdown
 
-protocol SubscriptionViewControllerInput {
-    // func displaySmth(viewModel: SomeModel)
+struct SubscriptionViewModel {
+    let id: String
+    let subscribeButtonTitle: String
 }
 
+protocol SubscriptionViewControllerInput {}
+
 protocol SubscriptionViewControllerOutput {
-    func restore()
-    func purcahseProduct(id: String)
-    func openPrivacyPolicy()
-    func openTerms()
-    // func doSmth(request: RequestModel)
+    func viewDidLoad()
+    func requestClose()
+    func requestPurchase(id: String)
+    func requestRestore()
+    func requestPrivacyPolicy()
+    func requestTermsOfUse()
 }
 
 final class SubscriptionViewController: UIViewController, SubscriptionViewControllerInput {
-    var output: SubscriptionViewControllerOutput!
-    var router: SubscriptionRouterInput!
-
-    private weak var tapKeyboardDismissRecognizer: UITapGestureRecognizer?
-
-    private let isNightTheme: Bool
     
-    private let logoImageView = UIImageView()
+    //  MARK: - VIP
+    
+    var output: SubscriptionViewControllerOutput!
+    
+    //  MARK: - UI Elements
+
+    private let closeButton = CustomButton()
+    private let imageView = UIImageView()
     private let titleLabel = UILabel()
-    private let subtitleLabel = UILabel()
-
-    private let subscribeButton = NGButton()
-    private let footerInfoLabel = UILabel()
-    private let restoreButton = ActionButton()
-    private let termsButton = ActionButton()
-    private let privacyButton = ActionButton()
-
-    private let closeButton = ActionButton()
-
-    init(isNightTheme: Bool) {
-        self.isNightTheme = isNightTheme
-        super.init(nibName: nil, bundle: nil)
+    private let featuresStack = UIStackView()
+    private let bottomView = UIView()
+    private let subscribeInfoLabel = UILabel()
+    private let subscribeButton = CustomButton()
+    private let restoreButton = CustomButton()
+    private let termsButton = CustomButton()
+    private let privacyButton = CustomButton()
+    private let scrollView = UIScrollView()
+    private let contentView = UIView()
+    
+    override var preferredStatusBarStyle: UIStatusBarStyle {
+        return .lightContent
     }
-
-    required init?(coder: NSCoder) {
-        fatalError("init(coder:) has not been implemented")
-    }
+    
+    //  MARK: - Logic
+    
+    var currentSubscription: SubscriptionViewModel?
+    
+    //  MARK: - Lifecycle
 
     override func loadView() {
-        super.loadView()
         view = UIView()
-        view.addSubview(logoImageView)
-        logoImageView.snp.makeConstraints {
-            $0.width.height.equalTo(110.0)
-            $0.centerX.equalToSuperview()
-            $0.centerY.equalToSuperview().multipliedBy(0.55)
-        }
-
-        view.addSubview(titleLabel)
-        titleLabel.snp.makeConstraints {
-            $0.top.equalTo(logoImageView.snp.bottom).offset(60.0)
-            $0.leading.trailing.equalToSuperview().inset(8.0)
-        }
-
-        view.addSubview(subtitleLabel)
-        subtitleLabel.snp.makeConstraints {
-            $0.top.equalTo(titleLabel.snp.bottom).offset(34.0)
-            $0.leading.trailing.equalToSuperview().inset(40.0)
-        }
-
-        let stackView = UIStackView()
-        stackView.axis = .horizontal
-        stackView.distribution = .fillEqually
-        stackView.spacing = 16
-        stackView.alignment = .fill
-        view.addSubview(stackView)
-        stackView.snp.makeConstraints {
-            $0.height.equalTo(40.0)
-            $0.leading.trailing.equalToSuperview().inset(30.0)
-            $0.bottom.equalTo(self.view.safeArea.bottom).offset(-4.0)
-        }
-        stackView.addArrangedSubview(privacyButton)
-        stackView.addArrangedSubview(termsButton)
-        stackView.addArrangedSubview(restoreButton)
-
-        view.addSubview(footerInfoLabel)
-        footerInfoLabel.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview().inset(8.0)
-            $0.bottom.equalTo(stackView.snp.top).offset(-34.0)
-        }
-
-        view.addSubview(subscribeButton)
-        subscribeButton.snp.makeConstraints {
-            $0.leading.trailing.equalToSuperview().inset(16.0)
-            $0.height.equalTo(54.0)
-            $0.bottom.equalTo(footerInfoLabel.snp.top).offset(-12.0)
-        }
-
-        view.addSubview(closeButton)
-        closeButton.snp.makeConstraints {
-            $0.height.width.equalTo(40.0)
-            $0.trailing.equalToSuperview().inset(14.0)
-            $0.top.equalTo(self.view.safeArea.top).inset(4.0)
-        }
+        setupUI()
     }
 
     override func viewDidLoad() {
         super.viewDidLoad()
-        if isNightTheme {
-            view.backgroundColor = .ngBackground
-            titleLabel.textColor = .white
-            subtitleLabel.textColor = .white
-            footerInfoLabel.textColor = .white
-        } else {
-            view.backgroundColor = .white
-            titleLabel.textColor = .black
-            subtitleLabel.textColor = .black
-            footerInfoLabel.textColor = .black
-        }
-
-        logoImageView.image = UIImage(named: "NicegramBigLogo")
-
-        subscribeButton.buttonState = .enabled
-
-        setupSubscriptionButton()
-        let subscription = SubscriptionService.shared.subscription(for: NicegramProducts.Premium)
-        subscribeButton.setTitleColor(.white, for: .normal)
-        subscribeButton.isRounded = true
-        subscribeButton.touchUpInside = { [weak self] in
-            guard let self = self else { return }
-            self.output.purcahseProduct(id: subscription?.identifier ?? "")
-        }
-
-        privacyButton.setTitle("Privacy", for: .normal)
-        privacyButton.titleLabel?.font = .systemFont(ofSize: 16.0, weight: .regular)
-        privacyButton.setTitleColor(.ngSubtitle, for: .normal)
-        privacyButton.touchUpInside = { [weak self] in
-            guard let self = self else { return }
-            self.output.openPrivacyPolicy()
-        }
-        termsButton.setTitle("Terms", for: .normal)
-        termsButton.titleLabel?.font = .systemFont(ofSize: 16.0, weight: .regular)
-        termsButton.setTitleColor(.ngSubtitle, for: .normal)
-        termsButton.touchUpInside = { [weak self] in
-            guard let self = self else { return }
-            self.output.openTerms()
-        }
-        restoreButton.setTitle("Restore", for: .normal)
-        restoreButton.titleLabel?.font = .systemFont(ofSize: 16.0, weight: .regular)
-        restoreButton.setTitleColor(.ngSubtitle, for: .normal)
-        restoreButton.touchUpInside = { [weak self] in
-            guard let self = self else { return }
-            self.output.restore()
-        }
-
-        titleLabel.text = "Nicegram Premium"
-        titleLabel.numberOfLines = 0
-        titleLabel.font = .systemFont(ofSize: 28.0, weight: .regular)
-        titleLabel.textAlignment = .center
-
-        subtitleLabel.text = "Unlock advanced Translator functions and folders management"
-        subtitleLabel.numberOfLines = 0
-        subtitleLabel.font = .systemFont(ofSize: 16.0, weight: .regular)
-        subtitleLabel.textAlignment = .center
-
-        footerInfoLabel.text = "Autorenewable subscription. Cancel anytime"
-        footerInfoLabel.numberOfLines = 0
-        footerInfoLabel.font = .systemFont(ofSize: 14.0, weight: .regular)
-        footerInfoLabel.textAlignment = .center
-
-        closeButton.setImage(UIImage(named: "Chat/Input/Media/GridDismissIcon"), for: .normal)
-        closeButton.imageView?.contentMode = .scaleToFill
+        
         closeButton.touchUpInside = { [weak self] in
-            guard let self = self else { return }
-            self.router.dismiss()
+            self?.output.requestClose()
         }
+        
+        subscribeButton.touchUpInside = { [weak self] in
+            if let self = self,
+               let id = self.currentSubscription?.id {
+                self.output.requestPurchase(id: id)
+            }
+        }
+        
+        restoreButton.touchUpInside = { [weak self] in
+            self?.output.requestRestore()
+        }
+        
+        privacyButton.touchUpInside = { [weak self] in
+            self?.output.requestPrivacyPolicy()
+        }
+        
+        termsButton.touchUpInside = { [weak self] in
+            self?.output.requestTermsOfUse()
+        }
+        
+        output.viewDidLoad()
     }
-
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        navigationController?.isNavigationBarHidden = false
-    }
-
-    func setupSubscriptionButton() {
-        let subscription = SubscriptionService.shared.subscription(for: NicegramProducts.Premium)
-        subscribeButton.setTitle("Subscribe for \(subscription?.price ?? "$0") / month", for: .normal)
+    
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        
+        scrollView.adjustBottomInsetToNotBeCovered(by: bottomView)
     }
 }
 
@@ -196,8 +102,191 @@ extension SubscriptionViewController: SubscriptionPresenterOutput {
             NGLoadingIndicator.shared.stopAnimating()
         }
     }
+    
+    func display(title: String) {
+        let body = MarkdownAttributeSet(
+            font: .systemFont(ofSize: 32, weight: .light),
+            textColor: .white
+        )
+        let bold = MarkdownAttributeSet(
+            font: .systemFont(ofSize: 32, weight: .bold),
+            textColor: .white
+        )
+        let attributes = MarkdownAttributes(
+            body: body,
+            bold: bold,
+            link: body,
+            linkAttribute: { _ in return nil }
+        )
+        titleLabel.attributedText = parseMarkdownIntoAttributedString(
+            title,
+            attributes: attributes,
+            textAlignment: .natural
+        )
+    }
+    
+    func display(premiumFeatures: [PremiumFeatureViewModel]) {
+        featuresStack.removeAllArrangedSubviews()
+        for feature in premiumFeatures {
+            let view = PremiumFeatureView()
+            view.display(feature)
+            featuresStack.addArrangedSubview(view)
+        }
+    }
+    
+    func display(subscription: SubscriptionViewModel) {
+        subscribeButton.display(title: subscription.subscribeButtonTitle, image: nil)
+        self.currentSubscription = subscription
+    }
+    
+    func display(subscribeTitle: String) {
+        subscribeButton.display(title: subscribeTitle, image: nil)
+    }
+    
+    func display(subscribeInfo: String) {
+        subscribeInfoLabel.text = subscribeInfo
+    }
+    
+    func display(restoreText: String) {
+        restoreButton.display(title: restoreText, image: nil)
+    }
+    
+    func display(privacyText: String) {
+        privacyButton.display(title: privacyText, image: nil)
+    }
+    
+    func display(termsText: String) {
+        termsButton.display(title: termsText, image: nil)
+    }
+}
 
-    func onSuccess() {
-        self.router.dismiss()
+//  MARK: - Private Functions
+
+private extension SubscriptionViewController {
+    struct Constants {
+        static let horizontalMarging = 20
+    }
+    
+    func setupUI() {
+        view.backgroundColor = .black
+        
+        closeButton.foregroundColor = .white.withAlphaComponent(0.4)
+        closeButton.display(title: nil, image: UIImage(named: "ng.xmark")?.withRenderingMode(.alwaysTemplate))
+        
+        imageView.image = UIImage(named: "ng.wallet.subscription")
+        
+        titleLabel.numberOfLines = 2
+        
+        featuresStack.axis = .vertical
+        featuresStack.spacing = 12
+        
+        subscribeInfoLabel.font = .systemFont(ofSize: 14, weight: .regular)
+        subscribeInfoLabel.textColor = .ngBodyThree
+        subscribeInfoLabel.numberOfLines = 0
+        subscribeInfoLabel.textAlignment = .center
+        
+        subscribeButton.configureTitleLabel { l in
+            l.font = .systemFont(ofSize: 16, weight: .bold)
+        }
+        subscribeButton.foregroundColor = .white
+        subscribeButton.layer.cornerRadius = 6
+        subscribeButton.setGradientBackground(colors: .defaultGradient)
+        
+        styleBottomButton(restoreButton)
+        styleBottomButton(privacyButton)
+        styleBottomButton(termsButton)
+        
+        bottomView.backgroundColor = .black
+        
+        let botButtonsStack = UIStackView(arrangedSubviews: [restoreButton, .botButtonsSeparator(), privacyButton, .botButtonsSeparator(), termsButton])
+        botButtonsStack.spacing = 15
+        botButtonsStack.distribution = .equalCentering
+        
+        let botStack = UIStackView(arrangedSubviews: [subscribeInfoLabel, subscribeButton, botButtonsStack])
+        botStack.axis = .vertical
+        botStack.spacing = 12
+        if #available(iOS 11.0, *) {
+            botStack.setCustomSpacing(30, after: subscribeButton)
+        }
+        
+        bottomView.addSubview(botStack)
+        
+        contentView.addSubview(imageView)
+        contentView.addSubview(titleLabel)
+        contentView.addSubview(featuresStack)
+        
+        scrollView.addSubview(contentView)
+        
+        view.addSubview(scrollView)
+        view.addSubview(bottomView)
+        view.addSubview(closeButton)
+        
+        imageView.snp.makeConstraints { make in
+            make.centerX.equalToSuperview()
+            make.leading.equalToSuperview().priority(.high)
+            make.top.equalToSuperview()
+            make.height.equalTo(imageView.snp.width).multipliedBy(360.0 / 375)
+            make.height.lessThanOrEqualTo(view).multipliedBy(0.55)
+        }
+        
+        titleLabel.snp.makeConstraints { make in
+            make.bottom.equalTo(imageView.snp.bottom)
+            make.leading.trailing.equalToSuperview().inset(Constants.horizontalMarging)
+        }
+        
+        featuresStack.snp.makeConstraints { make in
+            make.top.equalTo(titleLabel.snp.bottom).offset(24)
+            make.leading.trailing.equalToSuperview().inset(Constants.horizontalMarging)
+            make.bottom.equalToSuperview()
+        }
+        
+        contentView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+            make.width.equalToSuperview()
+            make.height.equalToSuperview().priority(1)
+        }
+        
+        scrollView.snp.makeConstraints { make in
+            make.edges.equalToSuperview()
+        }
+        
+        subscribeButton.snp.makeConstraints { make in
+            make.height.equalTo(54)
+        }
+        
+        bottomView.snp.makeConstraints { make in
+            make.leading.trailing.bottom.equalToSuperview()
+        }
+        
+        botStack.snp.makeConstraints { make in
+            make.leading.trailing.equalToSuperview().inset(Constants.horizontalMarging)
+            make.top.equalToSuperview().inset(12)
+            make.bottom.equalTo(self.view.safeArea.bottom).inset(10)
+        }
+        
+        closeButton.snp.makeConstraints { make in
+            make.top.equalTo(view.safeArea.top).inset(20)
+            make.trailing.equalToSuperview().inset(20)
+            make.width.height.equalTo(20)
+        }
+    }
+}
+
+private func styleBottomButton(_ button: CustomButton) {
+    button.configureTitleLabel { l in
+        l.font = .systemFont(ofSize: 11, weight: .medium)
+        l.numberOfLines = 2
+    }
+    button.foregroundColor = .ngBodyThree
+}
+
+private extension UIView {
+    static func botButtonsSeparator() -> UIView {
+        let view = UIView()
+        view.backgroundColor = .ngBodyThree
+        view.snp.makeConstraints { make in
+            make.width.equalTo(1)
+        }
+        return view
     }
 }

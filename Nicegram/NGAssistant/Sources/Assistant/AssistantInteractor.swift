@@ -23,18 +23,18 @@ class AssistantInteractor: AssistantInteractorInput {
 
     private let esimAuth: EsimAuth
     private let userEsimsRepository: UserEsimsRepository
-    private let specialOfferService: SpecialOfferService
+    private let getSpecialOfferUseCase: GetSpecialOfferUseCase
     private let eventsLogger: EventsLogger
     
     private var deeplink: Deeplink?
     private var specialOffer: SpecialOffer?
     private var isAuthorized = false
     
-    init(deeplink: Deeplink?, esimAuth: EsimAuth, userEsimsRepository: UserEsimsRepository, specialOfferService: SpecialOfferService, eventsLogger: EventsLogger) {
+    init(deeplink: Deeplink?, esimAuth: EsimAuth, userEsimsRepository: UserEsimsRepository, getSpecialOfferUseCase: GetSpecialOfferUseCase, eventsLogger: EventsLogger) {
         self.deeplink = deeplink
         self.esimAuth = esimAuth
         self.userEsimsRepository = userEsimsRepository
-        self.specialOfferService = specialOfferService
+        self.getSpecialOfferUseCase = getSpecialOfferUseCase
         self.eventsLogger = eventsLogger
     }
     
@@ -124,7 +124,7 @@ private extension AssistantInteractor {
     }
     
     func fetchSpecialOffer() {
-        specialOfferService.fetchSpecialOffer { [weak self] specialOffer in
+        getSpecialOfferUseCase.fetchSpecialOffer { [weak self] specialOffer in
             guard let self = self else { return }
             guard let specialOffer = specialOffer else { return }
             

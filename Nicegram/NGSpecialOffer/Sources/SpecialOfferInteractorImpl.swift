@@ -17,6 +17,7 @@ class SpecialOfferInteractor: SpecialOfferInteractorInput {
     //  MARK: - Dependencies
     
     private let specialOfferService: SpecialOfferService
+    private let setSpecialOfferSeenUseCase: SetSpecialOfferSeenUseCase
     private let eventsLogger: EventsLogger
     
     //  MARK: - Logic
@@ -27,9 +28,10 @@ class SpecialOfferInteractor: SpecialOfferInteractorInput {
     
     //  MARK: - Lifecycle
     
-    init(offerId: String, specialOfferService: SpecialOfferService, eventsLogger: EventsLogger, onCloseRequest: (() -> ())?) {
+    init(offerId: String, specialOfferService: SpecialOfferService, setSpecialOfferSeenUseCase: SetSpecialOfferSeenUseCase, eventsLogger: EventsLogger, onCloseRequest: (() -> ())?) {
         self.specialOfferService = specialOfferService
         self.specialOffer = specialOfferService.getSpecialOffer(with: offerId)
+        self.setSpecialOfferSeenUseCase = setSpecialOfferSeenUseCase
         self.eventsLogger = eventsLogger
         self.onCloseRequest = onCloseRequest
     }
@@ -44,7 +46,7 @@ extension SpecialOfferInteractor: SpecialOfferViewControllerOutput {
     
     func viewDidAppear() {
         if let specialOffer = specialOffer {
-            specialOfferService.markAsViewed(offerId: specialOffer.id)
+            setSpecialOfferSeenUseCase.markAsSeen(offerId: specialOffer.id)
             eventsLogger.logEvent(name: "special_offer_show_with_id_\(specialOffer.id)")
         }
     }

@@ -165,6 +165,10 @@ public final class Transaction {
     public func allMessageIdsWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> [MessageId] {
         return self.postbox?.allMessageIdsWithAuthor(peerId, authorId: authorId, namespace: namespace) ?? []
     }
+    
+    public func allMessages(_ peerId: PeerId, namespace: MessageId.Namespace) -> [Message] {
+        return self.postbox?.allMessages(peerId, namespace: namespace) ?? []
+    }
     //
     
     public func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
@@ -535,6 +539,11 @@ public final class Transaction {
         return self.postbox?.updateMedia(id, update: update) ?? Set()
     }
     
+    public func storeMediaIfNotPresent(media: Media) {
+        assert(!self.disposed)
+        self.postbox?.storeMediaIfNotPresent(media: media)
+    }
+    
     public func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
         assert(!self.disposed)
         self.postbox?.replaceItemCollections(namespace: namespace, itemCollections: itemCollections)
@@ -737,6 +746,14 @@ public final class Transaction {
         assert(!self.disposed)
         if let postbox = self.postbox {
             return postbox.filterStoredMessageIds(messageIds)
+        }
+        return Set()
+    }
+    
+    public func filterStoredMediaIds(namespace: MediaId.Namespace, ids: Set<Int64>) -> Set<Int64> {
+        assert(!self.disposed)
+        if let postbox = self.postbox {
+            return postbox.filterStoredMediaIds(namespace: namespace, ids: ids)
         }
         return Set()
     }
@@ -1847,6 +1864,15 @@ final class PostboxImpl {
     fileprivate func allMessageIdsWithAuthor(_ peerId: PeerId, authorId: PeerId, namespace: MessageId.Namespace) -> [MessageId] {
         return self.messageHistoryTable.allMessageIdsWithAuthor(peerId: peerId, authorId: authorId, namespace: namespace)
     }
+    
+    fileprivate func allMessages(_ peerId: PeerId, namespace: MessageId.Namespace) -> [Message] {
+        return self.messageHistoryTable.allMessageIndices(peerId: peerId, namespace: namespace).compactMap { index in
+            guard let intermediateMessage = self.messageHistoryTable.getMessage(index) else {
+                return nil
+            }
+            return renderIntermediateMessage(intermediateMessage)
+        }
+    }
     //
     
     fileprivate func removeAllMessagesWithGlobalTag(tag: GlobalMessageTags) {
@@ -2307,6 +2333,10 @@ final class PostboxImpl {
         return updatedMessageIndices
     }
     
+    fileprivate func storeMediaIfNotPresent(media: Media) {
+        self.messageHistoryTable.storeMediaIfNotPresent(media: media)
+    }
+    
     fileprivate func replaceItemCollections(namespace: ItemCollectionId.Namespace, itemCollections: [(ItemCollectionId, ItemCollectionInfo, [ItemCollectionItem])]) {
         var infos: [(ItemCollectionId, ItemCollectionInfo)] = []
         for (id, info, items) in itemCollections {
@@ -2348,6 +2378,18 @@ final class PostboxImpl {
         
         for id in messageIds {
             if self.messageHistoryIndexTable.exists(id) {
+                filteredIds.insert(id)
+            }
+        }
+        
+        return filteredIds
+    }
+    
+    fileprivate func filterStoredMediaIds(namespace: MediaId.Namespace, ids: Set<Int64>) -> Set<Int64> {
+        var filteredIds = Set<Int64>()
+        
+        for id in ids {
+            if !self.mediaTable.exists(id: MediaId(namespace: namespace, id: id)) {
                 filteredIds.insert(id)
             }
         }

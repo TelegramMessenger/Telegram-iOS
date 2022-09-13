@@ -1,5 +1,9 @@
 "AppName" = "Nicegram";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Politique de confidentialité";
+"Nicegram.EULA" = "CLUF";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "Robots";
 "ChatFilter.Channels" = "Canaux";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "Utiliser la caméra arrière (vidéos rondes)";
 
 "NiceFeatures.Folders.Header" = "DOSSIERS";
+"NiceFeatures.Account.Header" = "PARAMÈTRES DU COMPTE";
 "NiceFeatures.Folders.TgFolders" = "Dossiers en bas";
 "NiceFeatures.Folders.TgFolders.Notice" = "Liste de dossiers de style iOS";
 
@@ -107,6 +112,9 @@
 "Messages.UndoSpeechToText" = "Annuler Speech2Text";
 "Messages.SpeechToText.LowAccuracyError" = "La reconnaissance vocale a échoué.\n\nCela peut être dû à la mauvaise qualité de l'enregistrement audio ou à des différences entre la langue de l'application et celle de l'enregistrement audio.";
 "Messages.SelectAllFromUser" = "Sélectionner tout de cet utilisateur";
+"Messages.ToLanguage" = "Vers la langue";
+"Messages.ToLanguage.WithCode" = "Vers la langue : %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Nous n'avons pas pu déterminer la langue dans laquelle vous souhaitez traduire le texte. Veuillez la sélectionner manuellement et réessayer.";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Obtenir la date d'inscription";
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "Approximativement";
 "NiceFeatures.RegDate.NewerThan" = "Plus récent que";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Réponses rapides";
+"NiceFeatures.QuickReplies.Description" = "Vous pouvez ajouter un nombre illimité de réponses en utilisant le bouton ci-dessous. Pour utiliser la réponse rapide, entrez le **symbole « & »** dans le champ de saisie du message.";
+"NiceFeatures.QuickReplies.AddNew" = "Ajouter nouveau";
+"NiceFeatures.QuickReplies.Placeholder" = "Saisissez du texte";
+
 /*Telegram Premium*/
 "TelegramPremium.Description" = "Malheureusement, vous ne pouvez pas obtenir les ** fonctionnalités Premium de Telegram ** lorsque vous êtes connecté à l'application Nicegram. Veuillez vous rendre sur l'application officielle Telegram et vous abonner à **Telegram Premium**. Lorsque vous reviendrez sur Nicegram, toutes les **Fonctionnalités Premium** seront disponibles à l'utilisation.";
+"TelegramPremium.Title" = "Restaurer l'abonnement premium";
+"TelegramPremium.Failure.Title" = "Échec";
+"TelegramPremium.Failure.Description" = "Quelque chose s'est mal passé. Veuillez utiliser Nicegram Bot pour restaurer votre abonnement Premium à vie";
+"TelegramPremium.Failure.Pending" = "Votre demande est en attente. S'il vous plaît, attendez que Nicegram Bot l'approuve";
+"TelegramPremium.Success.Title" = "Succès";
+"TelegramPremium.Success.Description" = "Votre abonnement Premium à vie a été restauré avec succès !";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Double fond";
+"DoubleBottom.Description" = "Pour activer cette fonctionnalité, vous devez avoir plus d'un compte et activer le verrouillage par code (allez dans Paramètres → Confidentialité et sécurité → Verrouillage par code)";
+"DoubleBottom.Enabled.Title" = "Le double fond est activé";
+"DoubleBottom.Enabled.Description" = "N'oubliez pas le mot de passe que vous venez de définir et redémarrez l'application pour que le double fond fonctionne correctement";
+"DoubleBottom.Enabled.OK" = "D'ACCORD";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Fonctionnalités premium**";
+
+"NicePremium.Translator" = "Traducteur intégré";
+"NicePremium.Translator.Desc" = "Traduisez en permanence n'importe quel message dans l'application sans avoir à recourir à des traducteurs tiers";
+
+"NicePremium.SpeechToText.Desc" = "Obtenez la transcription de n'importe quel message vocal en quelques secondes et économisez une grande partie de votre temps libre";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "Informez rapidement tous les membres du groupe et assurez-vous que tout le monde lira votre message";
+
+"NicePremium.Renews" = "Renouvellement automatique de l'abonnement";

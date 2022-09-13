@@ -108,7 +108,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
         let sourceNode = self.sourceNode
         return ContextControllerTakeControllerInfo(contentAreaInScreenSpace: CGRect(origin: CGPoint(), size: CGSize(width: 10.0, height: 10.0)), sourceNode: { [weak sourceNode] in
             if let sourceNode = sourceNode {
-                return (sourceNode, sourceNode.bounds)
+                return (sourceNode.view, sourceNode.bounds)
             } else {
                 return nil
             }
@@ -693,6 +693,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     return
                 }
                 let animation: LottieAnimationComponent.AnimationItem?
+                let colors: [String: UIColor]
                 let progressValue: Double?
                 switch state {
                 case let .downloading(progress):
@@ -700,13 +701,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloading",
-                        colors: [
-                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                        ],
                         mode: .animating(loop: true)
                     )
+                    colors = [
+                        "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                    ]
                     progressValue = progress
                     
                     strongSelf.clearUnseenDownloadsTimer?.invalidate()
@@ -716,18 +717,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     animation = LottieAnimationComponent.AnimationItem(
                         name: "anim_search_downloaded",
-                        colors: [
-                            "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
-                            "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
-                        ],
                         mode: .animating(loop: false)
                     )
+                    colors = [
+                        "Fill 2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Mask1.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Mask2.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow3.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Fill.Ellipse 1.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Oval.Ellipse 1.Stroke 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow1.Union.Fill 1": strongSelf.presentationData.theme.list.itemAccentColor,
+                        "Arrow2.Union.Fill 1": strongSelf.presentationData.theme.rootController.navigationSearchBar.inputFillColor.blitOver(strongSelf.presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, alpha: 1.0),
+                    ]
                     progressValue = 1.0
                     
                     if strongSelf.clearUnseenDownloadsTimer == nil {
@@ -750,6 +751,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.hasDownloads = hasDownloadsValue
                     
                     animation = nil
+                    colors = [:]
                     progressValue = nil
                     
                     strongSelf.clearUnseenDownloadsTimer?.invalidate()
@@ -760,6 +762,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let contentComponent = AnyComponent(ZStack<Empty>([
                         AnyComponentWithIdentity(id: 0, component: AnyComponent(LottieAnimationComponent(
                             animation: animation,
+                            colors: colors,
                             size: CGSize(width: 24.0, height: 24.0)
                         ))),
                         AnyComponentWithIdentity(id: 1, component: AnyComponent(ProgressIndicatorComponent(
@@ -969,7 +972,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         scrollToEndIfExists = true
                     }
 
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), activateInput: activateInput && !peer.isDeleted, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
+                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), activateInput: (activateInput && !peer.isDeleted) ? .text : nil, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: strongSelf.groupId == PeerGroupId.root ? [.removeOnMasterDetails] : [], parentGroupId: strongSelf.groupId, chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
                         self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         if let promoInfo = promoInfo {
                             switch promoInfo {
@@ -1171,7 +1174,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self?.toolbarActionSelected(action: action)
         }
         
-        self.chatListDisplayNode.containerNode.activateChatPreview = { [weak self] item, node, gesture in
+        self.chatListDisplayNode.containerNode.activateChatPreview = { [weak self] item, node, gesture, location in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -1193,14 +1196,21 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             case let .peer(_, peer, _, _, _, _, _, _, _, promoInfo, _, _, _):
-                let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
-                chatController.canReadHistory.set(false)
-                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                let source: ContextContentSource
+                if let location = location {
+                    source = .location(ChatListContextLocationContentSource(controller: strongSelf, location: location))
+                } else {
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: nil, botStart: nil, mode: .standard(previewing: true))
+                    chatController.canReadHistory.set(false)
+                    source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
+                }
+                
+                let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatContextMenuItems(context: strongSelf.context, peerId: peer.peerId, promoInfo: promoInfo, source: .chatList(filter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter), chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
             }
         }
         
-        self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture in
+        self.chatListDisplayNode.peerContextAction = { [weak self] peer, source, node, gesture, location in
             guard let strongSelf = self else {
                 gesture?.cancel()
                 return
@@ -2499,8 +2509,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         let esimRepositry = EsimRepositoryImpl(offersRepository: offersRepository, regionsRepository: regionsRepository, countriesRepository: countriesRepository, userEsimsRepository: userEsimsRepository)
         
-        let specialOfferService = SpecialOfferServiceImpl(remoteConfig: RemoteConfigServiceImpl.shared)
-        
         if #available(iOS 13, *) {
             let ngTheme = NGThemeColors(
                 telegramTheme: self.presentationData.theme.intro.statusBarStyle, 
@@ -2563,14 +2571,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
+    private lazy var specialOfferService: SpecialOfferService = SpecialOfferServiceImpl(remoteConfig: RemoteConfigServiceImpl.shared)
+    private lazy var getFeaturedSpecialOfferUseCase: GetFeaturedSpecialOfferUseCase = GetFeaturedSpecialOfferUseCaseImpl(
+        specialOfferService: specialOfferService,
+        specialOfferScheduleService: SpecialOfferScheduleServiceImpl()
+    )
+    
     private func showSpecialOfferIfNeeded() {
-        let specialOfferService = SpecialOfferServiceImpl(remoteConfig: RemoteConfigServiceImpl.shared)
-        
-        specialOfferService.fetchFeaturedSpecialOffer { specialOffer in
-            guard let specialOffer = specialOffer,
-                  AppCache.appLaunchCount > 1 else  { return }
-            DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
-                self.showSpecialOffer(id: specialOffer.id, specialOfferService: specialOfferService)
+        getFeaturedSpecialOfferUseCase.fetchFeaturedSpecialOffer { [weak self] specialOffer in
+            guard let self = self else { return }
+            
+            if let specialOffer = specialOffer {
+                DispatchQueue.main.asyncAfter(deadline: .now() + .seconds(2)) {
+                    self.showSpecialOffer(id: specialOffer.id, specialOfferService: self.specialOfferService)
+                }
             }
         }
     }
@@ -2641,9 +2655,29 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     strongSelf.composePressed()
                 }
             }),
+            KeyShortcut(title: strings.KeyCommand_LockWithPasscode, input: "L", modifiers: [.command], action: { [weak self] in
+                if let strongSelf = self {
+                    strongSelf.context.sharedContext.appLockContext.lock()
+                }
+            }),
             KeyShortcut(title: strings.KeyCommand_Find, input: "\t", modifiers: [], action: toggleSearch),
             KeyShortcut(input: UIKeyCommand.inputEscape, modifiers: [], action: toggleSearch)
         ]
+        
+        let openTab: (Int) -> Void = { [weak self] index in
+            if let strongSelf = self {
+                let filters = strongSelf.chatListDisplayNode.containerNode.availableFilters
+                if index > filters.count - 1 {
+                    return
+                }
+                switch filters[index] {
+                    case .all:
+                        strongSelf.selectTab(id: .all)
+                    case let .filter(filter):
+                        strongSelf.selectTab(id: .filter(filter.id))
+                }
+            }
+        }
         
         let openChat: (Int) -> Void = { [weak self] index in
             if let strongSelf = self {
@@ -2655,13 +2689,23 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        let chatShortcuts: [KeyShortcut] = (0 ... 9).map { index in
+        let folderShortcuts: [KeyShortcut] = (0 ... 9).map { index in
             return KeyShortcut(input: "\(index)", modifiers: [.command], action: {
+                if index == 0 {
+                    openChat(0)
+                } else {
+                    openTab(index - 1)
+                }
+            })
+        }
+        
+        let chatShortcuts: [KeyShortcut] = (0 ... 9).map { index in
+            return KeyShortcut(input: "\(index)", modifiers: [.command, .alternate], action: {
                 openChat(index)
             })
         }
         
-        return inputShortcuts + chatShortcuts
+        return inputShortcuts + folderShortcuts + chatShortcuts
     }
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {
@@ -3646,5 +3690,19 @@ private final class ChatListHeaderBarContextExtractedContentSource: ContextExtra
     
     func putBack() -> ContextControllerPutBackViewInfo? {
         return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class ChatListContextLocationContentSource: ContextLocationContentSource {    
+    private let controller: ViewController
+    private let location: CGPoint
+    
+    init(controller: ViewController, location: CGPoint) {
+        self.controller = controller
+        self.location = location
+    }
+    
+    func transitionInfo() -> ContextControllerLocationViewInfo? {
+        return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

@@ -9,6 +9,7 @@ public class CustomButton: UIControl {
     private let imageView = ImageContainer()
     private let titleLabel = UILabel()
     private let stack = UIStackView()
+    private var currentBackgroundView: UIView?
     
     //  MARK: - Public Properties
     
@@ -39,12 +40,19 @@ public class CustomButton: UIControl {
         }
     }
     
+    public var backgrounView: UIView? {
+        get { currentBackgroundView }
+        set { setCurrentBackgroundView(newValue) }
+    }
+    
     public var touchUpInside: (() -> ())?
     
     //  MARK: - Lifecycle
     
     public override init(frame: CGRect) {
         super.init(frame: frame)
+        
+        clipsToBounds = true
         
         addTarget(self, action: #selector(onTouchUpInside), for: .touchUpInside)
         
@@ -57,7 +65,6 @@ public class CustomButton: UIControl {
         stack.spacing = 4
         stack.alignment = .center
         stack.isLayoutMarginsRelativeArrangement = true
-        stack.isUserInteractionEnabled = false
         
         setImagePosition(imagePosition)
         
@@ -115,6 +122,14 @@ public class CustomButton: UIControl {
         }
     }
     
+    public override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.point(inside: point, with: event) {
+            return self
+        } else {
+            return super.hitTest(point, with: event)
+        }
+    }
+    
     //  MARK: - Public Functions
 
     public func display(title: String?, image: UIImage?) {
@@ -139,7 +154,7 @@ public class CustomButton: UIControl {
         let newForegroundColor: UIColor?
         switch state {
         case .highlighted, .selected:
-            newForegroundColor = foregroundColor?.withAlphaComponent(0.5)
+            newForegroundColor = foregroundColor?.withMultipliedAlpha(0.5)
         default:
             newForegroundColor = foregroundColor
         }
@@ -171,6 +186,19 @@ public class CustomButton: UIControl {
         case .top, .bottom:
             stack.axis = .vertical
         }
+    }
+    
+    private func setCurrentBackgroundView(_ view: UIView?) {
+        currentBackgroundView?.removeFromSuperview()
+        
+        if let view = view {
+            insertSubview(view, at: 0)
+            view.snp.makeConstraints { make in
+                make.edges.equalToSuperview()
+            }
+        }
+        
+        currentBackgroundView = view
     }
 
     @objc private func onTouchUpInside() {

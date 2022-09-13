@@ -9,6 +9,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import ContextUI
 import ChatPresentationInterfaceState
 import PremiumUI
@@ -42,10 +43,10 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
     
     private weak var peekController: PeekController?
     
-    var previewedStickerItem: StickerPackItem?
+    var previewedStickerItem: TelegramMediaFile?
     
     var updateBackgroundOffset: ((CGFloat, Bool, ContainedViewLayoutTransition) -> Void)?
-    var sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Void)?
+    var sendSticker: ((FileMediaReference, UIView, CGRect) -> Void)?
     
     var getControllerInteraction: (() -> ChatControllerInteraction?)?
     
@@ -101,7 +102,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 if let itemNode = selectedNode, let item = itemNode.stickerItem {
                     return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                     |> deliverOnMainQueue
-                    |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                    |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
                             var menuItems: [ContextMenuItem] = []
                             
@@ -111,9 +112,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                 }, action: { _, f in
                                     if let strongSelf = self, let peekController = strongSelf.peekController {
                                         if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode, animationNode.bounds)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, animationNode.view, animationNode.bounds, nil)
                                         } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode, imageNode.bounds)
+                                            let _ = controllerInteraction.sendSticker(.standalone(media: item.file), true, false, nil, true, imageNode.view, imageNode.bounds, nil)
                                         }
                                     }
                                     f(.default)
@@ -125,9 +126,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                             }, action: { _, f in
                                 if let strongSelf = self, let peekController = strongSelf.peekController {
                                     if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode, animationNode.bounds)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, animationNode.view, animationNode.bounds, nil)
                                     } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode, imageNode.bounds)
+                                        let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, true, imageNode.view, imageNode.bounds, nil)
                                     }
                                 }
                                 f(.default)
@@ -143,7 +144,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                         |> deliverOnMainQueue).start(next: { result in
                                             switch result {
                                                 case .generic:
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                 case let .limitExceeded(limit, premiumLimit):
                                                     let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                     let text: String
@@ -152,7 +153,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                     } else {
                                                         text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                     }
-                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                    strongSelf.getControllerInteraction?()?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                         if let strongSelf = self {
                                                             if case .info = action {
                                                                 let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -179,7 +180,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                                 if let packReference = packReference {
                                                     let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                         if let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() {
-                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect)
+                                                            return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil)
                                                         } else {
                                                             return false
                                                         }
@@ -196,7 +197,7 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                                     }
                                 }))
                             )
-                            return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                            return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                                 guard let strongSelf = self, let controllerInteraction = strongSelf.getControllerInteraction?() else {
                                     return
                                 }
@@ -210,11 +211,11 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 }
             }
             return nil
-            }, present: { [weak self] content, sourceNode in
+            }, present: { [weak self] content, sourceView, sourceRect in
                 if let strongSelf = self {
                     let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                        return sourceNode
+                    let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                        return (sourceView, sourceRect)
                     })
                     controller.visibilityUpdated = { [weak self] visible in
                         self?.previewingStickersPromise.set(visible)
@@ -226,18 +227,18 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 return nil
             }, updateContent: { [weak self] content in
                 if let strongSelf = self {
-                    var item: StickerPackItem?
+                    var item: TelegramMediaFile?
                     if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
                         item = contentItem
                     }
-                    strongSelf.updatePreviewingItem(item: item, animated: true)
+                    strongSelf.updatePreviewingItem(file: item, animated: true)
                 }
         }))
     }
     
-    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
-        if self.previewedStickerItem != item {
-            self.previewedStickerItem = item
+    private func updatePreviewingItem(file: TelegramMediaFile?, animated: Bool) {
+        if self.previewedStickerItem?.fileId != file?.fileId {
+            self.previewedStickerItem = file
             
             for (_, itemNode) in self.itemNodes {
                 itemNode.updatePreviewing(animated: animated)
@@ -433,9 +434,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                         file: item.file,
                         theme: self.theme,
                         isPreviewed: { [weak self] item in
-                            return item.file.fileId == self?.previewedStickerItem?.file.fileId
-                        }, sendSticker: { [weak self] file, node, rect in
-                            self?.sendSticker?(file, node, rect)
+                            return item.file.fileId == self?.previewedStickerItem?.fileId
+                        }, sendSticker: { [weak self] file, view, rect in
+                            self?.sendSticker?(file, view, rect)
                         }
                     )
                     itemNode = item.node(layout: GridNodeLayout(
@@ -492,7 +493,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
     
     private var choosingStickerDisposable: Disposable?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, peerId: PeerId?) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, peerId: PeerId?, chatPresentationContext: ChatPresentationContext) {
         self.containerNode = ASDisplayNode()
         
         self.backgroundNode = ASDisplayNode()
@@ -535,7 +536,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
         
         self.stickersNode = InlineReactionSearchStickersNode(context: context, theme: theme, strings: strings, peerId: peerId)
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.placement = .overPanels
         self.isOpaque = false
@@ -576,7 +577,7 @@ final class InlineReactionSearchPanel: ChatInputContextPanelNode {
             guard let strongSelf = self else {
                 return
             }
-            let _ = strongSelf.controllerInteraction?.sendSticker(file, false, false, strongSelf.query, true, node, rect)
+            let _ = strongSelf.controllerInteraction?.sendSticker(file, false, false, strongSelf.query, true, node, rect, nil)
         }
         
         self.view.disablesInteractiveTransitionGestureRecognizer = true

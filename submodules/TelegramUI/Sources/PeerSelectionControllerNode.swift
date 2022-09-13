@@ -254,7 +254,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -331,6 +331,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             }, schedule: { [weak textInputPanelNode] in
                 textInputPanelNode?.sendMessage(.schedule)
             })
+            controller.emojiViewProvider = textInputPanelNode.emojiViewProvider
             strongSelf.presentInGlobalOverlay(controller, nil)
         }, openScheduledMessages: {
         }, openPeersNearby: {
@@ -351,6 +352,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, displayCopyProtectionTip: { _, _ in
         }, openWebView: { _, _, _, _ in
         }, updateShowWebView: { _ in
+        }, insertText: { _ in
+        }, backwardsDeleteText: {
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -385,12 +388,14 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     func beginSelection() {
         if let _ = self.textInputPanelNode {
         } else {
-            let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState)
+            let forwardAccessoryPanelNode = ForwardAccessoryPanelNode(context: self.context, messageIds: self.forwardedMessageIds, theme: self.presentationData.theme, strings: self.presentationData.strings, fontSize: self.presentationData.chatFontSize, nameDisplayOrder: self.presentationData.nameDisplayOrder, forwardOptionsState: self.presentationInterfaceState.interfaceState.forwardOptionsState, animationCache: nil, animationRenderer: nil)
             forwardAccessoryPanelNode.interfaceInteraction = self.interfaceInteraction
             self.addSubnode(forwardAccessoryPanelNode)
             self.forwardAccessoryPanelNode = forwardAccessoryPanelNode
             
-            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) })
+            let textInputPanelNode = AttachmentTextInputPanelNode(context: self.context, presentationInterfaceState: self.presentationInterfaceState, presentController: { [weak self] c in self?.present(c, nil) }, makeEntityInputView: {
+                return nil
+            })
             textInputPanelNode.interfaceInteraction = self.interfaceInteraction
             textInputPanelNode.sendMessage = { [weak self] mode in
                 guard let strongSelf = self else {
@@ -491,7 +496,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             if textInputPanelNode.frame.width.isZero {
                 panelTransition = .immediate
             }
-            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics)
+            var panelHeight = textInputPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: layout.size.height / 2.0, isSecondary: false, transition: panelTransition, interfaceState: self.presentationInterfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
             if self.searchDisplayController == nil {
                 panelHeight += insets.bottom
             } else {

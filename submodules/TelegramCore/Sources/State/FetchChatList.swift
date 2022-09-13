@@ -295,7 +295,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                 }
                 
                 return combineLatest(folderSignals)
-                |> map { folders -> FetchedChatList? in
+                |> mapToSignal { folders -> Signal<FetchedChatList?, NoError> in
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: PeerPresence] = [:]
                     var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
@@ -372,7 +372,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         }
                     }
                     
-                    return FetchedChatList(
+                    let result: FetchedChatList? = FetchedChatList(
                         chatPeerIds: parsedRemoteChats.itemIds + (pinnedItemIds ?? []),
                         peers: peers,
                         peerPresences: peerPresences,
@@ -390,6 +390,7 @@ func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLo
                         folderSummaries: folderSummaries,
                         peerGroupIds: peerGroupIds
                     )
+                    return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: storeMessages, result: result)
                 }
             }
         }

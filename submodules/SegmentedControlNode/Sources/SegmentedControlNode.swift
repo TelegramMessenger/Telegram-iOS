@@ -125,6 +125,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             if let layout  = self.validLayout {
                 let _ = self.updateLayout(layout, transition: .immediate)
             }
+            
+            self.updatePointerInteraction()
         }
     }
     
@@ -140,6 +142,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
             if let layout = self.validLayout {
                 let _ = self.updateLayout(layout, transition: .immediate)
             }
+            
+            self.updatePointerInteraction()
         }
     }
     
@@ -151,6 +155,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         if let layout = self.validLayout {
             let _ = self.updateLayout(layout, transition: .animated(duration: 0.2, curve: .easeInOut))
         }
+        
+        self.updatePointerInteraction()
     }
     
     public var selectedIndexChanged: (Int) -> Void = { _ in }
@@ -212,6 +218,18 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
         self.gestureRecognizer = gestureRecognizer
     }
     
+    private func updatePointerInteraction() {
+        for i in 0 ..< self.itemNodes.count {
+            let itemNode = self.itemNodes[i]
+         
+            if i == self.selectedIndex {
+                itemNode.pointerInteraction = PointerInteraction(view: itemNode.view, customInteractionView: self.selectionNode.view, style: .lift)
+            } else {
+                itemNode.pointerInteraction = PointerInteraction(view: itemNode.view, style: .insetRectangle(2.0, 2.0))
+            }
+        }
+    }
+    
     private func setupButtons() {
         for i in 0 ..< self.itemNodes.count {
             let itemNode = self.itemNodes[i]
@@ -233,6 +251,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                 }
             }
         }
+        
+        self.updatePointerInteraction()
     }
     
     private func updateButtonsHighlights(highlightedIndex: Int?, gestureSelectedIndex: Int?) {
@@ -379,6 +399,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                 if let layout = strongSelf.validLayout {
                     let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))
                 }
+                
+                strongSelf.updatePointerInteraction()
             }
         })
     }
@@ -415,6 +437,8 @@ public final class SegmentedControlNode: ASDisplayNode, UIGestureRecognizerDeleg
                                 if commit {
                                     strongSelf._selectedIndex = gestureSelectedIndex
                                     strongSelf.selectedIndexChanged(gestureSelectedIndex)
+                                    
+                                    strongSelf.updatePointerInteraction()
                                 } else {
                                     if let layout = strongSelf.validLayout {
                                         let _ = strongSelf.updateLayout(layout, transition: .animated(duration: 0.2, curve: .slide))

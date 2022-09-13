@@ -10,6 +10,7 @@ swift_library(
         "//submodules/AccountContext:AccountContext",
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/TelegramCore:TelegramCore",
+        "//Nicegram/EsimModule/FileStorage:FileStorage",
         "//Nicegram/NGLogging:NGLogging",
         "//Nicegram/NGData:NGData",
         "//Nicegram/NGExtensions:NGExtensions",

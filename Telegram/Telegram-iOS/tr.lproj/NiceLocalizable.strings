@@ -1,5 +1,9 @@
 "AppName" = "Nicegram";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Gizlilik politikası";
+"Nicegram.EULA" = "EULA";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "Botlar";
 "ChatFilter.Channels" = "Kanallar";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "Arka kamerayı kullan (Yuvarlak Videolar)";
 
 "NiceFeatures.Folders.Header" = "KLASÖRLER";
+"NiceFeatures.Account.Header" = "HESAP AYARLARI";
 "NiceFeatures.Folders.TgFolders" = "Alttaki Klasörler";
 "NiceFeatures.Folders.TgFolders.Notice" = "iOS tarzı klasör listesi";
 
@@ -107,6 +112,9 @@
 "Messages.UndoSpeechToText" = "Konuşmadan Metne Özelliğini Geri Al";
 "Messages.SpeechToText.LowAccuracyError" = "Konuşma tanıma başarısız oldu.\n\nBu, ses kaydının kalitesizliğinden ya da uygulamanın dili ile ses kaydının dili arasındaki farklılıklardan kaynaklanabilir.";
 "Messages.SelectAllFromUser" = "Bu Kullanıcıdan Olan Bütün Mesajları Seç";
+"Messages.ToLanguage" = "Hedef Dil";
+"Messages.ToLanguage.WithCode" = "Hedef Dil: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Metni çevirmek istediğiniz dili tespit edemedik. Lütfen manuel olarak seçin ve tekrar deneyin.\n";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Kayıt Tarihini Göster";
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "Yaklaşık olarak";
 "NiceFeatures.RegDate.NewerThan" = "Şundan daha yeni:";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Hızlı Yanıtlar";
+"NiceFeatures.QuickReplies.Description" = "Aşağıdaki butonu kullanarak istediğiniz sayıda yanıt ekleyebilirsiniz. Hızlı yanıtı kullanmak için ** \"&\" sembolünü** mesaj giriş alanına girin.";
+"NiceFeatures.QuickReplies.AddNew" = "Yeni Ekle";
+"NiceFeatures.QuickReplies.Placeholder" = "Metin Gir";
+
 /*Telegram Premium*/
 "TelegramPremium.Description" = "Ne yazık ki, Nicegram uygulamasında oturum açarken **Telegram Premium Özellikleri**'ni alamazsınız. Lütfen resmi Telegram uygulamasına gidin ve **Telegram Premium**'a abone olun. Nicegram'a geri döndüğünüzde, tüm **Premium Özellikler** kullanıma hazır olacaktır.";
+"TelegramPremium.Title" = "Premium'u geri yükleyin";
+"TelegramPremium.Failure.Title" = "Hata";
+"TelegramPremium.Failure.Description" = "Bir şeyler yanlış gitti. Premium Ömür Boyu Üyeliği geri yüklemek için lütfen Nicegram Bot'u kullanın";
+"TelegramPremium.Failure.Pending" = "Talebiniz beklemededir. Nicegram Bot onu onaylayana kadar lütfen bekleyin";
+"TelegramPremium.Success.Title" = "Başarılı";
+"TelegramPremium.Success.Description" = "Premium Ömür Boyu Üyeliğiniz başarılı bir şekilde geri yüklendi!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Çift Dip";
+"DoubleBottom.Description" = "Bu özelliği etkinleştirmek için birden fazla hesabınızın olması ve Parola Kilidini açmanız gerekir (Ayarlar → Gizlilik & Güvenlik  → Parola Kilidi)";
+"DoubleBottom.Enabled.Title" = "Çift Dip etkinleştirildi";
+"DoubleBottom.Enabled.Description" = "Lütfen az önce belirlediğiniz şifreyi hatırlayın ve Çift Dibin iyi çalışması için uygulamayı yeniden başlatın.";
+"DoubleBottom.Enabled.OK" = "TAMAM";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Premium Özellikler**";
+
+"NicePremium.Translator" = "Yerleşik Çevirmen";
+"NicePremium.Translator.Desc" = "Üçüncü kişi çevirmenlere geçmeden tüm mesajları anında uygulamada çevirin";
+
+"NicePremium.SpeechToText.Desc" = "Saniyeler içinde tüm sesli mesajların dökümünü oluşturun ve boş zamanınızdan tasarruf edin";
+
+"NicePremium.MentionAll" = "@TümündenBahset";
+"NicePremium.MentionAll.Desc" = "Tüm grup üyelerini hızla haberdar edin ve herkesin mesajınızı okuyacağından emin olun";
+
+"NicePremium.Renews" = "Abonelik Otomatik Olarak Yenilenir";

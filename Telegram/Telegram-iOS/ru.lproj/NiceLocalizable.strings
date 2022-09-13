@@ -1,5 +1,9 @@
 "AppName" = "Найсграм";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Политика конфиденциальности Nicegram";
+"Nicegram.EULA" = "Пользовательское соглашение Nicegram";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "Боты";
 "ChatFilter.Channels" = "Каналы";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "Задняя камера (Видеосообщения)";
 
 "NiceFeatures.Folders.Header" = "ПАПКИ";
+"NiceFeatures.Account.Header" = "НАСТРОЙКИ АККАУНТА";
 "NiceFeatures.Folders.TgFolders" = "Папки снизу";
 "NiceFeatures.Folders.TgFolders.Notice" = "Список папок в стиле iOS";
 
@@ -105,8 +110,11 @@
 "Messages.TranslateError" = "К сожалению, перевод недоступен.";
 "Messages.SpeechToText" = "Речь в текст";
 "Messages.UndoSpeechToText" = "Отменить «Речь в текст»";
-"Messages.SpeechToText.LowAccuracyError" = "Распознать речь не удалось.\n\nЭто может случаться из-за низкого качества звуковой записи или различий между языком приложения и звуковой записи.";
+"Messages.SpeechToText.LowAccuracyError" = "Распознать речь не удалось.\n\nЭто может случаться из-за плохого качества аудио или различий между языком приложения и аудио.";
 "Messages.SelectAllFromUser" = "Выбрать все от этого пользователя";
+"Messages.ToLanguage" = "На язык";
+"Messages.ToLanguage.WithCode" = "На язык: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Нам не удалось определить язык, на который вы хотите перевести текст. Выберите его вручную и повторите попытку.";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Узнать дату регистрации";
@@ -156,8 +164,40 @@
 
 /*Registration Date*/
 "NiceFeatures.RegDate.OlderThan" = "Старше, чем";
-"NiceFeatures.RegDate.Approximately" = "Примерно";
+"NiceFeatures.RegDate.Approximately" = "Приблизительно";
 "NiceFeatures.RegDate.NewerThan" = "Новее, чем";
+
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Быстрые ответы";
+"NiceFeatures.QuickReplies.Description" = "Вы можете добавить неограниченное количество ответов, используя кнопку ниже. Чтобы воспользоваться быстрым ответом, введите **символ «&»** в поле ввода сообщения.";
+"NiceFeatures.QuickReplies.AddNew" = "Добавить новый";
+"NiceFeatures.QuickReplies.Placeholder" = "Введите текст";
 
 /*Telegram Premium*/
 "TelegramPremium.Description" = "К сожалению, вы не можете получить **функции Telegram Premium**, если вы вошли в приложение Nicegram. Перейдите в официальное приложение Telegram и подпишитесь на **Telegram Premium**. Когда вы вернетесь в Nicegram, все **функции Premium** будут доступны для использования. ";
+"TelegramPremium.Title" = "Восстановить премиум-подписку";
+"TelegramPremium.Failure.Title" = "Ошибка";
+"TelegramPremium.Failure.Description" = "Что-то пошло не так. Воспользуйтесь ботом Nicegram, чтобы восстановить пожизненную премиум-подписку";
+"TelegramPremium.Failure.Pending" = "Ваш запрос ожидает рассмотрения. Пожалуйста, подождите, пока бот Nicegram его одобрит";
+"TelegramPremium.Success.Title" = "Готово";
+"TelegramPremium.Success.Description" = "Ваша пожизненная премиум-подписка успешно восстановлена!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Двойное дно";
+"DoubleBottom.Description" = "Чтобы включить эту функцию, у вас должно быть более одного аккаунта и включена блокировка кодом (перейдите в «Настройки» → «Конфиденциальность и безопасность» → «Блокировка кодом»).";
+"DoubleBottom.Enabled.Title" = "Двойное дно включено";
+"DoubleBottom.Enabled.Description" = "Пожалуйста, запомните код доступа, который вы только что установили, и перезапустите приложение, чтобы «Двойное дно» работало правильно";
+"DoubleBottom.Enabled.OK" = "Ок";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Премиум-функции**";
+
+"NicePremium.Translator" = "Встроенный переводчик";
+"NicePremium.Translator.Desc" = "Мгновенно переводите любое сообщение в приложении, не переключаясь на переводчики";
+
+"NicePremium.SpeechToText.Desc" = "Расшифруйте любое голосовое сообщение за считанные секунды и сэкономьте кучу времени";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "Быстро проинформировать всех членов группы и убедится, что все прочитают ваше сообщение";
+
+"NicePremium.Renews" = "Подписка продлевается автоматически";

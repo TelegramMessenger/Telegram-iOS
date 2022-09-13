@@ -71,10 +71,9 @@ class NGDeeplinkHandler {
 
 private extension NGDeeplinkHandler {
     func handleNicegramPremium(url: URL) -> Bool {
-        let theme = tgAccountContext.sharedContext.currentPresentationData.with({ $0 }).theme.referenceTheme
-        let isNightTheme = theme == .night || theme == .nightAccent
+        let presentationData = tgAccountContext.sharedContext.currentPresentationData.with({ $0 })
         
-        let c = SubscriptionBuilderImpl().build(isNightTheme: isNightTheme)
+        let c = SubscriptionBuilderImpl(presentationData: presentationData).build()
         c.modalPresentationStyle = .fullScreen
         
         navigationController?.topViewController?.present(c, animated: true)

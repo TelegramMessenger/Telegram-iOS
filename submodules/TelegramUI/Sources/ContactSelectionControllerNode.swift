@@ -59,9 +59,9 @@ final class ContactSelectionControllerNode: ASDisplayNode {
         self.displayDeviceContacts = displayDeviceContacts
         self.displayCallIcons = displayCallIcons
         
-        var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?) -> Void)?
-        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture in
-            contextActionImpl?(peer, node, gesture)
+        var contextActionImpl: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
+        self.contactListNode = ContactListNode(context: context, updatedPresentationData: (presentationData, self.presentationDataPromise.get()), presentation: .single(.natural(options: options, includeChatList: false)), displayCallIcons: displayCallIcons, contextAction: multipleSelection ? { peer, node, gesture, _ in
+            contextActionImpl?(peer, node, gesture, nil)
         } : nil, multipleSelection: multipleSelection)
         
         self.dimNode = ASDisplayNode()
@@ -105,7 +105,7 @@ final class ContactSelectionControllerNode: ASDisplayNode {
             self?.requestMultipleAction?(false, nil)
         }
         
-        contextActionImpl = { [weak self] peer, node, gesture in
+        contextActionImpl = { [weak self] peer, node, gesture, _ in
             if let strongSelf = self, (strongSelf.selectionState?.selectedPeerIndices.isEmpty ?? true) {
                 strongSelf.contactListNode.updateSelectionState { state in
                     let peerId = ContactListPeerId.peer(peer.id)

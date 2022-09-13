@@ -18,9 +18,11 @@ private func stringForKeepMediaTimeout(strings: PresentationStrings, timeout: In
     }
 }
 
+// MARK: Nicegram CacheSettings, (added 1 hour, 1 day; removed 1 week)
 private let keepMediaTimeoutValues: [Int32] = [
+    1 * 60 * 60,
+    1 * 24 * 60 * 60,
     3 * 24 * 60 * 60,
-    7 * 24 * 60 * 60,
     1 * 31 * 24 * 60 * 60,
     Int32.max
 ]
@@ -99,7 +101,8 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         
         var textNodes: [TextNode] = []
-        for _ in 0 ..< 4 {
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        for _ in 0 ..< keepMediaTimeoutValues.count {
             let textNode = TextNode()
             textNode.isUserInteractionEnabled = false
             textNode.displaysAsynchronously = false
@@ -116,8 +119,10 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
     
     func updateSliderView() {
         if let sliderView = self.sliderView, let item = self.item {
-            sliderView.maximumValue = 3.0
-            sliderView.positionsCount = 4
+            // MARK: Nicegram CacheSettings, change constant to actual value
+            sliderView.maximumValue = CGFloat(keepMediaTimeoutValues.count - 1)
+            // MARK: Nicegram CacheSettings, change constant to actual value
+            sliderView.positionsCount = keepMediaTimeoutValues.count
             
             let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0
             sliderView.value = CGFloat(value)
@@ -133,10 +138,12 @@ private final class KeepMediaDurationPickerItemNode: ListViewItemNode {
         sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 3.0
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        sliderView.maximumValue = CGFloat(keepMediaTimeoutValues.count - 1)
         sliderView.startValue = 0.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        sliderView.positionsCount = 4
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        sliderView.positionsCount = keepMediaTimeoutValues.count
         sliderView.useLinesForPositions = true
         if let item = self.item, let params = self.layoutParams {
             let value = keepMediaTimeoutValues.firstIndex(where: { $0 == item.value }) ?? 0

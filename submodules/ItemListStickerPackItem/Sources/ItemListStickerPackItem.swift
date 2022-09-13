@@ -768,12 +768,13 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                                     strongSelf.animationNode = animationNode
                                     strongSelf.addSubnode(animationNode)
                                     
-                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .cached)
+                                    animationNode.setup(source: AnimatedStickerResourceSource(account: item.account, resource: resource, isVideo: isVideo), width: 80, height: 80, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                                 }
                                 animationNode.visibility = strongSelf.visibility != .none && item.playAnimatedStickers
                                 animationNode.isHidden = !item.playAnimatedStickers
                                 strongSelf.imageNode.isHidden = item.playAnimatedStickers
                                 if let animationNode = strongSelf.animationNode {
+                                    animationNode.updateLayout(size: imageFrame.size)
                                     transition.updateFrame(node: animationNode, frame: imageFrame)
                                 }
                         }

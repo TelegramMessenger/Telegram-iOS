@@ -1,5 +1,9 @@
 "AppName" = "Nicegram";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Informativa sulla privacy";
+"Nicegram.EULA" = "EULA";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "Bot";
 "ChatFilter.Channels" = "Canali";
@@ -18,6 +22,7 @@
 "NiceFeatures.useBackCam" = "Usa camera posteriore (Videomessaggi)";
 
 "NiceFeatures.Folders.Header" = "CARTELLE";
+"NiceFeatures.Account.Header" = "IMPOSTAZIONI ACCOUNT";
 "NiceFeatures.Folders.TgFolders" = "Cartelle in basso";
 "NiceFeatures.Folders.TgFolders.Notice" = "lista cartelle stile iOS";
 
@@ -107,6 +112,9 @@
 "Messages.UndoSpeechToText" = "Annulla Speech2Text";
 "Messages.SpeechToText.LowAccuracyError" = "Riconoscimento vocale fallito.\n\nCiò può essere dovuto a una scarsa qualità della registrazione audio o a differenze tra la lingua dell'applicazione e la lingua della registrazione audio.";
 "Messages.SelectAllFromUser" = "Seleziona tutto da questo utente";
+"Messages.ToLanguage" = "Nella lingua";
+"Messages.ToLanguage.WithCode" = "Nella lingua: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Non siamo riusciti a individuare la lingua in cui desideri tradurre il testo. Per favore selezionala manualmente e riprova.";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Ottieni data registrazione";
@@ -147,11 +155,11 @@
 "NicegramSettings.Other.showProfileId" = "Mostra l'ID del profilo";
 "NicegramSettings.Other.showRegDate" = "Mostra la data di registrazione";
 "NicegramSettings.Unblock.Header" = "Sblocca";
-"NicegramSettings.Unblock.Button" = "Sblocca guida";
+"NicegramSettings.Unblock.Button" = "Guida allo sblocco";
 "NicegramSettings.Other.hideReactions" = "Nascondi Reazioni";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Scarica i video nella Galleria";
 "Premium.OnetapTranslate.LowPower" = "Riconoscimento a bassa potenza";
-"Premium.OnetapTranslate.LowPower.Notice" = "L'app rileva la lingua di ogni messaggio sul tuo dispositivo. È un'attività ad alte prestazioni che può influire sulla durata della batteria.";
+"Premium.OnetapTranslate.LowPower.Notice" = "L'app rileva la lingua di ogni messaggio sul tuo dispositivo. È un'attività che consuma tante risorse e che può influire sulla durata della batteria.";
 "Premium.rememberFolderOnExit" = "Ricorda la cartella corrente all'uscita";
 
 /*Registration Date*/
@@ -159,5 +167,37 @@
 "NiceFeatures.RegDate.Approximately" = "Circa";
 "NiceFeatures.RegDate.NewerThan" = "Più recente di";
 
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Risposte rapide";
+"NiceFeatures.QuickReplies.Description" = "Puoi aggiungere un numero illimitato di risposte usando il pulsante qui sotto. Per utilizzare la risposta rapida, inserisci il **simbolo \"&\"** quando devi inviare un messaggio.";
+"NiceFeatures.QuickReplies.AddNew" = "Aggiungi nuovo";
+"NiceFeatures.QuickReplies.Placeholder" = "Inserisci il testo";
+
 /*Telegram Premium*/
-"TelegramPremium.Description" = "Purtroppo non puoi ottenere le **Funzionalità Telegram Premium** mentre sei connesso all'app Nicegram. Vai all'app ufficiale di Telegram e iscriviti a **Telegram Premium**. Torna su Nicegram e tutte le **Funzionalità Premium** saranno disponibili.";
+"TelegramPremium.Description" = "Sfortunatamente non puoi ottenere le **Funzionalità di Telegram Premium** tramite Nicegram. Apri l'app ufficiale di Telegram e iscriviti a **Telegram Premium** lì. Torna su Nicegram e tutte le **Funzionalità Premium** saranno disponibili.";
+"TelegramPremium.Title" = "Ripristina Premium";
+"TelegramPremium.Failure.Title" = "Errore";
+"TelegramPremium.Failure.Description" = "Qualcosa è andato storto. Per favore, usa il Bot di Nicegram per ripristinare il tuo abbonamento Premium a vita";
+"TelegramPremium.Failure.Pending" = "La tua richiesta è in fase di elaborazione. Per favore, attendi che il Bot di Nicegram la approvi";
+"TelegramPremium.Success.Title" = "Successo";
+"TelegramPremium.Success.Description" = "Il tuo abbonamento Premium a vita è stato ripristinato con successo!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Doppio Fondo";
+"DoubleBottom.Description" = "Per abilitare questa funzione, devi avere più di un account e attivare il Blocco con password (vai su Impostazioni → Privacy e sicurezza → Blocco con password)";
+"DoubleBottom.Enabled.Title" = "Doppio Fondo abilitato";
+"DoubleBottom.Enabled.Description" = "Ricorda la password che hai appena impostato e riavvia l'app affinché il Doppio Fondo funzioni correttamente";
+"DoubleBottom.Enabled.OK" = "OK";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Funzionalità Premium**";
+
+"NicePremium.Translator" = "Traduttore integrato";
+"NicePremium.Translator.Desc" = "Traduci istantaneamente qualsiasi messaggio nell'app senza passare a traduttori di terze parti";
+
+"NicePremium.SpeechToText.Desc" = "Trascrivi qualsiasi messaggio vocale in pochi secondi risparmiando un sacco di tempo ";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "Informa rapidamente tutti i membri del gruppo e assicurati che tutti leggano il tuo messaggio";
+
+"NicePremium.Renews" = "L'abbonamento si rinnova automaticamente";

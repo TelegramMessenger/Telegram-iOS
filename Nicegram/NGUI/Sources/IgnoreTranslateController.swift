@@ -214,6 +214,10 @@ public func ignoreTranslateController(context: AccountContext) -> ViewController
                     NGSettings.ignoreTranslate.remove(at: index)
                 }
         }
+        // Trigger ItemListController state update
+        updateState { state in
+            return state
+        }
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get())

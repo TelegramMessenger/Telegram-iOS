@@ -324,8 +324,9 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             var name = "Icon"
                             var bordered = true
                             switch icon.name {
+                                // MARK: Nicegram, name changed to "Classic"
                                 case "BlueIcon":
-                                    name = item.strings.Appearance_AppIconDefault
+                                    name = "Classic"
                                 case "BlackIcon":
                                     name = item.strings.Appearance_AppIconDefaultX
                                 case "BlueClassicIcon":
@@ -345,7 +346,7 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                                 case "New2":
                                     name = "Nicegram Light"
                                 case "New3":
-                                    name = "Nicegram Dark"
+                                    name = item.strings.Appearance_AppIconDefault
                                 case "Premium":
                                     name = item.strings.Appearance_AppIconPremium
                                 case "PremiumBlack":

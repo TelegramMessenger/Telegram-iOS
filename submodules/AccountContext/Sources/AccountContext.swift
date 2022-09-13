@@ -260,6 +260,11 @@ public struct ResolvedBotAdminRights: OptionSet {
     }
 }
 
+public enum StickerPackUrlType {
+    case stickers
+    case emoji
+}
+
 public enum ResolvedUrl {
     case externalUrl(String)
     case urlAuth(String)
@@ -269,7 +274,7 @@ public enum ResolvedUrl {
     case groupBotStart(peerId: PeerId, payload: String, adminRights: ResolvedBotAdminRights?)
     case channelMessage(peerId: PeerId, messageId: MessageId, timecode: Double?)
     case replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage, messageId: MessageId)
-    case stickerPack(name: String)
+    case stickerPack(name: String, type: StickerPackUrlType)
     case instantView(TelegramMediaWebpage, String?)
     case proxy(host: String, port: Int32, username: String?, password: String?, secret: Data?)
     case join(String)
@@ -364,6 +369,11 @@ public enum ChatLocation: Equatable {
     case feed(id: Int32)
 }
 
+public enum ChatControllerActivateInput {
+    case text
+    case entityInput
+}
+
 public final class NavigateToChatControllerParams {
     public let navigationController: NavigationController
     public let chatController: ChatController?
@@ -374,7 +384,7 @@ public final class NavigateToChatControllerParams {
     public let botStart: ChatControllerInitialBotStart?
     public let attachBotStart: ChatControllerInitialAttachBotStart?
     public let updateTextInputState: ChatTextInputState?
-    public let activateInput: Bool
+    public let activateInput: ChatControllerActivateInput?
     public let keepStack: NavigateToChatKeepStack
     public let useExisting: Bool
     public let useBackAnimation: Bool
@@ -393,7 +403,7 @@ public final class NavigateToChatControllerParams {
     public let setupController: (ChatController) -> Void
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: Bool = false, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: ChatControllerActivateInput? = nil, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -724,7 +734,7 @@ public protocol SharedAccountContext: AnyObject {
     func chatAvailableMessageActions(engine: TelegramEngine, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>) -> Signal<ChatAvailableMessageActions, NoError>
     func chatAvailableMessageActions(engine: TelegramEngine, accountPeerId: EnginePeer.Id, messageIds: Set<EngineMessage.Id>, messages: [EngineMessage.Id: EngineMessage], peers: [EnginePeer.Id: EnginePeer]) -> Signal<ChatAvailableMessageActions, NoError>
     func resolveUrl(context: AccountContext, peerId: PeerId?, url: String, skipUrlAuth: Bool) -> Signal<ResolvedUrl, NoError>
-    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, forceExternal: Bool, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, ASDisplayNode, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?)
+    func openResolvedUrl(_ resolvedUrl: ResolvedUrl, context: AccountContext, urlContext: OpenURLContext, navigationController: NavigationController?, forceExternal: Bool, openPeer: @escaping (PeerId, ChatControllerInteractionNavigateToPeer) -> Void, sendFile: ((FileMediaReference) -> Void)?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?, requestMessageActionUrlAuth: ((MessageActionUrlSubject) -> Void)?, joinVoiceChat: ((PeerId, String?, CachedChannelData.ActiveCall) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, contentContext: Any?)
     func openAddContact(context: AccountContext, firstName: String, lastName: String, phoneNumber: String, label: String, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, completed: @escaping () -> Void)
     func openAddPersonContact(context: AccountContext, peerId: PeerId, pushController: @escaping (ViewController) -> Void, present: @escaping (ViewController, Any?) -> Void)
     func presentContactsWarningSuppression(context: AccountContext, present: (ViewController, Any?) -> Void)
@@ -738,6 +748,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
+    
+    func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

@@ -12,7 +12,7 @@ open class SparseNode: ASDisplayNode {
         if !self.bounds.contains(point) {
             return nil
         }
-        for view in self.view.subviews {
+        for view in self.view.subviews.reversed() {
             if let result = view.hitTest(self.view.convert(point, to: view), with: event), result.isUserInteractionEnabled {
                 return result
             }
@@ -20,6 +20,26 @@ open class SparseNode: ASDisplayNode {
         
         let result = super.hitTest(point, with: event)
         if result != self.view {
+            return result
+        } else {
+            return nil
+        }
+    }
+}
+
+open class SparseContainerView: UIView {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if self.alpha.isZero {
+            return nil
+        }
+        for view in self.subviews.reversed() {
+            if let result = view.hitTest(self.convert(point, to: view), with: event), result.isUserInteractionEnabled {
+                return result
+            }
+        }
+        
+        let result = super.hitTest(point, with: event)
+        if result != self {
             return result
         } else {
             return nil
@@ -223,7 +243,7 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
     }
 
-    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, transition: ContainedViewLayoutTransition, beginWithCurrentState: Bool = true) {
         self.validLayout = (size, cornerRadius)
 
         let contentFrame = CGRect(origin: CGPoint(), size: size)
@@ -259,6 +279,150 @@ public final class NavigationBackgroundNode: ASDisplayNode {
         }
 
         animator.updateCornerRadius(layer: self.backgroundNode.layer, cornerRadius: cornerRadius, completion: nil)
+        if let effectView = self.effectView {
+            animator.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius, completion: nil)
+            effectView.clipsToBounds = !cornerRadius.isZero
+        }
+    }
+}
+
+open class BlurredBackgroundView: UIView {
+    private var _color: UIColor?
+
+    private var enableBlur: Bool
+
+    private var effectView: UIVisualEffectView?
+    private let backgroundView: UIView
+
+    private var validLayout: (CGSize, CGFloat)?
+    
+    public var backgroundCornerRadius: CGFloat {
+        if let (_, cornerRadius) = self.validLayout {
+            return cornerRadius
+        } else {
+            return 0.0
+        }
+    }
+
+    public init(color: UIColor?, enableBlur: Bool = true) {
+        self._color = nil
+        self.enableBlur = enableBlur
+
+        self.backgroundView = UIView()
+
+        super.init(frame: CGRect())
+
+        self.addSubview(self.backgroundView)
+
+        if let color = color {
+            self.updateColor(color: color, transition: .immediate)
+        }
+    }
+    
+    required public init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func updateBackgroundBlur(forceKeepBlur: Bool) {
+        if let color = self._color, self.enableBlur && !sharedIsReduceTransparencyEnabled && ((color.alpha > .ulpOfOne && color.alpha < 0.95) || forceKeepBlur) {
+            if self.effectView == nil {
+                let effectView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+                //effectView.isHidden = true
+
+                for subview in effectView.subviews {
+                    if subview.description.contains("VisualEffectSubview") {
+                        subview.isHidden = true
+                    }
+                }
+
+                if let sublayer = effectView.layer.sublayers?[0], let filters = sublayer.filters {
+                    sublayer.backgroundColor = nil
+                    sublayer.isOpaque = false
+                    //sublayer.setValue(true as NSNumber, forKey: "allowsInPlaceFiltering")
+                    let allowedKeys: [String] = [
+                        "colorSaturate",
+                        "gaussianBlur"
+                    ]
+                    sublayer.filters = filters.filter { filter in
+                        guard let filter = filter as? NSObject else {
+                            return true
+                        }
+                        let filterName = String(describing: filter)
+                        if !allowedKeys.contains(filterName) {
+                            return false
+                        }
+                        return true
+                    }
+                }
+
+                if let (size, cornerRadius) = self.validLayout {
+                    effectView.frame = CGRect(origin: CGPoint(), size: size)
+                    ContainedViewLayoutTransition.immediate.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius)
+                    effectView.clipsToBounds = !cornerRadius.isZero
+                }
+                self.effectView = effectView
+                self.insertSubview(effectView, at: 0)
+            }
+        } else if let effectView = self.effectView {
+            self.effectView = nil
+            effectView.removeFromSuperview()
+        }
+    }
+
+    public func updateColor(color: UIColor, enableBlur: Bool? = nil, forceKeepBlur: Bool = false, transition: ContainedViewLayoutTransition) {
+        let effectiveEnableBlur = enableBlur ?? self.enableBlur
+
+        if self._color == color && self.enableBlur == effectiveEnableBlur {
+            return
+        }
+        self._color = color
+        self.enableBlur = effectiveEnableBlur
+
+        if sharedIsReduceTransparencyEnabled {
+            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: color.withAlphaComponent(1.0))
+        } else {
+            transition.updateBackgroundColor(layer: self.backgroundView.layer, color: color)
+        }
+
+        self.updateBackgroundBlur(forceKeepBlur: forceKeepBlur)
+    }
+
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, cornerRadius)
+
+        let contentFrame = CGRect(origin: CGPoint(), size: size)
+        transition.updateFrame(view: self.backgroundView, frame: contentFrame, beginWithCurrentState: true)
+        if let effectView = self.effectView, effectView.frame != contentFrame {
+            transition.updateFrame(layer: effectView.layer, frame: contentFrame, beginWithCurrentState: true)
+            if let sublayers = effectView.layer.sublayers {
+                for sublayer in sublayers {
+                    transition.updateFrame(layer: sublayer, frame: contentFrame, beginWithCurrentState: true)
+                }
+            }
+        }
+
+        transition.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: cornerRadius)
+        if let effectView = self.effectView {
+            transition.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius)
+            effectView.clipsToBounds = !cornerRadius.isZero
+        }
+    }
+    
+    public func update(size: CGSize, cornerRadius: CGFloat = 0.0, animator: ControlledTransitionAnimator) {
+        self.validLayout = (size, cornerRadius)
+
+        let contentFrame = CGRect(origin: CGPoint(), size: size)
+        animator.updateFrame(layer: self.backgroundView.layer, frame: contentFrame, completion: nil)
+        if let effectView = self.effectView, effectView.frame != contentFrame {
+            animator.updateFrame(layer: effectView.layer, frame: contentFrame, completion: nil)
+            if let sublayers = effectView.layer.sublayers {
+                for sublayer in sublayers {
+                    animator.updateFrame(layer: sublayer, frame: contentFrame, completion: nil)
+                }
+            }
+        }
+
+        animator.updateCornerRadius(layer: self.backgroundView.layer, cornerRadius: cornerRadius, completion: nil)
         if let effectView = self.effectView {
             animator.updateCornerRadius(layer: effectView.layer, cornerRadius: cornerRadius, completion: nil)
             effectView.clipsToBounds = !cornerRadius.isZero

@@ -34,6 +34,10 @@ public class SpecialOfferBuilderImpl: SpecialOfferBuilder {
         let interactor = SpecialOfferInteractor(
             offerId: offerId,
             specialOfferService: specialOfferService,
+            setSpecialOfferSeenUseCase: SetSpecialOfferSeenUseCaseImpl(
+                specialOfferService: specialOfferService,
+                specialOfferScheduleService: SpecialOfferScheduleServiceImpl()
+            ),
             eventsLogger: LoggersFactory().createDefaultEventsLogger(),
             onCloseRequest: onCloseRequest
         )

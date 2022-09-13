@@ -14,13 +14,15 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
     private let deleteButton: HighlightableButtonNode
     private let reportButton: HighlightableButtonNode
     private let forwardButton: HighlightableButtonNode
-    // MARK: Nicegram CopySelectedMessages
+    // MARK: Nicegram SelectedMessagesMenu
+    private let cloudButton: HighlightableButtonNode
+    private let copyForwardButton: HighlightableButtonNode
     private let copyButton: HighlightableButtonNode
     //
     private let shareButton: HighlightableButtonNode
     private let separatorNode: ASDisplayNode
     
-    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool)?
+    private var validLayout: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, metrics: LayoutMetrics, isSecondary: Bool, isMediaInputExpanded: Bool)?
     private var presentationInterfaceState: ChatPresentationInterfaceState?
     private var actions: ChatAvailableMessageActions?
     
@@ -33,14 +35,16 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         didSet {
             if oldValue != self.selectedMessages {
                 self.forwardButton.isEnabled = self.selectedMessages.count != 0
-                // MARK: Nicegram CopySelectedMessages
-                self.copyButton.isEnabled = self.selectedMessages.count != 0
+                // MARK: Nicegram SelectedMessagesMenu
+                self.cloudButton.isEnabled = self.forwardButton.isEnabled
+                self.copyForwardButton.isEnabled = self.forwardButton.isEnabled
+                self.copyButton.isEnabled = self.forwardButton.isEnabled
                 //
                 
                 if self.selectedMessages.isEmpty {
                     self.actions = nil
-                    if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = self.validLayout, let interfaceState = self.presentationInterfaceState {
-                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                    if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = self.validLayout, let interfaceState = self.presentationInterfaceState {
+                        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
                     }
                     self.canDeleteMessagesDisposable.set(nil)
                 } else if let context = self.context {
@@ -48,8 +52,8 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
                     |> deliverOnMainQueue).start(next: { [weak self] actions in
                         if let strongSelf = self {
                             strongSelf.actions = actions
-                            if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
-                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics)
+                            if let (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded) = strongSelf.validLayout, let interfaceState = strongSelf.presentationInterfaceState {
+                                let _ = strongSelf.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, additionalSideInsets: additionalSideInsets, maxHeight: maxHeight, isSecondary: isSecondary, transition: .immediate, interfaceState: interfaceState, metrics: metrics, isMediaInputExpanded: isMediaInputExpanded)
                             }
                         }
                     }))
@@ -62,25 +66,35 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.theme = theme
         self.peerMedia = peerMedia
         
-        self.deleteButton = HighlightableButtonNode(pointerStyle: .default)
+        self.deleteButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.deleteButton.isEnabled = false
         self.deleteButton.isAccessibilityElement = true
         self.deleteButton.accessibilityLabel = strings.VoiceOver_MessageContextDelete
         
-        self.reportButton = HighlightableButtonNode(pointerStyle: .default)
+        self.reportButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.reportButton.isEnabled = false
         self.reportButton.isAccessibilityElement = true
         self.reportButton.accessibilityLabel = strings.VoiceOver_MessageContextReport
         
-        self.forwardButton = HighlightableButtonNode(pointerStyle: .default)
+        self.forwardButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.forwardButton.isAccessibilityElement = true
         self.forwardButton.accessibilityLabel = strings.VoiceOver_MessageContextForward
+
+        // MARK: Nicegram SelectedMessagesMenu
+        self.cloudButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
+        self.cloudButton.isAccessibilityElement = true
+        self.cloudButton.accessibilityLabel = "Save To Favourites"
         
-        // MARK: Nicegram CopySelectedMessages
-        self.copyButton = HighlightableButtonNode(pointerStyle: .default)
+        self.copyForwardButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
+        self.copyForwardButton.isAccessibilityElement = true
+        self.copyForwardButton.accessibilityLabel = "Forward As Copy"
+        
+        self.copyButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
+        self.copyButton.isAccessibilityElement = true
+        self.copyButton.accessibilityLabel = "Copy"
         //
-        
-        self.shareButton = HighlightableButtonNode(pointerStyle: .default)
+
+        self.shareButton = HighlightableButtonNode(pointerStyle: .rectangle(CGSize(width: 56.0, height: 40.0)))
         self.shareButton.isAccessibilityElement = true
         self.shareButton.accessibilityLabel = strings.VoiceOver_MessageContextShare
         
@@ -112,12 +126,23 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         self.forwardButton.addTarget(self, action: #selector(self.forwardButtonPressed), forControlEvents: .touchUpInside)
         self.shareButton.addTarget(self, action: #selector(self.shareButtonPressed), forControlEvents: .touchUpInside)
         
-        // MARK: Nicegram CopySelectedMessages        
+        // MARK: Nicegram SelectedMessagesMenu
+        self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        
+        
+        self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+        self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+        
         self.copyButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
         self.copyButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
-        
+
+        self.addSubnode(self.cloudButton)
+        self.addSubnode(self.copyForwardButton)
         self.addSubnode(self.copyButton)
         
+        self.cloudButton.addTarget(self, action: #selector(self.cloudButtonPressed), forControlEvents: .touchUpInside)
+        self.copyForwardButton.addTarget(self, action: #selector(self.copyForwardButtonPressed), forControlEvents: .touchUpInside)
         self.copyButton.addTarget(self, action: #selector(self.copyButtonPressed), forControlEvents: .touchUpInside)
         //
     }
@@ -136,6 +161,14 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionReport"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.forwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            // MARK: Nicegram SelectedMessagesMenu
+            self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.cloudButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "SaveToCloud"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.copyForwardButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "CopyForward"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            self.copyButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
+            self.copyButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
+            //
             self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlAccentColor), for: [.normal])
             self.shareButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/MessageSelectionAction"), color: theme.chat.inputPanel.panelControlDisabledColor), for: [.disabled])
             
@@ -157,12 +190,34 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.forwardButton, false)
-        } else {
+        } else if !self.forwardButton.isImplicitlyDisabled {
             self.interfaceInteraction?.forwardSelectedMessages()
         }
     }
     
-    // MARK: Nicegram CopySelectedMessages
+    // MARK: Nicegram SelectedMessagesMenu
+    @objc func cloudButtonPressed() {
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.copyForwardButton, false)
+        } else {
+            self.interfaceInteraction?.cloudMessages(nil)
+        }
+    }
+    
+    @objc func copyForwardButtonPressed() {
+        if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
+            return
+        }
+        if let actions = self.actions, actions.isCopyProtected {
+            self.interfaceInteraction?.displayCopyProtectionTip(self.copyForwardButton, false)
+        } else {
+            self.interfaceInteraction?.copyForwardMessages(nil)
+        }
+    }
+    
     @objc func copyButtonPressed() {
         if let _ = self.presentationInterfaceState?.renderedPeer?.peer as? TelegramSecretChat {
             return
@@ -181,13 +236,13 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
         }
         if let actions = self.actions, actions.isCopyProtected {
             self.interfaceInteraction?.displayCopyProtectionTip(self.shareButton, true)
-        } else {
+        } else if !self.shareButton.isImplicitlyDisabled {
             self.interfaceInteraction?.shareSelectedMessages()
         }
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics) -> CGFloat {
-        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary)
+    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, additionalSideInsets: UIEdgeInsets, maxHeight: CGFloat, isSecondary: Bool, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, metrics: LayoutMetrics, isMediaInputExpanded: Bool) -> CGFloat {
+        self.validLayout = (width, leftInset, rightInset, bottomInset, additionalSideInsets, maxHeight, metrics, isSecondary, isMediaInputExpanded)
         
         let panelHeight = defaultHeight(metrics: metrics)
         
@@ -198,6 +253,11 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.deleteButton.isEnabled = false
             self.reportButton.isEnabled = false
             self.forwardButton.isImplicitlyDisabled = !actions.options.contains(.forward)
+            // MARK: Nicegram SelectedMessagesMenu
+            self.cloudButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            self.copyForwardButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            self.copyButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            //
             
             if self.peerMedia {
                 self.deleteButton.isEnabled = !actions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty
@@ -220,6 +280,11 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.reportButton.isHidden = true
             self.forwardButton.isImplicitlyDisabled = true
             self.shareButton.isImplicitlyDisabled = true
+            // MARK: Nicegram SelectedMessagesMenu
+            self.copyForwardButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            self.cloudButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            self.copyButton.isImplicitlyDisabled = self.forwardButton.isImplicitlyDisabled
+            //
         }
         
         if self.reportButton.isHidden || (self.peerMedia && self.deleteButton.isHidden && self.reportButton.isHidden) {
@@ -267,12 +332,15 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             self.shareButton.frame = CGRect(origin: CGPoint(x: floor((width - rightInset - 57.0) / 2.0), y: 0.0), size: CGSize(width: 57.0, height: panelHeight))
         }
         
-        // MARK: Nicegram CopySelectedMessages
+        // MARK: Nicegram SelectedMessagesMenu
+        reportButton.isHidden = true
         let buttons: [HighlightableButtonNode] = [
             self.deleteButton,
             self.reportButton,
             self.shareButton,
+            self.cloudButton,
             self.copyButton,
+            self.copyForwardButton,
             self.forwardButton
         ].filter { !$0.isHidden }
         let buttonSize = CGSize(width: 57.0, height: panelHeight)

@@ -124,6 +124,9 @@ func _internal_downloadAndApplyLocalization(accountManager: AccountManager<Teleg
             if let secondaryCode = preview.baseLanguageCode, components.count > 1 {
                 secondaryComponent = LocalizationComponent(languageCode: secondaryCode, localizedName: "", localization: components[1], customPluralizationCode: nil)
             }
+            // MARK: Nicegram Translate
+            setSavedTranslationTargetLanguage(code: languageCode)
+            //
             return accountManager.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in
                 transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in
                     return PreferencesEntry(LocalizationSettings(primaryComponent: LocalizationComponent(languageCode: preview.languageCode, localizedName: preview.localizedTitle, localization: primaryLocalization, customPluralizationCode: preview.customPluralizationCode), secondaryComponent: secondaryComponent))

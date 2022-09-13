@@ -56,6 +56,8 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
         }
     }
     
+    public var overrideVisibility: Bool = false
+    
     public var isPlayingChanged: (Bool) -> Void = { _ in }
     
     private var sourceDisposable: Disposable?

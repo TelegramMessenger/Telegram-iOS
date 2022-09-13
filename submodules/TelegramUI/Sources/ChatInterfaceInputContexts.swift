@@ -7,6 +7,8 @@ import AccountContext
 import Emoji
 import ChatInterfaceState
 import ChatPresentationInterfaceState
+import SwiftSignalKit
+import TextFormat
 
 struct PossibleContextQueryTypes: OptionSet {
     var rawValue: Int32
@@ -25,12 +27,18 @@ struct PossibleContextQueryTypes: OptionSet {
     static let command = PossibleContextQueryTypes(rawValue: (1 << 3))
     static let contextRequest = PossibleContextQueryTypes(rawValue: (1 << 4))
     static let emojiSearch = PossibleContextQueryTypes(rawValue: (1 << 5))
+    // MARK: Nicegram QuickReplies
+    static let quickReply = PossibleContextQueryTypes(rawValue: (1 << 6))
+    //
 }
 
 private func makeScalar(_ c: Character) -> Character {
     return c
 }
 
+// MARK: Nicegram QuickReplies
+private let quickReplyScalar = "&" as UnicodeScalar
+//
 private let spaceScalar = " " as UnicodeScalar
 private let newlineScalar = "\n" as UnicodeScalar
 private let hashScalar = "#" as UnicodeScalar
@@ -38,6 +46,21 @@ private let atScalar = "@" as UnicodeScalar
 private let slashScalar = "/" as UnicodeScalar
 private let colonScalar = ":" as UnicodeScalar
 private let alphanumerics = CharacterSet.alphanumerics
+
+// MARK: Nicegram QuickReplies
+public let quickReplyQueryCharacter = Character(quickReplyScalar)
+
+public func characterCanPrependQueryControl(_ c: Character?) -> Bool {
+    let scalar: UnicodeScalar?
+    if let c = c {
+        scalar = UnicodeScalar(String(c))
+    } else {
+        scalar = nil
+    }
+    
+    return scalarCanPrependQueryControl(scalar)
+}
+//
 
 private func scalarCanPrependQueryControl(_ c: UnicodeScalar?) -> Bool {
     if let c = c {
@@ -109,10 +132,22 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
         let string = (inputString as String)
         let trimmedString = string.trimmingTrailingSpaces()
         if string.count < 3, trimmedString.isSingleEmoji {
-            return [(NSRange(location: 0, length: inputString.length - (string.count - trimmedString.count)), [.emoji], nil)]
+            if inputText.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) == nil {
+                return [(NSRange(location: 0, length: inputString.length - (string.count - trimmedString.count)), [.emoji], nil)]
+            }
+        } else {
+            /*let activeString = inputText.attributedSubstring(from: NSRange(location: 0, length: inputState.selectionRange.upperBound))
+            if let lastCharacter = activeString.string.last, String(lastCharacter).isSingleEmoji {
+                let matchLength = (String(lastCharacter) as NSString).length
+                
+                if activeString.attribute(ChatTextInputAttributes.customEmoji, at: activeString.length - matchLength, effectiveRange: nil) == nil {
+                    return [(NSRange(location: inputState.selectionRange.upperBound - matchLength, length: matchLength), [.emojiSearch], nil)]
+                }
+            }*/
         }
         
-        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch])
+        // MARK: Nicegram QuickReplies, .quickReply added
+        var possibleTypes = PossibleContextQueryTypes([.command, .mention, .hashtag, .emojiSearch, .quickReply])
         var definedType = false
         
         while true {
@@ -147,7 +182,15 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
                         possibleQueryRange = NSRange(location: index, length: maxIndex - index)
                     }
                     break
-                } else if c == colonScalar {
+                } /* MARK: Nicegram QuickReplies */ else if c == quickReplyScalar {
+                    if scalarCanPrependQueryControl(previousC) {
+                        possibleTypes = possibleTypes.intersection([.quickReply])
+                        definedType = true
+                        index += 1
+                        possibleQueryRange = NSRange(location: index, length: maxIndex - index)
+                    }
+                    break
+                } /* */ else if c == colonScalar {
                     if scalarCanPrependQueryControl(previousC) {
                         possibleTypes = possibleTypes.intersection([.emojiSearch])
                         definedType = true
@@ -173,12 +216,60 @@ func textInputStateContextQueryRangeAndType(_ inputState: ChatTextInputState) ->
     return results
 }
 
+func serviceTasksForChatPresentationIntefaceState(context: AccountContext, chatPresentationInterfaceState: ChatPresentationInterfaceState, updateState: @escaping ((ChatPresentationInterfaceState) -> ChatPresentationInterfaceState) -> Void) -> [AnyHashable: () -> Disposable] {
+    var missingEmoji = Set<Int64>()
+    let inputText = chatPresentationInterfaceState.interfaceState.composeInputState.inputText
+    inputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: inputText.length), using: { value, _, _ in
+        if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+            if value.file == nil {
+                missingEmoji.insert(value.fileId)
+            }
+        }
+    })
+    
+    var result: [AnyHashable: () -> Disposable] = [:]
+    for id in missingEmoji {
+        result["emoji-\(id)"] = {
+            return (context.engine.stickers.resolveInlineStickers(fileIds: [id])
+            |> deliverOnMainQueue).start(next: { result in
+                if let file = result[id] {
+                    updateState({ state -> ChatPresentationInterfaceState in
+                        return state.updatedInterfaceState { interfaceState -> ChatInterfaceState in
+                            var inputState = interfaceState.composeInputState
+                            let text = NSMutableAttributedString(attributedString: inputState.inputText)
+                            
+                            inputState.inputText.enumerateAttribute(ChatTextInputAttributes.customEmoji, in: NSRange(location: 0, length: inputText.length), using: { value, range, _ in
+                                if let value = value as? ChatTextInputTextCustomEmojiAttribute {
+                                    if value.fileId == id {
+                                        text.removeAttribute(ChatTextInputAttributes.customEmoji, range: range)
+                                        text.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: file.fileId.id, file: file), range: range)
+                                    }
+                                }
+                            })
+                            
+                            inputState.inputText = text
+                            
+                            return interfaceState.withUpdatedComposeInputState(inputState)
+                        }
+                    })
+                }
+            })
+        }
+    }
+    return result
+}
+
 func inputContextQueriesForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) -> [ChatPresentationInputQuery] {
     let inputState = chatPresentationInterfaceState.interfaceState.effectiveInputState
     let inputString: NSString = inputState.inputText.string as NSString
     var result: [ChatPresentationInputQuery] = []
     for (possibleQueryRange, possibleTypes, additionalStringRange) in textInputStateContextQueryRangeAndType(inputState) {
         let query = inputString.substring(with: possibleQueryRange)
+        // MARK: Nicegram QuickReplies
+        if possibleTypes == [.quickReply] {
+            result.append(.quickReply(query))
+        }
+        //
         if possibleTypes == [.emoji] {
             result.append(.emoji(query.basicEmoji.0))
         } else if possibleTypes == [.hashtag] {
@@ -267,13 +358,15 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
     
     switch chatPresentationInterfaceState.inputMode {
         case .media:
-            accessoryItems.append(.keyboard)
+            accessoryItems.append(.input(isEnabled: true, inputMode: .keyboard))
             return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .inputButtons:
-            return ChatTextInputPanelState(accessoryItems: [.keyboard], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+            return ChatTextInputPanelState(accessoryItems: [.botInput(isEnabled: true, inputMode: .keyboard)], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
         case .none, .text:
             if let _ = chatPresentationInterfaceState.interfaceState.editMessage {
-                return ChatTextInputPanelState(accessoryItems: [], contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
+                accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
+                
+                return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)
             } else {
                 var accessoryItems: [ChatTextInputAccessoryItem] = []
                 var extendedSearchLayout = false
@@ -302,6 +395,9 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     }
                     
                     var stickersEnabled = true
+                    
+                    let stickersAreEmoji = !isTextEmpty
+                    
                     if let peer = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
                         if isTextEmpty, case .broadcast = peer.info, canSendMessagesToPeer(peer) {
                             accessoryItems.append(.silentPost(chatPresentationInterfaceState.interfaceState.silentPosting))
@@ -317,15 +413,15 @@ func inputTextPanelStateForChatPresentationInterfaceState(_ chatPresentationInte
                     if isTextEmpty && chatPresentationInterfaceState.hasBots && chatPresentationInterfaceState.hasBotCommands {
                         accessoryItems.append(.commands)
                     }
-                    #if DEBUG
-                    accessoryItems.append(.stickers(stickersEnabled))
-                    #else
-                    if isTextEmpty {
-                        accessoryItems.append(.stickers(stickersEnabled))
+                    
+                    if stickersEnabled {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: stickersAreEmoji ? .emoji : .stickers))
+                    } else {
+                        accessoryItems.append(.input(isEnabled: true, inputMode: .emoji))
                     }
-                    #endif
+                    
                     if isTextEmpty, let message = chatPresentationInterfaceState.keyboardButtonsMessage, let _ = message.visibleButtonKeyboardMarkup, chatPresentationInterfaceState.interfaceState.messageActionsState.dismissedButtonKeyboardMessageId != message.id {
-                        accessoryItems.append(.inputButtons)
+                        accessoryItems.append(.botInput(isEnabled: true, inputMode: .bot))
                     }
                 }
                 return ChatTextInputPanelState(accessoryItems: accessoryItems, contextPlaceholder: contextPlaceholder, mediaRecordingState: chatPresentationInterfaceState.inputTextPanelState.mediaRecordingState)

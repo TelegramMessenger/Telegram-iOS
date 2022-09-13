@@ -1,4 +1,86 @@
 public extension Api {
+    enum DraftMessage: TypeConstructorDescription {
+        case draftMessage(flags: Int32, replyToMsgId: Int32?, message: String, entities: [Api.MessageEntity]?, date: Int32)
+        case draftMessageEmpty(flags: Int32, date: Int32?)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
+                    if boxed {
+                        buffer.appendInt32(-40996577)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    serializeString(message, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(entities!.count))
+                    for item in entities! {
+                        item.serialize(buffer, true)
+                    }}
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    break
+                case .draftMessageEmpty(let flags, let date):
+                    if boxed {
+                        buffer.appendInt32(453805082)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(date!, buffer: buffer, boxed: false)}
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .draftMessage(let flags, let replyToMsgId, let message, let entities, let date):
+                return ("draftMessage", [("flags", String(describing: flags)), ("replyToMsgId", String(describing: replyToMsgId)), ("message", String(describing: message)), ("entities", String(describing: entities)), ("date", String(describing: date))])
+                case .draftMessageEmpty(let flags, let date):
+                return ("draftMessageEmpty", [("flags", String(describing: flags)), ("date", String(describing: date))])
+    }
+    }
+    
+        public static func parse_draftMessage(_ reader: BufferReader) -> DraftMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            var _3: String?
+            _3 = parseString(reader)
+            var _4: [Api.MessageEntity]?
+            if Int(_1!) & Int(1 << 3) != 0 {if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.MessageEntity.self)
+            } }
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 3) == 0) || _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.DraftMessage.draftMessage(flags: _1!, replyToMsgId: _2, message: _3!, entities: _4, date: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_draftMessageEmpty(_ reader: BufferReader) -> DraftMessage? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            if _c1 && _c2 {
+                return Api.DraftMessage.draftMessageEmpty(flags: _1!, date: _2)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum EmojiKeyword: TypeConstructorDescription {
         case emojiKeyword(keyword: String, emoticons: [String])
         case emojiKeywordDeleted(keyword: String, emoticons: [String])
@@ -1290,90 +1372,6 @@ public extension Api {
             let _c3 = _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.GroupCallStreamChannel.groupCallStreamChannel(channel: _1!, scale: _2!, lastTimestampMs: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum HighScore: TypeConstructorDescription {
-        case highScore(pos: Int32, userId: Int64, score: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .highScore(let pos, let userId, let score):
-                    if boxed {
-                        buffer.appendInt32(1940093419)
-                    }
-                    serializeInt32(pos, buffer: buffer, boxed: false)
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt32(score, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .highScore(let pos, let userId, let score):
-                return ("highScore", [("pos", String(describing: pos)), ("userId", String(describing: userId)), ("score", String(describing: score))])
-    }
-    }
-    
-        public static func parse_highScore(_ reader: BufferReader) -> HighScore? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.HighScore.highScore(pos: _1!, userId: _2!, score: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum ImportedContact: TypeConstructorDescription {
-        case importedContact(userId: Int64, clientId: Int64)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .importedContact(let userId, let clientId):
-                    if boxed {
-                        buffer.appendInt32(-1052885936)
-                    }
-                    serializeInt64(userId, buffer: buffer, boxed: false)
-                    serializeInt64(clientId, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .importedContact(let userId, let clientId):
-                return ("importedContact", [("userId", String(describing: userId)), ("clientId", String(describing: clientId))])
-    }
-    }
-    
-        public static func parse_importedContact(_ reader: BufferReader) -> ImportedContact? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            var _2: Int64?
-            _2 = reader.readInt64()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.ImportedContact.importedContact(userId: _1!, clientId: _2!)
             }
             else {
                 return nil

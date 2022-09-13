@@ -88,6 +88,10 @@ extension UIStackView {
 
 extension UIScrollView {
     public func adjustBottomInsetToNotBeCovered(by coveringView: UIView, additionalInset: CGFloat = 0) {
+        if #available(iOS 11.0, *) {
+            self.contentInsetAdjustmentBehavior = .never
+        }
+        
         let coveringFrame = coveringView.convert(coveringView.bounds, to: self)
         let inset = bounds.maxY - (coveringFrame.minY - additionalInset)
         if inset > 0 {

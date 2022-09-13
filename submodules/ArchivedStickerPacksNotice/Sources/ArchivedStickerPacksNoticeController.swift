@@ -127,7 +127,15 @@ private final class ArchivedStickersNoticeAlertContentNode: AlertContentNode {
         var index: Int = 0
         var entries: [ArchivedStickersNoticeEntry] = []
         for pack in archivedStickerPacks {
-            entries.append(ArchivedStickersNoticeEntry(index: index, info: pack.0, topItem: pack.1, count: presentationData.strings.StickerPack_StickerCount(pack.0.count)))
+            let countTitle: String
+            if pack.0.id.namespace == Namespaces.ItemCollection.CloudEmojiPacks {
+                countTitle = presentationData.strings.StickerPack_EmojiCount(pack.0.count)
+            } else if pack.0.id.namespace == Namespaces.ItemCollection.CloudMaskPacks {
+                countTitle = presentationData.strings.StickerPack_MaskCount(pack.0.count)
+            } else {
+                countTitle = presentationData.strings.StickerPack_StickerCount(pack.0.count)
+            }
+            entries.append(ArchivedStickersNoticeEntry(index: index, info: pack.0, topItem: pack.1, count: countTitle))
             index += 1
         }
         
@@ -304,7 +312,7 @@ public func archivedStickerPacksNoticeController(context: AccountContext, archiv
     let presentationDataDisposable = context.sharedContext.presentationData.start(next: { [weak controller] presentationData in
         controller?.theme = AlertControllerTheme(presentationData: presentationData)
     })
-    controller.dismissed = {
+    controller.dismissed = { _ in
         presentationDataDisposable.dispose()
         disposable.dispose()
     }

@@ -71,7 +71,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
     private var enqueuedTransitions: [(CommandChatInputContextPanelTransition, Bool)] = []
     private var validLayout: (CGSize, CGFloat, CGFloat, CGFloat)?
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, mode: MentionChatInputContextPanelMode) {
+    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, mode: MentionChatInputContextPanelMode, chatPresentationContext: ChatPresentationContext) {
         self.mode = mode
         
         self.listView = ListView()
@@ -84,7 +84,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
             return strings.VoiceOver_ScrollStatus(row, count).string
         }
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -116,11 +116,20 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                 return nil
             }
         }
-        if telegramUsers.count > 1 {
+        // MARK: Nicegram MentionAll
+        let currentModeSupportsMentionAll: Bool
+        switch mode {
+        case .input:
+            currentModeSupportsMentionAll = true
+        case .search:
+            currentModeSupportsMentionAll = false
+        }
+        if currentModeSupportsMentionAll, telegramUsers.count > 1 {
             index += 1
             entries.append(MentionChatInputContextPanelEntry(index: index, peer: nil, revealed: false))
             print("User count is \(telegramUsers.count)")
         }
+        //
     
         for peer in results {
             let peerId = peer.id.toInt64()
@@ -160,9 +169,7 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                                 // MARK: Nicegram changes
                                 guard let peer = peer else {
                                     guard isPremium() else {
-                                        let c = SubscriptionBuilderImpl().build(
-                                            isNightTheme: presentationData.theme.referenceTheme == .night || presentationData.theme.referenceTheme == .nightAccent
-                                        )
+                                        let c = SubscriptionBuilderImpl(presentationData: presentationData).build()
                                         c.modalPresentationStyle = .fullScreen
                                         interfaceInteraction.getNavigationController()?.topViewController?.present(c, animated: true)
                                         

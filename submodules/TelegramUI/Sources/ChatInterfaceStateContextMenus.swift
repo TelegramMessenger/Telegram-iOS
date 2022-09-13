@@ -698,7 +698,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         
                                         let id = Int64.random(in: Int64.min ... Int64.max)
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
-                                        let message: EnqueueMessage = .message(text: "", attributes: [], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
                                         
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
@@ -1522,6 +1522,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.append(.separator)
             }
             // MARK: NG Context Menu
+            let isSecretChat = message.id.peerId.namespace == Namespaces.Peer.SecretChat
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let locale = presentationData.strings.baseLanguageCode
             actions.append(.action(ContextMenuActionItem(text: l("AppName", locale) + "...", icon: { theme in
@@ -1540,7 +1541,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
                 
                 // Translate
-                if !message.text.isEmpty {
+                let textToTranslate = message.textToTranslate()
+                if !isSecretChat,
+                   !textToTranslate.isEmpty {
                     var title = l("Messages.Translate", locale)
                     var mode = "translate"
                     if message.text.contains(gTranslateSeparator) {
@@ -1566,7 +1569,8 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 })
                             }).start()
                         } else {
-                            let _ = (gtranslate(message.text, presentationData.strings.baseLanguageCode)  |> deliverOnMainQueue).start(next: { translated in
+                            let toLang = getPreferredTranslationTargetLanguage(presentationData)
+                            let _ = (gtranslate(textToTranslate, toLang) |> deliverOnMainQueue).start(next: { translated in
                                 let newMessageText = message.text + "\n\n\(gTranslateSeparator)\n" + translated
                                 let _ = (context.account.postbox.transaction { transaction -> Void in
                                     transaction.updateMessage(message.id, update: { currentMessage in
@@ -1612,9 +1616,40 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 controller.setItems(.single(ContextController.Items(content: .list(ngContextItems))), minHeight: nil)
             })))
             
-            //  MARK: - Nicegram (Speech2Text)
+            // MARK: Nicegram SelectAllMessagesWithAuthor
+            if let authorId = message.author?.id {
+                actions.append(.action(ContextMenuActionItem(text: l("Messages.SelectAllFromUser", locale), icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    _ = (context.engine.messages.allMessages(peerId: message.id.peerId, namespace: Namespaces.Message.Cloud)
+                    |> map { messages in
+                        var ids = messages
+                            .filter({ $0.author?.id == authorId })
+                            .filter({ message in
+                                return !message.media.contains(where: { $0 is TelegramMediaAction })
+                            })
+                            .sorted(by: { $0.timestamp > $1.timestamp })
+                            .prefix(100)
+                            .map(\.id)
+                        if !ids.contains(message.id) {
+                            ids.append(message.id)
+                        }
+                        return ids
+                    }
+                    |> deliverOnMainQueue)
+                    .start(next: { ids in
+                        interfaceInteraction.beginMessageSelection(ids, { transition in
+                            f(.custom(transition))
+                        })
+                    })
+                })))
+            }
+            //
             
-            if let mediaFile = message.media.compactMap({ $0 as? TelegramMediaFile }).first(where: { $0.isVoice }) {
+            //  MARK: - Nicegram Speech2Text
+            
+            if !isSecretChat,
+               let mediaFile = message.media.compactMap({ $0 as? TelegramMediaFile }).first(where: { $0.isVoice }) {
                 let title: String
                 let mode: String
                 if message.isSpeechToTextDone() {
@@ -1637,23 +1672,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 case .success(let translation):
                                     message.setSpeechToTextTranslation(translation, context: context)
                                 case .failure(let error):
-                                    DispatchQueue.main.async {
-                                        message.removeSpeechToTextMeta(context: context)
-                                        
-                                        switch error {
-                                        case .needPremium:
-                                            let c = SubscriptionBuilderImpl().build(
-                                                isNightTheme: presentationData.theme.referenceTheme == .night || presentationData.theme.referenceTheme == .nightAccent
-                                            )
-                                            c.modalPresentationStyle = .fullScreen
-                                            controllerInteraction.navigationController()?.topViewController?.present(c, animated: true)
-                                        case .lowAccuracy:
-                                            let c = getIAPErrorController(context: context, l("Messages.SpeechToText.LowAccuracyError", locale), presentationData)
-                                            controllerInteraction.presentGlobalOverlayController(c, nil)
-                                        case .underlying(_):
-                                            let c = getIAPErrorController(context: context, error.localizedDescription, presentationData)
-                                            controllerInteraction.presentGlobalOverlayController(c, nil)
-                                        }
+                                    message.removeSpeechToTextMeta(context: context)
+                                    
+                                    switch error {
+                                    case .needPremium:
+                                        let c = SubscriptionBuilderImpl(presentationData: presentationData).build()
+                                        c.modalPresentationStyle = .fullScreen
+                                        controllerInteraction.navigationController()?.topViewController?.present(c, animated: true)
+                                    case .lowAccuracy:
+                                        let c = getIAPErrorController(context: context, l("Messages.SpeechToText.LowAccuracyError", locale), presentationData)
+                                        controllerInteraction.presentGlobalOverlayController(c, nil)
+                                    case .underlying(_):
+                                        let c = getIAPErrorController(context: context, error.localizedDescription, presentationData)
+                                        controllerInteraction.presentGlobalOverlayController(c, nil)
                                     }
                                 }
                             }
@@ -1697,23 +1728,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     })
                 })))
             }
-            
-            // MARK: Nicegram SelectAllMessagesWithAuthor
-            if let authorId = message.author?.id {
-                actions.append(.action(ContextMenuActionItem(text: l("Messages.SelectAllFromUser", locale), icon: { theme in
-                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/SelectAll"), color: theme.actionSheet.primaryTextColor)
-                }, action: { _, f in
-                    _ = (context.engine.messages.allMessageIdsWithAuthor(peerId: message.id.peerId, authorId: authorId, namespace: Namespaces.Message.Cloud)
-                    |> deliverOnMainQueue)
-                    .start { ids in
-                        interfaceInteraction.beginMessageSelection(ids, { transition in
-                            f(.custom(transition))
-                        })
-                    }
-                })))
-            }
-            //
-            
         }
         
         let canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, appConfig: appConfig)

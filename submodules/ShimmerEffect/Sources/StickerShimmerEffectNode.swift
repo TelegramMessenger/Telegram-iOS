@@ -21,8 +21,8 @@ private func decodeStickerThumbnailData(_ data: Data) -> String {
     return string
 }
 
-public func generateStickerPlaceholderImage(data: Data?, size: CGSize, imageSize: CGSize, backgroundColor: UIColor?, foregroundColor: UIColor) -> UIImage? {
-    return generateImage(size, rotatedContext: { size, context in
+public func generateStickerPlaceholderImage(data: Data?, size: CGSize, scale: CGFloat? = nil, imageSize: CGSize, backgroundColor: UIColor?, foregroundColor: UIColor) -> UIImage? {
+    return generateImage(size, scale: scale, rotatedContext: { size, context in
         if let backgroundColor = backgroundColor {
             context.setFillColor(backgroundColor.cgColor)
             context.setBlendMode(.copy)

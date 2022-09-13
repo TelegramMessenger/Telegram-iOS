@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import MergeLists
 import AccountContext
 import StickerPackPreviewUI
+import StickerPeekUI
 import ContextUI
 import ChatPresentationInterfaceState
 import PremiumUI
@@ -20,7 +21,7 @@ private struct StickersChatInputContextPanelEntryStableId: Hashable {
 }
 
 final class StickersChatInputContextPanelInteraction {
-    var previewedStickerItem: StickerPackItem?
+    var previewedStickerItem: TelegramMediaFile?
 }
 
 private struct StickersChatInputContextPanelEntry: Identifiable, Comparable {
@@ -84,7 +85,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
     
     private var stickerPreviewController: StickerPreviewController?
     
-    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize) {
+    override init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, fontSize: PresentationFontSize, chatPresentationContext: ChatPresentationContext) {
         self.strings = strings
         
         self.listView = ListView()
@@ -99,7 +100,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
         
         self.stickersInteraction = StickersChatInputContextPanelInteraction()
         
-        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize)
+        super.init(context: context, theme: theme, strings: strings, fontSize: fontSize, chatPresentationContext: chatPresentationContext)
         
         self.isOpaque = false
         self.clipsToBounds = true
@@ -129,14 +130,14 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                     if let (item, itemNode) = stickersNode.stickerItem(at: point) {
                         return strongSelf.context.engine.stickers.isStickerSaved(id: item.file.fileId)
                         |> deliverOnMainQueue
-                        |> map { isStarred -> (ASDisplayNode, PeekControllerContent)? in
+                        |> map { isStarred -> (UIView, CGRect, PeekControllerContent)? in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
                                 var menuItems: [ContextMenuItem] = []
                                 menuItems = [
                                     .action(ContextMenuActionItem(text: strongSelf.strings.StickerPack_Send, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Resend"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                                     f(.default)
                                     
-                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode, itemNode.bounds)
+                                    let _ = controllerInteraction.sendSticker(.standalone(media: item.file), false, false, nil, true, itemNode.view, itemNode.bounds, nil)
                                     })),
                                     .action(ContextMenuActionItem(text: isStarred ? strongSelf.strings.Stickers_RemoveFromFavorites : strongSelf.strings.Stickers_AddToFavorites, icon: { theme in generateTintedImage(image: isStarred ? UIImage(bundleImageName: "Chat/Context Menu/Unfave") : UIImage(bundleImageName: "Chat/Context Menu/Fave"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
                                         f(.default)
@@ -147,7 +148,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                             |> deliverOnMainQueue).start(next: { result in
                                                 switch result {
                                                     case .generic:
-                                                        strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil), elevatedLayout: false, action: { _ in return false }), nil)
+                                                        strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: nil, text: !isStarred ? strongSelf.strings.Conversation_StickerAddedToFavorites : strongSelf.strings.Conversation_StickerRemovedFromFavorites, undoText: nil, customAction: nil), elevatedLayout: false, action: { _ in return false }), nil)
                                                     case let .limitExceeded(limit, premiumLimit):
                                                         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
                                                         let text: String
@@ -156,7 +157,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                         } else {
                                                             text = strongSelf.strings.Premium_MaxFavedStickersText("\(premiumLimit)").string
                                                         }
-                                                        strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil), elevatedLayout: false, action: { [weak self] action in
+                                                        strongSelf.interfaceInteraction?.presentGlobalOverlayController(UndoOverlayController(presentationData: presentationData, content: .sticker(context: strongSelf.context, file: item.file, title: strongSelf.strings.Premium_MaxFavedStickersTitle("\(limit)").string, text: text, undoText: nil, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                                             if let strongSelf = self {
                                                                 if case .info = action {
                                                                     let controller = PremiumIntroScreen(context: strongSelf.context, source: .savedStickers)
@@ -180,7 +181,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                                     if let packReference = packReference {
                                                         let controller = StickerPackScreen(context: strongSelf.context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controllerInteraction.navigationController(), sendSticker: { file, sourceNode, sourceRect in
                                                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
-                                                                return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect)
+                                                                return controllerInteraction.sendSticker(file, false, false, nil, true, sourceNode, sourceRect, nil)
                                                             } else {
                                                                 return false
                                                             }
@@ -197,7 +198,7 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                                         }
                                     }))
                                 ]
-                                return (itemNode, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item), menu: menuItems, openPremiumIntro: { [weak self] in
+                                return (itemNode.view, itemNode.bounds, StickerPreviewPeekContent(account: strongSelf.context.account, theme: strongSelf.theme, strings: strongSelf.strings, item: .pack(item.file), menu: menuItems, openPremiumIntro: { [weak self] in
                                     guard let strongSelf = self else {
                                         return
                                     }
@@ -212,11 +213,11 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
                 }
             }
             return nil
-        }, present: { [weak self] content, sourceNode in
+        }, present: { [weak self] content, sourceView, sourceRect in
             if let strongSelf = self {
                 let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                let controller = PeekController(presentationData: presentationData, content: content, sourceNode: {
-                    return sourceNode
+                let controller = PeekController(presentationData: presentationData, content: content, sourceView: {
+                    return (sourceView, sourceRect)
                 })
                 strongSelf.interfaceInteraction?.presentGlobalOverlayController(controller, nil)
                 return controller
@@ -224,18 +225,18 @@ final class StickersChatInputContextPanelNode: ChatInputContextPanelNode {
             return nil
         }, updateContent: { [weak self] content in
             if let strongSelf = self {
-                var item: StickerPackItem?
+                var item: TelegramMediaFile?
                 if let content = content as? StickerPreviewPeekContent, case let .pack(contentItem) = content.item {
                     item = contentItem
                 }
-                strongSelf.updatePreviewingItem(item: item, animated: true)
+                strongSelf.updatePreviewingItem(file: item, animated: true)
             }
         }))
     }
     
-    private func updatePreviewingItem(item: StickerPackItem?, animated: Bool) {
-        if self.stickersInteraction.previewedStickerItem != item {
-            self.stickersInteraction.previewedStickerItem = item
+    private func updatePreviewingItem(file: TelegramMediaFile?, animated: Bool) {
+        if self.stickersInteraction.previewedStickerItem?.fileId != file?.fileId {
+            self.stickersInteraction.previewedStickerItem = file
             
             self.listView.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? StickersChatInputContextPanelItemNode {

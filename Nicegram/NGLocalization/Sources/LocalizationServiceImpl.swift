@@ -19,7 +19,9 @@ public class LocalizationServiceImpl {
         let providerConfig = CrowdinProviderConfig(hashString: hash, sourceLanguage: sourceLanguage)
         let config = CrowdinSDKConfig.config()
             .with(crowdinProviderConfig: providerConfig)
-        CrowdinSDK.startWithConfig(config, completion: completion ?? {})
+        DispatchQueue.global().async {
+            CrowdinSDK.startWithConfig(config, completion: completion ?? {})
+        }
     }
 }
 

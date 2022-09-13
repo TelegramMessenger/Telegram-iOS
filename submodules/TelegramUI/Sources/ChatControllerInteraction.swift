@@ -58,10 +58,13 @@ struct UnreadMessageRangeKey: Hashable {
 }
 
 public final class ChatControllerInteraction {
+    // MARK: Nicegram Translate
+    let onTranslateButtonLongTap: () -> Void
+    //
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
     let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void
     let openPeerMention: (String) -> Void
-    let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void
+    let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
     let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, String) -> Void
     let activateMessagePinch: (PinchSourceContainerNode) -> Void
@@ -73,9 +76,9 @@ public final class ChatControllerInteraction {
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
     let sendCurrentMessage: (Bool) -> Void
     let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool
-    let sendGif: (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool
-    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool
+    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool
+    let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
+    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
     let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
     let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
     let activateSwitchInline: (PeerId?, String) -> Void
@@ -122,7 +125,7 @@ public final class ChatControllerInteraction {
     let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
     let displayPsa: (String, ASDisplayNode) -> Void
     let displayDiceTooltip: (TelegramMediaDice) -> Void
-    let animateDiceSuccess: (Bool) -> Void
+    let animateDiceSuccess: (Bool, Bool) -> Void
     let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
     let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
@@ -141,6 +144,7 @@ public final class ChatControllerInteraction {
     
     let requestMessageUpdate: (MessageId) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
+    let dismissTextInput: () -> Void
     
     var canPlayMedia: Bool = false
     var hiddenMedia: [MessageId: [Media]] = [:]
@@ -159,12 +163,16 @@ public final class ChatControllerInteraction {
     var currentMessageWithLoadingReplyThread: MessageId?
     var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     let presentationContext: ChatPresentationContext
+    var playNextOutgoingGift: Bool = false
     
     init(
+        // MARK: Nicegram Translate
+        onTranslateButtonLongTap: @escaping () -> Void = {},
+        //
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
         openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Peer?) -> Void,
         openPeerMention: @escaping (String) -> Void,
-        openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?) -> Void,
+        openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, String) -> Void,
         updateMessageReaction: @escaping (Message, ChatControllerInteractionReaction) -> Void,
         activateMessagePinch: @escaping (PinchSourceContainerNode) -> Void,
@@ -176,9 +184,9 @@ public final class ChatControllerInteraction {
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
         sendCurrentMessage: @escaping (Bool) -> Void,
         sendMessage: @escaping (String) -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, ASDisplayNode, CGRect) -> Bool,
-        sendGif: @escaping (FileMediaReference, ASDisplayNode, CGRect, Bool, Bool) -> Bool,
-        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, ASDisplayNode, CGRect, Bool) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendGif: @escaping (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool,
+        sendBotContextResultAsGif: @escaping (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool,
         requestMessageActionCallback: @escaping (MessageId, MemoryBuffer?, Bool, Bool) -> Void,
         requestMessageActionUrlAuth: @escaping (String, MessageActionUrlSubject) -> Void,
         activateSwitchInline: @escaping (PeerId?, String) -> Void,
@@ -225,7 +233,7 @@ public final class ChatControllerInteraction {
         displayPollSolution: @escaping (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void,
         displayPsa: @escaping (String, ASDisplayNode) -> Void,
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
-        animateDiceSuccess: @escaping (Bool) -> Void,
+        animateDiceSuccess: @escaping (Bool, Bool) -> Void,
         displayPremiumStickerTooltip: @escaping (TelegramMediaFile, Message) -> Void,
         openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
@@ -243,11 +251,15 @@ public final class ChatControllerInteraction {
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
         requestMessageUpdate: @escaping (MessageId) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
+        dismissTextInput: @escaping () -> Void,
         automaticMediaDownloadSettings: MediaAutoDownloadSettings,
         pollActionState: ChatInterfacePollActionState,
         stickerSettings: ChatInterfaceStickerSettings,
         presentationContext: ChatPresentationContext
     ) {
+        // MARK: Nicegram Translate
+        self.onTranslateButtonLongTap = onTranslateButtonLongTap
+        //
         self.openMessage = openMessage
         self.openPeer = openPeer
         self.openPeerMention = openPeerMention
@@ -330,6 +342,7 @@ public final class ChatControllerInteraction {
         self.openWebView = openWebView
         self.requestMessageUpdate = requestMessageUpdate
         self.cancelInteractiveKeyboardGestures = cancelInteractiveKeyboardGestures
+        self.dismissTextInput = dismissTextInput
         
         self.automaticMediaDownloadSettings = automaticMediaDownloadSettings
         

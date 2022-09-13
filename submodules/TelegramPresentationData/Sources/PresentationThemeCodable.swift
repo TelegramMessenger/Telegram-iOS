@@ -1605,6 +1605,8 @@ extension PresentationThemeInputMediaPanel: Codable {
         case panelSeparator
         case panelIcon
         case panelHighlightedIconBg
+        case panelHighlightedIcon
+        case panelContentVibrantOverlay
         case stickersBg
         case stickersSectionText
         case stickersSearchBg
@@ -1612,20 +1614,43 @@ extension PresentationThemeInputMediaPanel: Codable {
         case stickersSearchPrimary
         case stickersSearchControl
         case gifsBg
+        case bg
     }
     
     public convenience init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
+        
+        let backgroundColor: UIColor
+        if let value = try? decodeColor(values, .bg) {
+            backgroundColor = value
+        } else {
+            backgroundColor = try decodeColor(values, .gifsBg).withMultipliedAlpha(0.75)
+        }
+        
+        let panelHighlightedIconColor: UIColor
+        if let value = try? decodeColor(values, .panelHighlightedIcon) {
+            panelHighlightedIconColor = value
+        } else if let value = try? decodeColor(values, .panelHighlightedIcon, fallbackKey: "chat.inputPanel.inputText") {
+            let defaultColor = try decodeColor(values, .panelIcon)
+            panelHighlightedIconColor = defaultColor.mixedWith(value, alpha: 0.35)
+        } else {
+            panelHighlightedIconColor = try decodeColor(values, .panelIcon)
+        }
+        
+        let codingPath = decoder.codingPath.map { $0.stringValue }.joined(separator: ".")
+        
         self.init(panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelIconColor: try decodeColor(values, .panelIcon),
                   panelHighlightedIconBackgroundColor: try decodeColor(values, .panelHighlightedIconBg),
+                  panelHighlightedIconColor: panelHighlightedIconColor,
+                  panelContentVibrantOverlayColor: try decodeColor(values, .panelContentVibrantOverlay, fallbackKey: "\(codingPath).stickersSectionText"),
                   stickersBackgroundColor: try decodeColor(values, .stickersBg),
                   stickersSectionTextColor: try decodeColor(values, .stickersSectionText),
                   stickersSearchBackgroundColor: try decodeColor(values, .stickersSearchBg),
                   stickersSearchPlaceholderColor: try decodeColor(values, .stickersSearchPlaceholder),
                   stickersSearchPrimaryColor: try decodeColor(values, .stickersSearchPrimary),
                   stickersSearchControlColor: try decodeColor(values, .stickersSearchControl),
-                  gifsBackgroundColor: try decodeColor(values, .gifsBg))
+                  gifsBackgroundColor: try decodeColor(values, .gifsBg), backgroundColor: backgroundColor)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -1633,6 +1658,8 @@ extension PresentationThemeInputMediaPanel: Codable {
         try encodeColor(&values, self.panelSeparatorColor, .panelSeparator)
         try encodeColor(&values, self.panelIconColor, .panelIcon)
         try encodeColor(&values, self.panelHighlightedIconBackgroundColor, .panelHighlightedIconBg)
+        try encodeColor(&values, self.panelHighlightedIconColor, .panelHighlightedIcon)
+        try encodeColor(&values, self.panelContentVibrantOverlayColor, .panelContentVibrantOverlay)
         try encodeColor(&values, self.stickersBackgroundColor, .stickersBg)
         try encodeColor(&values, self.stickersSectionTextColor, .stickersSectionText)
         try encodeColor(&values, self.stickersSearchBackgroundColor, .stickersSearchBg)
@@ -1640,6 +1667,7 @@ extension PresentationThemeInputMediaPanel: Codable {
         try encodeColor(&values, self.stickersSearchPrimaryColor, .stickersSearchPrimary)
         try encodeColor(&values, self.stickersSearchControlColor, .stickersSearchControl)
         try encodeColor(&values, self.gifsBackgroundColor, .gifsBg)
+        try encodeColor(&values, self.backgroundColor, .bg)
     }
 }
 

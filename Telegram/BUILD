@@ -37,6 +37,7 @@ load(
     "telegram_enable_icloud",
     "telegram_enable_siri",
     "telegram_enable_watch",
+    "google_client_scheme",
 )
 
 load("@build_bazel_rules_apple//apple:resources.bzl",
@@ -316,6 +317,7 @@ alternate_icon_folders = [
     "Premium",
     "PremiumBlack",
     "PremiumTurbo",
+    "NicegramBetaIcon"
 ]
 
 [
@@ -416,6 +418,7 @@ plist_fragment(
     </array>
     """.format(
         telegram_bundle_id = telegram_bundle_id,
+        google_client_scheme = google_client_scheme,
     )
 )
 
@@ -1927,7 +1930,7 @@ plist_fragment(
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
     <key>UIViewControllerBasedStatusBarAppearance</key>
-    <false/>
+    <true/>
     <key>UIViewEdgeAntialiasing</key>
     <false/>
     <key>UIViewGroupOpacity</key>
@@ -1957,6 +1960,8 @@ plist_fragment(
         </dict>
     </array>
     <key>CADisableMinimumFrameDurationOnPhone</key>
+    <true/>
+    <key>UIApplicationSupportsIndirectInputEvents</key>
     <true/>
     """.format(
         telegram_bundle_id = telegram_bundle_id,

@@ -310,6 +310,7 @@ final class PhoneDemoComponent: Component {
         case swirlStars
         case fasterStars
         case badgeStars
+        case emoji
     }
     
     let context: AccountContext
@@ -449,6 +450,13 @@ final class PhoneDemoComponent: Component {
                     if let _ = self.decorationView as? BadgeStarsView {
                     } else {
                         let starsView = BadgeStarsView(frame: self.decorationContainerView.bounds)
+                        self.decorationView = starsView
+                        self.decorationContainerView.addSubview(starsView)
+                    }
+                case .emoji:
+                    if let _ = self.decorationView as? EmojiStarsView {
+                    } else {
+                        let starsView = EmojiStarsView(frame: self.decorationContainerView.bounds)
                         self.decorationView = starsView
                         self.decorationContainerView.addSubview(starsView)
                     }

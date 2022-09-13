@@ -30,13 +30,17 @@ private func stringForCacheSize(strings: PresentationStrings, size: Int32) -> St
 private let maximumCacheSizeValues: [Int32] = {
     let diskSpace = totalDiskSpace()
     if diskSpace > 100 * 1024 * 1024 * 1024 {
-        return [5, 20, 50, Int32.max]
+        // MARK: Nicegram CacheSettings, custom values
+        return [1, 2, 16, 32, Int32.max]
     } else if diskSpace > 50 * 1024 * 1024 * 1024 {
-        return [5, 16, 32, Int32.max]
+        // MARK: Nicegram CacheSettings, custom values
+        return [1, 2, 4, 16, Int32.max]
     } else if diskSpace > 24 * 1024 * 1024 * 1024 {
-        return [2, 8, 16, Int32.max]
+        // MARK: Nicegram CacheSettings, custom values
+        return [1, 2, 4, 16, Int32.max]
     } else {
-        return [1, 4, 8, Int32.max]
+        // MARK: Nicegram CacheSettings, custom values
+        return [1, 2, 4, 8, Int32.max]
     }
 }()
 
@@ -114,7 +118,8 @@ private final class MaximumCacheSizePickerItemNode: ListViewItemNode {
         self.maskNode = ASImageNode()
         
         var textNodes: [TextNode] = []
-        for _ in 0 ..< 4 {
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        for _ in 0 ..< maximumCacheSizeValues.count {
             let textNode = TextNode()
             textNode.isUserInteractionEnabled = false
             textNode.displaysAsynchronously = false
@@ -131,8 +136,10 @@ private final class MaximumCacheSizePickerItemNode: ListViewItemNode {
     
     func updateSliderView() {
         if let sliderView = self.sliderView, let item = self.item {
-            sliderView.maximumValue = 3.0
-            sliderView.positionsCount = 4
+            // MARK: Nicegram CacheSettings, change constant to actual value
+            sliderView.maximumValue = CGFloat(maximumCacheSizeValues.count - 1)
+            // MARK: Nicegram CacheSettings, change constant to actual value
+            sliderView.positionsCount = maximumCacheSizeValues.count
             
             let value = maximumCacheSizeValues.firstIndex(where: { $0 == item.value }) ?? 0
             sliderView.value = CGFloat(value)
@@ -148,10 +155,12 @@ private final class MaximumCacheSizePickerItemNode: ListViewItemNode {
         sliderView.lineSize = 4.0
         sliderView.dotSize = 5.0
         sliderView.minimumValue = 0.0
-        sliderView.maximumValue = 3.0
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        sliderView.maximumValue = CGFloat(maximumCacheSizeValues.count - 1)
         sliderView.startValue = 0.0
         sliderView.disablesInteractiveTransitionGestureRecognizer = true
-        sliderView.positionsCount = 4
+        // MARK: Nicegram CacheSettings, change constant to actual value
+        sliderView.positionsCount = maximumCacheSizeValues.count
         sliderView.useLinesForPositions = true
         if let item = self.item, let params = self.layoutParams {
             let value = maximumCacheSizeValues.firstIndex(where: { $0 == item.value }) ?? 0

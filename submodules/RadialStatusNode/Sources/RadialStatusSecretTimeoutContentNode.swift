@@ -122,7 +122,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
         
         if self.sparks {
             let lineWidth: CGFloat = 1.75
-            let center = bounds.center
+            let center = CGPoint(x: bounds.midX, y: bounds.midY)
             let radius: CGFloat = (bounds.size.width - lineWidth - 2.5 * 2.0) * 0.5
             
             let endAngle: CGFloat = -CGFloat.pi / 2.0 + 2.0 * CGFloat.pi * self.progress
@@ -211,7 +211,7 @@ final class RadialStatusSecretTimeoutContentNode: RadialStatusContentNode {
             context.setLineJoin(.miter)
             context.setMiterLimit(10.0)
             
-            let center = bounds.center
+            let center = CGPoint(x: bounds.midX, y: bounds.midY)
             let radius: CGFloat = (bounds.size.width - lineWidth - 2.5 * 2.0) * 0.5
             
             let startAngle: CGFloat = -CGFloat.pi / 2.0

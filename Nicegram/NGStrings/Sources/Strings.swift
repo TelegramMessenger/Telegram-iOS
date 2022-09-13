@@ -111,6 +111,9 @@ public func l(_ key: String, _ locale: String = "en") -> String {
     return result
 }
 
+public func l(_ key: String, _ locale: String = "en", with args: CVarArg...) -> String {
+    return String(format: l(key, locale), args)
+}
 
 public func getStringsUrl(_ lang: String) -> String {
     return "https://raw.githubusercontent.com/nicegram/translations/master/Telegram-iOS/" + lang + ".lproj/NiceLocalizable.strings"

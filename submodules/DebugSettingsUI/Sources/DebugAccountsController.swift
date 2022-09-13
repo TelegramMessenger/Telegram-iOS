@@ -121,9 +121,11 @@ public func debugAccountsController(context: AccountContext, accountManager: Acc
                 ActionSheetButtonItem(title: "Production", color: .accent, action: {
                     dismissAction()
                     
-                    if case .internal = context.sharedContext.applicationBindings.appBuildType {
-                        context.sharedContext.beginNewAuth(testingEnvironment: false)
-                    }
+                    // MARK: Nicegram Multi-account, internal build check commented
+                    context.sharedContext.beginNewAuth(testingEnvironment: false)
+//                    if case .internal = context.sharedContext.applicationBindings.appBuildType {
+//                        context.sharedContext.beginNewAuth(testingEnvironment: false)
+//                    }
                 }),
                 ActionSheetButtonItem(title: "Test", color: .accent, action: {
                     dismissAction()
