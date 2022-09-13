@@ -636,7 +636,11 @@ public final class MediaBox {
                         subscriber.putCompletion()
                         return EmptyDisposable
                     } else {
-                        if let data = MediaBoxPartialFile.extractPartialData(manager: MediaBoxFileManager(queue: nil), path: paths.partial, metaPath: paths.partial + ".meta", range: range) {
+                        let tempManager = MediaBoxFileManager(queue: nil)
+                        let data = withExtendedLifetime(tempManager, {
+                            return MediaBoxPartialFile.extractPartialData(manager: tempManager, path: paths.partial, metaPath: paths.partial + ".meta", range: range)
+                        })
+                        if let data = data {
                             subscriber.putNext((data, true))
                             subscriber.putCompletion()
                             return EmptyDisposable
@@ -676,6 +680,15 @@ public final class MediaBox {
                                 case .partial:
                                     subscriber.putNext((Data(), false))
                             }
+                        }
+                    } else {
+                        switch mode {
+                            case .complete, .incremental:
+                                if notifyAboutIncomplete {
+                                    subscriber.putNext((Data(), false))
+                                }
+                            case .partial:
+                                subscriber.putNext((Data(), false))
                         }
                     }
                 })
