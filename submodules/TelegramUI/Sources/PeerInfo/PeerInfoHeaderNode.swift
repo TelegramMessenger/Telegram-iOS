@@ -2346,10 +2346,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 emojiRegularStatusContent = .verified(fillColor: presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: presentationData.theme.list.itemCheckColors.foregroundColor)
                 emojiExpandedStatusContent = .verified(fillColor: UIColor(rgb: 0xffffff, alpha: 0.75), foregroundColor: .clear)
             case .fake:
-                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
                 emojiExpandedStatusContent = emojiRegularStatusContent
             case .scam:
-                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_FakeAccount.uppercased())
+                emojiRegularStatusContent = .text(color: presentationData.theme.chat.message.incoming.scamColor, string: presentationData.strings.Message_ScamAccount.uppercased())
                 emojiExpandedStatusContent = emojiRegularStatusContent
             case let .emojiStatus(emojiStatus):
                 currentEmojiStatus = emojiStatus

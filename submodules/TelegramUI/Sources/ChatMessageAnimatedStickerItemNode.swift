@@ -818,7 +818,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
-        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
@@ -1255,8 +1255,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, synchronousLoads in
-                if let strongSelf = self {
+            func finishLayout(_ animation: ListViewItemUpdateAnimation, _ apply: ListViewItemApply, _ synchronousLoads: Bool) {
+                if let strongSelf = weakSelf.value {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
                     
@@ -1473,7 +1473,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else {
                             isAppearing = true
                             deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
-                                if let item = self?.item {
+                                if let strongSelf = weakSelf.value, let item = strongSelf.item {
                                     item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
                                 }
                             })
@@ -1504,12 +1504,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
                             actionButtonsNode.buttonPressed = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.performMessageButtonAction(button: button)
                                 }
                             }
                             actionButtonsNode.buttonLongTapped = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.presentMessageButtonContextMenu(button: button)
                                 }
                             }
@@ -1536,13 +1536,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     gesture?.cancel()
                                     return
                                 }
@@ -1590,7 +1590,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                         strongSelf.dateAndStatusNode.pressed = {
-                            guard let strongSelf = self else {
+                            guard let strongSelf = weakSelf.value else {
                                 return
                             }
                             item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
@@ -1605,7 +1605,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         f()
                     }
                 }
+            }
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { (animation: ListViewItemUpdateAnimation, apply: ListViewItemApply, synchronousLoads: Bool) -> Void in
+                finishLayout(animation, apply, synchronousLoads)
             })
+        }
+        
+        let weakSelf = Weak(self)
+        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+            return continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }
     

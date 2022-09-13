@@ -1760,7 +1760,16 @@ public final class EntityKeyboardTopPanelComponent: Component {
             var validIds = Set<AnyHashable>()
             let visibleItemRange = itemLayout.visibleItemRange(for: visibleBounds)
             if !self.items.isEmpty && visibleItemRange.maxIndex >= visibleItemRange.minIndex {
-                for index in visibleItemRange.minIndex ... visibleItemRange.maxIndex {
+                var indices = Array(visibleItemRange.minIndex ... visibleItemRange.maxIndex)
+                for i in 0 ..< self.items.count {
+                    if self.items[i].id == AnyHashable("static") {
+                        if !indices.contains(i) {
+                            indices.append(i)
+                        }
+                        break
+                    }
+                }
+                for index in indices {
                     let item = self.items[index]
                     validIds.insert(item.id)
                     
@@ -1911,6 +1920,9 @@ public final class EntityKeyboardTopPanelComponent: Component {
                         itemIndex = component.items.count - 1
                         useRightAnchor = true
                     }
+                    if itemIndex == component.items.count - 1 {
+                        useRightAnchor = true
+                    }
                     if newBounds.minX < 0.0 {
                         newBounds.origin.x = 0.0
                         itemIndex = 0
@@ -1918,12 +1930,8 @@ public final class EntityKeyboardTopPanelComponent: Component {
                     }
                     
                     if useRightAnchor {
-                        var newBounds = CGRect(origin: CGPoint(x: updatedItemFrame.maxX - previousDistanceToItemRight, y: 0.0), size: availableSize)
-                        if newBounds.minX > itemLayout.contentSize.width - self.scrollView.bounds.width {
-                            newBounds.origin.x = itemLayout.contentSize.width - self.scrollView.bounds.width
-                        }
-                        if newBounds.minX < 0.0 {
-                        }
+                        let _ = previousDistanceToItemRight
+                        newBounds.origin.x = itemLayout.contentSize.width - self.scrollView.bounds.width
                     }
                     
                     previousItemFrame = previousItemLayout.containerFrame(at: itemIndex)

@@ -968,16 +968,20 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 var updatedTransition = transition
                 if let tipNode = self.tipNode, tipNode.tip == tip {
                 } else {
-                    if let tipNode = self.tipNode {
-                        self.tipNode = nil
-                        tipNode.removeFromSupernode()
-                    }
+                    let previousTipNode = self.tipNode
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
                     tipNode.requestDismiss = { [weak self] completion in
                         self?.getController()?.dismiss(completion: completion)
                     }
                     self.tipNode = tipNode
+                    
+                    if let previousTipNode = previousTipNode {
+                        previousTipNode.animateTransitionInside(other: tipNode)
+                        previousTipNode.removeFromSupernode()
+                        
+                        tipNode.animateContentIn()
+                    }
                 }
                 
                 if let tipNode = self.tipNode {

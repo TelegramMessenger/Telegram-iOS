@@ -39,8 +39,13 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
             case .premiumGifts:
                 namespace = Namespaces.ItemCollection.CloudPremiumGifts
                 id = 0
-            case .id:
-                break
+            case let .id(_id, _):
+                if info.flags.contains(.isEmoji) {
+                    namespace = Namespaces.ItemCollection.CloudEmojiPacks
+                } else {
+                    namespace = Namespaces.ItemCollection.CloudStickerPacks
+                }
+                id = _id
             default:
                 assertionFailure()
                 break

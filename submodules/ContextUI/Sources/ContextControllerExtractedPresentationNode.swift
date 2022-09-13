@@ -172,6 +172,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     
     private let getController: () -> ContextControllerProtocol?
     private let requestUpdate: (ContainedViewLayoutTransition) -> Void
+    private let requestUpdateOverlayWantsToBeBelowKeyboard: (ContainedViewLayoutTransition) -> Void
     private let requestDismiss: (ContextMenuActionResult) -> Void
     private let requestAnimateOut: (ContextMenuActionResult, @escaping () -> Void) -> Void
     private let source: ContentSource
@@ -208,12 +209,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
     init(
         getController: @escaping () -> ContextControllerProtocol?,
         requestUpdate: @escaping (ContainedViewLayoutTransition) -> Void,
+        requestUpdateOverlayWantsToBeBelowKeyboard: @escaping (ContainedViewLayoutTransition) -> Void,
         requestDismiss: @escaping (ContextMenuActionResult) -> Void,
         requestAnimateOut: @escaping (ContextMenuActionResult, @escaping () -> Void) -> Void,
         source: ContentSource
     ) {
         self.getController = getController
         self.requestUpdate = requestUpdate
+        self.requestUpdateOverlayWantsToBeBelowKeyboard = requestUpdateOverlayWantsToBeBelowKeyboard
         self.requestDismiss = requestDismiss
         self.requestAnimateOut = requestAnimateOut
         self.source = source
@@ -394,6 +397,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.actionsStackNode.increaseHighlightedIndex()
     }
     
+    func wantsDisplayBelowKeyboard() -> Bool {
+        if let reactionContextNode = self.reactionContextNode {
+            return reactionContextNode.wantsDisplayBelowKeyboard()
+        } else {
+            return false
+        }
+    }
+    
     func replaceItems(items: ContextController.Items, animated: Bool) {
         self.actionsStackNode.replace(item: makeContextControllerActionsStackItem(items: items), animated: animated)
     }
@@ -532,6 +543,12 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                             return
                         }
                         strongSelf.requestUpdate(transition)
+                    },
+                    requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition)
                     }
                 )
                 self.reactionContextNode = reactionContextNode

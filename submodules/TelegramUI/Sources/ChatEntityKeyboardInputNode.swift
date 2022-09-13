@@ -195,7 +195,30 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         continue
                     }
                     
-                    let animationData = EntityKeyboardAnimationData(file: item.file)
+                    let animationData: EntityKeyboardAnimationData
+                    
+                    if let thumbnail = featuredStickerPack.info.thumbnail {
+                        let type: EntityKeyboardAnimationData.ItemType
+                        if item.file.isAnimatedSticker {
+                            type = .lottie
+                        } else if item.file.isVideoEmoji || item.file.isVideoSticker {
+                            type = .video
+                        } else {
+                            type = .still
+                        }
+                        
+                        animationData = EntityKeyboardAnimationData(
+                            id: .stickerPackThumbnail(featuredStickerPack.info.id),
+                            type: type,
+                            resource: .stickerPackThumbnail(stickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), resource: thumbnail.resource),
+                            dimensions: thumbnail.dimensions.cgSize,
+                            immediateThumbnailData: featuredStickerPack.info.immediateThumbnailData,
+                            isReaction: false
+                        )
+                    } else {
+                        animationData = EntityKeyboardAnimationData(file: item.file)
+                    }
+                    
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
                         content: .animation(animationData),
@@ -513,6 +536,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 },
                 itemLayoutType: .detailed,
                 warpContentsOnEdges: false,
+                displaySearch: false,
                 enableLongPress: false,
                 selectedItems: Set()
             )
@@ -1095,6 +1119,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             navigationController: { [weak controllerInteraction] in
                 return controllerInteraction?.navigationController()
             },
+            requestUpdate: { _ in
+                
+            },
             sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets in
                 guard let controllerInteraction = controllerInteraction else {
                     return
@@ -1301,6 +1328,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             navigationController: { [weak controllerInteraction] in
                 return controllerInteraction?.navigationController()
             },
+            requestUpdate: { _ in
+                
+            },
             sendSticker: { [weak controllerInteraction] fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets in
                 guard let controllerInteraction = controllerInteraction else {
                     return
@@ -1465,6 +1495,13 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
+    func simulateUpdateLayout(isVisible: Bool) {
+        guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _, isExpanded) = self.currentState else {
+            return
+        }
+        let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
+    }
+    
     override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
         self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
         
@@ -1526,6 +1563,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             component: AnyComponent(EntityKeyboardComponent(
                 theme: interfaceState.theme,
                 strings: interfaceState.strings,
+                isContentInFocus: isVisible,
                 containerInsets: UIEdgeInsets(top: 0.0, left: leftInset, bottom: bottomInset, right: rightInset),
                 topPanelInsets: UIEdgeInsets(),
                 emojiContent: self.currentInputData.emoji,
@@ -1636,7 +1674,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         
         for group in itemGroups {
             if !(group.groupId.base is ItemCollectionId) {
-                updatedGroups.append(group)
+                if group.groupId != AnyHashable("static") {
+                    updatedGroups.append(group)
+                }
             } else {
                 if group.isEmbedded {
                     continue
@@ -2016,6 +2056,9 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             },
             navigationController: {
                 return nil
+            },
+            requestUpdate: { _ in
+                
             },
             sendSticker: nil,
             chatPeerId: nil,

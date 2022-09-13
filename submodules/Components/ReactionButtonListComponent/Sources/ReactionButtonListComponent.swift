@@ -673,7 +673,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     public var activateAfterCompletion: Bool = false {
         didSet {
             if self.activateAfterCompletion {
-                self.contextGesture?.activatedAfterCompletion = { [weak self] point in
+                self.contextGesture?.activatedAfterCompletion = { [weak self] point, _ in
                     guard let strongSelf = self else {
                         return
                     }
@@ -717,7 +717,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         }
         
         if self.activateAfterCompletion {
-            self.contextGesture?.activatedAfterCompletion = { [weak self] point in
+            self.contextGesture?.activatedAfterCompletion = { [weak self] point, _ in
                 guard let strongSelf = self else {
                     return
                 }

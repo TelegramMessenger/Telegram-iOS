@@ -250,6 +250,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     
     private let blurBackground: Bool
     
+    var overlayWantsToBeBelowKeyboard: Bool {
+        if let presentationNode = self.presentationNode {
+            return presentationNode.wantsDisplayBelowKeyboard()
+        } else {
+            return false
+        }
+    }
+    
     init(
         account: Account,
         controller: ContextController,
@@ -624,12 +632,21 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     guard let strongSelf = self else {
                         return
                     }
+                    
                     if let validLayout = strongSelf.validLayout {
                         strongSelf.updateLayout(
                             layout: validLayout,
                             transition: transition,
                             previousActionsContainerNode: nil
                         )
+                    }
+                },
+                requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let controller = strongSelf.getController() {
+                        controller.overlayWantsToBeBelowKeyboardUpdated(transition: transition)
                     }
                 },
                 requestDismiss: { [weak self] result in
@@ -681,6 +698,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             )
                         }
                     },
+                    requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        if let controller = strongSelf.getController() {
+                            controller.overlayWantsToBeBelowKeyboardUpdated(transition: transition)
+                        }
+                    },
                     requestDismiss: { [weak self] result in
                         guard let strongSelf = self else {
                             return
@@ -714,6 +739,14 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             transition: transition,
                             previousActionsContainerNode: nil
                         )
+                    }
+                },
+                requestUpdateOverlayWantsToBeBelowKeyboard: { [weak self] transition in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if let controller = strongSelf.getController() {
+                        controller.overlayWantsToBeBelowKeyboardUpdated(transition: transition)
                     }
                 },
                 requestDismiss: { [weak self] result in
@@ -1524,25 +1557,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
             reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
                 reactionContextNode?.removeFromSupernode()
             })
-        }
-        
-        if !items.reactionItems.isEmpty, let context = items.context, let animationCache = items.animationCache {
-            let reactionContextNode = ReactionContextNode(context: context, animationCache: animationCache, presentationData: self.presentationData, items: items.reactionItems, selectedItems: items.selectedReactionItems, getEmojiContent: items.getEmojiContent, isExpandedUpdated: { _ in }, requestLayout: { _ in })
-            self.reactionContextNode = reactionContextNode
-            self.addSubnode(reactionContextNode)
-            
-            reactionContextNode.reactionSelected = { [weak self] reaction, isLarge in
-                guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
-                    return
-                }
-                controller.reactionSelected?(reaction, isLarge)
-            }
-            reactionContextNode.premiumReactionsSelected = { [weak self] _ in
-                guard let strongSelf = self, let controller = strongSelf.getController() as? ContextController else {
-                    return
-                }
-                controller.premiumReactionsSelected?()
-            }
         }
 
         let previousActionsContainerNode = self.actionsContainerNode
@@ -2507,6 +2521,14 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var animatedDidAppear = false
     private var wasDismissed = false
+    
+    override public var overlayWantsToBeBelowKeyboard: Bool {
+        if self.isNodeLoaded {
+            return self.controllerNode.overlayWantsToBeBelowKeyboard
+        } else {
+            return false
+        }
+    }
     
     private var controllerNode: ContextControllerNode {
         return self.displayNode as! ContextControllerNode
