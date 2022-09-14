@@ -459,7 +459,9 @@ public class CreatePollTextInputItemNode: ListViewItemNode, ASEditableTextNodeDe
     public func editableTextNodeMenu(_ editableTextNode: ASEditableTextNode, forTextRange textRange: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu {
         var actions = suggestedActions
         
-        if let strings = self.item?.presentationData.strings {
+        if editableTextNode.attributedText == nil || editableTextNode.attributedText!.length == 0 || editableTextNode.selectedRange.length == 0 {
+            
+        } else if let strings = self.item?.presentationData.strings {
             let children: [UIAction] = [
                 UIAction(title: strings.TextFormat_Bold, image: nil) { [weak self] (action) in
                     if let strongSelf = self {
