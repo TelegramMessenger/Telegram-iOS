@@ -1913,7 +1913,7 @@ public final class EmojiPagerContentComponent: Component {
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
         public let externalBackground: ExternalBackground?
-        public let externalExpansionView: UIView?
+        public weak var externalExpansionView: UIView?
         public let useOpaqueTheme: Bool
         
         public init(

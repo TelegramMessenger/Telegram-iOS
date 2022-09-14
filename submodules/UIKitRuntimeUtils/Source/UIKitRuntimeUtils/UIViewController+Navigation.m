@@ -139,6 +139,12 @@ static bool notyfyingShiftState = false;
 
 @end
 
+@protocol UIRemoteKeyboardWindowProtocol
+
++ (UIWindow * _Nullable)remoteKeyboardWindowForScreen:(UIScreen * _Nullable)screen create:(BOOL)create;
+
+@end
+
 @implementation UIViewController (Navigation)
 
 + (void)load
@@ -154,6 +160,8 @@ static bool notyfyingShiftState = false;
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentingViewController) newSelector:@selector(_65087dc8_presentingViewController)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(presentViewController:animated:completion:) newSelector:@selector(_65087dc8_presentViewController:animated:completion:)];
         [RuntimeUtils swizzleInstanceMethodOfClass:[UIViewController class] currentSelector:@selector(setNeedsStatusBarAppearanceUpdate) newSelector:@selector(_65087dc8_setNeedsStatusBarAppearanceUpdate)];
+        
+        [RuntimeUtils swizzleClassMethodOfClass:NSClassFromString(@"UIRemoteKeyboardWindow") currentSelector:NSSelectorFromString(@"remoteKeyboardWindowForScreen:create:") newSelector:NSSelectorFromString(@"_65087dc8_remoteKeyboardWindowForScreen:create:")];
         
         if (@available(iOS 15.0, *)) {
             [RuntimeUtils swizzleInstanceMethodOfClass:[CADisplayLink class] currentSelector:@selector(setPreferredFrameRateRange:) newSelector:@selector(_65087dc8_setPreferredFrameRateRange:)];
@@ -289,6 +297,14 @@ static bool notyfyingShiftState = false;
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
     [self setStatusBarHidden:hidden withAnimation:animation];
 #pragma clang diagnostic pop
+}
+
+- (UIWindow * _Nullable)internalGetKeyboard {
+    Class windowClass = NSClassFromString(@"UIRemoteKeyboardWindow");
+    if (!windowClass) {
+        return nil;
+    }
+    return [(id<UIRemoteKeyboardWindowProtocol>)windowClass remoteKeyboardWindowForScreen:[UIScreen mainScreen] create:false];
 }
 
 @end

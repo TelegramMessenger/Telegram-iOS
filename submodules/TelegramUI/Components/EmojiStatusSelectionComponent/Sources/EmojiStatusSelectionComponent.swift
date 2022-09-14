@@ -141,6 +141,9 @@ public final class EmojiStatusSelectionComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+        }
+        
         func update(component: EmojiStatusSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
