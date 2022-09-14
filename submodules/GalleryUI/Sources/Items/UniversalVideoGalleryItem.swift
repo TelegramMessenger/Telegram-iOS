@@ -814,6 +814,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
 
+        self.clipsToBounds = true
+        
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         
         self.footerContentNode.interacting = { [weak self] value in
@@ -964,6 +966,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func ready() -> Signal<Void, NoError> {
         return self._ready.get()
+    }
+    
+    
+    override func screenFrameUpdated(_ frame: CGRect) {
+        let center = frame.midX - self.frame.width / 2.0
+        self.subnodeTransform = CATransform3DMakeTranslation(-center * 0.16, 0.0, 0.0)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
