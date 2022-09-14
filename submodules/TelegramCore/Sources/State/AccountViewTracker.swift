@@ -105,7 +105,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                 
                 return account.postbox.transaction { transaction -> Void in
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     for chat in chats {
                         if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                             peers.append(groupOrChannel)
@@ -114,9 +114,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     for apiUser in users {
                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                             peers.append(user)
-                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                peerPresences[user.id] = presence
-                            }
+                            peerPresences[user.id] = apiUser
                         }
                     }
                     
@@ -696,16 +694,14 @@ public final class AccountViewTracker {
                                 
                                 return account.postbox.transaction { transaction -> [MessageId: ViewCountContextState] in
                                     var peers: [Peer] = []
-                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    var peerPresences: [PeerId: Api.User] = [:]
                                     
                                     var resultStates: [MessageId: ViewCountContextState] = [:]
                                     
                                     for apiUser in users {
                                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                                             peers.append(user)
-                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                                peerPresences[user.id] = presence
-                                            }
+                                            peerPresences[user.id] = apiUser
                                         }
                                     }
                                     for chat in chats {
@@ -1086,7 +1082,7 @@ public final class AccountViewTracker {
                             |> mapToSignal { messages, chats, users -> Signal<Void, NoError> in
                                 return account.postbox.transaction { transaction -> Void in
                                     var peers: [Peer] = []
-                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    var peerPresences: [PeerId: Api.User] = [:]
                                     
                                     for chat in chats {
                                         if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
@@ -1096,9 +1092,7 @@ public final class AccountViewTracker {
                                     for apiUser in users {
                                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                                             peers.append(user)
-                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                                peerPresences[user.id] = presence
-                                            }
+                                            peerPresences[user.id] = apiUser
                                         }
                                     }
                                     

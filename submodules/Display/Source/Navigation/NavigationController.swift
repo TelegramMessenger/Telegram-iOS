@@ -408,6 +408,7 @@ open class NavigationController: UINavigationController, ContainableController, 
             } else {
                 if let statusBarHost = self.statusBarHost, let keyboardWindow = statusBarHost.keyboardWindow, let keyboardView = statusBarHost.keyboardView, !keyboardView.frame.height.isZero, isViewVisibleInHierarchy(keyboardView) {
                     if globalOverlayContainerParent.view.superview != keyboardWindow {
+                        globalOverlayContainerParent.layer.zPosition = 1000.0
                         keyboardWindow.addSubnode(globalOverlayContainerParent)
                     }
                 } else if globalOverlayContainerParent.view.superview !== self.displayNode.view {

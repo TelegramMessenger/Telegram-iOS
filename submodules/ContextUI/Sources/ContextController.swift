@@ -1473,41 +1473,10 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
-    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: @escaping () -> Void) {
         if let presentationNode = self.presentationNode {
-            presentationNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, completion: completion)
-            return
+            presentationNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, reducedCurve: reducedCurve, completion: completion)
         }
-        
-        guard let reactionContextNode = self.reactionContextNode else {
-            self.animateOut(result: .default, completion: completion)
-            return
-        }
-        var contentCompleted = false
-        var reactionCompleted = false
-        let intermediateCompletion: () -> Void = {
-            if contentCompleted && reactionCompleted {
-                completion()
-            }
-        }
-        
-        self.reactionContextNodeIsAnimatingOut = true
-        reactionContextNode.willAnimateOutToReaction(value: value)
-        reactionContextNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, completion: { [weak self] in
-            guard let strongSelf = self else {
-                return
-            }
-            strongSelf.reactionContextNode?.removeFromSupernode()
-            strongSelf.reactionContextNode = nil
-            reactionCompleted = true
-            intermediateCompletion()
-        })
-        self.animateOut(result: .default, completion: {
-            contentCompleted = true
-            intermediateCompletion()
-        })
-        
-        self.isUserInteractionEnabled = false
     }
 
 
@@ -2521,6 +2490,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
     
     private var animatedDidAppear = false
     private var wasDismissed = false
+    private var dismissOnInputClose: (result: ContextMenuActionResult, completion: (() -> Void)?)?
+    private var dismissToReactionOnInputClose: (value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: (() -> Void)?)?
     
     override public var overlayWantsToBeBelowKeyboard: Bool {
         if self.isNodeLoaded {
@@ -2669,6 +2640,20 @@ public final class ContextController: ViewController, StandalonePresentableContr
         super.containerLayoutUpdated(layout, transition: transition)
         
         self.controllerNode.updateLayout(layout: layout, transition: transition, previousActionsContainerNode: nil)
+        
+        if (layout.inputHeight ?? 0.0) == 0.0 {
+            if let dismissOnInputClose = self.dismissOnInputClose {
+                self.dismissOnInputClose = nil
+                DispatchQueue.main.async {
+                    self.dismiss(result: dismissOnInputClose.result, completion: dismissOnInputClose.completion)
+                }
+            } else if let args = self.dismissToReactionOnInputClose {
+                self.dismissToReactionOnInputClose = nil
+                DispatchQueue.main.async {
+                    self.dismissWithReactionImpl(value: args.value, targetView: args.targetView, hideNode: args.hideNode, animateTargetContainer: args.animateTargetContainer, addStandaloneReactionAnimation: args.addStandaloneReactionAnimation, reducedCurve: true, completion: args.completion)
+                }
+            }
+        }
     }
     
     override public func viewDidAppear(_ animated: Bool) {
@@ -2727,8 +2712,15 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     private func dismiss(result: ContextMenuActionResult, completion: (() -> Void)?) {
+        if viewTreeContainsFirstResponder(view: self.view) {
+            self.dismissOnInputClose = (result, completion)
+            self.view.endEditing(true)
+            return
+        }
+        
         if !self.wasDismissed {
             self.wasDismissed = true
+            
             self.controllerNode.animateOut(result: result, completion: { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
                 completion?()
@@ -2751,9 +2743,19 @@ public final class ContextController: ViewController, StandalonePresentableContr
     }
     
     public func dismissWithReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: (() -> Void)?) {
+        self.dismissWithReactionImpl(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, reducedCurve: false, completion: completion)
+    }
+    
+    private func dismissWithReactionImpl(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: (() -> Void)?) {
+        if viewTreeContainsFirstResponder(view: self.view) {
+            self.dismissToReactionOnInputClose = (value, targetView, hideNode, animateTargetContainer, addStandaloneReactionAnimation, completion)
+            self.view.endEditing(true)
+            return
+        }
+        
         if !self.wasDismissed {
             self.wasDismissed = true
-            self.controllerNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, completion: { [weak self] in
+            self.controllerNode.animateOutToReaction(value: value, targetView: targetView, hideNode: hideNode, animateTargetContainer: animateTargetContainer, addStandaloneReactionAnimation: addStandaloneReactionAnimation, reducedCurve: reducedCurve, completion: { [weak self] in
                 self?.presentingViewController?.dismiss(animated: false, completion: nil)
                 completion?()
             })

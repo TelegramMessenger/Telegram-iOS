@@ -480,14 +480,12 @@ public final class EngineMessageReactionListContext {
                         switch result {
                         case let .messageReactionsList(_, count, reactions, chats, users, nextOffset):
                             var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
+                            var peerPresences: [PeerId: Api.User] = [:]
                             
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                             }
                             for chat in chats {
                                 if let peer = parseTelegramGroupOrChannel(chat: chat) {

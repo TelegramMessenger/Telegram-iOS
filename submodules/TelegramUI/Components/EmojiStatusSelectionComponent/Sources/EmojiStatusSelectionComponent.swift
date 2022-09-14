@@ -64,6 +64,8 @@ public final class EmojiStatusSelectionComponent: Component {
     public let emojiContent: EmojiPagerContentComponent
     public let backgroundColor: UIColor
     public let separatorColor: UIColor
+    public let hideTopPanel: Bool
+    public let hideTopPanelUpdated: (Bool, Transition) -> Void
     
     public init(
         theme: PresentationTheme,
@@ -71,7 +73,9 @@ public final class EmojiStatusSelectionComponent: Component {
         deviceMetrics: DeviceMetrics,
         emojiContent: EmojiPagerContentComponent,
         backgroundColor: UIColor,
-        separatorColor: UIColor
+        separatorColor: UIColor,
+        hideTopPanel: Bool,
+        hideTopPanelUpdated: @escaping (Bool, Transition) -> Void
     ) {
         self.theme = theme
         self.strings = strings
@@ -79,6 +83,8 @@ public final class EmojiStatusSelectionComponent: Component {
         self.emojiContent = emojiContent
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
+        self.hideTopPanel = hideTopPanel
+        self.hideTopPanelUpdated = hideTopPanelUpdated
     }
     
     public static func ==(lhs: EmojiStatusSelectionComponent, rhs: EmojiStatusSelectionComponent) -> Bool {
@@ -100,6 +106,9 @@ public final class EmojiStatusSelectionComponent: Component {
         if lhs.separatorColor != rhs.separatorColor {
             return false
         }
+        if lhs.hideTopPanel != rhs.hideTopPanel {
+            return false
+        }
         return true
     }
     
@@ -111,6 +120,7 @@ public final class EmojiStatusSelectionComponent: Component {
         private let panelSeparatorView: UIView
         
         private var component: EmojiStatusSelectionComponent?
+        private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
             self.keyboardView = ComponentView<Empty>()
@@ -131,6 +141,9 @@ public final class EmojiStatusSelectionComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+        }
+        
         func update(component: EmojiStatusSelectionComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
@@ -138,8 +151,9 @@ public final class EmojiStatusSelectionComponent: Component {
             self.panelSeparatorView.backgroundColor = component.separatorColor
             
             self.component = component
+            self.state = state
             
-            let topPanelHeight: CGFloat = 42.0
+            let topPanelHeight: CGFloat = component.hideTopPanel ? 0.0 : 42.0
             
             let keyboardSize = self.keyboardView.update(
                 transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
@@ -158,6 +172,12 @@ public final class EmojiStatusSelectionComponent: Component {
                     externalTopPanelContainer: self.panelHostView,
                     topPanelExtensionUpdated: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
+                    hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.component?.hideTopPanelUpdated(hideTopPanel, transition)
+                    },
                     switchToTextInput: {},
                     switchToGifSubject: { _ in },
                     reorderItems: { _, _ in },
@@ -189,7 +209,7 @@ public final class EmojiStatusSelectionComponent: Component {
                 transition.setFrame(view: self.panelBackgroundView, frame: CGRect(origin: CGPoint(), size: CGSize(width: keyboardSize.width, height: topPanelHeight)))
                 self.panelBackgroundView.update(size: self.panelBackgroundView.bounds.size, transition: transition.containedViewLayoutTransition)
                 
-                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
+                transition.setFrame(view: self.panelSeparatorView, frame: CGRect(origin: CGPoint(x: 0.0, y: component.hideTopPanel ? -UIScreenPixel : topPanelHeight), size: CGSize(width: keyboardSize.width, height: UIScreenPixel)))
             }
             
             return availableSize
@@ -343,7 +363,8 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     requestUpdate: { _ in
                     },
-                    sendSticker: nil,
+                    updateSearchQuery: { _ in
+                    },
                     chatPeerId: nil,
                     peekBehavior: nil,
                     customLayout: nil,
@@ -639,7 +660,9 @@ public final class EmojiStatusSelectionController: ViewController {
                     deviceMetrics: layout.deviceMetrics,
                     emojiContent: emojiContent,
                     backgroundColor: listBackgroundColor,
-                    separatorColor: separatorColor
+                    separatorColor: separatorColor,
+                    hideTopPanel: false,
+                    hideTopPanelUpdated: { _, _ in }
                 )),
                 environment: {},
                 containerSize: CGSize(width: componentWidth, height: min(308.0, layout.size.height))

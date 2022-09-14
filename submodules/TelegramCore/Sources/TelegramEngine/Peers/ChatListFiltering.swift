@@ -633,7 +633,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
         
         return postbox.transaction { transaction -> Void in
             var peers: [Peer] = []
-            var peerPresences: [PeerId: PeerPresence] = [:]
+            var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
@@ -647,9 +647,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
                 
                 var topMessageIds = Set<MessageId>()

@@ -148,9 +148,11 @@ private final class WarpView: UIView {
             self.warpViews[i].update(containerSize: size, rect: rect, transition: transition)
         }
         
-        let frame = CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: CGSize(width: size.width, height: topInset + size.height - 21.0))
+        let clippingTopInset: CGFloat = topInset
+        let frame = CGRect(origin: CGPoint(x: 0.0, y: clippingTopInset), size: CGSize(width: size.width, height: -clippingTopInset + size.height - 21.0))
         transition.setPosition(view: self.clippingView, position: frame.center)
-        transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: -topInset), size: frame.size))
+        transition.setBounds(view: self.clippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: clippingTopInset), size: frame.size))
+        self.clippingView.clipsToBounds = true
         
         transition.setFrame(view: self.warpMaskContainer, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height - allItemsHeight), size: CGSize(width: size.width, height: allItemsHeight)))
         
@@ -1500,73 +1502,213 @@ private final class GroupExpandActionButton: UIButton {
     }
 }
 
-private final class SearchHeaderView: UIView, UITextFieldDelegate {
-    override static var layerClass: AnyClass {
+public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
+    private final class EmojiSearchTextField: UITextField {
+        override func textRect(forBounds bounds: CGRect) -> CGRect {
+            return bounds.integral
+        }
+    }
+    
+    private struct Params: Equatable {
+        var theme: PresentationTheme
+        var strings: PresentationStrings
+        var useOpaqueTheme: Bool
+        var isActive: Bool
+        var size: CGSize
+        
+        static func ==(lhs: Params, rhs: Params) -> Bool {
+            if lhs.theme !== rhs.theme {
+                return false
+            }
+            if lhs.strings !== rhs.strings {
+                return false
+            }
+            if lhs.useOpaqueTheme != rhs.useOpaqueTheme {
+                return false
+            }
+            if lhs.isActive != rhs.isActive {
+                return false
+            }
+            if lhs.size != rhs.size {
+                return false
+            }
+            return true
+        }
+    }
+    
+    override public static var layerClass: AnyClass {
         return PassthroughLayer.self
     }
     
-    private let requestUpdate: () -> Void
+    private let activated: () -> Void
+    private let deactivated: () -> Void
+    private let updateQuery: (String) -> Void
     
-    let tintContainerLayer: SimpleLayer
+    let tintContainerView: UIView
     
     private let backgroundLayer: SimpleLayer
     private let tintBackgroundLayer: SimpleLayer
     
-    private var tapRecognizer: UITapGestureRecognizer?
-    private var textField: UITextField?
+    private let searchIconView: UIImageView
+    private let searchIconTintView: UIImageView
+    private let tintTextView: ComponentView<Empty>
+    private let textView: ComponentView<Empty>
+    private let cancelButtonTintTitle: ComponentView<Empty>
+    private let cancelButtonTitle: ComponentView<Empty>
+    private let cancelButton: HighlightTrackingButton
     
-    var wantsDisplayBelowKeyboard: Bool {
+    private var textField: EmojiSearchTextField?
+    
+    private var tapRecognizer: UITapGestureRecognizer?
+    
+    private var params: Params?
+    
+    public var wantsDisplayBelowKeyboard: Bool {
         return self.textField != nil
     }
     
-    init(requestUpdate: @escaping () -> Void) {
-        self.requestUpdate = requestUpdate
+    init(activated: @escaping () -> Void, deactivated: @escaping () -> Void, updateQuery: @escaping (String) -> Void) {
+        self.activated = activated
+        self.deactivated = deactivated
+        self.updateQuery = updateQuery
         
-        self.tintContainerLayer = SimpleLayer()
+        self.tintContainerView = UIView()
         
         self.backgroundLayer = SimpleLayer()
         self.tintBackgroundLayer = SimpleLayer()
         
+        self.searchIconView = UIImageView()
+        self.searchIconTintView = UIImageView()
+        
+        self.tintTextView = ComponentView()
+        self.textView = ComponentView()
+        self.cancelButtonTintTitle = ComponentView()
+        self.cancelButtonTitle = ComponentView()
+        self.cancelButton = HighlightTrackingButton()
+        
         super.init(frame: CGRect())
         
         self.layer.addSublayer(self.backgroundLayer)
-        self.tintContainerLayer.addSublayer(self.tintBackgroundLayer)
+        self.tintContainerView.layer.addSublayer(self.tintBackgroundLayer)
         
-        (self.layer as? PassthroughLayer)?.mirrorLayer = self.tintContainerLayer
+        self.addSubview(self.searchIconView)
+        self.tintContainerView.addSubview(self.searchIconTintView)
+        
+        self.addSubview(self.cancelButton)
+        self.clipsToBounds = true
+        
+        (self.layer as? PassthroughLayer)?.mirrorLayer = self.tintContainerView.layer
         
         let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
         self.tapRecognizer = tapRecognizer
         self.addGestureRecognizer(tapRecognizer)
+        
+        self.cancelButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    if let cancelButtonTitleView = strongSelf.cancelButtonTitle.view {
+                        cancelButtonTitleView.layer.removeAnimation(forKey: "opacity")
+                        cancelButtonTitleView.alpha = 0.4
+                    }
+                    if let cancelButtonTintTitleView = strongSelf.cancelButtonTintTitle.view {
+                        cancelButtonTintTitleView.layer.removeAnimation(forKey: "opacity")
+                        cancelButtonTintTitleView.alpha = 0.4
+                    }
+                } else {
+                    if let cancelButtonTitleView = strongSelf.cancelButtonTitle.view {
+                        cancelButtonTitleView.alpha = 1.0
+                        cancelButtonTitleView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                    if let cancelButtonTintTitleView = strongSelf.cancelButtonTintTitle.view {
+                        cancelButtonTintTitleView.alpha = 1.0
+                        cancelButtonTintTitleView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
+        }
+        self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), for: .touchUpInside)
     }
     
-    required init?(coder: NSCoder) {
+    required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
-            /*if self.textField == nil {
-                let textField = UITextField(frame: self.backgroundLayer.frame.insetBy(dx: 10.0, dy: 0.0))
+            if self.textField == nil, let textComponentView = self.textView.view {
+                let backgroundFrame = self.backgroundLayer.frame
+                let textFieldFrame = CGRect(origin: CGPoint(x: textComponentView.frame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textComponentView.frame.minX, height: backgroundFrame.height))
+                
+                let textField = EmojiSearchTextField(frame: textFieldFrame)
                 self.textField = textField
                 self.addSubview(textField)
                 textField.delegate = self
-                
-                self.requestUpdate()
-                textField.becomeFirstResponder()
-            }*/
+                textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
+            }
+            
+            self.activated()
+            
+            self.textField?.becomeFirstResponder()
         }
     }
     
-    func textFieldDidBeginEditing(_ textField: UITextField) {
+    @objc private func cancelPressed() {
+        self.updateQuery("")
+        
+        if let textField = self.textField {
+            self.textField = nil
+            
+            textField.resignFirstResponder()
+            textField.removeFromSuperview()
+        }
+        self.deactivated()
     }
     
-    func textFieldDidEndEditing(_ textField: UITextField) {
+    public func textFieldDidBeginEditing(_ textField: UITextField) {
     }
     
-    func update(theme: PresentationTheme, useOpaqueTheme: Bool, title: String, size: CGSize, transition: Transition) {
+    public func textFieldDidEndEditing(_ textField: UITextField) {
+    }
+    
+    @objc private func textFieldChanged(_ textField: UITextField) {
+        self.update(transition: .immediate)
+        
+        self.updateQuery(textField.text ?? "")
+    }
+    
+    private func update(transition: Transition) {
+        guard let params = self.params else {
+            return
+        }
+        self.params = nil
+        self.update(theme: params.theme, strings: params.strings, useOpaqueTheme: params.useOpaqueTheme, isActive: params.isActive, size: params.size, transition: transition)
+    }
+    
+    public func update(theme: PresentationTheme, strings: PresentationStrings, useOpaqueTheme: Bool, isActive: Bool, size: CGSize, transition: Transition) {
+        let params = Params(
+            theme: theme,
+            strings: strings,
+            useOpaqueTheme: useOpaqueTheme,
+            isActive: isActive,
+            size: size
+        )
+        
+        if self.params == params {
+            return
+        }
+        
+        if self.params?.theme !== theme {
+            self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
+            self.searchIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)
+        }
+        
+        self.params = params
+        
         let sideInset: CGFloat = 8.0
         let topInset: CGFloat = 8.0
         let inputHeight: CGFloat = 36.0
+        
+        let sideTextInset: CGFloat = 8.0 + 4.0 + 24.0
         
         if useOpaqueTheme {
             self.backgroundLayer.backgroundColor = theme.chat.inputMediaPanel.panelContentControlOpaqueSelectionColor.cgColor
@@ -1579,14 +1721,112 @@ private final class SearchHeaderView: UIView, UITextFieldDelegate {
         self.backgroundLayer.cornerRadius = inputHeight * 0.5
         self.tintBackgroundLayer.cornerRadius = inputHeight * 0.5
         
-        let backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: size.width - sideInset * 2.0, height: inputHeight))
+        //TODO:localize
+        let textSize = self.textView.update(
+            transition: .immediate,
+            component: AnyComponent(Text(
+                text: "Search Reactions",
+                font: Font.regular(17.0),
+                color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+            )),
+            environment: {},
+            containerSize: CGSize(width: size.width - 32.0, height: 100.0)
+        )
+        let _ = self.tintTextView.update(
+            transition: .immediate,
+            component: AnyComponent(Text(
+                text: "Search Reactions",
+                font: Font.regular(17.0),
+                color: .white
+            )),
+            environment: {},
+            containerSize: CGSize(width: size.width - 32.0, height: 100.0)
+        )
+        let cancelTextSize = self.cancelButtonTitle.update(
+            transition: .immediate,
+            component: AnyComponent(Text(
+                text: strings.Common_Cancel,
+                font: Font.regular(17.0),
+                color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor
+            )),
+            environment: {},
+            containerSize: CGSize(width: size.width - 32.0, height: 100.0)
+        )
+        let _ = self.cancelButtonTintTitle.update(
+            transition: .immediate,
+            component: AnyComponent(Text(
+                text: strings.Common_Cancel,
+                font: Font.regular(17.0),
+                color: .white
+            )),
+            environment: {},
+            containerSize: CGSize(width: size.width - 32.0, height: 100.0)
+        )
+        
+        let cancelButtonSpacing: CGFloat = 8.0
+        
+        var backgroundFrame = CGRect(origin: CGPoint(x: sideInset, y: topInset), size: CGSize(width: size.width - sideInset * 2.0, height: inputHeight))
+        if isActive {
+            backgroundFrame.size.width -= cancelTextSize.width + cancelButtonSpacing
+        }
         transition.setFrame(layer: self.backgroundLayer, frame: backgroundFrame)
         transition.setFrame(layer: self.tintBackgroundLayer, frame: backgroundFrame)
         
-        if let textField = self.textField {
-            textField.textColor = theme.chat.inputMediaPanel.panelContentControlOpaqueOverlayColor
-            textField.frame = backgroundFrame
+        transition.setFrame(view: self.cancelButton, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX, y: 0.0), size: CGSize(width: cancelButtonSpacing + cancelTextSize.width, height: size.height)))
+        
+        var textFrame = CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((backgroundFrame.width - textSize.width) / 2.0), y: backgroundFrame.minY + floor((backgroundFrame.height - textSize.height) / 2.0)), size: textSize)
+        if isActive {
+            textFrame.origin.x = backgroundFrame.minX + sideTextInset
         }
+        
+        if let image = self.searchIconView.image {
+            let iconFrame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
+            transition.setFrame(view: self.searchIconView, frame: iconFrame)
+            transition.setFrame(view: self.searchIconTintView, frame: iconFrame)
+        }
+        
+        if let textComponentView = self.textView.view {
+            if textComponentView.superview == nil {
+                self.addSubview(textComponentView)
+                textComponentView.isUserInteractionEnabled = false
+            }
+            transition.setFrame(view: textComponentView, frame: textFrame)
+        }
+        if let tintTextComponentView = self.tintTextView.view {
+            if tintTextComponentView.superview == nil {
+                self.tintContainerView.addSubview(tintTextComponentView)
+                tintTextComponentView.isUserInteractionEnabled = false
+            }
+            transition.setFrame(view: tintTextComponentView, frame: textFrame)
+        }
+        
+        if let cancelButtonTitleComponentView = self.cancelButtonTitle.view {
+            if cancelButtonTitleComponentView.superview == nil {
+                self.addSubview(cancelButtonTitleComponentView)
+                cancelButtonTitleComponentView.isUserInteractionEnabled = false
+            }
+            transition.setFrame(view: cancelButtonTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
+        }
+        if let cancelButtonTintTitleComponentView = self.cancelButtonTintTitle.view {
+            if cancelButtonTintTitleComponentView.superview == nil {
+                self.tintContainerView.addSubview(cancelButtonTintTitleComponentView)
+                cancelButtonTintTitleComponentView.isUserInteractionEnabled = false
+            }
+            transition.setFrame(view: cancelButtonTintTitleComponentView, frame: CGRect(origin: CGPoint(x: backgroundFrame.maxX + cancelButtonSpacing, y: floor((size.height - cancelTextSize.height) / 2.0)), size: cancelTextSize))
+        }
+        
+        var hasText = false
+        if let textField = self.textField {
+            textField.textColor = theme.contextMenu.primaryColor
+            transition.setFrame(view: textField, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + sideTextInset, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.width - sideTextInset, height: backgroundFrame.height)))
+            
+            if let text = textField.text, !text.isEmpty {
+                hasText = true
+            }
+        }
+        
+        self.tintTextView.view?.isHidden = hasText
+        self.textView.view?.isHidden = hasText
     }
 }
 
@@ -1668,12 +1908,12 @@ public final class EmojiPagerContentComponent: Component {
         public let presentGlobalOverlayController: (ViewController) -> Void
         public let navigationController: () -> NavigationController?
         public let requestUpdate: (Transition) -> Void
-        public let sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Void)?
+        public let updateSearchQuery: (String) -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
         public let externalBackground: ExternalBackground?
-        public let externalExpansionView: UIView?
+        public weak var externalExpansionView: UIView?
         public let useOpaqueTheme: Bool
         
         public init(
@@ -1688,7 +1928,7 @@ public final class EmojiPagerContentComponent: Component {
             presentGlobalOverlayController: @escaping (ViewController) -> Void,
             navigationController: @escaping () -> NavigationController?,
             requestUpdate: @escaping (Transition) -> Void,
-            sendSticker: ((FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Void)?,
+            updateSearchQuery: @escaping (String) -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -1707,7 +1947,7 @@ public final class EmojiPagerContentComponent: Component {
             self.presentGlobalOverlayController = presentGlobalOverlayController
             self.navigationController = navigationController
             self.requestUpdate = requestUpdate
-            self.sendSticker = sendSticker
+            self.updateSearchQuery = updateSearchQuery
             self.chatPeerId = chatPeerId
             self.peekBehavior = peekBehavior
             self.customLayout = customLayout
@@ -1917,6 +2157,7 @@ public final class EmojiPagerContentComponent: Component {
     public let inputInteractionHolder: InputInteractionHolder
     public let itemGroups: [ItemGroup]
     public let itemLayoutType: ItemLayoutType
+    public let itemContentUniqueId: AnyHashable?
     public let warpContentsOnEdges: Bool
     public let displaySearch: Bool
     public let enableLongPress: Bool
@@ -1931,6 +2172,7 @@ public final class EmojiPagerContentComponent: Component {
         inputInteractionHolder: InputInteractionHolder,
         itemGroups: [ItemGroup],
         itemLayoutType: ItemLayoutType,
+        itemContentUniqueId: AnyHashable?,
         warpContentsOnEdges: Bool,
         displaySearch: Bool,
         enableLongPress: Bool,
@@ -1944,13 +2186,14 @@ public final class EmojiPagerContentComponent: Component {
         self.inputInteractionHolder = inputInteractionHolder
         self.itemGroups = itemGroups
         self.itemLayoutType = itemLayoutType
+        self.itemContentUniqueId = itemContentUniqueId
         self.warpContentsOnEdges = warpContentsOnEdges
         self.displaySearch = displaySearch
         self.enableLongPress = enableLongPress
         self.selectedItems = selectedItems
     }
     
-    public func withUpdatedItemGroups(_ itemGroups: [ItemGroup]) -> EmojiPagerContentComponent {
+    public func withUpdatedItemGroups(itemGroups: [ItemGroup], itemContentUniqueId: AnyHashable?) -> EmojiPagerContentComponent {
         return EmojiPagerContentComponent(
             id: self.id,
             context: self.context,
@@ -1960,6 +2203,7 @@ public final class EmojiPagerContentComponent: Component {
             inputInteractionHolder: self.inputInteractionHolder,
             itemGroups: itemGroups,
             itemLayoutType: self.itemLayoutType,
+            itemContentUniqueId: itemContentUniqueId,
             warpContentsOnEdges: self.warpContentsOnEdges,
             displaySearch: self.displaySearch,
             enableLongPress: self.enableLongPress,
@@ -2067,7 +2311,7 @@ public final class EmojiPagerContentComponent: Component {
             var premiumButtonInset: CGFloat
             var premiumButtonHeight: CGFloat
             
-            init(layoutType: ItemLayoutType, width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], expandedGroupIds: Set<AnyHashable>, curveNearBounds: Bool, displaySearch: Bool, customLayout: CustomLayout?) {
+            init(layoutType: ItemLayoutType, width: CGFloat, containerInsets: UIEdgeInsets, itemGroups: [ItemGroupDescription], expandedGroupIds: Set<AnyHashable>, curveNearBounds: Bool, displaySearch: Bool, isSearchActivated: Bool, customLayout: CustomLayout?) {
                 self.layoutType = layoutType
                 self.width = width
                 
@@ -2758,6 +3002,8 @@ public final class EmojiPagerContentComponent: Component {
         private let shimmerHostView: PortalSourceView?
         private let standaloneShimmerEffect: StandaloneShimmerEffect?
         
+        private var isSearchActivated: Bool = false
+        
         private let backgroundView: BlurredBackgroundView
         private var vibrancyEffectView: UIVisualEffectView?
         public private(set) var mirrorContentClippingView: UIView?
@@ -2770,7 +3016,7 @@ public final class EmojiPagerContentComponent: Component {
         private var effectiveVisibleSize: CGSize = CGSize()
         
         private let placeholdersContainerView: UIView
-        private var visibleSearchHeader: SearchHeaderView?
+        private var visibleSearchHeader: EmojiSearchHeaderView?
         private var visibleItemPlaceholderViews: [ItemLayer.Key: ItemPlaceholderView] = [:]
         private var visibleItemSelectionLayers: [ItemLayer.Key: ItemSelectionLayer] = [:]
         private var visibleItemLayers: [ItemLayer.Key: ItemLayer] = [:]
@@ -2791,6 +3037,8 @@ public final class EmojiPagerContentComponent: Component {
         
         private var contextFocusItemKey: EmojiPagerContentComponent.View.ItemLayer.Key?
         
+        private var contextGesture: ContextGesture?
+        private var tapRecognizer: UITapGestureRecognizer?
         private var longTapRecognizer: UILongPressGestureRecognizer?
         
         override init(frame: CGRect) {
@@ -2806,7 +3054,7 @@ public final class EmojiPagerContentComponent: Component {
             
             self.mirrorContentScrollView = UIView()
             self.mirrorContentScrollView.layer.anchorPoint = CGPoint()
-            self.mirrorContentScrollView.clipsToBounds = false
+            self.mirrorContentScrollView.clipsToBounds = true
             self.scrollView = ContentScrollView(mirrorView: self.mirrorContentScrollView)
             self.scrollView.layer.anchorPoint = CGPoint()
             
@@ -2962,9 +3210,12 @@ public final class EmojiPagerContentComponent: Component {
                 
                 let _ = foundItem
             }
+            self.contextGesture = contextGesture
             self.addGestureRecognizer(contextGesture)
             
-            //self.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
+            let tapRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:)))
+            self.tapRecognizer = tapRecognizer
+            self.addGestureRecognizer(tapRecognizer)
             
             let longTapRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(self.longPressGesture(_:)))
             longTapRecognizer.minimumPressDuration = 0.2
@@ -3125,6 +3376,437 @@ public final class EmojiPagerContentComponent: Component {
             }
         }
         
+        private func scrollToTop() {
+            guard let _ = self.component, let _ = self.pagerEnvironment, let itemLayout = self.itemLayout else {
+                return
+            }
+            if itemLayout.itemGroupLayouts.isEmpty {
+                return
+            }
+            
+            if "".isEmpty {
+                let wasIgnoringScrollingEvents = self.ignoreScrolling
+                self.ignoreScrolling = true
+                self.scrollView.setContentOffset(self.scrollView.contentOffset, animated: false)
+                
+                self.keepTopPanelVisibleUntilScrollingInput = true
+                
+                let scrollPosition: CGFloat = 0.0
+                
+                let offsetDirectionSign: Double = scrollPosition < self.scrollView.bounds.minY ? -1.0 : 1.0
+                
+                var previousVisibleLayers: [ItemLayer.Key: (CALayer, CGRect)] = [:]
+                for (id, layer) in self.visibleItemLayers {
+                    previousVisibleLayers[id] = (layer, layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                var previousVisibleItemSelectionLayers: [ItemLayer.Key: (CALayer, CGRect)] = [:]
+                for (id, layer) in self.visibleItemSelectionLayers {
+                    previousVisibleItemSelectionLayers[id] = (layer, layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                var previousVisiblePlaceholderViews: [ItemLayer.Key: (UIView, CGRect)] = [:]
+                for (id, view) in self.visibleItemPlaceholderViews {
+                    previousVisiblePlaceholderViews[id] = (view, view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                var previousVisibleGroupHeaders: [AnyHashable: (GroupHeaderLayer, CGRect)] = [:]
+                for (id, view) in self.visibleGroupHeaders {
+                    if !self.scrollView.bounds.intersects(view.frame) {
+                        continue
+                    }
+                    previousVisibleGroupHeaders[id] = (view, view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                var previousVisibleGroupBorders: [AnyHashable: (GroupBorderLayer, CGRect)] = [:]
+                for (id, layer) in self.visibleGroupBorders {
+                    previousVisibleGroupBorders[id] = (layer, layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                var previousVisibleGroupPremiumButtons: [AnyHashable: (UIView, CGRect)] = [:]
+                for (id, view) in self.visibleGroupPremiumButtons {
+                    if let view = view.view {
+                        previousVisibleGroupPremiumButtons[id] = (view, view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                    }
+                }
+                var previousVisibleGroupExpandActionButtons: [AnyHashable: (GroupExpandActionButton, CGRect)] = [:]
+                for (id, view) in self.visibleGroupExpandActionButtons {
+                    previousVisibleGroupExpandActionButtons[id] = (view, view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
+                }
+                
+                self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: scrollPosition), size: self.scrollView.bounds.size)
+                self.ignoreScrolling = wasIgnoringScrollingEvents
+                
+                self.updateVisibleItems(transition: .immediate, attemptSynchronousLoads: true, previousItemPositions: nil, updatedItemPositions: nil)
+                
+                var commonItemOffset: CGFloat?
+                var previousVisibleBoundingRect: CGRect?
+                for (id, layerAndFrame) in previousVisibleLayers {
+                    if let layer = self.visibleItemLayers[id] {
+                        if commonItemOffset == nil {
+                            let visibleFrame = layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            commonItemOffset = layerAndFrame.1.minY - visibleFrame.minY
+                        }
+                        break
+                    } else {
+                        if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
+                            previousVisibleBoundingRect = layerAndFrame.1.union(previousVisibleBoundingRectValue)
+                        } else {
+                            previousVisibleBoundingRect = layerAndFrame.1
+                        }
+                    }
+                }
+                
+                for (id, viewAndFrame) in previousVisiblePlaceholderViews {
+                    if let view = self.visibleItemPlaceholderViews[id] {
+                        if commonItemOffset == nil {
+                            let visibleFrame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            commonItemOffset = viewAndFrame.1.minY - visibleFrame.minY
+                        }
+                        break
+                    } else {
+                        if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
+                            previousVisibleBoundingRect = viewAndFrame.1.union(previousVisibleBoundingRectValue)
+                        } else {
+                            previousVisibleBoundingRect = viewAndFrame.1
+                        }
+                    }
+                }
+                
+                for (id, layerAndFrame) in previousVisibleGroupHeaders {
+                    if let view = self.visibleGroupHeaders[id] {
+                        if commonItemOffset == nil, self.scrollView.bounds.intersects(view.frame) {
+                            let visibleFrame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            commonItemOffset = layerAndFrame.1.minY - visibleFrame.minY
+                        }
+                        break
+                    } else {
+                        if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
+                            previousVisibleBoundingRect = layerAndFrame.1.union(previousVisibleBoundingRectValue)
+                        } else {
+                            previousVisibleBoundingRect = layerAndFrame.1
+                        }
+                    }
+                }
+                
+                for (id, viewAndFrame) in previousVisibleGroupPremiumButtons {
+                    if let view = self.visibleGroupPremiumButtons[id]?.view, self.scrollView.bounds.intersects(view.frame) {
+                        if commonItemOffset == nil {
+                            let visibleFrame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            commonItemOffset = viewAndFrame.1.minY - visibleFrame.minY
+                        }
+                        break
+                    } else {
+                        if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
+                            previousVisibleBoundingRect = viewAndFrame.1.union(previousVisibleBoundingRectValue)
+                        } else {
+                            previousVisibleBoundingRect = viewAndFrame.1
+                        }
+                    }
+                }
+                
+                for (id, viewAndFrame) in previousVisibleGroupExpandActionButtons {
+                    if let view = self.visibleGroupExpandActionButtons[id], self.scrollView.bounds.intersects(view.frame) {
+                        if commonItemOffset == nil {
+                            let visibleFrame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            commonItemOffset = viewAndFrame.1.minY - visibleFrame.minY
+                        }
+                        break
+                    } else {
+                        if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
+                            previousVisibleBoundingRect = viewAndFrame.1.union(previousVisibleBoundingRectValue)
+                        } else {
+                            previousVisibleBoundingRect = viewAndFrame.1
+                        }
+                    }
+                }
+                
+                let duration = 0.4
+                let timingFunction = kCAMediaTimingFunctionSpring
+                
+                if let commonItemOffset = commonItemOffset {
+                    for (_, layer) in self.visibleItemLayers {
+                        layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    }
+                    for (id, layerAndFrame) in previousVisibleLayers {
+                        if self.visibleItemLayers[id] != nil {
+                            continue
+                        }
+                        let layer = layerAndFrame.0
+                        self.scrollView.layer.addSublayer(layer)
+                        layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer] _ in
+                            layer?.removeFromSuperlayer()
+                        })
+                    }
+                    
+                    for (_, view) in self.visibleItemPlaceholderViews {
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    }
+                    for (id, viewAndFrame) in previousVisiblePlaceholderViews {
+                        if self.visibleItemPlaceholderViews[id] != nil {
+                            continue
+                        }
+                        let view = viewAndFrame.0
+                        self.placeholdersContainerView.addSubview(view)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    }
+                    
+                    for (_, view) in self.visibleGroupHeaders {
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    }
+                    for (id, viewAndFrame) in previousVisibleGroupHeaders {
+                        if self.visibleGroupHeaders[id] != nil {
+                            continue
+                        }
+                        let view = viewAndFrame.0
+                        self.scrollView.addSubview(view)
+                        let tintContentLayer = view.tintContentLayer
+                        self.mirrorContentScrollView.layer.addSublayer(tintContentLayer)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view, weak tintContentLayer] _ in
+                            view?.removeFromSuperview()
+                            tintContentLayer?.removeFromSuperlayer()
+                        })
+                    }
+                    
+                    for (_, layer) in self.visibleGroupBorders {
+                        layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    }
+                    for (id, layerAndFrame) in previousVisibleGroupBorders {
+                        if self.visibleGroupBorders[id] != nil {
+                            continue
+                        }
+                        let layer = layerAndFrame.0
+                        self.scrollView.layer.addSublayer(layer)
+                        let tintContainerLayer = layer.tintContainerLayer
+                        self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                        layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer, weak tintContainerLayer] _ in
+                            layer?.removeFromSuperlayer()
+                            tintContainerLayer?.removeFromSuperlayer()
+                        })
+                    }
+                    
+                    for (_, view) in self.visibleGroupPremiumButtons {
+                        if let view = view.view {
+                            view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                    }
+                    for (id, viewAndFrame) in previousVisibleGroupPremiumButtons {
+                        if self.visibleGroupPremiumButtons[id] != nil {
+                            continue
+                        }
+                        let view = viewAndFrame.0
+                        self.scrollView.addSubview(view)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view] _ in
+                            view?.removeFromSuperview()
+                        })
+                    }
+                    
+                    for (_, view) in self.visibleGroupExpandActionButtons {
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                    }
+                    for (id, viewAndFrame) in previousVisibleGroupExpandActionButtons {
+                        if self.visibleGroupExpandActionButtons[id] != nil {
+                            continue
+                        }
+                        let view = viewAndFrame.0
+                        self.scrollView.addSubview(view)
+                        let tintContainerLayer = view.tintContainerLayer
+                        self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                        view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view, weak tintContainerLayer] _ in
+                            view?.removeFromSuperview()
+                            tintContainerLayer?.removeFromSuperlayer()
+                        })
+                    }
+                } else if let previousVisibleBoundingRect = previousVisibleBoundingRect {
+                    var updatedVisibleBoundingRect: CGRect?
+                    
+                    for (_, layer) in self.visibleItemLayers {
+                        let frame = layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                        if let updatedVisibleBoundingRectValue = updatedVisibleBoundingRect {
+                            updatedVisibleBoundingRect = frame.union(updatedVisibleBoundingRectValue)
+                        } else {
+                            updatedVisibleBoundingRect = frame
+                        }
+                    }
+                    for (_, view) in self.visibleItemPlaceholderViews {
+                        let frame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                        if let updatedVisibleBoundingRectValue = updatedVisibleBoundingRect {
+                            updatedVisibleBoundingRect = frame.union(updatedVisibleBoundingRectValue)
+                        } else {
+                            updatedVisibleBoundingRect = frame
+                        }
+                    }
+                    for (_, view) in self.visibleGroupHeaders {
+                        if !self.scrollView.bounds.intersects(view.frame) {
+                            continue
+                        }
+                        let frame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                        if let updatedVisibleBoundingRectValue = updatedVisibleBoundingRect {
+                            updatedVisibleBoundingRect = frame.union(updatedVisibleBoundingRectValue)
+                        } else {
+                            updatedVisibleBoundingRect = frame
+                        }
+                    }
+                    for (_, view) in self.visibleGroupPremiumButtons {
+                        if let view = view.view {
+                            if !self.scrollView.bounds.intersects(view.frame) {
+                                continue
+                            }
+                            
+                            let frame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                            if let updatedVisibleBoundingRectValue = updatedVisibleBoundingRect {
+                                updatedVisibleBoundingRect = frame.union(updatedVisibleBoundingRectValue)
+                            } else {
+                                updatedVisibleBoundingRect = frame
+                            }
+                        }
+                    }
+                    for (_, view) in self.visibleGroupExpandActionButtons {
+                        if !self.scrollView.bounds.intersects(view.frame) {
+                            continue
+                        }
+                        
+                        let frame = view.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
+                        if let updatedVisibleBoundingRectValue = updatedVisibleBoundingRect {
+                            updatedVisibleBoundingRect = frame.union(updatedVisibleBoundingRectValue)
+                        } else {
+                            updatedVisibleBoundingRect = frame
+                        }
+                    }
+                    
+                    if let updatedVisibleBoundingRect = updatedVisibleBoundingRect {
+                        var commonItemOffset = updatedVisibleBoundingRect.height * offsetDirectionSign
+                        
+                        if previousVisibleBoundingRect.intersects(updatedVisibleBoundingRect) {
+                            if offsetDirectionSign < 0.0 {
+                                commonItemOffset = previousVisibleBoundingRect.minY - updatedVisibleBoundingRect.maxY
+                            } else {
+                                commonItemOffset = previousVisibleBoundingRect.maxY - updatedVisibleBoundingRect.minY
+                            }
+                        }
+                        
+                        for (_, layer) in self.visibleItemLayers {
+                            layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (_, layer) in self.visibleItemSelectionLayers {
+                            layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (id, layerAndFrame) in previousVisibleLayers {
+                            if self.visibleItemLayers[id] != nil {
+                                continue
+                            }
+                            let layer = layerAndFrame.0
+                            layer.frame = layerAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.layer.addSublayer(layer)
+                            layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer] _ in
+                                layer?.removeFromSuperlayer()
+                            })
+                        }
+                        for (id, layerAndFrame) in previousVisibleItemSelectionLayers {
+                            if self.visibleItemSelectionLayers[id] != nil {
+                                continue
+                            }
+                            let layer = layerAndFrame.0
+                            layer.frame = layerAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.layer.addSublayer(layer)
+                            layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer] _ in
+                                layer?.removeFromSuperlayer()
+                            })
+                        }
+                        
+                        for (_, view) in self.visibleItemPlaceholderViews {
+                            view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (id, viewAndFrame) in previousVisiblePlaceholderViews {
+                            if self.visibleItemPlaceholderViews[id] != nil {
+                                continue
+                            }
+                            let view = viewAndFrame.0
+                            view.frame = viewAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.placeholdersContainerView.addSubview(view)
+                            view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view] _ in
+                                view?.removeFromSuperview()
+                            })
+                        }
+                        
+                        for (_, view) in self.visibleGroupHeaders {
+                            if !self.scrollView.bounds.intersects(view.frame) {
+                                continue
+                            }
+                            view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (id, viewAndFrame) in previousVisibleGroupHeaders {
+                            if self.visibleGroupHeaders[id] != nil {
+                                continue
+                            }
+                            let view = viewAndFrame.0
+                            view.frame = viewAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.addSubview(view)
+                            let tintContentLayer = view.tintContentLayer
+                            self.mirrorContentScrollView.layer.addSublayer(tintContentLayer)
+                            view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view, weak tintContentLayer] _ in
+                                view?.removeFromSuperview()
+                                tintContentLayer?.removeFromSuperlayer()
+                            })
+                        }
+                        
+                        for (_, layer) in self.visibleGroupBorders {
+                            if !self.scrollView.bounds.intersects(layer.frame) {
+                                continue
+                            }
+                            layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (id, layerAndFrame) in previousVisibleGroupBorders {
+                            if self.visibleGroupBorders[id] != nil {
+                                continue
+                            }
+                            let layer = layerAndFrame.0
+                            layer.frame = layerAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.layer.addSublayer(layer)
+                            let tintContainerLayer = layer.tintContainerLayer
+                            self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                            layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer, weak tintContainerLayer] _ in
+                                layer?.removeFromSuperlayer()
+                                tintContainerLayer?.removeFromSuperlayer()
+                            })
+                        }
+                        
+                        for (_, view) in self.visibleGroupPremiumButtons {
+                            if let view = view.view {
+                                view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                            }
+                        }
+                        for (id, viewAndFrame) in previousVisibleGroupPremiumButtons {
+                            if self.visibleGroupPremiumButtons[id] != nil {
+                                continue
+                            }
+                            let view = viewAndFrame.0
+                            view.frame = viewAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.addSubview(view)
+                            view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view] _ in
+                                view?.removeFromSuperview()
+                            })
+                        }
+                        
+                        for (_, view) in self.visibleGroupExpandActionButtons {
+                            view.layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        for (id, viewAndFrame) in previousVisibleGroupExpandActionButtons {
+                            if self.visibleGroupExpandActionButtons[id] != nil {
+                                continue
+                            }
+                            let view = viewAndFrame.0
+                            view.frame = viewAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
+                            self.scrollView.addSubview(view)
+                            let tintContainerLayer = view.tintContainerLayer
+                            self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                            view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak view, weak tintContainerLayer] _ in
+                                view?.removeFromSuperview()
+                                tintContainerLayer?.removeFromSuperlayer()
+                            })
+                        }
+                    }
+                }
+            }
+        }
+        
         public func scrollToItemGroup(id supergroupId: AnyHashable, subgroupId: Int32?) {
             guard let component = self.component, let pagerEnvironment = self.pagerEnvironment, let itemLayout = self.itemLayout else {
                 return
@@ -3258,22 +3940,6 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                     }
-                    
-                    /*for (id, layerAndFrame) in previousVisibleGroupBorders {
-                        if let layer = self.visibleGroupBorders[id] {
-                            if commonItemOffset == nil, self.scrollView.bounds.intersects(layer.frame) {
-                                let visibleFrame = layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY)
-                                commonItemOffset = layerAndFrame.1.minY - visibleFrame.minY
-                            }
-                            break
-                        } else {
-                            if let previousVisibleBoundingRectValue = previousVisibleBoundingRect {
-                                previousVisibleBoundingRect = layerAndFrame.1.union(previousVisibleBoundingRectValue)
-                            } else {
-                                previousVisibleBoundingRect = layerAndFrame.1
-                            }
-                        }
-                    }*/
                     
                     for (id, viewAndFrame) in previousVisibleGroupPremiumButtons {
                         if let view = self.visibleGroupPremiumButtons[id]?.view, self.scrollView.bounds.intersects(view.frame) {
@@ -3600,11 +4266,11 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
-            guard let _ = self.component else {
+            guard let component = self.component else {
                 return
             }
             if case .ended = recognizer.state {
-                /*let locationInScrollView = recognizer.location(in: self.scrollView)
+                let locationInScrollView = recognizer.location(in: self.scrollView)
                 outer: for (id, groupHeader) in self.visibleGroupHeaders {
                     if groupHeader.frame.insetBy(dx: -10.0, dy: -6.0).contains(locationInScrollView) {
                         let groupHeaderPoint = self.scrollView.convert(locationInScrollView, to: groupHeader)
@@ -3612,7 +4278,7 @@ public final class EmojiPagerContentComponent: Component {
                             component.inputInteractionHolder.inputInteraction?.clearGroup(id)
                             return
                         } else {
-                            if groupHeader.tapGesture(recognizer) {
+                            if groupHeader.tapGesture(point: recognizer.location(in: groupHeader)) {
                                 return
                             }
                         }
@@ -3638,7 +4304,7 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
                 
-                let _ = foundItem*/
+                let _ = foundItem
             }
         }
         
@@ -3859,7 +4525,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         private func updateScrollingOffset(isReset: Bool, transition: Transition) {
-            guard let _ = self.component else {
+            guard let component = self.component else {
                 return
             }
 
@@ -3870,7 +4536,7 @@ public final class EmojiPagerContentComponent: Component {
                 let offsetToBottomEdge = max(0.0, scrollView.contentSize.height - currentBounds.maxY)
                 
                 let relativeOffset = scrollView.contentOffset.y - previousScrollingOffsetValue.value
-                //if case .detailed = component.itemLayoutType {
+                if !component.warpContentsOnEdges {
                     self.pagerEnvironment?.onChildScrollingUpdate(PagerComponentChildEnvironment.ContentScrollingUpdate(
                         relativeOffset: relativeOffset,
                         absoluteOffsetToTopEdge: offsetToTopEdge,
@@ -3879,7 +4545,7 @@ public final class EmojiPagerContentComponent: Component {
                         isInteracting: isInteracting,
                         transition: transition
                     ))
-                //}
+                }
             }
             self.previousScrollingOffset = ScrollingOffsetState(value: scrollView.contentOffset.y, isDraggingOrDecelerating: isInteracting)
         }
@@ -3943,33 +4609,6 @@ public final class EmojiPagerContentComponent: Component {
                     transitionHintInstalledGroupId = groupId
                 default:
                     break
-                }
-            }
-            
-            if component.displaySearch {
-                let visibleSearchHeader: SearchHeaderView
-                if let current = self.visibleSearchHeader {
-                    visibleSearchHeader = current
-                } else {
-                    visibleSearchHeader = SearchHeaderView(requestUpdate: { [weak self] in
-                        guard let strongSelf = self else {
-                            return
-                        }
-                        strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
-                    })
-                    self.visibleSearchHeader = visibleSearchHeader
-                    self.scrollView.addSubview(visibleSearchHeader)
-                    self.mirrorContentScrollView.layer.addSublayer(visibleSearchHeader.tintContainerLayer)
-                }
-                
-                let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
-                visibleSearchHeader.update(theme: keyboardChildEnvironment.theme, useOpaqueTheme: useOpaqueTheme, title: keyboardChildEnvironment.strings.Common_Search, size: searchHeaderFrame.size, transition: transition)
-                transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame)
-            } else {
-                if let visibleSearchHeader = self.visibleSearchHeader {
-                    self.visibleSearchHeader = nil
-                    visibleSearchHeader.removeFromSuperview()
-                    visibleSearchHeader.tintContainerLayer.removeFromSuperlayer()
                 }
             }
             
@@ -4723,7 +5362,7 @@ public final class EmojiPagerContentComponent: Component {
         }
         
         public func pagerUpdateBackground(backgroundFrame: CGRect, transition: Transition) {
-            guard let component = self.component, let keyboardChildEnvironment = self.keyboardChildEnvironment else {
+            guard let component = self.component, let keyboardChildEnvironment = self.keyboardChildEnvironment, let pagerEnvironment = self.pagerEnvironment else {
                 return
             }
             
@@ -4743,9 +5382,9 @@ public final class EmojiPagerContentComponent: Component {
                     }
                 }
                 
-                let clippingFrame = CGRect(origin: CGPoint(x: 0.0, y: 42.0), size: CGSize(width: backgroundFrame.width, height: backgroundFrame.height))
+                let clippingFrame = CGRect(origin: CGPoint(x: 0.0, y: pagerEnvironment.containerInsets.top), size: CGSize(width: backgroundFrame.width, height: backgroundFrame.height))
                 transition.setPosition(view: mirrorContentClippingView, position: clippingFrame.center)
-                transition.setBounds(view: mirrorContentClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: 42.0), size: clippingFrame.size))
+                transition.setBounds(view: mirrorContentClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: pagerEnvironment.containerInsets.top), size: clippingFrame.size))
                 
                 if mirrorContentClippingView.superview !== effectContainerView {
                     effectContainerView.addSubview(mirrorContentClippingView)
@@ -4814,6 +5453,12 @@ public final class EmojiPagerContentComponent: Component {
             
             if let longTapRecognizer = self.longTapRecognizer {
                 longTapRecognizer.isEnabled = component.enableLongPress
+            }
+            if let tapRecognizer = self.tapRecognizer {
+                tapRecognizer.isEnabled = component.enableLongPress
+            }
+            if let contextGesture = self.contextGesture {
+                contextGesture.isEnabled = !component.enableLongPress
             }
             
             if let shimmerHostView = self.shimmerHostView {
@@ -4969,7 +5614,7 @@ public final class EmojiPagerContentComponent: Component {
             
             var itemTransition = transition
             
-            let itemLayout = ItemLayout(
+            let extractedExpr = ItemLayout(
                 layoutType: component.itemLayoutType,
                 width: availableSize.width,
                 containerInsets: UIEdgeInsets(top: pagerEnvironment.containerInsets.top + 9.0, left: pagerEnvironment.containerInsets.left, bottom: 9.0 + pagerEnvironment.containerInsets.bottom, right: pagerEnvironment.containerInsets.right),
@@ -4977,13 +5622,18 @@ public final class EmojiPagerContentComponent: Component {
                 expandedGroupIds: self.expandedGroupIds,
                 curveNearBounds: component.warpContentsOnEdges,
                 displaySearch: component.displaySearch,
+                isSearchActivated: self.isSearchActivated,
                 customLayout: component.inputInteractionHolder.inputInteraction?.customLayout
             )
+            let itemLayout = extractedExpr
             if let previousItemLayout = self.itemLayout {
                 if previousItemLayout.width != itemLayout.width {
                     itemTransition = .immediate
                 } else if transition.userData(ContentAnimation.self) == nil {
-                    itemTransition = .immediate
+                    if previousItemLayout.itemInsets.top != itemLayout.itemInsets.top {
+                    } else {
+                        itemTransition = .immediate
+                    }
                 }
             } else {
                 itemTransition = .immediate
@@ -4991,26 +5641,41 @@ public final class EmojiPagerContentComponent: Component {
             self.itemLayout = itemLayout
             
             self.ignoreScrolling = true
-            transition.setPosition(view: self.scrollView, position: CGPoint())
+            
+            let scrollOriginY: CGFloat = 0.0
+            let scrollSize = CGSize(width: availableSize.width, height: availableSize.height)
+            
+            transition.setPosition(view: self.scrollView, position: CGPoint(x: 0.0, y: scrollOriginY))
             let previousSize = self.scrollView.bounds.size
-            self.scrollView.bounds = CGRect(origin: self.scrollView.bounds.origin, size: availableSize)
+            var resetScrolling = false
+            if self.scrollView.bounds.isEmpty && component.displaySearch {
+                resetScrolling = true
+            }
+            if previousComponent?.itemContentUniqueId != component.itemContentUniqueId {
+                resetScrolling = true
+            }
+            self.scrollView.bounds = CGRect(origin: self.scrollView.bounds.origin, size: scrollSize)
             
             let warpHeight: CGFloat = 50.0
+            var topWarpInset = pagerEnvironment.containerInsets.top
+            if self.isSearchActivated {
+                topWarpInset += itemLayout.searchInsets.top + itemLayout.searchHeight
+            }
             if let warpView = self.warpView {
                 transition.setFrame(view: warpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
-                warpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: pagerEnvironment.containerInsets.top, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
+                warpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
             }
             if let mirrorContentWarpView = self.mirrorContentWarpView {
                 transition.setFrame(view: mirrorContentWarpView, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: availableSize))
-                mirrorContentWarpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: pagerEnvironment.containerInsets.top, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
+                mirrorContentWarpView.update(size: CGSize(width: availableSize.width, height: availableSize.height), topInset: topWarpInset, warpHeight: warpHeight, theme: keyboardChildEnvironment.theme, transition: transition)
             }
             
-            if availableSize.height > previousSize.height || transition.animation.isImmediate {
+            if scrollSize.height > previousSize.height || transition.animation.isImmediate {
                 self.boundsChangeTrackerLayer.removeAllAnimations()
                 self.boundsChangeTrackerLayer.bounds = self.scrollView.bounds
                 self.effectiveVisibleSize = self.scrollView.bounds.size
             } else {
-                self.effectiveVisibleSize = CGSize(width: availableSize.width, height: max(self.effectiveVisibleSize.height, availableSize.height))
+                self.effectiveVisibleSize = CGSize(width: scrollSize.width, height: max(self.effectiveVisibleSize.height, scrollSize.height))
                 transition.setBounds(layer: self.boundsChangeTrackerLayer, bounds: self.scrollView.bounds, completion: { [weak self] completed in
                     guard let strongSelf = self else {
                         return
@@ -5081,6 +5746,14 @@ public final class EmojiPagerContentComponent: Component {
                 }
             }
             
+            if resetScrolling {
+                if component.displaySearch && !self.isSearchActivated {
+                    self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 50.0), size: scrollSize)
+                } else {
+                    self.scrollView.bounds = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: scrollSize)
+                }
+            }
+            
             self.ignoreScrolling = false
             
             if calculateUpdatedItemPositions {
@@ -5115,9 +5788,79 @@ public final class EmojiPagerContentComponent: Component {
             }
             
             var attemptSynchronousLoads = !(scrollView.isDragging || scrollView.isDecelerating)
+            if resetScrolling {
+                attemptSynchronousLoads = true
+            }
             if let synchronousLoadBehavior = transition.userData(SynchronousLoadBehavior.self) {
                 if synchronousLoadBehavior.isDisabled {
                     attemptSynchronousLoads = false
+                }
+            }
+            
+            if component.displaySearch {
+                let visibleSearchHeader: EmojiSearchHeaderView
+                if let current = self.visibleSearchHeader {
+                    visibleSearchHeader = current
+                    
+                    if self.isSearchActivated {
+                        if visibleSearchHeader.superview != self {
+                            self.addSubview(visibleSearchHeader)
+                            self.mirrorContentClippingView?.addSubview(visibleSearchHeader.tintContainerView)
+                        }
+                    }
+                } else {
+                    visibleSearchHeader = EmojiSearchHeaderView(activated: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.isSearchActivated = true
+                        strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(true)
+                        strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
+                    }, deactivated: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        strongSelf.scrollToTop()
+                        
+                        strongSelf.isSearchActivated = false
+                        strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
+                        strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
+                    }, updateQuery: { [weak self] query in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.component?.inputInteractionHolder.inputInteraction?.updateSearchQuery(query)
+                    })
+                    self.visibleSearchHeader = visibleSearchHeader
+                    if self.isSearchActivated {
+                        self.addSubview(visibleSearchHeader)
+                        self.mirrorContentClippingView?.addSubview(visibleSearchHeader.tintContainerView)
+                    } else {
+                        self.scrollView.addSubview(visibleSearchHeader)
+                        self.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                    }
+                }
+                
+                let useOpaqueTheme = component.inputInteractionHolder.inputInteraction?.useOpaqueTheme ?? false
+                
+                let searchHeaderFrame = CGRect(origin: CGPoint(x: itemLayout.searchInsets.left, y: itemLayout.searchInsets.top), size: CGSize(width: itemLayout.width - itemLayout.searchInsets.left - itemLayout.searchInsets.right, height: itemLayout.searchHeight))
+                visibleSearchHeader.update(theme: keyboardChildEnvironment.theme, strings: keyboardChildEnvironment.strings, useOpaqueTheme: useOpaqueTheme, isActive: self.isSearchActivated, size: searchHeaderFrame.size, transition: transition)
+                transition.setFrame(view: visibleSearchHeader, frame: searchHeaderFrame, completion: { [weak self] _ in
+                    guard let strongSelf = self, let visibleSearchHeader = strongSelf.visibleSearchHeader else {
+                        return
+                    }
+                    
+                    if !strongSelf.isSearchActivated && visibleSearchHeader.superview != strongSelf.scrollView {
+                        strongSelf.scrollView.addSubview(visibleSearchHeader)
+                        strongSelf.mirrorContentScrollView.addSubview(visibleSearchHeader.tintContainerView)
+                    }
+                })
+            } else {
+                if let visibleSearchHeader = self.visibleSearchHeader {
+                    self.visibleSearchHeader = nil
+                    visibleSearchHeader.removeFromSuperview()
+                    visibleSearchHeader.tintContainerView.removeFromSuperview()
                 }
             }
             
@@ -5832,8 +6575,9 @@ public final class EmojiPagerContentComponent: Component {
                     )
                 },
                 itemLayoutType: .compact,
+                itemContentUniqueId: nil,
                 warpContentsOnEdges: isReactionSelection || isStatusSelection,
-                displaySearch: false,
+                displaySearch: isReactionSelection,
                 enableLongPress: (isReactionSelection && !isQuickReactionSelection) || isStatusSelection,
                 selectedItems: selectedItems
             )

@@ -720,7 +720,15 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     reactionContextNodeTransition = .immediate
                 }
                 reactionContextNodeTransition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size), beginWithCurrentState: true)
-                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0), isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
+                
+                var reactionAnchorRect = contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0)
+                
+                let bottomInset = layout.insets(options: [.input]).bottom
+                if reactionAnchorRect.minY > layout.size.height - bottomInset {
+                    reactionAnchorRect.origin.y = layout.size.height - bottomInset
+                }
+                
+                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: reactionAnchorRect, isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
                 
                 self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - 46.0
             } else {
@@ -1145,7 +1153,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
     }
     
-    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void) {
+    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: @escaping () -> Void) {
         guard let reactionContextNode = self.reactionContextNode else {
             self.requestAnimateOut(.default, completion)
             return
@@ -1162,7 +1170,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         self.reactionContextNodeIsAnimatingOut = true
         reactionContextNode.willAnimateOutToReaction(value: value)
         
-        self.requestAnimateOut(.default, {
+        let result: ContextMenuActionResult
+        if reducedCurve {
+            result = .custom(.animated(duration: 0.5, curve: .spring))
+        } else {
+            result = .default
+        }
+        
+        self.requestAnimateOut(result, {
             contentCompleted = true
             intermediateCompletion()
         })

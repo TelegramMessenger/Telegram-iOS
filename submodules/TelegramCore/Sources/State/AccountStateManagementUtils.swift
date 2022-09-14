@@ -3170,7 +3170,7 @@ func replayFinalState(
                     }
                     
                 }
-                updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
+                updatePeerPresencesClean(transaction: transaction, accountPeerId: accountPeerId, peerPresences: presences)
             case let .UpdateSecretChat(chat, _):
                 updateSecretChat(encryptionProvider: encryptionProvider, accountPeerId: accountPeerId, transaction: transaction, mediaBox: mediaBox, chat: chat, requestData: nil)
             case let .AddSecretMessages(messages):

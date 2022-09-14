@@ -400,7 +400,7 @@ private func updateContactPresences(postbox: Postbox, network: Network, accountP
                         peerPresences[PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))] = TelegramUserPresence(apiStatus: status)
                 }
             }
-            updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
+            updatePeerPresencesClean(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
         }
         |> ignoreValues
     }

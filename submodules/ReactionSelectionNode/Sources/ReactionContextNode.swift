@@ -234,6 +234,9 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
     private var emojiContentDisposable: Disposable?
     
+    private let emojiSearchDisposable = MetaDisposable()
+    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    
     private var horizontalExpandRecognizer: UIPanGestureRecognizer?
     private var horizontalExpandStartLocation: CGPoint?
     private var horizontalExpandDistance: CGFloat = 0.0
@@ -248,6 +251,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var genericReactionEffectDisposable: Disposable?
     private var genericReactionEffect: String?
+    
+    private var isReactionSearchActive: Bool = false
     
     public static func randomGenericReactionEffect(context: AccountContext) -> Signal<String?, NoError> {
         return context.engine.stickers.loadedStickerPack(reference: .emojiGenericAnimations, forceActualized: false)
@@ -404,10 +409,17 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         })
         
         if let getEmojiContent = getEmojiContent {
-            self.emojiContentDisposable = (getEmojiContent(self.animationCache, self.animationRenderer)
-            |> deliverOnMainQueue).start(next: { [weak self] emojiContent in
+            self.emojiContentDisposable = combineLatest(queue: .mainQueue(),
+                getEmojiContent(self.animationCache, self.animationRenderer),
+                self.emojiSearchResult.get()
+            ).start(next: { [weak self] emojiContent, emojiSearchResult in
                 guard let strongSelf = self else {
                     return
+                }
+                
+                var emojiContent = emojiContent
+                if let emojiSearchResult = emojiSearchResult {
+                    emojiContent = emojiContent.withUpdatedItemGroups(itemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id)
                 }
                 
                 strongSelf.emojiContent = emojiContent
@@ -436,7 +448,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             deviceMetrics: DeviceMetrics.iPhone13,
                             emojiContent: emojiContent,
                             backgroundColor: .clear,
-                            separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
+                            separatorColor: strongSelf.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
+                            hideTopPanel: strongSelf.isReactionSearchActive,
+                            hideTopPanelUpdated: { hideTopPanel, transition in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.isReactionSearchActive = hideTopPanel
+                                strongSelf.requestLayout(transition.containedViewLayoutTransition)
+                            }
                         )),
                         environment: {},
                         containerSize: CGSize(width: componentView.bounds.width, height: 300.0)
@@ -456,6 +476,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
         self.availableReactionsDisposable?.dispose()
         self.hasPremiumDisposable?.dispose()
         self.genericReactionEffectDisposable?.dispose()
+        self.emojiSearchDisposable.dispose()
     }
     
     override public func didLoad() {
@@ -830,7 +851,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 expandItemSize = 30.0
                 expandTintOffset = 0.0
             }
-            let baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0) + (self.isExpanded ? (46.0 + 54.0 - 4.0) : 0.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
+            let baseNextFrame = CGRect(origin: CGPoint(x: self.scrollNode.view.bounds.width - expandItemSize - 9.0, y: containerHeight - contentHeight + floor((contentHeight - expandItemSize) / 2.0) + (self.isExpanded ? (46.0) : 0.0)), size: CGSize(width: expandItemSize, height: expandItemSize + self.extensionDistance))
             
             transition.updateFrame(view: expandItemView, frame: baseNextFrame)
             transition.updateFrame(view: expandItemView.tintView, frame: baseNextFrame.offsetBy(dx: 0.0, dy: expandTintOffset))
@@ -931,7 +952,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             visibleItemCount: itemCount
         )
         
-        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? (46.0 + 54.0 - 4.0) : 0.0), size: actualBackgroundFrame.size)
+        var scrollFrame = CGRect(origin: CGPoint(x: 0.0, y: self.isExpanded ? (46.0) : 0.0), size: actualBackgroundFrame.size)
         scrollFrame.origin.y += floorToScreenPixels(self.extensionDistance / 2.0)
         
         transition.updateFrame(node: self.contentContainer, frame: visualBackgroundFrame, beginWithCurrentState: true)
@@ -978,7 +999,15 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         deviceMetrics: DeviceMetrics.iPhone13,
                         emojiContent: emojiContent,
                         backgroundColor: .clear,
-                        separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5)
+                        separatorColor: self.presentationData.theme.list.itemPlainSeparatorColor.withMultipliedAlpha(0.5),
+                        hideTopPanel: self.isReactionSearchActive,
+                        hideTopPanelUpdated: { [weak self] hideTopPanel, transition in
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            strongSelf.isReactionSearchActive = hideTopPanel
+                            strongSelf.requestLayout(transition.containedViewLayoutTransition)
+                        }
                     )),
                     environment: {},
                     containerSize: CGSize(width: actualBackgroundFrame.width, height: 300.0)
@@ -1023,7 +1052,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             if let mirrorContentClippingView = emojiView.mirrorContentClippingView {
                                 mirrorContentClippingView.clipsToBounds = false
-                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: 46.0 + 54.0 - 4.0), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
+                                Transition(transition).animateBoundsOrigin(view: mirrorContentClippingView, from: CGPoint(x: 0.0, y: 46.0), to: CGPoint(), additive: true, completion: { [weak mirrorContentClippingView] _ in
                                     mirrorContentClippingView?.clipsToBounds = true
                                 })
                             }
@@ -1053,7 +1082,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     componentTransition.setFrame(view: componentView, frame: CGRect(origin: componentFrame.origin, size: CGSize(width: componentFrame.width, height: componentFrame.height)))
                     
                     if animateIn {
-                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -(46.0 + 54.0 - 4.0) + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
+                        transition.animatePositionAdditive(layer: componentView.layer, offset: CGPoint(x: 0.0, y: -(46.0) + floorToScreenPixels(self.animateFromExtensionDistance / 2.0)))
                     }
                 }
             }
@@ -1247,7 +1276,116 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition.containedViewLayoutTransition)
             },
-            sendSticker: nil,
+            updateSearchQuery: { [weak self] query in
+                guard let strongSelf = self else {
+                    return
+                }
+                
+                if query.isEmpty {
+                    strongSelf.emojiSearchDisposable.set(nil)
+                    strongSelf.emojiSearchResult.set(.single(nil))
+                } else {
+                    let context = strongSelf.context
+                    
+                    let languageCode = "en"
+                    var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: query.count < 2)
+                    if !languageCode.lowercased().hasPrefix("en") {
+                        signal = signal
+                        |> mapToSignal { keywords in
+                            return .single(keywords)
+                            |> then(
+                                context.engine.stickers.searchEmojiKeywords(inputLanguageCode: "en-US", query: query, completeMatch: query.count < 3)
+                                |> map { englishKeywords in
+                                    return keywords + englishKeywords
+                                }
+                            )
+                        }
+                    }
+                
+                    let hasPremium = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                    |> map { peer -> Bool in
+                        guard case let .user(user) = peer else {
+                            return false
+                        }
+                        return user.isPremium
+                    }
+                    |> distinctUntilChanged
+                    
+                    let resultSignal = signal
+                    |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                        return combineLatest(
+                            context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                            hasPremium
+                        )
+                        |> map { view, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
+                            var result: [(String, TelegramMediaFile?, String)] = []
+                            
+                            var allEmoticons: [String: String] = [:]
+                            for keyword in keywords {
+                                for emoticon in keyword.emoticons {
+                                    allEmoticons[emoticon] = keyword.keyword
+                                }
+                            }
+                            
+                            for entry in view.entries {
+                                guard let item = entry.item as? StickerPackItem else {
+                                    continue
+                                }
+                                for attribute in item.file.attributes {
+                                    switch attribute {
+                                    case let .CustomEmoji(_, alt, _):
+                                        if !alt.isEmpty, let keyword = allEmoticons[alt] {
+                                            if !item.file.isPremiumEmoji || hasPremium {
+                                                result.append((alt, item.file, keyword))
+                                            }
+                                        }
+                                    default:
+                                        break
+                                    }
+                                }
+                            }
+                            
+                            for keyword in keywords {
+                                for emoticon in keyword.emoticons {
+                                    result.append((emoticon, nil, keyword.keyword))
+                                }
+                            }
+                            
+                            var items: [EmojiPagerContentComponent.Item] = []
+                            
+                            var existingIds = Set<MediaId>()
+                            for item in result {
+                                if let itemFile = item.1 {
+                                    if existingIds.contains(itemFile.fileId) {
+                                        continue
+                                    }
+                                    existingIds.insert(itemFile.fileId)
+                                    let animationData = EntityKeyboardAnimationData(file: itemFile)
+                                    let item = EmojiPagerContentComponent.Item(
+                                        animationData: animationData,
+                                        content: .animation(animationData),
+                                        itemFile: itemFile, subgroupId: nil,
+                                        icon: .none,
+                                        accentTint: false
+                                    )
+                                    items.append(item)
+                                }
+                            }
+                            
+                            return [EmojiPagerContentComponent.ItemGroup(
+                                supergroupId: "search", groupId: "search", title: nil, subtitle: nil, actionButtonTitle: nil, isFeatured: false, isPremiumLocked: false, isEmbedded: false, hasClear: false, collapsedLineCount: nil, displayPremiumBadges: false, headerItem: nil, items: items)]
+                        }
+                    }
+                    
+                    strongSelf.emojiSearchDisposable.set((resultSignal
+                    |> deliverOnMainQueue).start(next: { result in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                    }))
+                }
+            },
             chatPeerId: nil,
             peekBehavior: nil,
             customLayout: emojiContentLayout,

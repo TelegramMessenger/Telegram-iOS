@@ -1537,7 +1537,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             } else if peer.isFake {
                                 currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                             } else if peer.isVerified {
-                                currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                                currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                             }
@@ -1553,7 +1553,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else if peer.isFake {
                         currentCredibilityIconContent = .text(color: item.presentationData.theme.chat.message.incoming.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
                     } else if peer.isVerified {
-                        currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                        currentCredibilityIconContent = .verified(fillColor: item.presentationData.theme.list.itemCheckColors.fillColor, foregroundColor: item.presentationData.theme.list.itemCheckColors.foregroundColor, sizeType: .compact)
                     } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled {
                         currentCredibilityIconContent = .premium(color: item.presentationData.theme.list.itemAccentColor)
                     }
