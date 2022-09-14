@@ -43,26 +43,26 @@ public func addSavedSticker(postbox: Postbox, network: Network, file: TelegramMe
             if case let .Sticker(_, maybePackReference, _) = attribute, let packReference = maybePackReference {
                 var fetchReference: StickerPackReference?
                 switch packReference {
-                    case .name:
+                case .name:
+                    fetchReference = packReference
+                case let .id(id, _):
+                    let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
+                    var found = false
+                inner: for item in items {
+                    if let stickerItem = item as? StickerPackItem {
+                        if stickerItem.file.fileId == file.fileId {
+                            let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
+                            found = true
+                            addSavedSticker(transaction: transaction, file: stickerItem.file, stringRepresentations: stringRepresentations)
+                            break inner
+                        }
+                    }
+                }
+                    if !found {
                         fetchReference = packReference
-                    case let .id(id, _):
-                        let items = transaction.getItemCollectionItems(collectionId: ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id))
-                        var found = false
-                        inner: for item in items {
-                            if let stickerItem = item as? StickerPackItem {
-                                if stickerItem.file.fileId == file.fileId {
-                                    let stringRepresentations = stickerItem.getStringRepresentationsOfIndexKeys()
-                                    found = true
-                                    addSavedSticker(transaction: transaction, file: stickerItem.file, stringRepresentations: stringRepresentations)
-                                    break inner
-                                }
-                            }
-                        }
-                        if !found {
-                            fetchReference = packReference
-                        }
-                    case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts:
-                        break
+                    }
+                case .animatedEmoji, .animatedEmojiAnimations, .dice, .premiumGifts, .emojiGenericAnimations, .iconStatusEmoji:
+                    break
                 }
                 if let fetchReference = fetchReference {
                     return network.request(Api.functions.messages.getStickerSet(stickerset: fetchReference.apiInputStickerSet, hash: 0))

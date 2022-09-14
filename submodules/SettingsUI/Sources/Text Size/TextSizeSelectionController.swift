@@ -13,6 +13,8 @@ import WallpaperResources
 import LegacyComponents
 import ItemListUI
 import WallpaperBackgroundNode
+import AnimationCache
+import MultiAnimationRenderer
 
 private func generateMaskImage(color: UIColor) -> UIImage? {
     return generateImage(CGSize(width: 1.0, height: 80.0), opaque: false, rotatedContext: { size, context in
@@ -33,6 +35,9 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     private let context: AccountContext
     private var presentationThemeSettings: PresentationThemeSettings
     private var presentationData: PresentationData
+    
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
     
     private let referenceTimestamp: Int32
     
@@ -57,6 +62,9 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationThemeSettings = presentationThemeSettings
+        
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         let calendar = Calendar(identifier: .gregorian)
         var components = calendar.dateComponents(Set([.era, .year, .month, .day, .hour, .minute, .second]), from: Date())
@@ -210,7 +218,7 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
     private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var items: [ChatListItem] = []
         
-        let interaction = ChatListNodeInteraction(context: self.context, activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+        let interaction = ChatListNodeInteraction(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
         }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in
         }, activateChatPreview: { _, _, gesture, _ in
             gesture?.cancel()

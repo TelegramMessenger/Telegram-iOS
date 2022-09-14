@@ -458,6 +458,30 @@ public func stringAndActivityForUserPresence(strings: PresentationStrings, dateT
     }
 }
 
+public func peerStatusExpirationString(statusTimestamp: Int32, relativeTo timestamp: Int32, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat) -> String {
+    let difference = max(statusTimestamp - timestamp, 60)
+    if difference < 60 * 60 {
+        return strings.PeerStatusExpiration_Minutes(Int32(round(Double(difference) / Double(60))))
+    } else if difference < 24 * 60 * 60 {
+        return strings.PeerStatusExpiration_Hours(Int32(round(Double(difference) / Double(60 * 60))))
+    } else {
+        var t: time_t = time_t(statusTimestamp)
+        var timeinfo: tm = tm()
+        localtime_r(&t, &timeinfo)
+        
+        var now: time_t = time_t(timestamp)
+        var timeinfoNow: tm = tm()
+        localtime_r(&now, &timeinfoNow)
+        
+        let dayDifference = timeinfo.tm_yday - timeinfoNow.tm_yday
+        if dayDifference == 1 {
+            return strings.PeerStatusExpiration_TomorrowAt(stringForShortTimestamp(hours: timeinfo.tm_hour, minutes: timeinfo.tm_min, dateTimeFormat: dateTimeFormat)).string
+        } else {
+            return strings.PeerStatusExpiration_AtDate(stringForTimestamp(day: timeinfo.tm_mday, month: timeinfo.tm_mon + 1, dateTimeFormat: dateTimeFormat)).string
+        }
+    }
+}
+
 public func userPresenceStringRefreshTimeout(_ presence: TelegramUserPresence, relativeTo timestamp: Int32) -> Double {
     switch presence.status {
     case let .present(statusTimestamp):

@@ -682,7 +682,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     var accessibilityData: ChatMessageAccessibilityData?
     var safeInsets = UIEdgeInsets()
     
-    var awaitingAppliedReaction: (String?, () -> Void)?
+    var awaitingAppliedReaction: (MessageReaction.Reaction?, () -> Void)?
     
     public required convenience init() {
         self.init(layerBacked: false)
@@ -808,7 +808,11 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .text:
                     item.controllerInteraction.sendMessage(button.title)
                 case let .url(url):
-                    item.controllerInteraction.openUrl(url, true, nil, nil)
+                    var concealed = true
+                    if url.hasPrefix("tg://") {
+                        concealed = false
+                    }
+                    item.controllerInteraction.openUrl(url, concealed, nil, nil)
                 case .requestMap:
                     item.controllerInteraction.shareCurrentLocation()
                 case .requestPhone:
@@ -847,7 +851,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                 case .setupPoll:
                     break
                 case let .openUserProfile(peerId):
-                    item.controllerInteraction.openPeer(peerId, .info, nil, nil)
+                    item.controllerInteraction.openPeer(peerId, .info, nil, false, nil)
                 case let .openWebView(url, simple):
                     item.controllerInteraction.openWebView(button.title, url, simple, false)
             }
@@ -868,7 +872,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
     func openMessageContextMenu() {
     }
     
-    public func targetReactionView(value: String) -> UIView? {
+    public func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         return nil
     }
     

@@ -759,6 +759,8 @@ public final class PresentationThemeBubbleColorComponents {
     public let reactionInactiveForeground: UIColor
     public let reactionActiveBackground: UIColor
     public let reactionActiveForeground: UIColor
+    public let reactionInactiveMediaPlaceholder: UIColor
+    public let reactionActiveMediaPlaceholder: UIColor
     
     public init(
         fill: [UIColor],
@@ -768,7 +770,9 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveBackground: UIColor,
         reactionInactiveForeground: UIColor,
         reactionActiveBackground: UIColor,
-        reactionActiveForeground: UIColor
+        reactionActiveForeground: UIColor,
+        reactionInactiveMediaPlaceholder: UIColor,
+        reactionActiveMediaPlaceholder: UIColor
     ) {
         self.fill = fill
         self.highlightedFill = highlightedFill
@@ -778,6 +782,8 @@ public final class PresentationThemeBubbleColorComponents {
         self.reactionInactiveForeground = reactionInactiveForeground
         self.reactionActiveBackground = reactionActiveBackground
         self.reactionActiveForeground = reactionActiveForeground
+        self.reactionInactiveMediaPlaceholder = reactionInactiveMediaPlaceholder
+        self.reactionActiveMediaPlaceholder = reactionActiveMediaPlaceholder
     }
     
     public func withUpdated(
@@ -787,7 +793,9 @@ public final class PresentationThemeBubbleColorComponents {
         reactionInactiveBackground: UIColor? = nil,
         reactionInactiveForeground: UIColor? = nil,
         reactionActiveBackground: UIColor? = nil,
-        reactionActiveForeground: UIColor? = nil
+        reactionActiveForeground: UIColor? = nil,
+        reactionInactiveMediaPlaceholder: UIColor? = nil,
+        reactionActiveMediaPlaceholder: UIColor? = nil
     ) -> PresentationThemeBubbleColorComponents {
         return PresentationThemeBubbleColorComponents(
             fill: fill ?? self.fill,
@@ -797,7 +805,9 @@ public final class PresentationThemeBubbleColorComponents {
             reactionInactiveBackground: reactionInactiveBackground ?? self.reactionInactiveBackground,
             reactionInactiveForeground: reactionInactiveForeground ?? self.reactionInactiveForeground,
             reactionActiveBackground: reactionActiveBackground ?? self.reactionActiveBackground,
-            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground
+            reactionActiveForeground: reactionActiveForeground ?? self.reactionActiveForeground,
+            reactionInactiveMediaPlaceholder: reactionInactiveMediaPlaceholder ?? self.reactionInactiveMediaPlaceholder,
+            reactionActiveMediaPlaceholder: reactionActiveMediaPlaceholder ?? self.reactionActiveMediaPlaceholder
         )
     }
 }
@@ -1144,6 +1154,10 @@ public final class PresentationThemeInputMediaPanel {
     public let panelHighlightedIconBackgroundColor: UIColor
     public let panelHighlightedIconColor: UIColor
     public let panelContentVibrantOverlayColor: UIColor
+    public let panelContentControlVibrantOverlayColor: UIColor
+    public let panelContentControlVibrantSelectionColor: UIColor
+    public let panelContentControlOpaqueOverlayColor: UIColor
+    public let panelContentControlOpaqueSelectionColor: UIColor
     public let stickersBackgroundColor: UIColor
     public let stickersSectionTextColor: UIColor
     public let stickersSearchBackgroundColor: UIColor
@@ -1153,12 +1167,34 @@ public final class PresentationThemeInputMediaPanel {
     public let gifsBackgroundColor: UIColor
     public let backgroundColor: UIColor
     
-    public init(panelSeparatorColor: UIColor, panelIconColor: UIColor, panelHighlightedIconBackgroundColor: UIColor, panelHighlightedIconColor: UIColor, panelContentVibrantOverlayColor: UIColor, stickersBackgroundColor: UIColor, stickersSectionTextColor: UIColor, stickersSearchBackgroundColor: UIColor, stickersSearchPlaceholderColor: UIColor, stickersSearchPrimaryColor: UIColor, stickersSearchControlColor: UIColor, gifsBackgroundColor: UIColor, backgroundColor: UIColor) {
+    public init(
+        panelSeparatorColor: UIColor,
+        panelIconColor: UIColor,
+        panelHighlightedIconBackgroundColor: UIColor,
+        panelHighlightedIconColor: UIColor,
+        panelContentVibrantOverlayColor: UIColor,
+        panelContentControlVibrantOverlayColor: UIColor,
+        panelContentControlVibrantSelectionColor: UIColor,
+        panelContentControlOpaqueOverlayColor: UIColor,
+        panelContentControlOpaqueSelectionColor: UIColor,
+        stickersBackgroundColor: UIColor,
+        stickersSectionTextColor: UIColor,
+        stickersSearchBackgroundColor: UIColor,
+        stickersSearchPlaceholderColor: UIColor,
+        stickersSearchPrimaryColor: UIColor,
+        stickersSearchControlColor: UIColor,
+        gifsBackgroundColor: UIColor,
+        backgroundColor: UIColor
+    ) {
         self.panelSeparatorColor = panelSeparatorColor
         self.panelIconColor = panelIconColor
         self.panelHighlightedIconBackgroundColor = panelHighlightedIconBackgroundColor
         self.panelHighlightedIconColor = panelHighlightedIconColor
         self.panelContentVibrantOverlayColor = panelContentVibrantOverlayColor
+        self.panelContentControlVibrantOverlayColor = panelContentControlVibrantOverlayColor
+        self.panelContentControlVibrantSelectionColor = panelContentControlVibrantSelectionColor
+        self.panelContentControlOpaqueOverlayColor = panelContentControlOpaqueOverlayColor
+        self.panelContentControlOpaqueSelectionColor = panelContentControlOpaqueSelectionColor
         self.stickersBackgroundColor = stickersBackgroundColor
         self.stickersSectionTextColor = stickersSectionTextColor
         self.stickersSearchBackgroundColor = stickersSearchBackgroundColor
@@ -1169,8 +1205,43 @@ public final class PresentationThemeInputMediaPanel {
         self.backgroundColor = backgroundColor
     }
     
-    public func withUpdated(panelSeparatorColor: UIColor? = nil, panelIconColor: UIColor? = nil, panelHighlightedIconBackgroundColor: UIColor? = nil, panelHighlightedIconColor: UIColor? = nil, panelContentVibrantOverlayColor: UIColor? = nil, stickersBackgroundColor: UIColor? = nil, stickersSectionTextColor: UIColor? = nil, stickersSearchBackgroundColor: UIColor? = nil, stickersSearchPlaceholderColor: UIColor? = nil, stickersSearchPrimaryColor: UIColor? = nil, stickersSearchControlColor: UIColor? = nil, gifsBackgroundColor: UIColor? = nil, backgroundColor: UIColor? = nil) -> PresentationThemeInputMediaPanel {
-        return PresentationThemeInputMediaPanel(panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor, panelIconColor: panelIconColor ?? self.panelIconColor, panelHighlightedIconBackgroundColor: panelHighlightedIconBackgroundColor ?? self.panelHighlightedIconBackgroundColor, panelHighlightedIconColor: panelHighlightedIconColor ?? self.panelHighlightedIconColor, panelContentVibrantOverlayColor: panelContentVibrantOverlayColor ?? self.panelContentVibrantOverlayColor, stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor, stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor, stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor, stickersSearchPlaceholderColor: stickersSearchPlaceholderColor ?? self.stickersSearchPlaceholderColor, stickersSearchPrimaryColor: stickersSearchPrimaryColor ?? self.stickersSearchPrimaryColor, stickersSearchControlColor: stickersSearchControlColor ?? self.stickersSearchControlColor, gifsBackgroundColor: gifsBackgroundColor ?? self.gifsBackgroundColor, backgroundColor: backgroundColor ?? self.backgroundColor)
+    public func withUpdated(
+        panelSeparatorColor: UIColor? = nil,
+        panelIconColor: UIColor? = nil,
+        panelHighlightedIconBackgroundColor: UIColor? = nil,
+        panelHighlightedIconColor: UIColor? = nil,
+        panelContentVibrantOverlayColor: UIColor? = nil,
+        panelContentControlVibrantOverlayColor: UIColor? = nil,
+        panelContentControlVibrantSelectionColor: UIColor? = nil,
+        panelContentControlOpaqueOverlayColor: UIColor? = nil,
+        panelContentControlOpaqueSelectionColor: UIColor? = nil,
+        stickersBackgroundColor: UIColor? = nil,
+        stickersSectionTextColor: UIColor? = nil,
+        stickersSearchBackgroundColor: UIColor? = nil,
+        stickersSearchPlaceholderColor: UIColor? = nil,
+        stickersSearchPrimaryColor: UIColor? = nil,
+        stickersSearchControlColor: UIColor? = nil,
+        gifsBackgroundColor: UIColor? = nil,
+        backgroundColor: UIColor? = nil
+    ) -> PresentationThemeInputMediaPanel {
+        return PresentationThemeInputMediaPanel(
+            panelSeparatorColor: panelSeparatorColor ?? self.panelSeparatorColor,
+            panelIconColor: panelIconColor ?? self.panelIconColor,
+            panelHighlightedIconBackgroundColor: panelHighlightedIconBackgroundColor ?? self.panelHighlightedIconBackgroundColor,
+            panelHighlightedIconColor: panelHighlightedIconColor ?? self.panelHighlightedIconColor,
+            panelContentVibrantOverlayColor: panelContentVibrantOverlayColor ?? self.panelContentVibrantOverlayColor,
+            panelContentControlVibrantOverlayColor: panelContentControlVibrantOverlayColor ?? self.panelContentControlVibrantOverlayColor,
+            panelContentControlVibrantSelectionColor: panelContentControlVibrantSelectionColor ?? self.panelContentControlVibrantSelectionColor,
+            panelContentControlOpaqueOverlayColor: panelContentControlOpaqueOverlayColor ?? self.panelContentControlOpaqueOverlayColor,
+            panelContentControlOpaqueSelectionColor: panelContentControlOpaqueSelectionColor ?? self.panelContentControlOpaqueSelectionColor,
+            stickersBackgroundColor: stickersBackgroundColor ?? self.stickersBackgroundColor,
+            stickersSectionTextColor: stickersSectionTextColor ?? self.stickersSectionTextColor,
+            stickersSearchBackgroundColor: stickersSearchBackgroundColor ?? self.stickersSearchBackgroundColor,
+            stickersSearchPlaceholderColor: stickersSearchPlaceholderColor ?? self.stickersSearchPlaceholderColor,
+            stickersSearchPrimaryColor: stickersSearchPrimaryColor ?? self.stickersSearchPrimaryColor, stickersSearchControlColor: stickersSearchControlColor ?? self.stickersSearchControlColor,
+            gifsBackgroundColor: gifsBackgroundColor ?? self.gifsBackgroundColor,
+            backgroundColor: backgroundColor ?? self.backgroundColor
+        )
     }
 }
 

@@ -569,7 +569,7 @@ private final class DemoSheetContent: CombinedComponent {
                 stickerOverrideMessages
             )
             |> map { reactions, items, data, reactionOverrideMessages, stickerOverrideMessages -> ([AvailableReactions.Reaction], [TelegramMediaFile], Bool?, PremiumPromoConfiguration?) in
-                var reactionOverrides: [String: TelegramMediaFile] = [:]
+                var reactionOverrides: [MessageReaction.Reaction: TelegramMediaFile] = [:]
                 for item in accountSpecificReactionOverrides {
                     if let maybeMessage = reactionOverrideMessages[item.messageId], let message = maybeMessage {
                         for media in message.media {
@@ -580,7 +580,7 @@ private final class DemoSheetContent: CombinedComponent {
                     }
                 }
                 
-                var stickerOverrides: [String: TelegramMediaFile] = [:]
+                var stickerOverrides: [MessageReaction.Reaction: TelegramMediaFile] = [:]
                 for item in accountSpecificStickerOverrides {
                     if let maybeMessage = stickerOverrideMessages[item.messageId], let message = maybeMessage {
                         for media in message.media {
@@ -623,7 +623,7 @@ private final class DemoSheetContent: CombinedComponent {
                         for attribute in file.attributes {
                             switch attribute {
                             case let .Sticker(displayText, _, _):
-                                if let replacementFile = stickerOverrides[displayText], let dimensions = replacementFile.dimensions {
+                                if let replacementFile = stickerOverrides[.builtin(displayText)], let dimensions = replacementFile.dimensions {
                                     let _ = dimensions
                                     return TelegramMediaFile(
                                         fileId: file.fileId,
@@ -712,7 +712,7 @@ private final class DemoSheetContent: CombinedComponent {
                 isStandalone = true
             }
             
-            if let reactions = state.reactions, let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
+            if let stickers = state.stickers, let appIcons = state.appIcons, let configuration = state.promoConfiguration {
                 let textColor = theme.actionSheet.primaryTextColor
                 
                 var availableItems: [PremiumPerk: DemoPagerComponent.Item] = [:]
@@ -794,15 +794,14 @@ private final class DemoSheetContent: CombinedComponent {
                         id: PremiumDemoScreen.Subject.uniqueReactions,
                         component: AnyComponent(
                             PageComponent(
-                                content: AnyComponent(
-                                    ReactionsCarouselComponent(
-                                        context: component.context,
-                                        theme: environment.theme,
-                                        reactions: reactions
-                                    )
-                                ),
-                                title: isStandalone ? strings.Premium_ReactionsStandalone : strings.Premium_Reactions,
-                                text: isStandalone ? strings.Premium_ReactionsStandaloneInfo : strings.Premium_ReactionsInfo,
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["infinite_reactions"],
+                                    decoration: .swirlStars
+                                )),
+                                title: strings.Premium_InfiniteReactions,
+                                text: strings.Premium_InfiniteReactionsInfo,
                                 textColor: textColor
                             )
                         )
@@ -821,6 +820,24 @@ private final class DemoSheetContent: CombinedComponent {
                                 ),
                                 title: strings.Premium_Stickers,
                                 text: strings.Premium_StickersInfo,
+                                textColor: textColor
+                            )
+                        )
+                    )
+                )
+                availableItems[.emojiStatus] = DemoPagerComponent.Item(
+                    AnyComponentWithIdentity(
+                        id: PremiumDemoScreen.Subject.emojiStatus,
+                        component: AnyComponent(
+                            PageComponent(
+                                content: AnyComponent(PhoneDemoComponent(
+                                    context: component.context,
+                                    position: .top,
+                                    videoFile: configuration.videos["emoji_status"],
+                                    decoration: .badgeStars
+                                )),
+                                title: strings.Premium_EmojiStatus,
+                                text: strings.Premium_EmojiStatusInfo,
                                 textColor: textColor
                             )
                         )
@@ -919,7 +936,7 @@ private final class DemoSheetContent: CombinedComponent {
                 var items: [DemoPagerComponent.Item] = component.order.compactMap { availableItems[$0] }
                 let index: Int
                 switch component.source {
-                    case .intro:
+                    case .intro, .gift:
                         index = items.firstIndex(where: { (component.subject as AnyHashable) == $0.content.id }) ?? 0
                     case .other:
                         items = items.filter { item in
@@ -981,6 +998,8 @@ private final class DemoSheetContent: CombinedComponent {
                 switch component.source {
                     case let .intro(price):
                         buttonText = strings.Premium_SubscribeFor(price ?? "–").string
+                    case let .gift(price):
+                        buttonText = strings.Premium_Gift_GiftSubscription(price ?? "–").string
                     case .other:
                         switch component.subject {
                             case .uniqueReactions:
@@ -1169,10 +1188,12 @@ public class PremiumDemoScreen: ViewControllerComponentContainer {
         case animatedUserpics
         case appIcons
         case animatedEmoji
+        case emojiStatus
     }
     
     public enum Source: Equatable {
         case intro(String?)
+        case gift(String?)
         case other
     }
     

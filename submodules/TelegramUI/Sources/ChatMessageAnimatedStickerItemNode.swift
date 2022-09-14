@@ -109,6 +109,7 @@ class ChatMessageShareButton: HighlightableButtonNode {
             var updatedIconOffset = CGPoint()
             if case .pinnedMessages = subject {
                 updatedIconImage = PresentationResourcesChat.chatFreeNavigateButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
+                updatedIconOffset = CGPoint(x: UIScreenPixel, y: 1.0)
             } else if isReplies {
                 updatedIconImage = PresentationResourcesChat.chatFreeCommentButtonIcon(presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper)
             } else if message.id.peerId.isRepliesOrSavedMessages(accountPeerId: account.peerId) {
@@ -554,7 +555,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 emojiFile = item.associatedData.animatedEmojiStickers[emoji.strippedEmoji]?.first?.file
             }
             
-            if item.message.text.count == 1, item.message.associatedMedia.isEmpty && emojiFile != nil {
+            if item.message.text.count == 1, (item.message.textEntitiesAttribute?.entities ?? []).isEmpty && emojiFile != nil {
                 emojiString = nil
             } else if emojiString != nil {
                 emojiFile = nil
@@ -712,7 +713,9 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             if !alreadySeen {
                 item.controllerInteraction.seenOneTimeAnimatedMedia.insert(item.message.id)
                 if let emojiString = self.emojiString, emojiString.count == 1 {
-                    self.playAdditionalEmojiAnimation(index: 1)
+                    if item.message.id.peerId.namespace == Namespaces.Peer.CloudUser {
+                        self.playAdditionalEmojiAnimation(index: 1)
+                    }
                 } else if let file = file, file.isPremiumSticker {
                     Queue.mainQueue().after(0.1) {
                         self.playPremiumStickerAnimation()
@@ -815,7 +818,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         
         let textLayout = TextNodeWithEntities.asyncLayout(self.textNode)
         
-        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageAnimatedStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
             let incoming = item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData)
@@ -974,13 +977,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
                 
                 if item.message.forwardInfo != nil || item.message.attributes.first(where: { $0 is ReplyMessageAttribute }) != nil {
-                    tmpWidth -= 60.0
+                    tmpWidth -= 45.0
                 }
                 
                 tmpWidth -= deliveryFailedInset
                 
-                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset) - 70.0
-                
+                let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset - layoutConstants.bubble.edgeInset - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+
                 let font = Font.regular(fontSizeForEmojiString(item.message.text))
                 let attributedText = stringWithAppliedEntities(item.message.text, entities: item.message.textEntitiesAttribute?.entities ?? [], baseColor: .black, linkColor: .black, baseFont: font, linkFont: font, boldFont: font, italicFont: font, boldItalicFont: font, fixedFont: font, blockQuoteFont: font, message: item.message)
                 textLayoutAndApply = textLayout(TextNodeLayoutArguments(attributedString: attributedText, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural))
@@ -1031,7 +1034,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute, isEmoji {
                     edited = !attribute.isHidden
@@ -1058,15 +1061,18 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 impressionCount: viewCount,
                 dateText: dateText,
                 type: statusType,
-                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
                 reactions: dateReactionsAndPeers.reactions,
                 reactionPeers: dateReactionsAndPeers.peers,
+                displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message)
+                canViewReactionList: canViewMessageReactionList(message: item.message),
+                animationCache: item.controllerInteraction.presentationContext.animationCache,
+                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -1211,7 +1217,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
@@ -1228,6 +1234,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     availableReactions: item.associatedData.availableReactions,
                     reactions: reactions,
                     message: item.message,
+                    accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
                 ))
@@ -1248,8 +1255,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, synchronousLoads in
-                if let strongSelf = self {
+            func finishLayout(_ animation: ListViewItemUpdateAnimation, _ apply: ListViewItemApply, _ synchronousLoads: Bool) {
+                if let strongSelf = weakSelf.value {
                     strongSelf.appliedForwardInfo = (forwardSource, forwardAuthorSignature)
                     strongSelf.updateAccessibilityData(accessibilityData)
                     
@@ -1466,7 +1473,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         } else {
                             isAppearing = true
                             deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
-                                if let item = self?.item {
+                                if let strongSelf = weakSelf.value, let item = strongSelf.item {
                                     item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
                                 }
                             })
@@ -1497,12 +1504,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
                             actionButtonsNode.buttonPressed = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.performMessageButtonAction(button: button)
                                 }
                             }
                             actionButtonsNode.buttonLongTapped = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.presentMessageButtonContextMenu(button: button)
                                 }
                             }
@@ -1529,13 +1536,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceView, value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     gesture?.cancel()
                                     return
                                 }
@@ -1583,7 +1590,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                         strongSelf.dateAndStatusNode.pressed = {
-                            guard let strongSelf = self else {
+                            guard let strongSelf = weakSelf.value else {
                                 return
                             }
                             item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
@@ -1598,7 +1605,15 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         f()
                     }
                 }
+            }
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { (animation: ListViewItemUpdateAnimation, apply: ListViewItemApply, synchronousLoads: Bool) -> Void in
+                finishLayout(animation, apply, synchronousLoads)
             })
+        }
+        
+        let weakSelf = Weak(self)
+        return { (_ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+            return continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }
     
@@ -1918,6 +1933,34 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                 item.controllerInteraction.navigateToMessage(item.message.id, attribute.messageId)
                             })
                         }
+                    }
+                }
+            }
+            
+            if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
+                if let item = self.item, let forwardInfo = item.message.forwardInfo {
+                    let performAction: () -> Void = {
+                        if let sourceMessageId = forwardInfo.sourceMessageId {
+                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
+                                } else if case .member = channel.participationStatus {
+                                } else {
+                                    item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_PrivateChannelTooltip, forwardInfoNode, nil)
+                                    return
+                                }
+                            }
+                            item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
+                        } else if let peer = forwardInfo.source ?? forwardInfo.author {
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
+                        } else if let _ = forwardInfo.authorSignature {
+                            item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
+                        }
+                    }
+                    
+                    if forwardInfoNode.hasAction(at: self.view.convert(location, to: forwardInfoNode.view)) {
+                        return .action({})
+                    } else {
+                        return .optionalAction(performAction)
                     }
                 }
             }
@@ -2589,7 +2632,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
-    override func targetReactionView(value: String) -> UIView? {
+    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }
@@ -2658,23 +2701,23 @@ private func fontSizeForEmojiString(_ string: String) -> CGFloat {
         case 1:
             multiplier = 1.0
         case 2:
-            multiplier = 0.7
+            multiplier = 0.84
         case 3:
-            multiplier = 0.52
+            multiplier = 0.69
         case 4:
-            multiplier = 0.37
+            multiplier = 0.53
         case 5:
-            multiplier = 0.28
+            multiplier = 0.46
         case 6:
-            multiplier = 0.25
+            multiplier = 0.38
         case 7:
-            multiplier = 0.23
+            multiplier = 0.32
         case 8:
-            multiplier = 0.21
+            multiplier = 0.27
         case 9:
-            multiplier = 0.19
+            multiplier = 0.24
         default:
-            multiplier = 0.19
+            multiplier = 0.21
     }
     return floor(basicSize * multiplier)
 }

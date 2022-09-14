@@ -319,6 +319,80 @@ public extension Api {
     }
 }
 public extension Api {
+    enum ChatReactions: TypeConstructorDescription {
+        case chatReactionsAll(flags: Int32)
+        case chatReactionsNone
+        case chatReactionsSome(reactions: [Api.Reaction])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .chatReactionsAll(let flags):
+                    if boxed {
+                        buffer.appendInt32(1385335754)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    break
+                case .chatReactionsNone:
+                    if boxed {
+                        buffer.appendInt32(-352570692)
+                    }
+                    
+                    break
+                case .chatReactionsSome(let reactions):
+                    if boxed {
+                        buffer.appendInt32(1713193015)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(reactions.count))
+                    for item in reactions {
+                        item.serialize(buffer, true)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .chatReactionsAll(let flags):
+                return ("chatReactionsAll", [("flags", String(describing: flags))])
+                case .chatReactionsNone:
+                return ("chatReactionsNone", [])
+                case .chatReactionsSome(let reactions):
+                return ("chatReactionsSome", [("reactions", String(describing: reactions))])
+    }
+    }
+    
+        public static func parse_chatReactionsAll(_ reader: BufferReader) -> ChatReactions? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChatReactions.chatReactionsAll(flags: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_chatReactionsNone(_ reader: BufferReader) -> ChatReactions? {
+            return Api.ChatReactions.chatReactionsNone
+        }
+        public static func parse_chatReactionsSome(_ reader: BufferReader) -> ChatReactions? {
+            var _1: [Api.Reaction]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Reaction.self)
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChatReactions.chatReactionsSome(reactions: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum CodeSettings: TypeConstructorDescription {
         case codeSettings(flags: Int32, logoutTokens: [Buffer]?)
     
@@ -366,13 +440,13 @@ public extension Api {
 }
 public extension Api {
     enum Config: TypeConstructorDescription {
-        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], dcTxtDomainName: String, chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, pinnedInfolderCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, gifSearchUsername: String?, venueSearchUsername: String?, imgSearchUsername: String?, staticMapsProvider: String?, captionLengthMax: Int32, messageLengthMax: Int32, webfileDcId: Int32, suggestedLangCode: String?, langPackVersion: Int32?, baseLangPackVersion: Int32?)
+        case config(flags: Int32, date: Int32, expires: Int32, testMode: Api.Bool, thisDc: Int32, dcOptions: [Api.DcOption], dcTxtDomainName: String, chatSizeMax: Int32, megagroupSizeMax: Int32, forwardedCountMax: Int32, onlineUpdatePeriodMs: Int32, offlineBlurTimeoutMs: Int32, offlineIdleTimeoutMs: Int32, onlineCloudTimeoutMs: Int32, notifyCloudDelayMs: Int32, notifyDefaultDelayMs: Int32, pushChatPeriodMs: Int32, pushChatLimit: Int32, savedGifsLimit: Int32, editTimeLimit: Int32, revokeTimeLimit: Int32, revokePmTimeLimit: Int32, ratingEDecay: Int32, stickersRecentLimit: Int32, stickersFavedLimit: Int32, channelsReadMediaPeriod: Int32, tmpSessions: Int32?, pinnedDialogsCountMax: Int32, pinnedInfolderCountMax: Int32, callReceiveTimeoutMs: Int32, callRingTimeoutMs: Int32, callConnectTimeoutMs: Int32, callPacketTimeoutMs: Int32, meUrlPrefix: String, autoupdateUrlPrefix: String?, gifSearchUsername: String?, venueSearchUsername: String?, imgSearchUsername: String?, staticMapsProvider: String?, captionLengthMax: Int32, messageLengthMax: Int32, webfileDcId: Int32, suggestedLangCode: String?, langPackVersion: Int32?, baseLangPackVersion: Int32?, reactionsDefault: Api.Reaction?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion, let reactionsDefault):
                     if boxed {
-                        buffer.appendInt32(856375399)
+                        buffer.appendInt32(589653676)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(date, buffer: buffer, boxed: false)
@@ -423,14 +497,15 @@ public extension Api {
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(suggestedLangCode!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(langPackVersion!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeInt32(baseLangPackVersion!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 15) != 0 {reactionsDefault!.serialize(buffer, true)}
                     break
     }
     }
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion):
-                return ("config", [("flags", String(describing: flags)), ("date", String(describing: date)), ("expires", String(describing: expires)), ("testMode", String(describing: testMode)), ("thisDc", String(describing: thisDc)), ("dcOptions", String(describing: dcOptions)), ("dcTxtDomainName", String(describing: dcTxtDomainName)), ("chatSizeMax", String(describing: chatSizeMax)), ("megagroupSizeMax", String(describing: megagroupSizeMax)), ("forwardedCountMax", String(describing: forwardedCountMax)), ("onlineUpdatePeriodMs", String(describing: onlineUpdatePeriodMs)), ("offlineBlurTimeoutMs", String(describing: offlineBlurTimeoutMs)), ("offlineIdleTimeoutMs", String(describing: offlineIdleTimeoutMs)), ("onlineCloudTimeoutMs", String(describing: onlineCloudTimeoutMs)), ("notifyCloudDelayMs", String(describing: notifyCloudDelayMs)), ("notifyDefaultDelayMs", String(describing: notifyDefaultDelayMs)), ("pushChatPeriodMs", String(describing: pushChatPeriodMs)), ("pushChatLimit", String(describing: pushChatLimit)), ("savedGifsLimit", String(describing: savedGifsLimit)), ("editTimeLimit", String(describing: editTimeLimit)), ("revokeTimeLimit", String(describing: revokeTimeLimit)), ("revokePmTimeLimit", String(describing: revokePmTimeLimit)), ("ratingEDecay", String(describing: ratingEDecay)), ("stickersRecentLimit", String(describing: stickersRecentLimit)), ("stickersFavedLimit", String(describing: stickersFavedLimit)), ("channelsReadMediaPeriod", String(describing: channelsReadMediaPeriod)), ("tmpSessions", String(describing: tmpSessions)), ("pinnedDialogsCountMax", String(describing: pinnedDialogsCountMax)), ("pinnedInfolderCountMax", String(describing: pinnedInfolderCountMax)), ("callReceiveTimeoutMs", String(describing: callReceiveTimeoutMs)), ("callRingTimeoutMs", String(describing: callRingTimeoutMs)), ("callConnectTimeoutMs", String(describing: callConnectTimeoutMs)), ("callPacketTimeoutMs", String(describing: callPacketTimeoutMs)), ("meUrlPrefix", String(describing: meUrlPrefix)), ("autoupdateUrlPrefix", String(describing: autoupdateUrlPrefix)), ("gifSearchUsername", String(describing: gifSearchUsername)), ("venueSearchUsername", String(describing: venueSearchUsername)), ("imgSearchUsername", String(describing: imgSearchUsername)), ("staticMapsProvider", String(describing: staticMapsProvider)), ("captionLengthMax", String(describing: captionLengthMax)), ("messageLengthMax", String(describing: messageLengthMax)), ("webfileDcId", String(describing: webfileDcId)), ("suggestedLangCode", String(describing: suggestedLangCode)), ("langPackVersion", String(describing: langPackVersion)), ("baseLangPackVersion", String(describing: baseLangPackVersion))])
+                case .config(let flags, let date, let expires, let testMode, let thisDc, let dcOptions, let dcTxtDomainName, let chatSizeMax, let megagroupSizeMax, let forwardedCountMax, let onlineUpdatePeriodMs, let offlineBlurTimeoutMs, let offlineIdleTimeoutMs, let onlineCloudTimeoutMs, let notifyCloudDelayMs, let notifyDefaultDelayMs, let pushChatPeriodMs, let pushChatLimit, let savedGifsLimit, let editTimeLimit, let revokeTimeLimit, let revokePmTimeLimit, let ratingEDecay, let stickersRecentLimit, let stickersFavedLimit, let channelsReadMediaPeriod, let tmpSessions, let pinnedDialogsCountMax, let pinnedInfolderCountMax, let callReceiveTimeoutMs, let callRingTimeoutMs, let callConnectTimeoutMs, let callPacketTimeoutMs, let meUrlPrefix, let autoupdateUrlPrefix, let gifSearchUsername, let venueSearchUsername, let imgSearchUsername, let staticMapsProvider, let captionLengthMax, let messageLengthMax, let webfileDcId, let suggestedLangCode, let langPackVersion, let baseLangPackVersion, let reactionsDefault):
+                return ("config", [("flags", String(describing: flags)), ("date", String(describing: date)), ("expires", String(describing: expires)), ("testMode", String(describing: testMode)), ("thisDc", String(describing: thisDc)), ("dcOptions", String(describing: dcOptions)), ("dcTxtDomainName", String(describing: dcTxtDomainName)), ("chatSizeMax", String(describing: chatSizeMax)), ("megagroupSizeMax", String(describing: megagroupSizeMax)), ("forwardedCountMax", String(describing: forwardedCountMax)), ("onlineUpdatePeriodMs", String(describing: onlineUpdatePeriodMs)), ("offlineBlurTimeoutMs", String(describing: offlineBlurTimeoutMs)), ("offlineIdleTimeoutMs", String(describing: offlineIdleTimeoutMs)), ("onlineCloudTimeoutMs", String(describing: onlineCloudTimeoutMs)), ("notifyCloudDelayMs", String(describing: notifyCloudDelayMs)), ("notifyDefaultDelayMs", String(describing: notifyDefaultDelayMs)), ("pushChatPeriodMs", String(describing: pushChatPeriodMs)), ("pushChatLimit", String(describing: pushChatLimit)), ("savedGifsLimit", String(describing: savedGifsLimit)), ("editTimeLimit", String(describing: editTimeLimit)), ("revokeTimeLimit", String(describing: revokeTimeLimit)), ("revokePmTimeLimit", String(describing: revokePmTimeLimit)), ("ratingEDecay", String(describing: ratingEDecay)), ("stickersRecentLimit", String(describing: stickersRecentLimit)), ("stickersFavedLimit", String(describing: stickersFavedLimit)), ("channelsReadMediaPeriod", String(describing: channelsReadMediaPeriod)), ("tmpSessions", String(describing: tmpSessions)), ("pinnedDialogsCountMax", String(describing: pinnedDialogsCountMax)), ("pinnedInfolderCountMax", String(describing: pinnedInfolderCountMax)), ("callReceiveTimeoutMs", String(describing: callReceiveTimeoutMs)), ("callRingTimeoutMs", String(describing: callRingTimeoutMs)), ("callConnectTimeoutMs", String(describing: callConnectTimeoutMs)), ("callPacketTimeoutMs", String(describing: callPacketTimeoutMs)), ("meUrlPrefix", String(describing: meUrlPrefix)), ("autoupdateUrlPrefix", String(describing: autoupdateUrlPrefix)), ("gifSearchUsername", String(describing: gifSearchUsername)), ("venueSearchUsername", String(describing: venueSearchUsername)), ("imgSearchUsername", String(describing: imgSearchUsername)), ("staticMapsProvider", String(describing: staticMapsProvider)), ("captionLengthMax", String(describing: captionLengthMax)), ("messageLengthMax", String(describing: messageLengthMax)), ("webfileDcId", String(describing: webfileDcId)), ("suggestedLangCode", String(describing: suggestedLangCode)), ("langPackVersion", String(describing: langPackVersion)), ("baseLangPackVersion", String(describing: baseLangPackVersion)), ("reactionsDefault", String(describing: reactionsDefault))])
     }
     }
     
@@ -529,6 +604,10 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {_44 = reader.readInt32() }
             var _45: Int32?
             if Int(_1!) & Int(1 << 2) != 0 {_45 = reader.readInt32() }
+            var _46: Api.Reaction?
+            if Int(_1!) & Int(1 << 15) != 0 {if let signature = reader.readInt32() {
+                _46 = Api.parse(reader, signature: signature) as? Api.Reaction
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -574,8 +653,9 @@ public extension Api {
             let _c43 = (Int(_1!) & Int(1 << 2) == 0) || _43 != nil
             let _c44 = (Int(_1!) & Int(1 << 2) == 0) || _44 != nil
             let _c45 = (Int(_1!) & Int(1 << 2) == 0) || _45 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 && _c41 && _c42 && _c43 && _c44 && _c45 {
-                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, revokeTimeLimit: _21!, revokePmTimeLimit: _22!, ratingEDecay: _23!, stickersRecentLimit: _24!, stickersFavedLimit: _25!, channelsReadMediaPeriod: _26!, tmpSessions: _27, pinnedDialogsCountMax: _28!, pinnedInfolderCountMax: _29!, callReceiveTimeoutMs: _30!, callRingTimeoutMs: _31!, callConnectTimeoutMs: _32!, callPacketTimeoutMs: _33!, meUrlPrefix: _34!, autoupdateUrlPrefix: _35, gifSearchUsername: _36, venueSearchUsername: _37, imgSearchUsername: _38, staticMapsProvider: _39, captionLengthMax: _40!, messageLengthMax: _41!, webfileDcId: _42!, suggestedLangCode: _43, langPackVersion: _44, baseLangPackVersion: _45)
+            let _c46 = (Int(_1!) & Int(1 << 15) == 0) || _46 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 && _c16 && _c17 && _c18 && _c19 && _c20 && _c21 && _c22 && _c23 && _c24 && _c25 && _c26 && _c27 && _c28 && _c29 && _c30 && _c31 && _c32 && _c33 && _c34 && _c35 && _c36 && _c37 && _c38 && _c39 && _c40 && _c41 && _c42 && _c43 && _c44 && _c45 && _c46 {
+                return Api.Config.config(flags: _1!, date: _2!, expires: _3!, testMode: _4!, thisDc: _5!, dcOptions: _6!, dcTxtDomainName: _7!, chatSizeMax: _8!, megagroupSizeMax: _9!, forwardedCountMax: _10!, onlineUpdatePeriodMs: _11!, offlineBlurTimeoutMs: _12!, offlineIdleTimeoutMs: _13!, onlineCloudTimeoutMs: _14!, notifyCloudDelayMs: _15!, notifyDefaultDelayMs: _16!, pushChatPeriodMs: _17!, pushChatLimit: _18!, savedGifsLimit: _19!, editTimeLimit: _20!, revokeTimeLimit: _21!, revokePmTimeLimit: _22!, ratingEDecay: _23!, stickersRecentLimit: _24!, stickersFavedLimit: _25!, channelsReadMediaPeriod: _26!, tmpSessions: _27, pinnedDialogsCountMax: _28!, pinnedInfolderCountMax: _29!, callReceiveTimeoutMs: _30!, callRingTimeoutMs: _31!, callConnectTimeoutMs: _32!, callPacketTimeoutMs: _33!, meUrlPrefix: _34!, autoupdateUrlPrefix: _35, gifSearchUsername: _36, venueSearchUsername: _37, imgSearchUsername: _38, staticMapsProvider: _39, captionLengthMax: _40!, messageLengthMax: _41!, webfileDcId: _42!, suggestedLangCode: _43, langPackVersion: _44, baseLangPackVersion: _45, reactionsDefault: _46)
             }
             else {
                 return nil

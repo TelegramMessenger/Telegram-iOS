@@ -93,7 +93,6 @@ typedef enum {
     UIColor *_regularDotColor;
     UIColor *_highlightedDotColor;
     
-    UIButton *_startButton;
     TGModernButton *_alternativeLanguageButton;
     
     SMetaDisposable *_localizationsDisposable;
@@ -101,6 +100,8 @@ typedef enum {
     
     SVariable *_alternativeLocalization;
     NSDictionary<NSString *, NSString *> *_englishStrings;
+    
+    UIView *_wrapperView;
     
     bool _loadedView;
 }
@@ -308,6 +309,9 @@ typedef enum {
     
     [self loadGL];
     
+    _wrapperView = [[UIScrollView alloc]initWithFrame:self.view.bounds];
+    [self.view addSubview:_wrapperView];
+    
     _pageScrollView = [[UIScrollView alloc]initWithFrame:self.view.bounds];
     _pageScrollView.clipsToBounds = true;
     _pageScrollView.opaque = true;
@@ -317,7 +321,7 @@ typedef enum {
     _pageScrollView.pagingEnabled = true;
     _pageScrollView.contentSize = CGSizeMake(_headlines.count * self.view.bounds.size.width, self.view.bounds.size.height);
     _pageScrollView.delegate = self;
-    [self.view addSubview:_pageScrollView];
+    [_wrapperView addSubview:_pageScrollView];
     
     _pageViews = [NSMutableArray array];
     
@@ -331,41 +335,6 @@ typedef enum {
     }
     [_pageScrollView setPage:0];
     
-    _startButton = [[UIButton alloc] init];
-    _startButton.adjustsImageWhenDisabled = false;
-    [_startButton setTitle:_englishStrings[@"Tour.StartButton"] forState:UIControlStateNormal];
-    [_startButton.titleLabel setFont:TGMediumSystemFontOfSize(20.0f)];
-    [_startButton setTitleColor:_backgroundColor forState:UIControlStateNormal];
-    static UIImage *buttonBackgroundImage = nil;
-    static UIImage *buttonHighlightedBackgroundImage = nil;
-    static dispatch_once_t onceToken;
-    dispatch_once(&onceToken, ^{
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(48.0, 48.0), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-            CGContextSetFillColorWithColor(context, [_buttonColor CGColor]);
-            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
-            buttonBackgroundImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:24 topCapHeight:24];
-            UIGraphicsEndImageContext();
-        }
-        {
-            UIGraphicsBeginImageContextWithOptions(CGSizeMake(48.0, 48.0), false, 0.0f);
-            CGContextRef context = UIGraphicsGetCurrentContext();
-            CGFloat hue = 0.0f;
-            CGFloat sat = 0.0f;
-            CGFloat bri = 0.0f;
-            [_buttonColor getHue:&hue saturation:&sat brightness:&bri alpha:nil];
-            UIColor *color = [[UIColor alloc] initWithHue:hue saturation:sat brightness:bri * 0.7 alpha:1.0];
-            CGContextSetFillColorWithColor(context, [color CGColor]);
-            CGContextFillEllipseInRect(context, CGRectMake(0.0f, 0.0f, 48.0f, 48.0f));
-            buttonHighlightedBackgroundImage = [UIGraphicsGetImageFromCurrentImageContext() stretchableImageWithLeftCapWidth:24 topCapHeight:24];
-            UIGraphicsEndImageContext();
-        }
-    });
-    [_startButton setContentEdgeInsets:UIEdgeInsetsMake(0.0f, 20.0f, 0.0f, 20.0f)];
-    [_startButton setBackgroundImage:buttonBackgroundImage forState:UIControlStateNormal];
-    [_startButton setBackgroundImage:buttonHighlightedBackgroundImage forState:UIControlStateHighlighted];
-    [self.view addSubview:_startButton];
     [self.view addSubview:_alternativeLanguageButton];
     
     _pageControl = [[UIPageControl alloc] init];
@@ -374,7 +343,20 @@ typedef enum {
     [_pageControl setNumberOfPages:6];
     _pageControl.pageIndicatorTintColor = _regularDotColor;
     _pageControl.currentPageIndicatorTintColor = _highlightedDotColor;
-    [self.view addSubview:_pageControl];
+    [_wrapperView addSubview:_pageControl];
+}
+
+- (UIView *)createAnimationSnapshot {
+    UIImage *image = _glkView.snapshot;
+    UIImageView *imageView = [[UIImageView alloc] initWithFrame:_glkView.frame];
+    imageView.image = image;
+    return imageView;
+}
+
+- (UIView *)createTextSnapshot {
+    UIView *snapshotView = [_wrapperView snapshotViewAfterScreenUpdates:false];
+    snapshotView.frame = _wrapperView.frame;
+    return snapshotView;
 }
 
 - (BOOL)shouldAutorotate
@@ -527,12 +509,16 @@ typedef enum {
     _pageControl.frame = CGRectMake(0, pageControlY, self.view.bounds.size.width, 7);
     _glkView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
     
-    [_startButton sizeToFit];
-    _startButton.frame = CGRectMake(floor((self.view.bounds.size.width - _startButton.frame.size.width) / 2.0f), self.view.bounds.size.height - startButtonY - statusBarHeight, _startButton.frame.size.width, 48.0f);
-    [_startButton addTarget:self action:@selector(startButtonPress) forControlEvents:UIControlEventTouchUpInside];
+    CGFloat startButtonWidth = self.view.bounds.size.width - 48.0f;
+    UIView *startButton = self.createStartButton(startButtonWidth);
+    if (startButton.superview == nil) {
+        [self.view addSubview:startButton];
+    }
+    startButton.frame = CGRectMake(floor((self.view.bounds.size.width - startButtonWidth) / 2.0f), self.view.bounds.size.height - startButtonY - statusBarHeight, startButtonWidth, 50.0f);
     
-    _alternativeLanguageButton.frame = CGRectMake(floor((self.view.bounds.size.width - _alternativeLanguageButton.frame.size.width) / 2.0f), CGRectGetMaxY(_startButton.frame) + languageButtonOffset, _alternativeLanguageButton.frame.size.width, _alternativeLanguageButton.frame.size.height);
+    _alternativeLanguageButton.frame = CGRectMake(floor((self.view.bounds.size.width - _alternativeLanguageButton.frame.size.width) / 2.0f), CGRectGetMaxY(startButton.frame) + languageButtonOffset, _alternativeLanguageButton.frame.size.width, _alternativeLanguageButton.frame.size.height);
     
+    _wrapperView.frame = CGRectMake(0, 0, self.view.bounds.size.width, self.view.bounds.size.height);
     _pageScrollView.frame=CGRectMake(0, 20, self.view.bounds.size.width, self.view.bounds.size.height - 20);
     _pageScrollView.contentSize=CGSizeMake(_headlines.count * self.view.bounds.size.width, 150);
     _pageScrollView.contentOffset = CGPointMake(_currentPage * self.view.bounds.size.width, 0);
@@ -691,7 +677,6 @@ NSInteger _current_page_end;
 - (void)setIsEnabled:(bool)isEnabled {
     if (_isEnabled != isEnabled) {
         _isEnabled = isEnabled;
-        _startButton.alpha = _isEnabled ? 1.0 : 0.6;
         _alternativeLanguageButton.alpha = _isEnabled ? 1.0 : 0.6;
     }
 }

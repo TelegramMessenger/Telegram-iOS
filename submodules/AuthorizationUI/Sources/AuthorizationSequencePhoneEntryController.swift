@@ -9,7 +9,6 @@ import TelegramPresentationData
 import ProgressNavigationButtonNode
 import AccountContext
 import CountrySelectionUI
-import SettingsUI
 import PhoneNumberFormat
 import DebugSettingsUI
 
@@ -17,6 +16,8 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private var controllerNode: AuthorizationSequencePhoneEntryControllerNode {
         return self.displayNode as! AuthorizationSequencePhoneEntryControllerNode
     }
+    
+    private var validLayout: ContainerViewLayout?
     
     private let sharedContext: SharedAccountContext
     private var account: UnauthorizedAccount
@@ -29,20 +30,30 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
     private let back: () -> Void
     
     private var currentData: (Int32, String?, String)?
+        
+    var codeNode: ASDisplayNode {
+        return self.controllerNode.codeNode
+    }
+    
+    var numberNode: ASDisplayNode {
+        return self.controllerNode.numberNode
+    }
+    
+    var buttonNode: ASDisplayNode {
+        return self.controllerNode.buttonNode
+    }
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
+            self.confirmationController?.inProgress = self.inProgress
         }
     }
     var loginWithNumber: ((String, Bool) -> Void)?
     var accountUpdated: ((UnauthorizedAccount) -> Void)?
+    
+    weak var confirmationController: PhoneConfirmationController?
     
     private let termsDisposable = MetaDisposable()
     
@@ -75,7 +86,6 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         if !otherAccountPhoneNumbers.1.isEmpty {
             self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         }
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
     }
     
     required init(coder aDecoder: NSCoder) {
@@ -90,10 +100,34 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         self.back()
     }
     
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
     func updateData(countryCode: Int32, countryName: String?, number: String) {
         self.currentData = (countryCode, countryName, number)
         if self.isNodeLoaded {
             self.controllerNode.codeAndNumber = (countryCode, countryName, number)
+        }
+    }
+    
+    private var shouldAnimateIn = false
+    private var transitionInArguments: (buttonFrame: CGRect, buttonTitle: String, animationSnapshot: UIView, textSnapshot: UIView)?
+    
+    func animateWithSplashController(_ controller: AuthorizationSequenceSplashController) {
+        self.shouldAnimateIn = true
+        
+        if let animationSnapshot = controller.animationSnapshot, let textSnapshot = controller.textSnaphot {
+            self.transitionInArguments = (controller.buttonFrame, controller.buttonTitle, animationSnapshot, textSnapshot)
         }
     }
     
@@ -146,22 +180,62 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
         })
     }
     
+    private var animatingIn = false
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        self.controllerNode.activateInput()
+        if self.shouldAnimateIn {
+            self.animatingIn = true
+            if let (buttonFrame, buttonTitle, animationSnapshot, textSnapshot) = self.transitionInArguments {
+                self.controllerNode.willAnimateIn(buttonFrame: buttonFrame, buttonTitle: buttonTitle, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+            }
+            Queue.mainQueue().justDispatch {
+                self.controllerNode.activateInput()
+            }
+        } else {
+            self.controllerNode.activateInput()
+        }
     }
     
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        self.controllerNode.activateInput()
+        if !self.animatingIn {
+            self.controllerNode.activateInput()
+        }
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if let confirmationController = self.confirmationController {
+            confirmationController.transitionOut()
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
+    
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
+        
+        if self.shouldAnimateIn, let inputHeight = layout.inputHeight, inputHeight > 0.0 {
+            if let (buttonFrame, buttonTitle, animationSnapshot, textSnapshot) = self.transitionInArguments {
+                self.shouldAnimateIn = false
+                self.controllerNode.animateIn(buttonFrame: buttonFrame, buttonTitle: buttonTitle, animationSnapshot: animationSnapshot, textSnapshot: textSnapshot)
+            }
+        }
+    }
+    
+    func dismissConfirmation() {
+        self.confirmationController?.dismissAnimated()
+        self.confirmationController = nil
     }
     
     @objc func nextPressed() {
@@ -186,7 +260,27 @@ final class AuthorizationSequencePhoneEntryController: ViewController {
                 actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_OK, action: {}))
                 self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: nil, text: self.presentationData.strings.Login_PhoneNumberAlreadyAuthorized, actions: actions), in: .window(.root))
             } else {
-                self.loginWithNumber?(self.controllerNode.currentNumber, self.controllerNode.syncContacts)
+                if let validLayout = self.validLayout, validLayout.size.width > 320.0 {
+                    let (code, formattedNumber) = self.controllerNode.formattedCodeAndNumber
+
+                    let confirmationController = PhoneConfirmationController(theme: self.presentationData.theme, strings: self.presentationData.strings, code: code, number: formattedNumber, sourceController: self)
+                    confirmationController.proceed = { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.loginWithNumber?(strongSelf.controllerNode.currentNumber, strongSelf.controllerNode.syncContacts)
+                        }
+                    }
+                    (self.navigationController as? NavigationController)?.presentOverlay(controller: confirmationController, inGlobal: true, blockInteraction: true)
+                    self.confirmationController = confirmationController
+                } else {
+                    var actions: [TextAlertAction] = []
+                    actions.append(TextAlertAction(type: .genericAction, title: self.presentationData.strings.Login_Edit, action: {}))
+                    actions.append(TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Login_Yes, action: { [weak self] in
+                        if let strongSelf = self {
+                            strongSelf.loginWithNumber?(strongSelf.controllerNode.currentNumber, strongSelf.controllerNode.syncContacts)
+                        }
+                    }))
+                    self.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: self.presentationData), title: logInNumber, text: self.presentationData.strings.Login_PhoneNumberConfirmation, actions: actions), in: .window(.root))
+                }
             }
         } else {
             self.hapticFeedback.error()

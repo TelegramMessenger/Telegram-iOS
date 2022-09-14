@@ -7221,6 +7221,7 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.AllowedReactionsUpdated" = "%1$@ updated the list of allowed reactions to: %2$@";
 "Channel.AdminLog.ReactionsDisabled" = "%1$@ disabled reactions";
+"Channel.AdminLog.ReactionsEnabled" = "%1$@ enabled all reactions";
 
 "Contacts.ScanQrCode" = "Scan QR Code";
 "Contacts.QrCode.MyCode" = "My QR Code";
@@ -7236,6 +7237,13 @@ Sorry for the inconvenience.";
 "PeerInfo.AllowedReactions.AllowAllGroupInfo" = "Allow subscribers to react to group messages.";
 "PeerInfo.AllowedReactions.AllowAllChannelInfo" = "Allow subscribers to react to channel posts.";
 "PeerInfo.AllowedReactions.ReactionListHeader" = "AVAILABLE REACTIONS";
+"PeerInfo.AllowedReactions.OptionAllReactions" = "All Reactions";
+"PeerInfo.AllowedReactions.OptionSomeReactions" = "Some Reactions";
+"PeerInfo.AllowedReactions.OptionNoReactions" = "No Reactions";
+
+"PeerInfo.AllowedReactions.GroupOptionAllInfo" = "Members of this group can use any emoji as reactions to messages.";
+"PeerInfo.AllowedReactions.GroupOptionSomeInfo" = "Members of the group can use only some allowed emoji as reactions to messages.";
+"PeerInfo.AllowedReactions.GroupOptionNoInfo" = "Members of the group can't add any reactions to messages.";
 
 "PeerInfo.Reactions" = "Reactions";
 "PeerInfo.ReactionsDisabled" = "Disabled";
@@ -7247,6 +7255,9 @@ Sorry for the inconvenience.";
 "Settings.QuickReactionSetup.ReactionListHeader" = "QUICK REACTION";
 "Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
 "Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
+
+"Settings.QuickReactionSetup.ChooseQuickReaction" = "Choose Your Quick Reaction";
+"Settings.QuickReactionSetup.ChooseQuickReactionInfo" = "You can set any emoji as your quick reaction.";
 
 "Chat.ContextReactionCount_1" = "1 reaction";
 "Chat.ContextReactionCount_any" = "%@ reactions";
@@ -7441,6 +7452,7 @@ Sorry for the inconvenience.";
 
 "WebApp.AddToAttachmentUnavailableError" = "This bot can't be added to the attachment menu.";
 "WebApp.AddToAttachmentAlreadyAddedError" = "This bot is already added to your attachment menu.";
+"WebApp.AddToAttachmentSucceeded" = "**%@** has been added to your attachment menu.";
 
 "WebApp.OpenWebViewAlertTitle" = "Open Web App";
 "WebApp.OpenWebViewAlertText" = "**%@** would like to open its web app to proceed.\n\nIt will be able to access your **IP address** and basic device info.";
@@ -7663,6 +7675,7 @@ Sorry for the inconvenience.";
 "Premium.AppIconStandaloneInfo" = "Unlock a wider range of app icons by subscribing to **Telegram Premium**.";
 
 "Premium.SubscribeFor" = "Subscribe for %@ / month";
+"Premium.SubscribeForAnnual" = "Subscribe for %@ / year";
 
 "Premium.AboutTitle" = "ABOUT TELEGRAM PREMIUM";
 "Premium.AboutText" = "While the free version of Telegram already gives its users more than any other messaging application, **Telegram Premium** pushes its capabilities even further.\n\n**Telegram Premium** is a paid option, because most Premium Features require additional expenses from Telegram to third parties such as data center providers and server manufacturers. Contributions from **Telegram Premium** users allow us to cover such costs and also help Telegram stay free for everyone.";
@@ -7807,8 +7820,6 @@ Sorry for the inconvenience.";
 "Premium.Gift.Info" = "You can review the list of features and terms of use for Telegram Premium [here]().";
 "Premium.Gift.GiftSubscription" = "Gift Subscription for %@";
 
-"Premium.Gift.PricePerMonth" = "%@ / month";
-
 "Premium.Gift.Months_1" = "%@ Month";
 "Premium.Gift.Months_any" = "%@ Months";
 
@@ -7874,6 +7885,10 @@ Sorry for the inconvenience.";
 "ChatContextMenu.EmojiSetSingle" = "This message contains\n#[%@]() emoji.";
 "ChatContextMenu.EmojiSet_1" = "This message contains emoji from [%@ pack]().";
 "ChatContextMenu.EmojiSet_any" = "This message contains emoji from [%@ packs]().";
+
+"ChatContextMenu.ReactionEmojiSetSingle" = "This message contains\n#[%@]() reactions.";
+"ChatContextMenu.ReactionEmojiSet_1" = "This message contains reactions from [%@ pack]().";
+"ChatContextMenu.ReactionEmojiSet_any" = "This message contains reactions from [%@ packs]().";
 
 "EmojiPack.Title" = "Emoji";
 "EmojiPack.Emoji_1" = "%@ emoji";
@@ -7957,3 +7972,110 @@ Sorry for the inconvenience.";
 "KeyCommand.ExitFullscreen" = "Exit Fullscreen";
 
 "StickerPacksSettings.SuggestAnimatedEmoji" = "Suggest Animated Emoji";
+
+"Emoji.FrequentlyUsed" = "Recently Used";
+
+"Premium.Annual" = "Annual";
+"Premium.Semiannual" = "Semiannual";
+"Premium.Monthly" = "Monthly";
+
+"Login.PhoneNumberConfirmation" = "Is this the correct number?";
+"Login.Edit" = "Edit";
+"Login.Yes" = "Yes";
+
+"Checkout.PaymentLiabilityBothAlert" = "Telegram will not have access to your credit card information. Credit card details will be handled only by the payment system, {target}.\n\nPayments will go directly to the developer of {target}. Telegram cannot provide any guarantees, so proceed at your own risk. In case of problems, please contact the developer of {target} or your bank.";
+
+"Settings.ChangeProfilePhoto" = "Change Profile Photo";
+
+"Premium.EmojiStatusShortTitle" = "This is %1$@'s current status.";
+"Premium.EmojiStatusTitle" = "This is %1$@'s current status from #[%2$@]().";
+"Premium.EmojiStatusText" = "Emoji status is a premium feature.\n Other features included in **Telegram Premium**:";
+
+"Login.SelectCountry" = "Country";
+
+"ReportPeer.ReportReaction" = "Report Reaction";
+
+"Login.Or" = "or";
+"Login.Continue" = "Continue";
+
+"Login.EnterCodeSMSTitle" = "Enter Code";
+"Login.EnterCodeSMSText" = "We've sent and SMS with an activation code to your phone **%@**.";
+"Login.SendCodeAsSMS" = "Send the code as an SMS";
+"Login.EnterCodeTelegramTitle" = "Enter Code";
+"Login.EnterCodeTelegramText" = "We've sent the code to the **Telegram app** for %@ on your other device.";
+"Login.AddEmailTitle" = "Add Email";
+"Login.AddEmailText" = "Please enter your valid email address to protect your account.";
+"Login.AddEmailPlaceholder" = "Enter your email";
+"Login.EnterCodeEmailTitle" = "Check Your Email";
+"Login.EnterCodeEmailText" = "Please enter the code we have sent to your email %@.";
+"Login.EnterNewEmailTitle" = "Enter New Email";
+"Login.EnterCodeNewEmailTitle" = "Check Your New Email";
+"Login.EnterCodeNewEmailText" = "Please enter the code we have sent to your new email %@.";
+"Login.WrongCodeError" = "Wrong code, please try again.";
+
+"PrivacySettings.LoginEmail" = "Login Email";
+"PrivacySettings.LoginEmailInfo" = "Change your email address for Telegram login codes.";
+"Login.EmailChanged" = "Your email has been changed.";
+"PrivacySettings.LoginEmailAlertText" = "This email address will be used every time you login to your Telegram account from a new device.";
+"PrivacySettings.LoginEmailAlertChange" = "Change Email";
+
+"Login.InvalidEmailAddressError" = "An error occurred. Please try again.";
+"Login.InvalidEmailError" = "Please enter a valid e-mail address.";
+"Login.InvalidEmailTokenError" = "An error occurred. Please try again.";
+"Login.EmailNotAllowedError" = "Sorry, this email can't be used.";
+
+"Conversation.EmojiCopied" = "Emoji copied to clipboard";
+
+"Conversation.EmojiTooltip" = "Tap here to choose more emoji";
+
+"Premium.PricePerMonth" = "%@/month";
+"Premium.PricePerYear" = "%@/year";
+
+"Conversation.SendMesageAsPremiumInfo" = "Subscribe to **Telegram Premium** to be able to comment on behalf your channels in group chats.";
+
+"SetTimeoutFor.Minutes_1" = "Set for 1 minute";
+"SetTimeoutFor.Minutes_any" = "Set for %@ minutes";
+
+"SetTimeoutFor.Hours_1" = "Set for 1 hour";
+"SetTimeoutFor.Hours_any" = "Set for %@ hours";
+
+"SetTimeoutFor.Days_1" = "Set for 1 day";
+"SetTimeoutFor.Days_any" = "Set for %@ days";
+
+"PeerStatusExpiration.Minutes_1" = "Your status expires in one minute";
+"PeerStatusExpiration.Minutes_any" = "Your status expires in %@ minutes";
+"PeerStatusExpiration.Hours_1" = "Your status expires in one hour";
+"PeerStatusExpiration.Hours_any" = "Your status expires in %@ hours";
+"PeerStatusExpiration.TomorrowAt" = "Your status expires tomorrow at %@";
+"PeerStatusExpiration.AtDate" = "Your status expires on %@";
+
+"Chat.PanelCustomStatusInfo" = "This account uses %@ as a custom status next to its name. Such emoji statuses are available to all subscribers of Telegram Premium.";
+
+"Login.CancelEmailVerification" = "Do you want to stop the email verification process?";
+"Login.CancelEmailVerificationStop" = "Stop";
+"Login.CancelEmailVerificationContinue" = "Continue";
+
+"Premium.InfiniteReactions" = "Infinite Reactions";
+"Premium.InfiniteReactionsInfo" = "React with thousands of emoji — with multiple reactions per message.";
+
+"Premium.EmojiStatus" = "Emoji Status";
+"Premium.EmojiStatusInfo" = "Add any of thousands emojis next to your name to display current activity.";
+
+"PeerStatusSetup.NoTimerTitle" = "Long tap to set a timer";
+"Chat.PremiumReactionToastTitle" = "Subscribe to **Telegram Premium** to unlock this reaction.";
+"Chat.PremiumReactionToastAction" = "More";
+
+"Chat.ClearReactionsAlertText" = "Do you want to clear your recent reaction emoji from suggestions?";
+"Chat.ClearReactionsAlertAction" = "Clear Recent Emoji";
+
+"EmojiStatusSetup.SetUntil" = "Set Until";
+"EmojiStatusSetup.TimerOther" = "Other";
+
+"Chat.ReactionSection.Popular" = "Popular";
+"Chat.ReactionSection.Recent" = "Recently Used";
+
+"PeerInfo.SetEmojiStatus" = "Set Emoji Status";
+"PeerInfo.ChangeEmojiStatus" = "Change Emoji Status";
+
+"PeerInfo.LabelAllReactions" = "All Reactions";
+

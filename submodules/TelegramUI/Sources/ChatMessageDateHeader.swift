@@ -395,7 +395,6 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let containerNode: ContextControllerSourceNode
     private let avatarNode: AvatarNode
     private var videoNode: UniversalVideoNode?
-    private var credibilityIconNode: ASImageNode?
     
     private var videoContent: NativeVideoContent?
     private let playbackStartDisposable = MetaDisposable()
@@ -520,22 +519,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
                 }
             }))
-            
-            let credibilityIconNode: ASImageNode
-            if let current = self.credibilityIconNode {
-                credibilityIconNode = current
-            } else {
-                credibilityIconNode = ASImageNode()
-                credibilityIconNode.displaysAsynchronously = false
-                credibilityIconNode.displayWithoutProcessing = true
-                credibilityIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
-                self.containerNode.addSubnode(credibilityIconNode)
-            }
-            credibilityIconNode.frame = CGRect(origin: CGPoint(x: 29.0 - UIScreenPixel, y: 29.0 - UIScreenPixel), size: CGSize(width: 10.0, height: 10.0))
-        } else {
-            self.credibilityIconNode?.removeFromSupernode()
-            self.credibilityIconNode = nil
-            
+        } else {            
             self.cachedDataDisposable.set(nil)
             self.videoContent = nil
             
@@ -609,9 +593,9 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else {
                 if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, nil)
+                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false, nil)
                 } else {
-                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, nil)
+                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, false, nil)
                 }
             }
         }

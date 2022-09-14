@@ -42,9 +42,6 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                 additionalCount = 1
             }
             
-
-
-            
             let limitCount: Int
             if case .root = groupId {
                 limitCount = Int(userLimitsConfiguration.maxPinnedChatCount)
@@ -76,8 +73,10 @@ func _internal_toggleItemPinned(postbox: Postbox, accountPeerId: PeerId, locatio
                         if updatedData.includePeers.pinnedPeers.contains(peerId) {
                             updatedData.includePeers.removePinnedPeer(peerId)
                         } else {
-                            if !updatedData.includePeers.addPinnedPeer(peerId) {
+                            let _ = updatedData.includePeers.addPinnedPeer(peerId)
+                            if updatedData.includePeers.peers.count > userLimitsConfiguration.maxFolderChatsCount {
                                 result = .limitExceeded(count: updatedData.includePeers.peers.count, limit: Int(userLimitsConfiguration.maxFolderChatsCount))
+                                updatedData = data
                             }
                         }
                         filters[index] = .filter(id: id, title: title, emoticon: emoticon, data: updatedData)

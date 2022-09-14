@@ -7,7 +7,7 @@ import Display
 import AppBundle
 import LegacyComponents
 
-private func createEmitterBehavior(type: String) -> NSObject {
+func createEmitterBehavior(type: String) -> NSObject {
     let selector = ["behaviorWith", "Type:"].joined(separator: "")
     let behaviorClass = NSClassFromString(["CA", "Emitter", "Behavior"].joined(separator: "")) as! NSObject.Type
     let behaviorWithType = behaviorClass.method(for: NSSelectorFromString(selector))!

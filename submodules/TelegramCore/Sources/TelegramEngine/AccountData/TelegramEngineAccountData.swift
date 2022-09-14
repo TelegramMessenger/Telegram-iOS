@@ -55,10 +55,16 @@ public extension TelegramEngine {
             return _internal_removeAccountPhoto(network: self.account.network, reference: reference)
         }
         
-        public func setEmojiStatus(file: TelegramMediaFile?) -> Signal<Never, NoError> {
+        public func setEmojiStatus(file: TelegramMediaFile?, expirationDate: Int32?) -> Signal<Never, NoError> {
             let peerId = self.account.peerId
             
-            let remoteApply = self.account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: file.flatMap({ Api.EmojiStatus.emojiStatus(documentId: $0.fileId.id) }) ?? Api.EmojiStatus.emojiStatusEmpty))
+            let remoteApply = self.account.network.request(Api.functions.account.updateEmojiStatus(emojiStatus: file.flatMap({ file in
+                if let expirationDate = expirationDate {
+                    return Api.EmojiStatus.emojiStatusUntil(documentId: file.fileId.id, until: expirationDate)
+                } else {
+                    return Api.EmojiStatus.emojiStatus(documentId: file.fileId.id)
+                }
+            }) ?? Api.EmojiStatus.emojiStatusEmpty))
             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                 return .single(.boolFalse)
             }
@@ -67,9 +73,15 @@ public extension TelegramEngine {
             return self.account.postbox.transaction { transaction -> Void in
                 if let file = file {
                     transaction.storeMediaIfNotPresent(media: file)
+                    
+                    if let entry = CodableEntry(RecentMediaItem(file)) {
+                        let itemEntry = OrderedItemListEntry(id: RecentMediaItemId(file.fileId).rawValue, contents: entry)
+                        transaction.addOrMoveToFirstPositionOrderedItemListItem(collectionId: Namespaces.OrderedItemList.CloudRecentStatusEmoji, item: itemEntry, removeTailIfCountExceeds: 32)
+                    }
                 }
+                
                 if let peer = transaction.getPeer(peerId) as? TelegramUser {
-                    updatePeers(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id) }))], update: { _, updated in
+                    updatePeers(transaction: transaction, peers: [peer.withUpdatedEmojiStatus(file.flatMap({ PeerEmojiStatus(fileId: $0.fileId.id, expirationDate: expirationDate) }))], update: { _, updated in
                         updated
                     })
                 }

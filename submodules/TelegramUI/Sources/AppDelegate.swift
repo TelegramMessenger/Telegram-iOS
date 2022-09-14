@@ -110,6 +110,10 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var keyboardWindow: UIWindow? {
+        if #available(iOS 16.0, *) {
+            return UIApplication.shared.internalGetKeyboard()
+        }
+        
         for window in UIApplication.shared.windows {
             if isKeyboardWindow(window: window) {
                 return window
@@ -1105,8 +1109,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                     |> deliverOnMainQueue).start(completed: {
-                        authContextValue.rootController.view.endEditing(true)
-                        authContextValue.rootController.dismiss()
+                        Queue.mainQueue().after(0.75) {
+                            authContextValue.rootController.view.endEditing(true)
+                            authContextValue.rootController.dismiss()
+                        }
                     })
                 } else {
                     authContextValue.rootController.view.endEditing(true)
@@ -2000,7 +2006,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
                             let _ = TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0)).start()
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil

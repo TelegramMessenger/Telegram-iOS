@@ -172,7 +172,7 @@ final class ChatMessageSelectionInputPanelNode: ChatInputPanelNode {
             } else {
                 self.deleteButton.isEnabled = !actions.disableDelete
             }
-            self.shareButton.isImplicitlyDisabled = actions.options.intersection([.forward]).isEmpty
+            self.shareButton.isImplicitlyDisabled = actions.options.intersection(.forward).isEmpty || actions.options.intersection(.externalShare).isEmpty
             self.reportButton.isEnabled = !actions.options.intersection([.report]).isEmpty
             
             if self.peerMedia {

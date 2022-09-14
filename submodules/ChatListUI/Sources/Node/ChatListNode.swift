@@ -81,7 +81,30 @@ public final class ChatListNodeInteraction {
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
     
-    public init(context: AccountContext, activateSearch: @escaping () -> Void, peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void, disabledPeerSelected: @escaping (EnginePeer) -> Void, togglePeerSelected: @escaping (EnginePeer) -> Void, togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void, additionalCategorySelected: @escaping (Int) -> Void, messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void, groupSelected: @escaping (EngineChatList.Group) -> Void, addContact: @escaping (String) -> Void, setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void, setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void, setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void, deletePeer: @escaping (EnginePeer.Id, Bool) -> Void, updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void, togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void, toggleArchivedFolderHiddenByDefault: @escaping () -> Void, hidePsa: @escaping (EnginePeer.Id) -> Void, activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void, present: @escaping (ViewController) -> Void) {
+    public init(
+        context: AccountContext,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        activateSearch: @escaping () -> Void,
+        peerSelected: @escaping (EnginePeer, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void,
+        disabledPeerSelected: @escaping (EnginePeer) -> Void,
+        togglePeerSelected: @escaping (EnginePeer) -> Void,
+        togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
+        additionalCategorySelected: @escaping (Int) -> Void,
+        messageSelected: @escaping (EnginePeer, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void,
+        groupSelected: @escaping (EngineChatList.Group) -> Void,
+        addContact: @escaping (String) -> Void,
+        setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void,
+        setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void,
+        setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void,
+        deletePeer: @escaping (EnginePeer.Id, Bool) -> Void,
+        updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void,
+        togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void,
+        toggleArchivedFolderHiddenByDefault: @escaping () -> Void,
+        hidePsa: @escaping (EnginePeer.Id) -> Void,
+        activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void,
+        present: @escaping (ViewController) -> Void
+    ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
         self.disabledPeerSelected = disabledPeerSelected
@@ -101,11 +124,8 @@ public final class ChatListNodeInteraction {
         self.hidePsa = hidePsa
         self.activateChatPreview = activateChatPreview
         self.present = present
-        
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
     }
 }
 
@@ -373,7 +393,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 if let chatPeer = chatPeer {
                                     nodeInteraction.disabledPeerSelected(chatPeer)
                                 }
-                            }
+                            },
+                            animationCache: nodeInteraction.animationCache,
+                            animationRenderer: nodeInteraction.animationRenderer
                         ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):
@@ -513,7 +535,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 if let chatPeer = chatPeer {
                                     nodeInteraction.disabledPeerSelected(chatPeer)
                                 }
-                            }
+                            },
+                            animationCache: nodeInteraction.animationCache,
+                            animationRenderer: nodeInteraction.animationRenderer
                     ), directionHint: entry.directionHint)
                 }
             case let .HoleEntry(_, theme):
@@ -605,6 +629,8 @@ public final class ChatListNode: ListView {
     private let context: AccountContext
     private let groupId: EngineChatList.Group
     private let mode: ChatListNodeMode
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
     
     private let _ready = ValuePromise<Bool>()
     private var didSetReady = false
@@ -719,13 +745,15 @@ public final class ChatListNode: ListView {
     public var selectionLimit: Int32 = 100
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
-    public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, disableAnimations: Bool) {
+    public init(context: AccountContext, groupId: EngineChatList.Group, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool) {
         self.context = context
         self.groupId = groupId
         self.chatListFilter = chatListFilter
         self.chatListFilterValue.set(.single(chatListFilter))
         self.fillPreloadItems = fillPreloadItems
         self.mode = mode
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
         
         var isSelecting = false
         if case .peers(_, true, _, _) = mode {
@@ -744,7 +772,7 @@ public final class ChatListNode: ListView {
         
         self.keepMinimalScrollHeightWithTopInset = navigationBarSearchContentHeight
         
-        let nodeInteraction = ChatListNodeInteraction(context: context, activateSearch: { [weak self] in
+        let nodeInteraction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: { [weak self] in
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
@@ -864,18 +892,35 @@ public final class ChatListNode: ListView {
                             break
                         case let .limitExceeded(count, _):
                             if isPremium {
-                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
-                                strongSelf.push?(controller)
-                            } else {
-                                var replaceImpl: ((ViewController) -> Void)?
-                                let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
-                                    let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
-                                    replaceImpl?(premiumScreen)
-                                })
-                                replaceImpl = { [weak controller] c in
-                                    controller?.replace(with: c)
+                                if case .filter = location {
+                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {})
+                                    strongSelf.push?(controller)
+                                } else {
+                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {})
+                                    strongSelf.push?(controller)
                                 }
-                                strongSelf.push?(controller)
+                            } else {
+                                if case .filter = location {
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumLimitScreen(context: context, subject: .chatsPerFolder, count: Int32(count), action: {
+                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                        replaceImpl?(premiumScreen)
+                                    })
+                                    strongSelf.push?(controller)
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                } else {
+                                    var replaceImpl: ((ViewController) -> Void)?
+                                    let controller = PremiumLimitScreen(context: context, subject: .pins, count: Int32(count), action: {
+                                        let premiumScreen = PremiumIntroScreen(context: context, source: .pinnedChats)
+                                        replaceImpl?(premiumScreen)
+                                    })
+                                    strongSelf.push?(controller)
+                                    replaceImpl = { [weak controller] c in
+                                        controller?.replace(with: c)
+                                    }
+                                }
                             }
                         }
                     }

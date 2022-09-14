@@ -6,6 +6,8 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case call = 2
     case flashCall = 3
     case missedCall = 4
+    case email = 5
+    case emailSetupRequired = 6
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -14,6 +16,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case call(length: Int32)
     case flashCall(pattern: String)
     case missedCall(numberPrefix: String, length: Int32)
+    case email(emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?, appleSignInAllowed: Bool, setup: Bool)
+    case emailSetupRequired(appleSignInAllowed: Bool)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -27,6 +31,10 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .flashCall(pattern: decoder.decodeStringForKey("p", orElse: ""))
             case SentAuthorizationCodeTypeValue.missedCall.rawValue:
                 self = .missedCall(numberPrefix: decoder.decodeStringForKey("n", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
+            case SentAuthorizationCodeTypeValue.email.rawValue:
+                self = .email(emailPattern: decoder.decodeStringForKey("e", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0), nextPhoneLoginDate: decoder.decodeOptionalInt32ForKey("d"), appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0, setup: decoder.decodeInt32ForKey("s", orElse: 0) != 0)
+            case SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue:
+                self = .emailSetupRequired(appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0)
             default:
                 preconditionFailure()
         }
@@ -50,6 +58,20 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 encoder.encodeInt32(SentAuthorizationCodeTypeValue.missedCall.rawValue, forKey: "v")
                 encoder.encodeString(numberPrefix, forKey: "n")
                 encoder.encodeInt32(length, forKey: "l")
+            case let .email(emailPattern, length, nextPhoneLoginDate, appleSignInAllowed, setup):
+                encoder.encodeInt32(SentAuthorizationCodeTypeValue.email.rawValue, forKey: "v")
+                encoder.encodeString(emailPattern, forKey: "e")
+                encoder.encodeInt32(length, forKey: "l")
+                if let nextPhoneLoginDate = nextPhoneLoginDate {
+                    encoder.encodeInt32(nextPhoneLoginDate, forKey: "d")
+                } else {
+                    encoder.encodeNil(forKey: "d")
+                }
+                encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
+                encoder.encodeInt32(setup ? 1 : 0, forKey: "s")
+            case let .emailSetupRequired(appleSignInAllowed):
+                encoder.encodeInt32(SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue, forKey: "v")
+                encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
         }
     }
 }
@@ -107,8 +129,8 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
     case empty
     case phoneEntry(countryCode: Int32, number: String)
     case confirmationCodeEntry(number: String, type: SentAuthorizationCodeType, hash: String, timeout: Int32?, nextType: AuthorizationCodeNextType?, syncContacts: Bool)
-    case passwordEntry(hint: String, number: String?, code: String?, suggestReset: Bool, syncContacts: Bool)
-    case passwordRecovery(hint: String, number: String?, code: String?, emailPattern: String, syncContacts: Bool)
+    case passwordEntry(hint: String, number: String?, code: AuthorizationCode?, suggestReset: Bool, syncContacts: Bool)
+    case passwordRecovery(hint: String, number: String?, code: AuthorizationCode?, emailPattern: String, syncContacts: Bool)
     case awaitingAccountReset(protectedUntil: Int32, number: String?, syncContacts: Bool)
     case signUp(number: String, codeHash: String, firstName: String, lastName: String, termsOfService: UnauthorizedAccountTermsOfService?, syncContacts: Bool)
     
@@ -125,9 +147,21 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                 }
                 self = .confirmationCodeEntry(number: decoder.decodeStringForKey("num", orElse: ""), type: decoder.decodeObjectForKey("t", decoder: { SentAuthorizationCodeType(decoder: $0) }) as! SentAuthorizationCodeType, hash: decoder.decodeStringForKey("h", orElse: ""), timeout: decoder.decodeOptionalInt32ForKey("tm"), nextType: nextType, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.passwordEntry.rawValue:
-                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: decoder.decodeOptionalStringForKey("c"), suggestReset: decoder.decodeInt32ForKey("suggestReset", orElse: 0) != 0, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
+                var code: AuthorizationCode?
+                if let modernCode = decoder.decodeObjectForKey("modernCode", decoder: { AuthorizationCode(decoder: $0) }) as? AuthorizationCode {
+                    code = modernCode
+                } else if let legacyCode = decoder.decodeOptionalStringForKey("c") {
+                    code = .phoneCode(legacyCode)
+                }
+                self = .passwordEntry(hint: decoder.decodeStringForKey("h", orElse: ""), number: decoder.decodeOptionalStringForKey("n"), code: code, suggestReset: decoder.decodeInt32ForKey("suggestReset", orElse: 0) != 0, syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.passwordRecovery.rawValue:
-                self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: decoder.decodeOptionalStringForKey("code"), emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
+                var code: AuthorizationCode?
+                if let modernCode = decoder.decodeObjectForKey("modernCode", decoder: { AuthorizationCode(decoder: $0) }) as? AuthorizationCode {
+                    code = modernCode
+                } else if let legacyCode = decoder.decodeOptionalStringForKey("code") {
+                    code = .phoneCode(legacyCode)
+                }
+                self = .passwordRecovery(hint: decoder.decodeStringForKey("hint", orElse: ""), number: decoder.decodeOptionalStringForKey("number"), code: code, emailPattern: decoder.decodeStringForKey("emailPattern", orElse: ""), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.awaitingAccountReset.rawValue:
                 self = .awaitingAccountReset(protectedUntil: decoder.decodeInt32ForKey("protectedUntil", orElse: 0), number: decoder.decodeOptionalStringForKey("number"), syncContacts: decoder.decodeInt32ForKey("syncContacts", orElse: 1) != 0)
             case UnauthorizedAccountStateContentsValue.signUp.rawValue:
@@ -171,9 +205,9 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "n")
                 }
                 if let code = code {
-                    encoder.encodeString(code, forKey: "c")
+                    encoder.encodeObject(code, forKey: "modernCode")
                 } else {
-                    encoder.encodeNil(forKey: "c")
+                    encoder.encodeNil(forKey: "modernCode")
                 }
                 encoder.encodeInt32(suggestReset ? 1 : 0, forKey: "suggestReset")
                 encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")
@@ -186,9 +220,9 @@ public enum UnauthorizedAccountStateContents: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "number")
                 }
                 if let code = code {
-                    encoder.encodeString(code, forKey: "code")
+                    encoder.encodeObject(code, forKey: "modernCode")
                 } else {
-                    encoder.encodeNil(forKey: "code")
+                    encoder.encodeNil(forKey: "modernCode")
                 }
                 encoder.encodeString(emailPattern, forKey: "emailPattern")
                 encoder.encodeInt32(syncContacts ? 1 : 0, forKey: "syncContacts")

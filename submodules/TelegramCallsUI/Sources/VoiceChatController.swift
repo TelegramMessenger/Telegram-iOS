@@ -1254,7 +1254,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 } else {
                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
-                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text), action: { _ in return false })
+                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text, action: nil), action: { _ in return false })
                             }
                         } else {
                             if case let .channel(groupPeer) = groupPeer, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
@@ -1264,7 +1264,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                     dismissController?()
                                     
                                     if let strongSelf = self {
-                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
+                                        let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peer.id, messages: [.message(text: listenerLink, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                                         |> deliverOnMainQueue).start(next: { [weak self] _ in
                                             if let strongSelf = self {
                                                 strongSelf.presentUndoOverlay(content: .forward(savedMessages: false, text: strongSelf.presentationData.strings.UserInfo_LinkForwardTooltip_Chat_One(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string), action: { _ in return true })
@@ -1362,7 +1362,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil), action: { _ in return false })
                                             }
                                         }))
                                     } else if case let .legacyGroup(groupPeer) = groupPeer {
@@ -1430,7 +1430,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil), action: { _ in return false })
                                             }
                                         }))
                                     }
@@ -2262,7 +2262,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(EnginePeer(event.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
-                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(event.peer), text: text), action: { _ in return false })
+                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(event.peer), text: text, action: nil), action: { _ in return false })
                 }
             }))
             
@@ -2277,7 +2277,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 } else {
                     text = strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                 }
-                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text), action: { _ in return false })
+                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text, action: nil), action: { _ in return false })
             }))
 
             self.stateVersionDisposable.set((self.call.stateVersion

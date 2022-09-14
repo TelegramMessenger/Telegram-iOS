@@ -14,13 +14,22 @@ public struct AuthorizationLayoutItemSpacing {
 }
 
 public struct AuthorizationLayoutItem {
-    public var node: ASDisplayNode
+    public var node: ASDisplayNode?
+    public var view: UIView?
     public var size: CGSize
     public var spacingBefore: AuthorizationLayoutItemSpacing
     public var spacingAfter: AuthorizationLayoutItemSpacing
     
     public init(node: ASDisplayNode, size: CGSize, spacingBefore: AuthorizationLayoutItemSpacing, spacingAfter: AuthorizationLayoutItemSpacing) {
         self.node = node
+        self.size = size
+        self.spacingBefore = spacingBefore
+        self.spacingAfter = spacingAfter
+    }
+
+
+    public init(view: UIView, size: CGSize, spacingBefore: AuthorizationLayoutItemSpacing, spacingAfter: AuthorizationLayoutItemSpacing) {
+        self.view = view
         self.size = size
         self.spacingBefore = spacingBefore
         self.spacingAfter = spacingAfter
@@ -147,7 +156,12 @@ public func layoutAuthorizationItems(bounds: CGRect, items: [AuthorizationLayout
     for i in 0 ..< solvedItems.count {
         let item = solvedItems[i]
         verticalOrigin += item.spacingBefore!
-        transition.updateFrame(node: item.item.node, frame: CGRect(origin: CGPoint(x: floor((bounds.size.width - item.item.size.width) / 2.0), y: verticalOrigin), size: item.item.size))
+        let itemFrame = CGRect(origin: CGPoint(x: floor((bounds.size.width - item.item.size.width) / 2.0), y: verticalOrigin), size: item.item.size)
+        if let view = item.item.view {
+            transition.updateFrame(view: view, frame: itemFrame)
+        } else if let node = item.item.node {
+            transition.updateFrame(node: node, frame: itemFrame)
+        }
         verticalOrigin += item.item.size.height
         verticalOrigin += item.spacingAfter!
     }

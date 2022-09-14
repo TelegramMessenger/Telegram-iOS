@@ -6,11 +6,11 @@ import SwiftSignalKit
 public struct ExperimentalUISettings: Codable, Equatable {
     public struct AccountReactionOverrides: Equatable, Codable {
         public struct Item: Equatable, Codable {
-            public var key: String
+            public var key: MessageReaction.Reaction
             public var messageId: MessageId
             public var mediaId: MediaId
             
-            public init(key: String, messageId: MessageId, mediaId: MediaId) {
+            public init(key: MessageReaction.Reaction, messageId: MessageId, mediaId: MediaId) {
                 self.key = key
                 self.messageId = messageId
                 self.mediaId = mediaId
@@ -142,8 +142,8 @@ public struct ExperimentalUISettings: Codable, Equatable {
         self.inlineStickers = (try container.decodeIfPresent(Int32.self, forKey: "inlineStickers") ?? 0) != 0
         self.localTranscription = (try container.decodeIfPresent(Int32.self, forKey: "localTranscription") ?? 0) != 0
         self.enableReactionOverrides = try container.decodeIfPresent(Bool.self, forKey: "enableReactionOverrides") ?? false
-        self.accountReactionEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
-        self.accountStickerEffectOverrides = (try container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
+        self.accountReactionEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountReactionEffectOverrides")) ?? []
+        self.accountStickerEffectOverrides = (try? container.decodeIfPresent([AccountReactionOverrides].self, forKey: "accountStickerEffectOverrides")) ?? []
     }
     
     public func encode(to encoder: Encoder) throws {

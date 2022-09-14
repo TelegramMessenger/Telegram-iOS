@@ -5,6 +5,8 @@ import Display
 import TelegramPresentationData
 import TextFormat
 import Markdown
+import SolidRoundedButtonNode
+import AuthorizationUtils
 
 private func roundCorners(diameter: CGFloat) -> UIImage {
     UIGraphicsBeginImageContextWithOptions(CGSize(width: diameter, height: diameter), false, 0.0)
@@ -34,6 +36,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     private let lastSeparatorNode: ASDisplayNode
     private let currentPhotoNode: ASImageNode
     private let addPhotoButton: HighlightableButtonNode
+    private let proceedNode: SolidRoundedButtonNode
     
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
     
@@ -64,6 +67,14 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         didSet {
             self.firstNameField.alpha = self.inProgress ? 0.6 : 1.0
             self.lastNameField.alpha = self.inProgress ? 0.6 : 1.0
+            
+            if self.inProgress != oldValue {
+                if self.inProgress {
+                    self.proceedNode.transitionToProgress()
+                } else {
+                    self.proceedNode.transitionFromProgress()
+                }
+            }
         }
     }
     
@@ -75,20 +86,20 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.currentOptionNode = ASTextNode()
         self.currentOptionNode.isUserInteractionEnabled = false
         self.currentOptionNode.displaysAsynchronously = false
-        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.list.itemPlaceholderTextColor, paragraphAlignment: .center)
+        self.currentOptionNode.attributedText = NSAttributedString(string: self.strings.Login_InfoHelp, font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.termsNode = ImmediateTextNode()
         self.termsNode.textAlignment = .center
         self.termsNode.maximumNumberOfLines = 0
         self.termsNode.displaysAsynchronously = false
-        let body = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemPrimaryTextColor)
-        let link = MarkdownAttributeSet(font: Font.regular(16.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
-        self.termsNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
+        let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.list.itemSecondaryTextColor)
+        let link = MarkdownAttributeSet(font: Font.regular(13.0), textColor: theme.list.itemAccentColor, additionalAttributes: [TelegramTextAttributes.URL: ""])
+        self.termsNode.attributedText = parseMarkdownIntoAttributedString(strings.Login_TermsOfServiceLabel.replacingOccurrences(of: "\n", with: " ").replacingOccurrences(of: "]", with: "]()"), attributes: MarkdownAttributes(body: body, bold: body, link: link, linkAttribute: { _ in nil }), textAlignment: .center)
         
         self.firstSeparatorNode = ASDisplayNode()
         self.firstSeparatorNode.isLayerBacked = true
@@ -132,11 +143,14 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.currentPhotoNode.displayWithoutProcessing = true
         
         self.addPhotoButton = HighlightableButtonNode()
-        self.addPhotoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: self.theme.list.itemPlaceholderTextColor), for: .normal)
-        self.addPhotoButton.setBackgroundImage(generateCircleImage(diameter: 110.0, lineWidth: 1.0, color: self.theme.list.itemPlaceholderTextColor), for: .normal)
-        
+        self.addPhotoButton.setImage(generateTintedImage(image: UIImage(bundleImageName: "Avatar/EditAvatarIconLarge"), color: self.theme.list.itemAccentColor), for: .normal)
+        self.addPhotoButton.setBackgroundImage(generateFilledCircleImage(diameter: 110.0, color: self.theme.list.itemAccentColor.withAlphaComponent(0.1), strokeColor: nil, strokeWidth: nil, backgroundColor: nil), for: .normal)
+                
         self.addPhotoButton.addSubnode(self.currentPhotoNode)
         self.addPhotoButton.allowsGroupOpacity = true
+        
+        self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_Continue, theme: SolidRoundedButtonTheme(theme: self.theme), height: 50.0, cornerRadius: 11.0, gloss: false)
+        self.proceedNode.progressType = .embedded
         
         super.init()
         
@@ -158,6 +172,7 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.addSubnode(self.termsNode)
         self.termsNode.isHidden = true
         self.addSubnode(self.addPhotoButton)
+        self.addSubnode(self.proceedNode)
         
         self.addPhotoButton.addTarget(self, action: #selector(self.addPhotoPressed), forControlEvents: .touchUpInside)
         
@@ -172,6 +187,13 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         self.termsNode.tapAttributeAction = { [weak self] attributes, _ in
             if let _ = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] {
                 self?.openTermsOfService?()
+            }
+        }
+        
+        self.proceedNode.pressed = { [weak self] in
+            if let strongSelf = self {
+                let name = strongSelf.currentName
+                strongSelf.signUpWithName?(name.0, name.1)
             }
         }
     }
@@ -191,93 +213,51 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         
         var insets = layout.insets(options: [.statusBar])
         if let inputHeight = layout.inputHeight {
-            insets.bottom += max(inputHeight, layout.standardInputHeight)
+            insets.bottom = max(inputHeight, layout.standardInputHeight)
         }
         
-        let availableHeight = max(1.0, layout.size.height - insets.top - insets.bottom)
-        
-        if max(layout.size.width, layout.size.height) > 1023.0 {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(40.0), textColor: self.theme.list.itemPrimaryTextColor)
-        } else {
-            self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.light(30.0), textColor: self.theme.list.itemPrimaryTextColor)
-        }
-        
+        let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 90.0 : 10.0
+                
+        self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
         let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
-        let additionalTitleSpacing: CGFloat
-        if titleSize.width > layout.size.width - 160.0 {
-            additionalTitleSpacing = 44.0
-        } else {
-            additionalTitleSpacing = 0.0
-        }
         
-        let minimalTitleSpacing: CGFloat = 10.0
-        let maxTitleSpacing: CGFloat = 22.0
-        let fieldHeight: CGFloat = 57.0
-        let inputFieldsHeight: CGFloat = fieldHeight * 2.0
-        let leftInset: CGFloat = 130.0
+        let fieldHeight: CGFloat = 54.0
         
-        let minimalNoticeSpacing: CGFloat = 11.0
-        let maxNoticeSpacing: CGFloat = 35.0
+        let sideInset: CGFloat = 24.0
+        let innerInset: CGFloat = 16.0
+        
         let noticeSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         let termsSize = self.termsNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
         
-        let noticeHeight: CGFloat = noticeSize.height + (self.termsNode.isHidden ? 0.0 : (termsSize.height + 4.0))
+        let avatarSize: CGSize = CGSize(width: 110.0, height: 110.0)
+        var items: [AuthorizationLayoutItem] = []
+        items.append(AuthorizationLayoutItem(node: self.addPhotoButton, size: avatarSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 16.0, maxValue: 16.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        self.currentPhotoNode.frame = CGRect(origin: CGPoint(), size: avatarSize)
         
-        let minimalTermsOfServiceSpacing: CGFloat = 6.0
-        let maxTermsOfServiceSpacing: CGFloat = 20.0
-        let minTrailingSpacing: CGFloat = 10.0
+        items.append(AuthorizationLayoutItem(node: self.titleNode, size: titleSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 18.0, maxValue: 18.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.currentOptionNode, size: noticeSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 20.0, maxValue: 20.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        let inputHeight = inputFieldsHeight
-        let essentialHeight = additionalTitleSpacing + titleSize.height + minimalTitleSpacing + inputHeight + minimalNoticeSpacing + noticeHeight
-        let additionalHeight = minimalTermsOfServiceSpacing + minTrailingSpacing
+        items.append(AuthorizationLayoutItem(node: self.firstNameField, size: CGSize(width: layout.size.width - (sideInset + innerInset) * 2.0, height: fieldHeight), spacingBefore: AuthorizationLayoutItemSpacing(weight: 32.0, maxValue: 60.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.firstSeparatorNode, size: CGSize(width: layout.size.width - sideInset * 2.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
         
-        let navigationHeight: CGFloat
-        if essentialHeight + additionalHeight > availableHeight || availableHeight * 0.66 - inputHeight < additionalHeight {
-            navigationHeight = min(floor(availableHeight * 0.3), availableHeight - inputFieldsHeight)
+        items.append(AuthorizationLayoutItem(node: self.lastNameField, size: CGSize(width: layout.size.width - (sideInset + innerInset) * 2.0, height: fieldHeight), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        items.append(AuthorizationLayoutItem(node: self.lastSeparatorNode, size: CGSize(width: layout.size.width - sideInset * 2.0, height: UIScreenPixel), spacingBefore: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        items.append(AuthorizationLayoutItem(node: self.termsNode, size: termsSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 48.0, maxValue: 100.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 0.0, maxValue: 0.0)))
+        
+        if layout.size.width > 320.0 {
+            self.proceedNode.isHidden = false
+            
+            let inset: CGFloat = 24.0
+            let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
+            let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
+            transition.updateFrame(node: self.proceedNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize))
         } else {
-            navigationHeight = floor(availableHeight * 0.3)
+            insets.top = navigationBarHeight
+            self.proceedNode.isHidden = true
         }
         
-        let titleOffset: CGFloat
-        if navigationHeight * 0.5 < titleSize.height + minimalTitleSpacing {
-            titleOffset = max(navigationBarHeight, floor((navigationHeight - titleSize.height) / 2.0))
-        } else {
-            titleOffset = max(navigationBarHeight, max(navigationHeight * 0.5, navigationHeight - maxTitleSpacing - titleSize.height))
-        }
-        transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: floor((layout.size.width - titleSize.width) / 2.0), y: titleOffset), size: titleSize))
-        
-        let addPhotoButtonFrame = CGRect(origin: CGPoint(x: 10.0, y: navigationHeight + 10.0), size: CGSize(width: 110.0, height: 110.0))
-        transition.updateFrame(node: self.addPhotoButton, frame: addPhotoButtonFrame)
-        self.currentPhotoNode.frame = CGRect(origin: CGPoint(), size: addPhotoButtonFrame.size)
-        
-        let firstFieldFrame = CGRect(origin: CGPoint(x: leftInset, y: navigationHeight + 3.0), size: CGSize(width: layout.size.width - leftInset, height: fieldHeight))
-        transition.updateFrame(node: self.firstNameField, frame: firstFieldFrame)
-        
-        let lastFieldFrame = CGRect(origin: CGPoint(x: firstFieldFrame.minX, y: firstFieldFrame.maxY), size: CGSize(width: firstFieldFrame.size.width, height: fieldHeight))
-        transition.updateFrame(node: self.lastNameField, frame: lastFieldFrame)
-        
-        transition.updateFrame(node: self.firstSeparatorNode, frame: CGRect(origin: CGPoint(x: leftInset, y: firstFieldFrame.maxY), size: CGSize(width: layout.size.width - leftInset, height: UIScreenPixel)))
-        transition.updateFrame(node: self.lastSeparatorNode, frame: CGRect(origin: CGPoint(x: leftInset, y: lastFieldFrame.maxY), size: CGSize(width: layout.size.width - leftInset, height: UIScreenPixel)))
-        
-        let additionalAvailableHeight = max(1.0, availableHeight - lastFieldFrame.maxY)
-        let additionalAvailableSpacing = max(1.0, additionalAvailableHeight - noticeHeight)
-        let noticeSpacingFactor = maxNoticeSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-        let termsOfServiceSpacingFactor = maxTermsOfServiceSpacing / (maxNoticeSpacing + maxTermsOfServiceSpacing + minTrailingSpacing)
-        
-        let noticeSpacing: CGFloat
-        let termsOfServiceSpacing: CGFloat
-        if additionalAvailableHeight <= maxNoticeSpacing + noticeHeight + maxTermsOfServiceSpacing + minTrailingSpacing {
-            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-            noticeSpacing = floor((additionalAvailableHeight - termsOfServiceSpacing - noticeHeight) / 2.0)
-        } else {
-            noticeSpacing = min(floor(noticeSpacingFactor * additionalAvailableSpacing), maxNoticeSpacing)
-            termsOfServiceSpacing = min(floor(termsOfServiceSpacingFactor * additionalAvailableSpacing), maxTermsOfServiceSpacing)
-        }
-        
-        let currentOptionFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - noticeSize.width) / 2.0), y: lastFieldFrame.maxY + max(0.0, noticeSpacing)), size: noticeSize)
-        transition.updateFrame(node: self.currentOptionNode, frame: currentOptionFrame)
-        let termsFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - termsSize.width) / 2.0), y: layout.size.height - insets.bottom - termsSize.height - 4.0), size: termsSize)
-        transition.updateFrame(node: self.termsNode, frame: termsFrame)
+        let _ = layoutAuthorizationItems(bounds: CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: layout.size.width, height: layout.size.height - insets.top - insets.bottom - additionalBottomInset)), items: items, transition: transition, failIfDoesNotFit: false)
     }
     
     func activateInput() {

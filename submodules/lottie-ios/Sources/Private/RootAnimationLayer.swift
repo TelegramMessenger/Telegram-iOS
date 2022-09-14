@@ -39,6 +39,7 @@ protocol RootAnimationLayer: CALayer {
   func getOriginalValue(for keypath: AnimationKeypath, atFrame: AnimationFrameTime?) -> Any?
 
   func layer(for keypath: AnimationKeypath) -> CALayer?
+  func allLayers(for keypath: AnimationKeypath) -> [CALayer]
   func animatorNodes(for keypath: AnimationKeypath) -> [AnimatorNode]?
 }
 

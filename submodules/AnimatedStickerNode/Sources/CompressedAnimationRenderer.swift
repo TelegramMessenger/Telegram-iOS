@@ -37,6 +37,10 @@ final class CompressedAnimationRenderer: ASDisplayNode, AnimationRenderer {
     
     private let renderer: CompressedImageRenderer
     
+    var currentFrameImage: UIImage? {
+        return nil
+    }
+    
     override init() {
         self.renderer = CompressedImageRenderer(sharedContext: AnimationCompressor.SharedContext.shared)!
         

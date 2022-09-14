@@ -227,7 +227,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         return super.hitTest(point, with: event)
     }
     
-    override func reactionTargetView(value: String) -> UIView? {
+    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.interactiveFileNode.dateAndStatusNode.isHidden {
             return self.interactiveFileNode.dateAndStatusNode.reactionView(value: value)
         }

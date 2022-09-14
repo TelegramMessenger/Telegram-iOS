@@ -13,6 +13,7 @@ public struct UserLimitsConfiguration: Equatable {
     public let maxUploadFileParts: Int32
     public let maxAboutLength: Int32
     public let maxAnimatedEmojisInText: Int32
+    public let maxReactionsPerMessage: Int32
     
     public static var defaultValue: UserLimitsConfiguration {
         return UserLimitsConfiguration(
@@ -26,7 +27,8 @@ public struct UserLimitsConfiguration: Equatable {
             maxCaptionLength: 1024,
             maxUploadFileParts: 4000,
             maxAboutLength: 70,
-            maxAnimatedEmojisInText: 10
+            maxAnimatedEmojisInText: 10,
+            maxReactionsPerMessage: 1
         )
     }
 
@@ -41,7 +43,8 @@ public struct UserLimitsConfiguration: Equatable {
         maxCaptionLength: Int32,
         maxUploadFileParts: Int32,
         maxAboutLength: Int32,
-        maxAnimatedEmojisInText: Int32
+        maxAnimatedEmojisInText: Int32,
+        maxReactionsPerMessage: Int32
     ) {
         self.maxPinnedChatCount = maxPinnedChatCount
         self.maxChannelsCount = maxChannelsCount
@@ -54,6 +57,7 @@ public struct UserLimitsConfiguration: Equatable {
         self.maxUploadFileParts = maxUploadFileParts
         self.maxAboutLength = maxAboutLength
         self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
+        self.maxReactionsPerMessage = maxReactionsPerMessage
     }
 }
 
@@ -89,5 +93,6 @@ extension UserLimitsConfiguration {
         self.maxUploadFileParts = getValue("upload_max_fileparts", orElse: defaultValue.maxUploadFileParts)
         self.maxAboutLength = getValue("about_length_limit", orElse: defaultValue.maxAboutLength)
         self.maxAnimatedEmojisInText = getGeneralValue("message_animated_emoji_max", orElse: defaultValue.maxAnimatedEmojisInText)
+        self.maxReactionsPerMessage = getValue("reactions_user_max", orElse: 1)
     }
 }

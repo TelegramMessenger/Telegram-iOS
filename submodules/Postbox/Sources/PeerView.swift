@@ -24,6 +24,7 @@ final class MutablePeerView: MutablePostboxView {
     var peers: [PeerId: Peer] = [:]
     var peerPresences: [PeerId: PeerPresence] = [:]
     var messages: [MessageId: Message] = [:]
+    var media: [MediaId: Media] = [:]
     var peerIsContact: Bool
     var groupId: PeerGroupId?
     
@@ -81,6 +82,7 @@ final class MutablePeerView: MutablePostboxView {
                 self.messages[id] = message
             }
         }
+        self.media = renderAssociatedMediaForPeers(postbox: postbox, peers: self.peers)
     }
     
     func reset(postbox: PostboxImpl) -> Bool {
@@ -103,7 +105,7 @@ final class MutablePeerView: MutablePostboxView {
         }
         
         var updated = false
-        
+        var peersUpdated = false
         var updateMessages = false
         
         if let cachedData = updatedCachedPeerData[self.contactPeerId], self.cachedData == nil || !self.cachedData!.isEqual(to: cachedData) {
@@ -124,8 +126,10 @@ final class MutablePeerView: MutablePostboxView {
             for id in peerIds {
                 if let peer = updatedPeers[id] {
                     self.peers[id] = peer
+                    peersUpdated = true
                 } else if let peer = getPeer(id) {
                     self.peers[id] = peer
+                    peersUpdated = true
                 }
                 
                 if let presence = updatedPeerPresences[id] {
@@ -170,12 +174,17 @@ final class MutablePeerView: MutablePostboxView {
                 if let peer = updatedPeers[id] {
                     self.peers[id] = peer
                     updated = true
+                    peersUpdated = true
                 }
                 if let presence = updatedPeerPresences[id] {
                     self.peerPresences[id] = presence
                     updated = true
                 }
             }
+        }
+        
+        if peersUpdated {
+            self.media = renderAssociatedMediaForPeers(postbox: postbox, peers: self.peers)
         }
         
         if let cachedData = self.cachedData, !cachedData.messageIds.isEmpty, let operations = transaction.currentOperationsByPeerId[self.peerId] {
@@ -270,6 +279,7 @@ public final class PeerView: PostboxView {
     public let peers: [PeerId: Peer]
     public let peerPresences: [PeerId: PeerPresence]
     public let messages: [MessageId: Message]
+    public let media: [MediaId: Media]
     public let peerIsContact: Bool
     public let groupId: PeerGroupId?
     
@@ -280,6 +290,7 @@ public final class PeerView: PostboxView {
         self.peers = mutableView.peers
         self.peerPresences = mutableView.peerPresences
         self.messages = mutableView.messages
+        self.media = mutableView.media
         self.peerIsContact = mutableView.peerIsContact
         self.groupId = mutableView.groupId
     }

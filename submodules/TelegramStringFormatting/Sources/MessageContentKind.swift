@@ -103,7 +103,7 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
         let updatedString = NSMutableAttributedString(attributedString: attributedText)
         
         for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
-            guard case let .CustomEmoji(stickerPack, fileId) = entity.type else {
+            guard case let .CustomEmoji(_, fileId) = entity.type else {
                 continue
             }
             
@@ -111,8 +111,7 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
             
             let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
             var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-            //updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
             
             let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
             updatedString.replaceCharacters(in: range, with: insertString)
@@ -296,6 +295,7 @@ public func foldLineBreaks(_ text: String) -> String {
             result += " " + line
         }
     }
+    result = result.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     return result
 }
 

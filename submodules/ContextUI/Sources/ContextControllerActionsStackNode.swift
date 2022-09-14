@@ -9,13 +9,19 @@ import SwiftSignalKit
 import AccountContext
 import ReactionSelectionNode
 import Markdown
+import EntityKeyboard
+import AnimationCache
+import MultiAnimationRenderer
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
+    var wantsFullWidth: Bool { get }
+    
     func update(
         presentationData: PresentationData,
         constrainedSize: CGSize,
         standardMinWidth: CGFloat,
         standardMaxWidth: CGFloat,
+        additionalBottomInset: CGFloat,
         transition: ContainedViewLayoutTransition
     ) -> (size: CGSize, apparentHeight: CGFloat)
     
@@ -35,7 +41,8 @@ public protocol ContextControllerActionsStackItem: AnyObject {
     ) -> ContextControllerActionsStackItemNode
     
     var tip: ContextController.Tip? { get }
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? { get }
+    var tipSignal: Signal<ContextController.Tip?, NoError>? { get }
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? { get }
 }
 
 protocol ContextControllerActionsListItemNode: ASDisplayNode {
@@ -407,6 +414,10 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
         private var hapticFeedback: HapticFeedback?
         private var highlightedItemNode: Item?
         
+        var wantsFullWidth: Bool {
+            return false
+        }
+        
         init(
             getController: @escaping () -> ContextControllerProtocol?,
             requestDismiss: @escaping (ContextMenuActionResult) -> Void,
@@ -503,6 +514,7 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             var itemNodeLayouts: [(minSize: CGSize, apply: (_ size: CGSize, _ transition: ContainedViewLayoutTransition) -> Void)] = []
@@ -619,17 +631,20 @@ final class ContextControllerActionsListStackItem: ContextControllerActionsStack
     }
     
     private let items: [ContextMenuItem]
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
+    let tipSignal: Signal<ContextController.Tip?, NoError>?
     
     init(
         items: [ContextMenuItem],
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
-        tip: ContextController.Tip?
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+        tip: ContextController.Tip?,
+        tipSignal: Signal<ContextController.Tip?, NoError>?
     ) {
         self.items = items
         self.reactionItems = reactionItems
         self.tip = tip
+        self.tipSignal = tipSignal
     }
     
     func node(
@@ -670,18 +685,23 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
             self.addSubnode(self.contentNode)
         }
         
+        var wantsFullWidth: Bool {
+            return true
+        }
+        
         func update(
             presentationData: PresentationData,
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
             let contentLayout = self.contentNode.update(
                 presentationData: presentationData,
                 constrainedWidth: constrainedSize.width,
                 maxHeight: constrainedSize.height,
-                bottomInset: 0.0,
+                bottomInset: additionalBottomInset,
                 transition: transition
             )
             transition.updateFrame(node: self.contentNode, frame: CGRect(origin: CGPoint(), size: contentLayout.cleanSize), beginWithCurrentState: true)
@@ -703,17 +723,20 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
     }
     
     private let content: ContextControllerItemsContent
-    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+    let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
     let tip: ContextController.Tip?
+    let tipSignal: Signal<ContextController.Tip?, NoError>?
     
     init(
         content: ContextControllerItemsContent,
-        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
-        tip: ContextController.Tip?
+        reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
+        tip: ContextController.Tip?,
+        tipSignal: Signal<ContextController.Tip?, NoError>?
     ) {
         self.content = content
         self.reactionItems = reactionItems
         self.tip = tip
+        self.tipSignal = tipSignal
     }
     
     func node(
@@ -732,15 +755,15 @@ final class ContextControllerActionsCustomStackItem: ContextControllerActionsSta
 }
 
 func makeContextControllerActionsStackItem(items: ContextController.Items) -> ContextControllerActionsStackItem {
-    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
-    if let context = items.context, !items.reactionItems.isEmpty {
-        reactionItems = (context, items.reactionItems)
+    var reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
+    if let context = items.context, let animationCache = items.animationCache, !items.reactionItems.isEmpty {
+        reactionItems = (context, items.reactionItems, items.selectedReactionItems, animationCache, items.getEmojiContent)
     }
     switch items.content {
     case let .list(listItems):
-        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip)
+        return ContextControllerActionsListStackItem(items: listItems, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
     case let .custom(customContent):
-        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip)
+        return ContextControllerActionsCustomStackItem(content: customContent, reactionItems: reactionItems, tip: items.tip, tipSignal: items.tipSignal)
     }
 }
 
@@ -848,11 +871,14 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         let requestUpdate: (ContainedViewLayoutTransition) -> Void
         let node: ContextControllerActionsStackItemNode
         let dimNode: ASDisplayNode
-        let tip: ContextController.Tip?
+        var tip: ContextController.Tip?
+        let tipSignal: Signal<ContextController.Tip?, NoError>?
         var tipNode: InnerTextSelectionTipContainerNode?
-        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?
+        let reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?
         var storedScrollingState: CGFloat?
         let positionLock: CGFloat?
+        
+        private var tipDisposable: Disposable?
         
         init(
             getController: @escaping () -> ContextControllerProtocol?,
@@ -861,7 +887,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             requestUpdateApparentHeight: @escaping (ContainedViewLayoutTransition) -> Void,
             item: ContextControllerActionsStackItem,
             tip: ContextController.Tip?,
-            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])?,
+            tipSignal: Signal<ContextController.Tip?, NoError>?,
+            reactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)?,
             positionLock: CGFloat?
         ) {
             self.getController = getController
@@ -881,6 +908,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             self.positionLock = positionLock
             
             self.tip = tip
+            self.tipSignal = tipSignal
             
             super.init()
             
@@ -888,6 +916,21 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             self.addSubnode(self.node)
             self.addSubnode(self.dimNode)
+            
+            if let tipSignal = tipSignal {
+                self.tipDisposable = (tipSignal
+                |> deliverOnMainQueue).start(next: { [weak self] tip in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.tip = tip
+                    requestUpdate(.immediate)
+                })
+            }
+        }
+        
+        deinit {
+            self.tipDisposable?.dispose()
         }
         
         func update(
@@ -895,6 +938,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             constrainedSize: CGSize,
             standardMinWidth: CGFloat,
             standardMaxWidth: CGFloat,
+            additionalBottomInset: CGFloat,
             transitionFraction: CGFloat,
             transition: ContainedViewLayoutTransition
         ) -> (size: CGSize, apparentHeight: CGFloat) {
@@ -903,6 +947,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 constrainedSize: constrainedSize,
                 standardMinWidth: standardMinWidth,
                 standardMaxWidth: standardMaxWidth,
+                additionalBottomInset: additionalBottomInset,
                 transition: transition
             )
             
@@ -918,16 +963,25 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             return (size, apparentHeight)
         }
         
-        func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: ASDisplayNode, height: CGFloat)? {
+        func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: InnerTextSelectionTipContainerNode, height: CGFloat)? {
             if let tip = self.tip {
                 var updatedTransition = transition
-                if self.tipNode == nil {
+                if let tipNode = self.tipNode, tipNode.tip == tip {
+                } else {
+                    let previousTipNode = self.tipNode
                     updatedTransition = .immediate
                     let tipNode = InnerTextSelectionTipContainerNode(presentationData: presentationData, tip: tip)
                     tipNode.requestDismiss = { [weak self] completion in
                         self?.getController()?.dismiss(completion: completion)
                     }
                     self.tipNode = tipNode
+                    
+                    if let previousTipNode = previousTipNode {
+                        previousTipNode.animateTransitionInside(other: tipNode)
+                        previousTipNode.removeFromSupernode()
+                        
+                        tipNode.animateContentIn()
+                    }
                 }
                 
                 if let tipNode = self.tipNode {
@@ -982,7 +1036,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
     
     private var selectionPanGesture: UIPanGestureRecognizer?
     
-    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem])? {
+    var topReactionItems: (context: AccountContext, reactionItems: [ReactionContextItem], selectedReactionItems: Set<MessageReaction.Reaction>, animationCache: AnimationCache, getEmojiContent: ((AnimationCache, MultiAnimationRenderer) -> Signal<EmojiPagerContentComponent, NoError>)?)? {
         return self.itemContainers.last?.reactionItems
     }
     
@@ -1075,6 +1129,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             },
             item: item,
             tip: item.tip,
+            tipSignal: item.tipSignal,
             reactionItems: item.reactionItems,
             positionLock: positionLock
         )
@@ -1120,6 +1175,11 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         
         let animateAppearingContainers = transition.isAnimated && !self.dismissingItemContainers.isEmpty
         
+        struct TipLayout {
+            var tipNode: InnerTextSelectionTipContainerNode
+            var tipHeight: CGFloat
+        }
+        
         struct ItemLayout {
             var size: CGSize
             var apparentHeight: CGFloat
@@ -1127,6 +1187,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             var alphaTransitionFraction: CGFloat
             var itemTransition: ContainedViewLayoutTransition
             var animateAppearingContainer: Bool
+            var tip: TipLayout?
         }
         
         var topItemSize = CGSize()
@@ -1156,16 +1217,48 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 alphaTransitionFraction = 0.0
             }
             
+            var tip: TipLayout?
+            
+            let itemContainerConstrainedSize: CGSize
+            let standardMinWidth: CGFloat
+            let standardMaxWidth: CGFloat
+            let additionalBottomInset: CGFloat
+            
+            if itemContainer.node.wantsFullWidth {
+                itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
+                standardMaxWidth = 240.0
+                standardMinWidth = standardMaxWidth
+                
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: standardMaxWidth, transition: itemContainerTransition) {
+                    tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+                    additionalBottomInset = tipHeight + 10.0
+                } else {
+                    additionalBottomInset = 0.0
+                }
+            } else {
+                itemContainerConstrainedSize = CGSize(width: constrainedSize.width, height: itemConstrainedHeight)
+                standardMinWidth = 220.0
+                standardMaxWidth = 240.0
+                additionalBottomInset = 0.0
+            }
+            
             let itemSize = itemContainer.update(
                 presentationData: presentationData,
-                constrainedSize: CGSize(width: constrainedSize.width, height: itemConstrainedHeight),
-                standardMinWidth: 220.0,
-                standardMaxWidth: 240.0,
+                constrainedSize: itemContainerConstrainedSize,
+                standardMinWidth: standardMinWidth,
+                standardMaxWidth: standardMaxWidth,
+                additionalBottomInset: additionalBottomInset,
                 transitionFraction: alphaTransitionFraction,
                 transition: itemContainerTransition
             )
             if i == self.itemContainers.count - 1 {
                 topItemSize = itemSize.size
+            }
+            
+            if !itemContainer.node.wantsFullWidth {
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: itemSize.size.width, transition: itemContainerTransition) {
+                    tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
+                }
             }
             
             itemLayouts.append(ItemLayout(
@@ -1174,7 +1267,8 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 transitionFraction: transitionFraction,
                 alphaTransitionFraction: alphaTransitionFraction,
                 itemTransition: itemContainerTransition,
-                animateAppearingContainer: animateAppearingContainer
+                animateAppearingContainer: animateAppearingContainer,
+                tip: tip
             ))
         }
         
@@ -1196,6 +1290,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
         }
         
         let navigationContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: topItemWidth, height: max(14 * 2.0, topItemApparentHeight)))
+        let previousNavigationContainerFrame = self.navigationContainer.frame
         transition.updateFrame(node: self.navigationContainer, frame: navigationContainerFrame, beginWithCurrentState: true)
         self.navigationContainer.update(presentationData: presentationData, presentation: presentation, size: navigationContainerFrame.size, transition: transition)
         
@@ -1222,20 +1317,30 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             
             self.itemContainers[i].updateDimNode(presentationData: presentationData, size: CGSize(width: itemLayouts[i].size.width, height: navigationContainerFrame.size.height), transitionFraction: itemLayouts[i].alphaTransitionFraction, transition: transition)
             
-            if let (tipNode, tipHeight) = self.itemContainers[i].updateTip(presentationData: presentationData, width: itemLayouts[i].size.width, transition: transition) {
-                var tipTransition = transition
-                if tipNode.supernode == nil {
-                    tipTransition = .immediate
-                    self.addSubnode(tipNode)
+            if let tip = itemLayouts[i].tip {
+                let tipTransition = transition
+                var animateTipIn = false
+                if tip.tipNode.supernode == nil {
+                    self.addSubnode(tip.tipNode)
+                    animateTipIn = transition.isAnimated
+                    tip.tipNode.frame = CGRect(origin: CGPoint(x: previousNavigationContainerFrame.minX, y: previousNavigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight))
+                    tip.tipNode.setActualSize(size: tip.tipNode.bounds.size, transition: .immediate)
                 }
                 
                 let tipAlpha: CGFloat = itemLayouts[i].alphaTransitionFraction
                 
-                tipTransition.updateFrame(node: tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tipHeight)), beginWithCurrentState: true)
-                tipTransition.updateAlpha(node: tipNode, alpha: tipAlpha, beginWithCurrentState: true)
+                tipTransition.updateFrame(node: tip.tipNode, frame: CGRect(origin: CGPoint(x: navigationContainerFrame.minX, y: navigationContainerFrame.maxY + tipSpacing), size: CGSize(width: itemLayouts[i].size.width, height: tip.tipHeight)), beginWithCurrentState: true)
+                tip.tipNode.setActualSize(size: tip.tipNode.bounds.size, transition: tipTransition)
+                
+                if animateTipIn {
+                    tip.tipNode.alpha = tipAlpha
+                    tip.tipNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                } else {
+                    tipTransition.updateAlpha(node: tip.tipNode, alpha: tipAlpha, beginWithCurrentState: true)
+                }
                 
                 if i == self.itemContainers.count - 1 {
-                    topItemSize.height += tipSpacing + tipHeight
+                    topItemSize.height += tipSpacing + tip.tipHeight
                 }
             }
         }

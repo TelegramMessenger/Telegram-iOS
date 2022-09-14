@@ -97,14 +97,12 @@ func _internal_getCurrentGroupCall(account: Account, callId: Int64, accessHash: 
                 }
                 
                 var peers: [Peer] = []
-                var peerPresences: [PeerId: PeerPresence] = [:]
+                var peerPresences: [PeerId: Api.User] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
                 
                 for chat in chats {
@@ -383,14 +381,12 @@ func _internal_getGroupCallParticipants(account: Account, callId: Int64, accessH
                 }
                 
                 var peers: [Peer] = []
-                var peerPresences: [PeerId: PeerPresence] = [:]
+                var peerPresences: [PeerId: Api.User] = [:]
                 
                 for user in users {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
                 
                 for chat in chats {
@@ -596,14 +592,12 @@ func _internal_joinGroupCall(account: Account, peerId: PeerId, joinAs: PeerId?, 
                 state.adminIds = Set(peerAdminIds)
                     
                 var peers: [Peer] = []
-                var peerPresences: [PeerId: PeerPresence] = [:]
+                var peerPresences: [PeerId: Api.User] = [:]
 
                 for user in apiUsers {
                     let telegramUser = TelegramUser(user: user)
                     peers.append(telegramUser)
-                    if let presence = TelegramUserPresence(apiUser: user) {
-                        peerPresences[telegramUser.id] = presence
-                    }
+                    peerPresences[telegramUser.id] = user
                 }
 
                 let connectionMode: JoinGroupCallResult.ConnectionMode

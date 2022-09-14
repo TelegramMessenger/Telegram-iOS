@@ -92,8 +92,12 @@ public final class TelegramGroup: Peer, Equatable {
         return .title(title: self.title, addressName: nil)
     }
     
+    public var associatedMediaIds: [MediaId]? { return nil }
+    
     public let associatedPeerId: PeerId? = nil
     public let notificationSettingsPeerId: PeerId? = nil
+    
+    public var timeoutAttribute: UInt32? { return nil }
     
     public init(id: PeerId, title: String, photo: [TelegramMediaImageRepresentation], participantCount: Int, role: TelegramGroupRole, membership: TelegramGroupMembership, flags: TelegramGroupFlags, defaultBannedRights: TelegramChatBannedRights?, migrationReference: TelegramGroupToChannelMigrationReference?, creationDate: Int32, version: Int) {
         self.id = id

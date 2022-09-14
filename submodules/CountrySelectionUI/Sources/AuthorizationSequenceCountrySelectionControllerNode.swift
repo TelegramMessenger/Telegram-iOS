@@ -38,7 +38,11 @@ private func loadCountryCodes() -> [(String, Int)] {
         
         let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
         
-        let maybeNameRange = data.range(of: endOfLine, options: [], range: idRange.upperBound ..< data.endIndex)
+        guard let patternRange = data.range(of: delimiter, options: [], range: idRange.upperBound ..< data.endIndex) else {
+            break
+        }
+                
+        let maybeNameRange = data.range(of: endOfLine, options: [], range: patternRange.upperBound ..< data.endIndex)
         
         if let countryCodeInt = Int(countryCode) {
             result.append((countryId, countryCodeInt))

@@ -82,6 +82,34 @@ public protocol Media: AnyObject, PostboxCoding {
     func isSemanticallyEqual(to other: Media) -> Bool
 }
 
+public func areMediaArraysEqual(_ lhs: [Media], _ rhs: [Media]) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for i in 0 ..< lhs.count {
+        if !lhs[i].isEqual(to: rhs[i]) {
+            return false
+        }
+    }
+    return true
+}
+
+public func areMediaDictionariesEqual(_ lhs: [MediaId: Media], _ rhs: [MediaId: Media]) -> Bool {
+    if lhs.count != rhs.count {
+        return false
+    }
+    for (key, value) in lhs {
+        if let rhsValue = rhs[key] {
+            if !value.isEqual(to: rhsValue) {
+                return false
+            }
+        } else {
+            return false
+        }
+    }
+    return true
+}
+
 public extension Media {
     func isLikelyToBeUpdated() -> Bool {
         return false

@@ -805,7 +805,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum BotCommandScope: TypeConstructorDescription {
+    indirect enum BotCommandScope: TypeConstructorDescription {
         case botCommandScopeChatAdmins
         case botCommandScopeChats
         case botCommandScopeDefault

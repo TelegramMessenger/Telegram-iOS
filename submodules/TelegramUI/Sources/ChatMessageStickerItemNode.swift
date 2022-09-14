@@ -345,7 +345,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         let currentShareButtonNode = self.shareButtonNode
         let currentForwardInfo = self.appliedForwardInfo
         
-        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageStickerItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
@@ -504,7 +504,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
+            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute, isEmoji {
                     edited = !attribute.isHidden
@@ -531,15 +531,18 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 impressionCount: viewCount,
                 dateText: dateText,
                 type: statusType,
-                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                 constrainedSize: CGSize(width: params.width, height: CGFloat.greatestFiniteMagnitude),
                 availableReactions: item.associatedData.availableReactions,
                 reactions: dateReactionsAndPeers.reactions,
                 reactionPeers: dateReactionsAndPeers.peers,
+                displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                 replyCount: dateReplies,
                 isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                 hasAutoremove: item.message.isSelfExpiring,
-                canViewReactionList: canViewMessageReactionList(message: item.message)
+                canViewReactionList: canViewMessageReactionList(message: item.message),
+                animationCache: item.controllerInteraction.presentationContext.animationCache,
+                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
             ))
             
             let (dateAndStatusSize, dateAndStatusApply) = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -681,7 +684,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
@@ -699,6 +702,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     availableReactions: item.associatedData.availableReactions,
                     reactions: reactions,
                     message: item.message,
+                    accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
                 ))
@@ -781,8 +785,8 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, synchronousLoads in
-                if let strongSelf = self {
+            func finishAsyncLayout(_ animation: ListViewItemUpdateAnimation, _ synchronousLoads: Bool) {
+                if let strongSelf = weakSelf.value {
                     var transition: ContainedViewLayoutTransition = .immediate
                     if case let .System(duration, _) = animation {
                         transition = .animated(duration: duration, curve: .spring)
@@ -947,7 +951,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         } else {
                             isAppearing = true
                             deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
-                                if let item = self?.item {
+                                if let strongSelf = weakSelf.value, let item = strongSelf.item {
                                     item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
                                 }
                             })
@@ -978,12 +982,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         if actionButtonsNode !== strongSelf.actionButtonsNode {
                             strongSelf.actionButtonsNode = actionButtonsNode
                             actionButtonsNode.buttonPressed = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.performMessageButtonAction(button: button)
                                 }
                             }
                             actionButtonsNode.buttonLongTapped = { button in
-                                if let strongSelf = self {
+                                if let strongSelf = weakSelf.value {
                                     strongSelf.presentMessageButtonContextMenu(button: button)
                                 }
                             }
@@ -1010,13 +1014,13 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                             strongSelf.reactionButtonsNode = reactionButtonsNode
                             reactionButtonsNode.reactionSelected = { value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     return
                                 }
                                 item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                             }
                             reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
-                                guard let strongSelf = self, let item = strongSelf.item else {
+                                guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                     gesture?.cancel()
                                     return
                                 }
@@ -1066,7 +1070,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if let forwardInfo = item.message.forwardInfo, forwardInfo.flags.contains(.isImported) {
                         strongSelf.dateAndStatusNode.pressed = {
-                            guard let strongSelf = self else {
+                            guard let strongSelf = weakSelf.value else {
                                 return
                             }
                             item.controllerInteraction.displayImportedMessageTooltip(strongSelf.dateAndStatusNode)
@@ -1081,7 +1085,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                         f()
                     }
                 }
+            }
+            
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { animation, _, synchronousLoads in
+                finishAsyncLayout(animation, synchronousLoads)
             })
+        }
+        
+        let weakSelf = Weak(self)
+        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+            return continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }
     
@@ -1613,7 +1626,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         item.controllerInteraction.openMessageContextMenu(item.message, false, self, self.imageNode.frame, nil, nil)
     }
     
-    override func targetReactionView(value: String) -> UIView? {
+    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }

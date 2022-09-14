@@ -2543,7 +2543,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.currentEmojiSuggestionView = nil
                 
                 currentEmojiSuggestionView.alpha = 0.0
-                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, completion: { [weak currentEmojiSuggestionView] _ in
+                currentEmojiSuggestionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak currentEmojiSuggestionView] _ in
                     currentEmojiSuggestionView?.removeFromSuperview()
                 })
             }
@@ -2587,9 +2587,9 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                             loop: for attribute in file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, displayText, packReference):
+                                case let .CustomEmoji(_, displayText, _):
                                     text = displayText
-                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(stickerPack: packReference, fileId: file.fileId.id, file: file)
+                                    emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                     break loop
                                 default:
                                     break
@@ -2614,7 +2614,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                                         if adjacentString.string != previousText.string || adjacentString.attribute(ChatTextInputAttributes.customEmoji, at: 0, effectiveRange: nil) != nil {
                                             break
                                         }
-                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: emojiAttribute.stickerPack, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
+                                        inputText.replaceCharacters(in: replaceRange, with: NSAttributedString(string: text, attributes: [ChatTextInputAttributes.customEmoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: emojiAttribute.interactivelySelectedFromPackId, fileId: emojiAttribute.fileId, file: emojiAttribute.file)]))
                                         replacedUpperBound = replaceRange.lowerBound
                                     } else {
                                         break
@@ -3462,6 +3462,15 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
     func frameForStickersButton() -> CGRect? {
         for (item, button) in self.accessoryItemButtons {
             if case let .input(_, inputMode) = item, case .stickers = inputMode {
+                return button.frame.insetBy(dx: 0.0, dy: 6.0)
+            }
+        }
+        return nil
+    }
+    
+    func frameForEmojiButton() -> CGRect? {
+        for (item, button) in self.accessoryItemButtons {
+            if case let .input(_, inputMode) = item, case .emoji = inputMode {
                 return button.frame.insetBy(dx: 0.0, dy: 6.0)
             }
         }

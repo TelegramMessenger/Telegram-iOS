@@ -54,16 +54,32 @@ public final class AnimationCacheItem {
         case frames(Int)
     }
     
-    public let numFrames: Int
-    private let advanceImpl: (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?
-    
-    public init(numFrames: Int, advanceImpl: @escaping (Advance, AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame?) {
-        self.numFrames = numFrames
-        self.advanceImpl = advanceImpl
+    public struct AdvanceResult {
+        public let frame: AnimationCacheItemFrame
+        public let didLoop: Bool
+        
+        public init(frame: AnimationCacheItemFrame, didLoop: Bool) {
+            self.frame = frame
+            self.didLoop = didLoop
+        }
     }
     
-    public func advance(advance: Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
+    public let numFrames: Int
+    private let advanceImpl: (Advance, AnimationCacheItemFrame.RequestedFormat) -> AdvanceResult?
+    private let resetImpl: () -> Void
+    
+    public init(numFrames: Int, advanceImpl: @escaping (Advance, AnimationCacheItemFrame.RequestedFormat) -> AdvanceResult?, resetImpl: @escaping () -> Void) {
+        self.numFrames = numFrames
+        self.advanceImpl = advanceImpl
+        self.resetImpl = resetImpl
+    }
+    
+    public func advance(advance: Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AdvanceResult? {
         return self.advanceImpl(advance, requestedFormat)
+    }
+    
+    public func reset() {
+        self.resetImpl()
     }
 }
 
@@ -74,7 +90,7 @@ public struct AnimationCacheItemDrawingSurface {
     public let bytesPerRow: Int
     public let length: Int
     
-    init(
+    public init(
         argb: UnsafeMutablePointer<UInt8>,
         width: Int,
         height: Int,
@@ -234,7 +250,10 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         var duration: Double
     }
     
-    let queue: Queue
+    var queue: Queue {
+        return self.innerQueue
+    }
+    let innerQueue: Queue
     var isCancelled: Bool = false
     
     private let compressedPath: String
@@ -269,7 +288,7 @@ private final class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
         self.dctQualityChroma = 88
         self.dctQualityDelta = 22
         
-        self.queue = queue
+        self.innerQueue = queue
         self.compressedPath = allocateTempFile()
         
         guard let file = ManagedFile(queue: nil, path: self.compressedPath, mode: .readwrite) else {
@@ -660,12 +679,14 @@ private final class AnimationCacheItemAccessor {
         self.currentDctData = dctData
     }
     
-    private func loadNextFrame() {
+    private func loadNextFrame() -> Bool {
+        var didLoop = false
         let index: Int
         if let currentFrame = self.currentFrame {
             if currentFrame.index + 1 >= self.durationMapping.count {
                 index = 0
                 self.compressedDataReader = nil
+                didLoop = true
             } else {
                 index = currentFrame.index + 1
             }
@@ -680,7 +701,7 @@ private final class AnimationCacheItemAccessor {
         
         guard let compressedDataReader = self.compressedDataReader else {
             self.currentFrame = nil
-            return
+            return didLoop
         }
         
         do {
@@ -770,13 +791,22 @@ private final class AnimationCacheItemAccessor {
             self.currentFrame = nil
             self.compressedDataReader = nil
         }
+        
+        return didLoop
     }
     
-    func advance(advance: AnimationCacheItem.Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItemFrame? {
+    func reset() {
+        self.currentFrame = nil
+    }
+    
+    func advance(advance: AnimationCacheItem.Advance, requestedFormat: AnimationCacheItemFrame.RequestedFormat) -> AnimationCacheItem.AdvanceResult? {
+        var didLoop = false
         switch advance {
         case let .frames(count):
             for _ in 0 ..< count {
-                self.loadNextFrame()
+                if self.loadNextFrame() {
+                    didLoop = true
+                }
             }
         case let .duration(duration):
             var durationOverflow = duration
@@ -785,12 +815,16 @@ private final class AnimationCacheItemAccessor {
                     currentFrame.remainingDuration -= durationOverflow
                     if currentFrame.remainingDuration <= 0.0 {
                         durationOverflow = -currentFrame.remainingDuration
-                        self.loadNextFrame()
+                        if self.loadNextFrame() {
+                            didLoop = true
+                        }
                     } else {
                         break
                     }
                 } else {
-                    self.loadNextFrame()
+                    if self.loadNextFrame() {
+                        didLoop = true
+                    }
                     break
                 }
             }
@@ -805,36 +839,42 @@ private final class AnimationCacheItemAccessor {
             let currentSurface = ImageARGB(width: currentFrame.yuva.yPlane.width, height: currentFrame.yuva.yPlane.height, rowAlignment: 32)
             currentFrame.yuva.toARGB(target: currentSurface)
             
-            return AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: currentFrame.duration)
+            return AnimationCacheItem.AdvanceResult(
+                frame: AnimationCacheItemFrame(format: .rgba(data: currentSurface.argbPlane.data, width: currentSurface.argbPlane.width, height: currentSurface.argbPlane.height, bytesPerRow: currentSurface.argbPlane.bytesPerRow), duration: currentFrame.duration),
+                didLoop: didLoop
+            )
         case .yuva:
-            return AnimationCacheItemFrame(
-                format: .yuva(
-                    y: AnimationCacheItemFrame.Plane(
-                        data: currentFrame.yuva.yPlane.data,
-                        width: currentFrame.yuva.yPlane.width,
-                        height: currentFrame.yuva.yPlane.height,
-                        bytesPerRow: currentFrame.yuva.yPlane.bytesPerRow
+            return AnimationCacheItem.AdvanceResult(
+                frame: AnimationCacheItemFrame(
+                    format: .yuva(
+                        y: AnimationCacheItemFrame.Plane(
+                            data: currentFrame.yuva.yPlane.data,
+                            width: currentFrame.yuva.yPlane.width,
+                            height: currentFrame.yuva.yPlane.height,
+                            bytesPerRow: currentFrame.yuva.yPlane.bytesPerRow
+                        ),
+                        u: AnimationCacheItemFrame.Plane(
+                            data: currentFrame.yuva.uPlane.data,
+                            width: currentFrame.yuva.uPlane.width,
+                            height: currentFrame.yuva.uPlane.height,
+                            bytesPerRow: currentFrame.yuva.uPlane.bytesPerRow
+                        ),
+                        v: AnimationCacheItemFrame.Plane(
+                            data: currentFrame.yuva.vPlane.data,
+                            width: currentFrame.yuva.vPlane.width,
+                            height: currentFrame.yuva.vPlane.height,
+                            bytesPerRow: currentFrame.yuva.vPlane.bytesPerRow
+                        ),
+                        a: AnimationCacheItemFrame.Plane(
+                            data: currentFrame.yuva.aPlane.data,
+                            width: currentFrame.yuva.aPlane.width,
+                            height: currentFrame.yuva.aPlane.height,
+                            bytesPerRow: currentFrame.yuva.aPlane.bytesPerRow
+                        )
                     ),
-                    u: AnimationCacheItemFrame.Plane(
-                        data: currentFrame.yuva.uPlane.data,
-                        width: currentFrame.yuva.uPlane.width,
-                        height: currentFrame.yuva.uPlane.height,
-                        bytesPerRow: currentFrame.yuva.uPlane.bytesPerRow
-                    ),
-                    v: AnimationCacheItemFrame.Plane(
-                        data: currentFrame.yuva.vPlane.data,
-                        width: currentFrame.yuva.vPlane.width,
-                        height: currentFrame.yuva.vPlane.height,
-                        bytesPerRow: currentFrame.yuva.vPlane.bytesPerRow
-                    ),
-                    a: AnimationCacheItemFrame.Plane(
-                        data: currentFrame.yuva.aPlane.data,
-                        width: currentFrame.yuva.aPlane.width,
-                        height: currentFrame.yuva.aPlane.height,
-                        bytesPerRow: currentFrame.yuva.aPlane.bytesPerRow
-                    )
+                    duration: currentFrame.duration
                 ),
-                duration: currentFrame.duration
+                didLoop: didLoop
             )
         }
     }
@@ -1201,6 +1241,8 @@ private func loadItem(path: String) throws -> AnimationCacheItem {
     
     return AnimationCacheItem(numFrames: frameMapping.count, advanceImpl: { advance, requestedFormat in
         return itemAccessor.advance(advance: advance, requestedFormat: requestedFormat)
+    }, resetImpl: {
+        itemAccessor.reset()
     })
 }
 
@@ -1220,7 +1262,7 @@ private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String
                 guard let frame = higherResolutionItem.advance(advance: .frames(1), requestedFormat: .yuva(rowAlignment: yuva.yPlane.rowAlignment)) else {
                     return nil
                 }
-                switch frame.format {
+                switch frame.frame.format {
                 case .rgba:
                     return nil
                 case let .yuva(y, u, v, a):
@@ -1230,7 +1272,7 @@ private func adaptItemFromHigherResolution(currentQueue: Queue, itemPath: String
                     yuva.aPlane.copyScaled(fromPlane: a)
                 }
                 
-                return frame.duration
+                return frame.frame.duration
             }, proposedWidth: width, proposedHeight: height, insertKeyframe: true)
         }
         
@@ -1267,7 +1309,7 @@ private func generateFirstFrameFromItem(currentQueue: Queue, itemPath: String, a
             guard let frame = animationItem.advance(advance: .frames(1), requestedFormat: .yuva(rowAlignment: 1)) else {
                 return false
             }
-            switch frame.format {
+            switch frame.frame.format {
             case .rgba:
                 return false
             case let .yuva(y, u, v, a):
@@ -1282,7 +1324,7 @@ private func generateFirstFrameFromItem(currentQueue: Queue, itemPath: String, a
                     yuva.vPlane.copyScaled(fromPlane: v)
                     yuva.aPlane.copyScaled(fromPlane: a)
                     
-                    return frame.duration
+                    return frame.frame.duration
                 }, proposedWidth: y.width, proposedHeight: y.height, insertKeyframe: true)
             }
         }
@@ -1348,6 +1390,12 @@ private func findHigherResolutionFileForAdaptation(itemDirectoryPath: String, ba
 
 public final class AnimationCacheImpl: AnimationCache {
     private final class Impl {
+        private struct ItemKey: Hashable {
+            var id: String
+            var width: Int
+            var height: Int
+        }
+        
         private final class ItemContext {
             let subscribers = Bag<(AnimationCacheItemResult) -> Void>()
             let disposable = MetaDisposable()
@@ -1364,7 +1412,7 @@ public final class AnimationCacheImpl: AnimationCache {
         private let fetchQueues: [Queue]
         private var nextFetchQueueIndex: Int = 0
         
-        private var itemContexts: [String: ItemContext] = [:]
+        private var itemContexts: [ItemKey: ItemContext] = [:]
         
         init(queue: Queue, basePath: String, allocateTempFile: @escaping () -> String) {
             self.queue = queue
@@ -1395,14 +1443,15 @@ public final class AnimationCacheImpl: AnimationCache {
                 
                 return EmptyDisposable
             }
+            let key = ItemKey(id: sourceId, width: Int(size.width), height: Int(size.height))
             
             let itemContext: ItemContext
             var beginFetch = false
-            if let current = self.itemContexts[sourceId] {
+            if let current = self.itemContexts[key] {
                 itemContext = current
             } else {
                 itemContext = ItemContext()
-                self.itemContexts[sourceId] = itemContext
+                self.itemContexts[key] = itemContext
                 beginFetch = true
             }
             
@@ -1417,11 +1466,11 @@ public final class AnimationCacheImpl: AnimationCache {
                 let allocateTempFile = self.allocateTempFile
                 guard let writer = AnimationCacheItemWriterImpl(queue: self.fetchQueues[fetchQueueIndex % self.fetchQueues.count], allocateTempFile: self.allocateTempFile, completion: { [weak self, weak itemContext] result in
                     queue.async {
-                        guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
+                        guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[key] else {
                             return
                         }
                         
-                        strongSelf.itemContexts.removeValue(forKey: sourceId)
+                        strongSelf.itemContexts.removeValue(forKey: key)
                         
                         guard let result = result else {
                             return
@@ -1461,13 +1510,13 @@ public final class AnimationCacheImpl: AnimationCache {
             
             return ActionDisposable { [weak self, weak itemContext] in
                 queue.async {
-                    guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[sourceId] else {
+                    guard let strongSelf = self, let itemContext = itemContext, itemContext === strongSelf.itemContexts[key] else {
                         return
                     }
                     itemContext.subscribers.remove(index)
                     if itemContext.subscribers.isEmpty {
                         itemContext.disposable.dispose()
-                        strongSelf.itemContexts.removeValue(forKey: sourceId)
+                        strongSelf.itemContexts.removeValue(forKey: key)
                     }
                 }
             }

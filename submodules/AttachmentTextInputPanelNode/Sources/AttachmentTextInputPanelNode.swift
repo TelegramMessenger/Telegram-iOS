@@ -336,10 +336,8 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.presentController = presentController
         self.makeEntityInputView = makeEntityInputView
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         var hasSpoilers = true
         if presentationInterfaceState.chatLocation.peerId?.namespace == Namespaces.Peer.SecretChat {
@@ -513,6 +511,9 @@ public class AttachmentTextInputPanelNode: ASDisplayNode, TGCaptionPanelView, AS
         self.textInputContainer.addSubnode(textInputNode)
         textInputNode.view.disablesInteractiveTransitionGestureRecognizer = true
         self.textInputNode = textInputNode
+        
+        textInputNode.textView.inputAssistantItem.leadingBarButtonGroups = []
+        textInputNode.textView.inputAssistantItem.trailingBarButtonGroups = []
         
         if let presentationInterfaceState = self.presentationInterfaceState {
             refreshChatTextInputTypingAttributes(textInputNode, theme: presentationInterfaceState.theme, baseFontSize: baseFontSize)

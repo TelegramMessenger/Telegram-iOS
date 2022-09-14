@@ -26,6 +26,8 @@ import ChatPresentationInterfaceState
 import ChatMessageBackground
 import AnimationCache
 import MultiAnimationRenderer
+import ComponentFlow
+import EmojiStatusComponent
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -112,9 +114,13 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 result.append((message, ChatMessageGameBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                 needReactions = false
                 break inner
-            } else if let _ = media as? TelegramMediaInvoice {
-                skipText = true
-                result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+            } else if let invoice = media as? TelegramMediaInvoice {
+                if let _ = invoice.extendedMedia {
+                    result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
+                } else {
+                    skipText = true
+                    result.append((message, ChatMessageInvoiceBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                }
                 needReactions = false
                 break inner
             } else if let _ = media as? TelegramMediaContact {
@@ -200,7 +206,8 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
     
     let firstMessage = item.content.firstMessage
     
-    let reactionsAreInline = shouldDisplayInlineDateReactions(message: firstMessage)
+    let reactionsAreInline: Bool
+    reactionsAreInline = shouldDisplayInlineDateReactions(message: firstMessage, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions)
     if reactionsAreInline {
         needReactions = false
     }
@@ -298,18 +305,8 @@ class ChatPresentationContext {
     init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
         self.backgroundNode = backgroundNode
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        
-        let animationRenderer: MultiAnimationRenderer
-        /*if #available(iOS 13.0, *) {
-            animationRenderer = MultiAnimationMetalRendererImpl()
-        } else {*/
-            animationRenderer = MultiAnimationRendererImpl()
-        //}
-        
-        self.animationRenderer = animationRenderer
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
     }
 }
 
@@ -497,7 +494,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     private var nameNode: TextNode?
     private var adminBadgeNode: TextNode?
-    private var credibilityIconNode: ASImageNode?
+    private var credibilityIconView: ComponentHostView<Empty>?
+    private var credibilityIconComponent: EmojiStatusComponent?
     private var forwardInfoNode: ChatMessageForwardInfoNode?
     var forwardInfoReferenceNode: ASDisplayNode? {
         return self.forwardInfoNode
@@ -540,6 +538,23 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 if let replyInfoNode = self.replyInfoNode {
                     replyInfoNode.visibility = self.visibility != .none
+                }
+                
+                self.visibilityStatus = self.visibility != .none
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                if let credibilityIconView = self.credibilityIconView, let credibilityIconComponent = self.credibilityIconComponent {
+                    let _ = credibilityIconView.update(
+                        transition: .immediate,
+                        component: AnyComponent(credibilityIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                        environment: {},
+                        containerSize: credibilityIconView.bounds.size
+                    )
                 }
             }
         }
@@ -1365,7 +1380,33 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
             } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty && !isPreview {
-                replyMarkup = attribute
+                var isExtendedMedia = false
+                for media in firstMessage.media {
+                    if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                        isExtendedMedia = true
+                        break
+                    }
+                }
+                if isExtendedMedia {
+                    var updatedRows: [ReplyMarkupRow] = []
+                    for row in attribute.rows {
+                        let updatedButtons = row.buttons.filter { button in
+                            if case .payment = button.action {
+                                return false
+                            } else {
+                                return true
+                            }
+                        }
+                        if !updatedButtons.isEmpty {
+                            updatedRows.append(ReplyMarkupRow(buttons: updatedButtons))
+                        }
+                    }
+                    if !updatedRows.isEmpty {
+                        replyMarkup = ReplyMarkupMessageAttribute(rows: updatedRows, flags: attribute.flags, placeholder: attribute.placeholder)
+                    }
+                } else {
+                    replyMarkup = attribute
+                }
             } else if let attribute = attribute as? AuthorSignatureMessageAttribute {
                 if let chatPeer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, case .group = chatPeer.info, firstMessage.author is TelegramChannel, !attribute.signature.isEmpty {
                     authorRank = .custom(attribute.signature)
@@ -1536,7 +1577,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             bottomNodeMergeStatus = .Both
         }
         
-        var currentCredibilityIconImage: UIImage?
+        var currentCredibilityIcon: EmojiStatusComponent.Content?
         
         var initialDisplayHeader = true
         if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
@@ -1559,20 +1600,24 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             } else if let effectiveAuthor = effectiveAuthor {
                 authorNameString = EnginePeer(effectiveAuthor).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                 
+                let nameColor: UIColor
                 if incoming {
-                    authorNameColor = chatMessagePeerIdColors[Int(clamping: effectiveAuthor.id.id._internalGetInt64Value() % 7)]
+                    nameColor = chatMessagePeerIdColors[Int(clamping: effectiveAuthor.id.id._internalGetInt64Value() % 7)]
                 } else {
-                    authorNameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                    nameColor = item.presentationData.theme.theme.chat.message.outgoing.accentTextColor
                 }
+                authorNameColor = nameColor
 
                 if case let .peer(peerId) = item.chatLocation, let authorPeerId = item.message.author?.id, authorPeerId == peerId {
-                    
                 } else if effectiveAuthor.isScam {
-                    currentCredibilityIconImage = PresentationResourcesChatList.scamIcon(item.presentationData.theme.theme, strings: item.presentationData.strings, type: incoming ? .regular : .outgoing)
+                    currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_ScamAccount.uppercased())
                 } else if effectiveAuthor.isFake {
-                    currentCredibilityIconImage = PresentationResourcesChatList.fakeIcon(item.presentationData.theme.theme, strings: item.presentationData.strings, type: incoming ? .regular : .outgoing)
+                    currentCredibilityIcon = .text(color: incoming ? item.presentationData.theme.theme.chat.message.incoming.scamColor : item.presentationData.theme.theme.chat.message.outgoing.scamColor, string: item.presentationData.strings.Message_FakeAccount.uppercased())
+                } else if let user = effectiveAuthor as? TelegramUser, let emojiStatus = user.emojiStatus {
+                    currentCredibilityIcon = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 20.0, height: 20.0), placeholderColor: incoming ? item.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : item.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor, themeColor: nameColor.withMultipliedAlpha(0.4), loopMode: .count(2))
+                } else if effectiveAuthor.isPremium {
+                    currentCredibilityIcon = .premium(color: nameColor.withMultipliedAlpha(0.4))
                 }
-                
             }
             if let rawAuthorNameColor = authorNameColor {
                 var dimColors = false
@@ -1645,7 +1690,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: message)
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: message)
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1691,15 +1736,18 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     impressionCount: viewCount,
                     dateText: dateText,
                     type: statusType,
-                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
+                    layoutInput: .standalone(reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.StandaloneReactionSettings() : nil),
                     constrainedSize: CGSize(width: 200.0, height: CGFloat.greatestFiniteMagnitude),
                     availableReactions: item.associatedData.availableReactions,
                     reactions: dateReactionsAndPeers.reactions,
                     reactionPeers: dateReactionsAndPeers.peers,
+                    displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                     replyCount: dateReplies,
                     isPinned: message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                     hasAutoremove: message.isSelfExpiring,
-                    canViewReactionList: canViewMessageReactionList(message: message)
+                    canViewReactionList: canViewMessageReactionList(message: message),
+                    animationCache: item.controllerInteraction.presentationContext.animationCache,
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                 ))
                 
                 mosaicStatusSizeAndApply = statusSuggestedWidthAndContinue.1(statusSuggestedWidthAndContinue.0)
@@ -1763,8 +1811,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 
                 var credibilityIconWidth: CGFloat = 0.0
-                if let credibilityIconImage = currentCredibilityIconImage {
-                    credibilityIconWidth += credibilityIconImage.size.width + 4.0
+                if let currentCredibilityIcon = currentCredibilityIcon {
+                    credibilityIconWidth += 4.0
+                    switch currentCredibilityIcon {
+                    case let .text(_, string):
+                        let textString = NSAttributedString(string: string, font: Font.bold(10.0), textColor: .black, paragraphAlignment: .center)
+                        let stringRect = textString.boundingRect(with: CGSize(width: 100.0, height: 16.0), options: .usesLineFragmentOrigin, context: nil)
+                        credibilityIconWidth += floor(stringRect.width) + 11.0
+                    default:
+                        credibilityIconWidth += 20.0
+                    }
                 }
                 let adminBadgeSizeAndApply = adminBadgeLayout(TextNodeLayoutArguments(attributedString: adminBadgeString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 adminNodeSizeApply = (adminBadgeSizeAndApply.0.size, {
@@ -1895,6 +1951,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 availableReactions: item.associatedData.availableReactions,
                 reactions: bubbleReactions,
                 message: item.message,
+                accountPeer: item.associatedData.accountPeer,
                 isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                 constrainedWidth: maximumNodeWidth
             ))
@@ -2256,7 +2313,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentOrigin: contentOrigin,
                 nameNodeOriginY: nameNodeOriginY,
                 layoutConstants: layoutConstants,
-                currentCredibilityIconImage: currentCredibilityIconImage,
+                currentCredibilityIcon: currentCredibilityIcon,
                 adminNodeSizeApply: adminNodeSizeApply,
                 contentUpperRightCorner: contentUpperRightCorner,
                 forwardInfoSizeApply: forwardInfoSizeApply,
@@ -2300,7 +2357,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentOrigin: CGPoint,
         nameNodeOriginY: CGFloat,
         layoutConstants: ChatMessageItemLayoutConstants,
-        currentCredibilityIconImage: UIImage?,
+        currentCredibilityIcon: EmojiStatusComponent.Content?,
         adminNodeSizeApply: (CGSize, () -> TextNode?),
         contentUpperRightCorner: CGPoint,
         forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?),
@@ -2418,20 +2475,38 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 animation.animator.updateFrame(layer: nameNode.layer, frame: nameNodeFrame, completion: nil)
             }
             
-            if let credibilityIconImage = currentCredibilityIconImage {
-                let credibilityIconNode: ASImageNode
-                if let node = strongSelf.credibilityIconNode {
-                    credibilityIconNode = node
+            if let currentCredibilityIcon = currentCredibilityIcon {
+                let credibilityIconView: ComponentHostView<Empty>
+                if let current = strongSelf.credibilityIconView {
+                    credibilityIconView = current
                 } else {
-                    credibilityIconNode = ASImageNode()
-                    strongSelf.credibilityIconNode = credibilityIconNode
-                    strongSelf.clippingNode.addSubnode(credibilityIconNode)
+                    credibilityIconView = ComponentHostView<Empty>()
+                    credibilityIconView.isUserInteractionEnabled = false
+                    strongSelf.credibilityIconView = credibilityIconView
+                    strongSelf.clippingNode.view.addSubview(credibilityIconView)
                 }
-                credibilityIconNode.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 4.0, y: nameNode.frame.minY), size: credibilityIconImage.size)
-                credibilityIconNode.image = credibilityIconImage
+                
+                let credibilityIconComponent = EmojiStatusComponent(
+                    context: item.context,
+                    animationCache: item.context.animationCache,
+                    animationRenderer: item.context.animationRenderer,
+                    content: currentCredibilityIcon,
+                    isVisibleForAnimations: strongSelf.visibilityStatus,
+                    action: nil
+                )
+                strongSelf.credibilityIconComponent = credibilityIconComponent
+                
+                let credibilityIconSize = credibilityIconView.update(
+                    transition: .immediate,
+                    component: AnyComponent(credibilityIconComponent),
+                    environment: {},
+                    containerSize: CGSize(width: 20.0, height: 20.0)
+                )
+                
+                credibilityIconView.frame = CGRect(origin: CGPoint(x: nameNode.frame.maxX + 3.0, y: nameNode.frame.minY + floor((nameNode.bounds.height - credibilityIconSize.height) / 2.0)), size: credibilityIconSize)
             } else {
-                strongSelf.credibilityIconNode?.removeFromSupernode()
-                strongSelf.credibilityIconNode = nil
+                strongSelf.credibilityIconView?.removeFromSuperview()
+                strongSelf.credibilityIconView = nil
             }
             
             if let adminBadgeNode = adminNodeSizeApply.1() {
@@ -3219,7 +3294,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                         })
                                     } else {
                                         return .optionalAction({
-                                            item.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, item.message.peers[peerId])
+                                            item.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, item.message.peers[peerId])
                                         })
                                     }
                                 }
@@ -3251,7 +3326,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 }
                                 item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                             } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
                             } else if let _ = forwardInfo.authorSignature {
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }
@@ -3290,7 +3365,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         })
                     case let .peerMention(peerId, _):
                         return .action({
-                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
                         })
                     case let .textMention(name):
                         return .action({
@@ -3974,7 +4049,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         item.controllerInteraction.openMessageContextMenu(item.message, true, self, subFrame, nil, nil)
     }
     
-    override func targetReactionView(value: String) -> UIView? {
+    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }

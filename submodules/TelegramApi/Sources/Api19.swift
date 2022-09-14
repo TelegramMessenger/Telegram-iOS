@@ -1,4 +1,46 @@
 public extension Api {
+    enum SendAsPeer: TypeConstructorDescription {
+        case sendAsPeer(flags: Int32, peer: Api.Peer)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .sendAsPeer(let flags, let peer):
+                    if boxed {
+                        buffer.appendInt32(-1206095820)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    peer.serialize(buffer, true)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .sendAsPeer(let flags, let peer):
+                return ("sendAsPeer", [("flags", String(describing: flags)), ("peer", String(describing: peer))])
+    }
+    }
+    
+        public static func parse_sendAsPeer(_ reader: BufferReader) -> SendAsPeer? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.Peer?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.Peer
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.SendAsPeer.sendAsPeer(flags: _1!, peer: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum SendMessageAction: TypeConstructorDescription {
         case sendMessageCancelAction
         case sendMessageChooseContactAction
@@ -391,7 +433,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum SponsoredMessage: TypeConstructorDescription {
+    indirect enum SponsoredMessage: TypeConstructorDescription {
         case sponsoredMessage(flags: Int32, randomId: Buffer, fromId: Api.Peer?, chatInvite: Api.ChatInvite?, chatInviteHash: String?, channelPost: Int32?, startParam: String?, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -834,52 +876,6 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.StatsURL.statsURL(url: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
-    enum StickerPack: TypeConstructorDescription {
-        case stickerPack(emoticon: String, documents: [Int64])
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .stickerPack(let emoticon, let documents):
-                    if boxed {
-                        buffer.appendInt32(313694676)
-                    }
-                    serializeString(emoticon, buffer: buffer, boxed: false)
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(documents.count))
-                    for item in documents {
-                        serializeInt64(item, buffer: buffer, boxed: false)
-                    }
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .stickerPack(let emoticon, let documents):
-                return ("stickerPack", [("emoticon", String(describing: emoticon)), ("documents", String(describing: documents))])
-    }
-    }
-    
-        public static func parse_stickerPack(_ reader: BufferReader) -> StickerPack? {
-            var _1: String?
-            _1 = parseString(reader)
-            var _2: [Int64]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
-            }
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            if _c1 && _c2 {
-                return Api.StickerPack.stickerPack(emoticon: _1!, documents: _2!)
             }
             else {
                 return nil

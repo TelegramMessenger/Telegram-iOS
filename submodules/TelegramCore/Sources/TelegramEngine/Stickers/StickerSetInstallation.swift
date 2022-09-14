@@ -28,24 +28,30 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
     let input: Api.InputStickerSet
     
     switch reference {
-        case let .name(name):
-            collectionId = nil
-            input = .inputStickerSetShortName(shortName: name)
-        case let .id(id, accessHash):
-            collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
-            input = .inputStickerSetID(id: id, accessHash: accessHash)
-        case .animatedEmoji:
-            collectionId = nil
-            input = .inputStickerSetAnimatedEmoji
-        case let .dice(emoji):
-            collectionId = nil
-            input = .inputStickerSetDice(emoticon: emoji)
-        case .animatedEmojiAnimations:
-            collectionId = nil
-            input = .inputStickerSetAnimatedEmojiAnimations
-        case .premiumGifts:
-            collectionId = nil
-            input = .inputStickerSetPremiumGifts
+    case let .name(name):
+        collectionId = nil
+        input = .inputStickerSetShortName(shortName: name)
+    case let .id(id, accessHash):
+        collectionId = ItemCollectionId(namespace: Namespaces.ItemCollection.CloudStickerPacks, id: id)
+        input = .inputStickerSetID(id: id, accessHash: accessHash)
+    case .animatedEmoji:
+        collectionId = nil
+        input = .inputStickerSetAnimatedEmoji
+    case let .dice(emoji):
+        collectionId = nil
+        input = .inputStickerSetDice(emoticon: emoji)
+    case .animatedEmojiAnimations:
+        collectionId = nil
+        input = .inputStickerSetAnimatedEmojiAnimations
+    case .premiumGifts:
+        collectionId = nil
+        input = .inputStickerSetPremiumGifts
+    case .emojiGenericAnimations:
+        collectionId = nil
+        input = .inputStickerSetEmojiGenericAnimations
+    case .iconStatusEmoji:
+        collectionId = nil
+        input = .inputStickerSetEmojiDefaultStatuses
     }
     
     let localSignal: (ItemCollectionId) -> Signal<(ItemCollectionInfo, [ItemCollectionItem])?, NoError> = { collectionId in

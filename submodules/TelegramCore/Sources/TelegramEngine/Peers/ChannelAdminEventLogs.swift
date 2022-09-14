@@ -67,7 +67,7 @@ public enum AdminLogEventAction {
     case participantJoinByRequest(invitation: ExportedInvitation, approvedBy: PeerId)
     case toggleCopyProtection(Bool)
     case sendMessage(Message)
-    case changeAvailableReactions(previousValue: [String], updatedValue: [String])
+    case changeAvailableReactions(previousValue: PeerAllowedReactions, updatedValue: PeerAllowedReactions)
 }
 
 public enum ChannelAdminLogEventError {
@@ -264,7 +264,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                             action = .sendMessage(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):
-                                        action = .changeAvailableReactions(previousValue: prevValue, updatedValue: newValue)
+                                        action = .changeAvailableReactions(previousValue: PeerAllowedReactions(apiReactions: prevValue), updatedValue: PeerAllowedReactions(apiReactions: newValue))
                                 }
                                 let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
                                 if let action = action {

@@ -114,7 +114,9 @@ final class EntityKeyboardAnimationTopPanelComponent: Component {
                         animationData: component.item,
                         content: .animation(component.item),
                         itemFile: nil,
-                        subgroupId: nil
+                        subgroupId: nil,
+                        icon: .none,
+                        accentTint: false
                     ),
                     context: component.context,
                     attemptSynchronousLoad: false,
@@ -380,7 +382,7 @@ final class EntityKeyboardIconTopPanelComponent: Component {
             }
             
             let nativeIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 44.0, height: 44.0) : CGSize(width: 24.0, height: 24.0)
-            let boundingIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 38.0, height: 38.0) : CGSize(width: 24.0, height: 24.0)
+            let boundingIconSize: CGSize = itemEnvironment.isExpanded ? CGSize(width: 38.0, height: 38.0) : CGSize(width: 22.0, height: 22.0)
             
             let iconSize = (self.iconView.image?.size ?? nativeIconSize).aspectFitted(boundingIconSize)
             let iconFrame = CGRect(origin: CGPoint(x: floor((availableSize.width - iconSize.width) / 2.0), y: floor((nativeIconSize.height - iconSize.height) / 2.0)), size: iconSize)
@@ -911,18 +913,18 @@ final class EntityKeyboardStaticStickersPanelComponent: Component {
     }
 }
 
-final class EntityKeyboardTopPanelItemEnvironment: Equatable {
-    let isExpanded: Bool
-    let isHighlighted: Bool
-    let highlightedSubgroupId: AnyHashable?
+public final class EntityKeyboardTopPanelItemEnvironment: Equatable {
+    public let isExpanded: Bool
+    public let isHighlighted: Bool
+    public let highlightedSubgroupId: AnyHashable?
     
-    init(isExpanded: Bool, isHighlighted: Bool, highlightedSubgroupId: AnyHashable?) {
+    public init(isExpanded: Bool, isHighlighted: Bool, highlightedSubgroupId: AnyHashable?) {
         self.isExpanded = isExpanded
         self.isHighlighted = isHighlighted
         self.highlightedSubgroupId = highlightedSubgroupId
     }
     
-    static func ==(lhs: EntityKeyboardTopPanelItemEnvironment, rhs: EntityKeyboardTopPanelItemEnvironment) -> Bool {
+    public static func ==(lhs: EntityKeyboardTopPanelItemEnvironment, rhs: EntityKeyboardTopPanelItemEnvironment) -> Bool {
         if lhs.isExpanded != rhs.isExpanded {
             return false
         }
@@ -1132,21 +1134,21 @@ private final class ReorderGestureRecognizer: UIGestureRecognizer {
     }
 }
 
-final class EntityKeyboardTopPanelComponent: Component {
-    typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
+public final class EntityKeyboardTopPanelComponent: Component {
+    public typealias EnvironmentType = EntityKeyboardTopContainerPanelEnvironment
     
-    final class Item: Equatable {
-        let id: AnyHashable
-        let isReorderable: Bool
-        let content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>
+    public final class Item: Equatable {
+        public let id: AnyHashable
+        public let isReorderable: Bool
+        public let content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>
         
-        init(id: AnyHashable, isReorderable: Bool, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
+        public init(id: AnyHashable, isReorderable: Bool, content: AnyComponent<EntityKeyboardTopPanelItemEnvironment>) {
             self.id = id
             self.isReorderable = isReorderable
             self.content = content
         }
         
-        static func ==(lhs: Item, rhs: Item) -> Bool {
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.id != rhs.id {
                 return false
             }
@@ -1161,33 +1163,42 @@ final class EntityKeyboardTopPanelComponent: Component {
         }
     }
     
+    let id: AnyHashable
     let theme: PresentationTheme
     let items: [Item]
     let containerSideInset: CGFloat
     let defaultActiveItemId: AnyHashable?
     let forceActiveItemId: AnyHashable?
     let activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>
+    let activeContentItemMapping: [AnyHashable: AnyHashable]
     let reorderItems: ([Item]) -> Void
     
     init(
+        id: AnyHashable,
         theme: PresentationTheme,
         items: [Item],
         containerSideInset: CGFloat,
         defaultActiveItemId: AnyHashable? = nil,
         forceActiveItemId: AnyHashable? = nil,
         activeContentItemIdUpdated: ActionSlot<(AnyHashable, AnyHashable?, Transition)>,
+        activeContentItemMapping: [AnyHashable: AnyHashable] = [:],
         reorderItems: @escaping ([Item]) -> Void
     ) {
+        self.id = id
         self.theme = theme
         self.items = items
         self.containerSideInset = containerSideInset
         self.defaultActiveItemId = defaultActiveItemId
         self.forceActiveItemId = forceActiveItemId
         self.activeContentItemIdUpdated = activeContentItemIdUpdated
+        self.activeContentItemMapping = activeContentItemMapping
         self.reorderItems = reorderItems
     }
     
-    static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
+    public static func ==(lhs: EntityKeyboardTopPanelComponent, rhs: EntityKeyboardTopPanelComponent) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
         if lhs.theme !== rhs.theme {
             return false
         }
@@ -1210,7 +1221,15 @@ final class EntityKeyboardTopPanelComponent: Component {
         return true
     }
     
-    final class View: UIView, UIScrollViewDelegate {
+    public final class Tag {
+        public let id: AnyHashable
+        
+        public init(id: AnyHashable) {
+            self.id = id
+        }
+    }
+    
+    public final class View: UIView, UIScrollViewDelegate, ComponentTaggedView {
         private struct ItemLayout {
             struct ItemDescription {
                 var isStatic: Bool
@@ -1455,6 +1474,21 @@ final class EntityKeyboardTopPanelComponent: Component {
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        public func matches(tag: Any) -> Bool {
+            if let tag = tag as? Tag {
+                if tag.id == self.component?.id {
+                    return true
+                }
+            }
+            return false
+        }
+        
+        public func animateIn() {
+            for (_, itemView) in self.itemViews {
+                itemView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.3, delay: 0.12)
+            }
         }
         
         public func scrollViewDidScroll(_ scrollView: UIScrollView) {
@@ -1726,7 +1760,16 @@ final class EntityKeyboardTopPanelComponent: Component {
             var validIds = Set<AnyHashable>()
             let visibleItemRange = itemLayout.visibleItemRange(for: visibleBounds)
             if !self.items.isEmpty && visibleItemRange.maxIndex >= visibleItemRange.minIndex {
-                for index in visibleItemRange.minIndex ... visibleItemRange.maxIndex {
+                var indices = Array(visibleItemRange.minIndex ... visibleItemRange.maxIndex)
+                for i in 0 ..< self.items.count {
+                    if self.items[i].id == AnyHashable("static") {
+                        if !indices.contains(i) {
+                            indices.append(i)
+                        }
+                        break
+                    }
+                }
+                for index in indices {
                     let item = self.items[index]
                     validIds.insert(item.id)
                     
@@ -1877,6 +1920,9 @@ final class EntityKeyboardTopPanelComponent: Component {
                         itemIndex = component.items.count - 1
                         useRightAnchor = true
                     }
+                    if itemIndex == component.items.count - 1 {
+                        useRightAnchor = true
+                    }
                     if newBounds.minX < 0.0 {
                         newBounds.origin.x = 0.0
                         itemIndex = 0
@@ -1884,12 +1930,8 @@ final class EntityKeyboardTopPanelComponent: Component {
                     }
                     
                     if useRightAnchor {
-                        var newBounds = CGRect(origin: CGPoint(x: updatedItemFrame.maxX - previousDistanceToItemRight, y: 0.0), size: availableSize)
-                        if newBounds.minX > itemLayout.contentSize.width - self.scrollView.bounds.width {
-                            newBounds.origin.x = itemLayout.contentSize.width - self.scrollView.bounds.width
-                        }
-                        if newBounds.minX < 0.0 {
-                        }
+                        let _ = previousDistanceToItemRight
+                        newBounds.origin.x = itemLayout.contentSize.width - self.scrollView.bounds.width
                     }
                     
                     previousItemFrame = previousItemLayout.containerFrame(at: itemIndex)
@@ -2006,9 +2048,10 @@ final class EntityKeyboardTopPanelComponent: Component {
             }
             
             component.activeContentItemIdUpdated.connect { [weak self] (itemId, subcontentItemId, transition) in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let component = strongSelf.component else {
                     return
                 }
+                let itemId = component.activeContentItemMapping[itemId] ?? itemId
                 strongSelf.activeContentItemIdUpdated(itemId: itemId, subcontentItemId: subcontentItemId, transition: transition)
             }
             
@@ -2095,11 +2138,11 @@ final class EntityKeyboardTopPanelComponent: Component {
         }
     }
     
-    func makeView() -> View {
+    public func makeView() -> View {
         return View(frame: CGRect())
     }
     
-    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
     }
 }

@@ -12,6 +12,8 @@ import DeviceLocationManager
 import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
+import AnimationCache
+import MultiAnimationRenderer
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -151,6 +153,7 @@ public struct ChatAvailableMessageActionOptions: OptionSet {
     public static let unsendPersonal = ChatAvailableMessageActionOptions(rawValue: 1 << 7)
     public static let sendScheduledNow = ChatAvailableMessageActionOptions(rawValue: 1 << 8)
     public static let editScheduledTime = ChatAvailableMessageActionOptions(rawValue: 1 << 9)
+    public static let externalShare = ChatAvailableMessageActionOptions(rawValue: 1 << 10)
 }
 
 public struct ChatAvailableMessageActions {
@@ -467,6 +470,7 @@ public enum PeerInfoControllerMode {
     case calls(messages: [Message])
     case nearbyPeer(distance: Int32)
     case group(PeerId)
+    case reaction(MessageId)
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -751,6 +755,8 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
+    func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
+    
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }
     var immediateHasOngoingCall: Bool { get }
@@ -780,6 +786,7 @@ public enum PremiumIntroSource {
     case about
     case deeplink(String?)
     case profile(PeerId)
+    case emojiStatus(PeerId, Int64, TelegramMediaFile?, String?)
 }
 
 #if ENABLE_WALLET
@@ -882,6 +889,9 @@ public protocol AccountContext: AnyObject {
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
+    
+    var animationCache: AnimationCache { get }
+    var animationRenderer: MultiAnimationRenderer { get }
     
     var animatedEmojiStickers: [String: [StickerPackItem]] { get }
     

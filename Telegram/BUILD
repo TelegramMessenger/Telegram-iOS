@@ -417,6 +417,10 @@ official_bundle_ids = [
     "org.telegram.Telegram-iOS",
 ]
 
+store_bundle_ids = [
+    "ph.telegra.Telegraph",
+]
+
 apple_pay_merchants = official_apple_pay_merchants if telegram_bundle_id == "ph.telegra.Telegraph" else []
 
 apple_pay_merchants_fragment = "" if apple_pay_merchants == [] else """
@@ -462,6 +466,7 @@ associated_domains_fragment = "" if telegram_bundle_id not in official_bundle_id
 <array>
     <string>applinks:telegram.me</string>
     <string>applinks:t.me</string>
+    <string>applinks:*.t.me</string>
 </array>
 """
 
@@ -492,6 +497,14 @@ communication_notifications_fragment = """
 <true/>
 """
 
+store_signin_fragment = """
+<key>com.apple.developer.applesignin</key>
+<array>
+    <string>Default</string>
+</array>
+"""
+signin_fragment = store_signin_fragment if telegram_bundle_id in store_bundle_ids else ""
+
 plist_fragment(
     name = "TelegramEntitlements",
     extension = "entitlements",
@@ -505,6 +518,7 @@ plist_fragment(
         unrestricted_voip_fragment,
         carplay_fragment,
         communication_notifications_fragment,
+        signin_fragment,
     ])
 )
 
@@ -1944,7 +1958,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": ":TelegramWatchApp",
+        "//conditions:default": None,#":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",

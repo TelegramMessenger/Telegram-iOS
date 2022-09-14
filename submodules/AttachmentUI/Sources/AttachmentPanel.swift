@@ -16,6 +16,7 @@ import PhotoResources
 import AnimatedStickerComponent
 import SemanticStatusNode
 import MediaResources
+import MultilineTextComponent
 
 private let buttonSize = CGSize(width: 88.0, height: 49.0)
 private let smallButtonWidth: CGFloat = 69.0
@@ -162,7 +163,7 @@ private final class AttachButtonComponent: CombinedComponent {
     static var body: Body {
         let icon = Child(IconComponent.self)
         let animatedIcon = Child(AnimatedStickerComponent.self)
-        let title = Child(Text.self)
+        let title = Child(MultilineTextComponent.self)
         let button = Child(Rectangle.self)
 
         return { context in
@@ -257,10 +258,15 @@ private final class AttachButtonComponent: CombinedComponent {
             }
 
             let title = title.update(
-                component: Text(
-                    text: name,
-                    font: Font.regular(10.0),
-                    color: context.component.isSelected ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor
+                component: MultilineTextComponent(
+                    text: .plain(NSAttributedString(
+                        string: name,
+                        font: Font.regular(10.0),
+                        textColor: context.component.isSelected ? component.theme.rootController.tabBar.selectedTextColor : component.theme.rootController.tabBar.textColor,
+                        paragraphAlignment: .center)),
+                    horizontalAlignment: .center,
+                    truncationType: .end,
+                    maximumNumberOfLines: 1
                 ),
                 availableSize: context.availableSize,
                 transition: .immediate
@@ -597,7 +603,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in

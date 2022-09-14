@@ -13,6 +13,7 @@ swift_library(
         "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
         "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
@@ -21,6 +22,8 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/AppBundle:AppBundle",
         "//submodules/TextFormat:TextFormat",
+        "//submodules/lottie-ios:Lottie",
+        "//submodules/GZip:GZip",
     ],
     visibility = [
         "//visibility:public",

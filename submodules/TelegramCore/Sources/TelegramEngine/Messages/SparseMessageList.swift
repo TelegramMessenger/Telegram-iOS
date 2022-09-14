@@ -925,7 +925,7 @@ public final class SparseMessageCalendar {
                         case let .searchResultsCalendar(_, _, minDate, minMsgId, _, periods, messages, chats, users):
                             var parsedMessages: [StoreMessage] = []
                             var peers: [Peer] = []
-                            var peerPresences: [PeerId: PeerPresence] = [:]
+                            var peerPresences: [PeerId: Api.User] = [:]
 
                             for chat in chats {
                                 if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
@@ -935,9 +935,7 @@ public final class SparseMessageCalendar {
                             for user in users {
                                 let telegramUser = TelegramUser(user: user)
                                 peers.append(telegramUser)
-                                if let presence = TelegramUserPresence(apiUser: user) {
-                                    peerPresences[telegramUser.id] = presence
-                                }
+                                peerPresences[telegramUser.id] = user
                             }
 
                             for message in messages {

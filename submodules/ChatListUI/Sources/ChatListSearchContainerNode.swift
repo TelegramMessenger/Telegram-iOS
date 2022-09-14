@@ -31,6 +31,8 @@ import UndoUI
 import TextFormat
 import Postbox
 import TelegramAnimatedStickerNode
+import AnimationCache
+import MultiAnimationRenderer
 
 private enum ChatListTokenId: Int32 {
     case archive
@@ -129,7 +131,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, groupId: EngineChatList.Group, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.groupId = groupId
@@ -146,7 +148,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.presentInGlobalOverlay = presentInGlobalOverlay
     
         self.filterContainerNode = ChatListSearchFiltersContainerNode()
-        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, groupId: groupId, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
+        self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, groupId: groupId, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
         self.paneContainerNode.clipsToBounds = true
         
         super.init()
@@ -1212,7 +1214,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             if !entities.isEmpty {
                                 attributes.append(TextEntitiesMessageAttribute(entities: entities))
                             }
-                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                            result.append(.message(text: text.string, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                         }
                     }
                 }

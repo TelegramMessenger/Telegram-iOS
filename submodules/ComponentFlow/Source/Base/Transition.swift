@@ -280,6 +280,29 @@ public struct Transition {
         }
     }
     
+    public func setBoundsSize(view: UIView, size: CGSize, completion: ((Bool) -> Void)? = nil) {
+        if view.bounds.size == size {
+            completion?(true)
+            return
+        }
+        switch self.animation {
+        case .none:
+            view.bounds.size = size
+            view.layer.removeAnimation(forKey: "bounds.size")
+            completion?(true)
+        case .curve:
+            let previousBounds: CGRect
+            if view.layer.animation(forKey: "bounds.size") != nil, let presentation = view.layer.presentation() {
+                previousBounds = presentation.bounds
+            } else {
+                previousBounds = view.layer.bounds
+            }
+            view.bounds = CGRect(origin: view.bounds.origin, size: size)
+
+            self.animateBoundsSize(view: view, from: previousBounds.size, to: size, completion: completion)
+        }
+    }
+    
     public func setPosition(view: UIView, position: CGPoint, completion: ((Bool) -> Void)? = nil) {
         if view.center == position {
             completion?(true)
@@ -390,7 +413,11 @@ public struct Transition {
     }
     
     public func setScale(view: UIView, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
-        let t = view.layer.presentation()?.transform ?? view.layer.transform
+        self.setScale(layer: view.layer, scale: scale, completion: completion)
+    }
+    
+    public func setScale(layer: CALayer, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        let t = layer.presentation()?.transform ?? layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         if currentScale == scale {
             completion?(true)
@@ -398,12 +425,12 @@ public struct Transition {
         }
         switch self.animation {
         case .none:
-            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
             completion?(true)
         case let .curve(duration, curve):
             let previousScale = currentScale
-            view.layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
-            view.layer.animate(
+            layer.transform = CATransform3DMakeScale(scale, scale, 1.0)
+            layer.animate(
                 from: previousScale as NSNumber,
                 to: scale as NSNumber,
                 keyPath: "transform.scale",
@@ -548,6 +575,10 @@ public struct Transition {
         self.animateBoundsOrigin(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
     }
     
+    public func animateBoundsSize(view: UIView, from fromValue: CGSize, to toValue: CGSize, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animateBoundsSize(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
+    }
+    
     public func animatePosition(layer: CALayer, from fromValue: CGPoint, to toValue: CGPoint, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
@@ -595,6 +626,25 @@ public struct Transition {
                 from: NSValue(cgPoint: fromValue),
                 to: NSValue(cgPoint: toValue),
                 keyPath: "bounds.origin",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: additive,
+                completion: completion
+            )
+        }
+    }
+    
+    public func animateBoundsSize(layer: CALayer, from fromValue: CGSize, to toValue: CGSize, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            break
+        case let .curve(duration, curve):
+            layer.animate(
+                from: NSValue(cgSize: fromValue),
+                to: NSValue(cgSize: toValue),
+                keyPath: "bounds.size",
                 duration: duration,
                 delay: 0.0,
                 curve: curve,

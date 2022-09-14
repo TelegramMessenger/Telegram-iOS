@@ -6,6 +6,7 @@ final class PeerTable: Table {
     }
     
     private let reverseAssociatedTable: ReverseAssociatedPeerTable
+    private let peerTimeoutPropertiesTable: PeerTimeoutPropertiesTable
     
     private let sharedEncoder = PostboxEncoder()
     private let sharedKey = ValueBoxKey(length: 8)
@@ -13,8 +14,9 @@ final class PeerTable: Table {
     private var cachedPeers: [PeerId: Peer] = [:]
     private var updatedInitialPeers: [PeerId: Peer?] = [:]
     
-    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, reverseAssociatedTable: ReverseAssociatedPeerTable) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, reverseAssociatedTable: ReverseAssociatedPeerTable, peerTimeoutPropertiesTable: PeerTimeoutPropertiesTable) {
         self.reverseAssociatedTable = reverseAssociatedTable
+        self.peerTimeoutPropertiesTable = peerTimeoutPropertiesTable
         
         super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
@@ -61,6 +63,24 @@ final class PeerTable: Table {
             }
         }
         return result
+    }
+    
+    func commitDependentTables() {
+        for (peerId, previousPeer) in self.updatedInitialPeers {
+            if let peer = self.cachedPeers[peerId] {
+                let previousTimeout = previousPeer?.timeoutAttribute
+                if previousTimeout != peer.timeoutAttribute {
+                    if let previousTimeout = previousTimeout {
+                        self.peerTimeoutPropertiesTable.remove(peerId: peerId, timestamp: previousTimeout)
+                    }
+                    if let updatedTimeout = peer.timeoutAttribute {
+                        self.peerTimeoutPropertiesTable.add(peerId: peerId, timestamp: updatedTimeout)
+                    }
+                }
+            } else {
+                assertionFailure()
+            }
+        }
     }
     
     override func beforeCommit() {

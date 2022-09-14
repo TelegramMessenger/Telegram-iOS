@@ -62,6 +62,7 @@ public enum EngineConfiguration {
         public let maxUploadFileParts: Int32
         public let maxAboutLength: Int32
         public let maxAnimatedEmojisInText: Int32
+        public let maxReactionsPerMessage: Int32
         
         public static var defaultValue: UserLimits {
             return UserLimits(UserLimitsConfiguration.defaultValue)
@@ -78,7 +79,8 @@ public enum EngineConfiguration {
             maxCaptionLength: Int32,
             maxUploadFileParts: Int32,
             maxAboutLength: Int32,
-            maxAnimatedEmojisInText: Int32
+            maxAnimatedEmojisInText: Int32,
+            maxReactionsPerMessage: Int32
         ) {
             self.maxPinnedChatCount = maxPinnedChatCount
             self.maxChannelsCount = maxChannelsCount
@@ -91,6 +93,7 @@ public enum EngineConfiguration {
             self.maxUploadFileParts = maxUploadFileParts
             self.maxAboutLength = maxAboutLength
             self.maxAnimatedEmojisInText = maxAnimatedEmojisInText
+            self.maxReactionsPerMessage = maxReactionsPerMessage
         }
     }
 }
@@ -148,7 +151,8 @@ public extension EngineConfiguration.UserLimits {
             maxCaptionLength: userLimitsConfiguration.maxCaptionLength,
             maxUploadFileParts: userLimitsConfiguration.maxUploadFileParts,
             maxAboutLength: userLimitsConfiguration.maxAboutLength,
-            maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText
+            maxAnimatedEmojisInText: userLimitsConfiguration.maxAnimatedEmojisInText,
+            maxReactionsPerMessage: userLimitsConfiguration.maxReactionsPerMessage
         )
     }
 }

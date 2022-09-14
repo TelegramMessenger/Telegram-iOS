@@ -15,6 +15,8 @@ final class AuthorizationSequenceSignUpController: ViewController {
         return self.displayNode as! AuthorizationSequenceSignUpControllerNode
     }
     
+    private var validLayout: ContainerViewLayout?
+    
     private let presentationData: PresentationData
     private let back: () -> Void
     
@@ -30,12 +32,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
     
     var inProgress: Bool = false {
         didSet {
-            if self.inProgress {
-                let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
-                self.navigationItem.rightBarButtonItem = item
-            } else {
-                self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
-            }
+            self.updateNavigationItems()
             self.controllerNode.inProgress = self.inProgress
         }
     }
@@ -50,7 +47,7 @@ final class AuthorizationSequenceSignUpController: ViewController {
         
         self.statusBar.statusBarStyle = presentationData.theme.intro.statusBarStyle.style
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+//        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
         
         self.attemptNavigation = { _ in
             return false
@@ -81,11 +78,25 @@ final class AuthorizationSequenceSignUpController: ViewController {
         })]), in: .window(.root))
     }
     
+    func updateNavigationItems() {
+        guard let layout = self.validLayout, layout.size.width < 360.0 else {
+            return
+        }
+                
+        if self.inProgress {
+            let item = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: self.presentationData.theme.rootController.navigationBar.accentTextColor))
+            self.navigationItem.rightBarButtonItem = item
+        } else {
+            self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Next, style: .done, target: self, action: #selector(self.nextPressed))
+        }
+    }
+    
     override public func loadDisplayNode() {
         let currentAvatarMixin = Atomic<NSObject?>(value: nil)
         
-        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: self.presentationData.theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
-            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: false, theme: defaultPresentationTheme, present: { c, a in
+        let theme = self.presentationData.theme
+        self.displayNode = AuthorizationSequenceSignUpControllerNode(theme: theme, strings: self.presentationData.strings, addPhoto: { [weak self] in
+            presentLegacyAvatarPicker(holder: currentAvatarMixin, signup: false, theme: theme, present: { c, a in
                 self?.view.endEditing(true)
                 self?.present(c, in: .window(.root), with: a)
             }, openCurrent: nil, completion: { image in
@@ -136,6 +147,13 @@ final class AuthorizationSequenceSignUpController: ViewController {
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
+        
+        let hadLayout = self.validLayout != nil
+        self.validLayout = layout
+        
+        if !hadLayout {
+            self.updateNavigationItems()
+        }
         
         self.controllerNode.containerLayoutUpdated(layout, navigationBarHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }

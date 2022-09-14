@@ -48,6 +48,8 @@ public struct Namespaces {
         public static let CloudAnimatedEmojiReactions: Int32 = 6
         public static let CloudPremiumGifts: Int32 = 7
         public static let CloudEmojiPacks: Int32 = 8
+        public static let CloudEmojiGenericAnimations: Int32 = 9
+        public static let CloudIconStatusEmoji: Int32 = 10
     }
     
     public struct OrderedItemList {
@@ -68,6 +70,10 @@ public struct Namespaces {
         public static let LocalRecentEmoji: Int32 = 14
         public static let CloudFeaturedEmojiPacks: Int32 = 15
         public static let CloudAllPremiumStickers: Int32 = 16
+        public static let CloudRecentStatusEmoji: Int32 = 17
+        public static let CloudFeaturedStatusEmoji: Int32 = 18
+        public static let CloudRecentReactions: Int32 = 19
+        public static let CloudTopReactions: Int32 = 20
     }
     
     public struct CachedItemCollection {
