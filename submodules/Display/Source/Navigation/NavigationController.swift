@@ -158,7 +158,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     private var globalOverlayContainerParent: GlobalOverlayContainerParent?
     public var globalOverlayControllersUpdated: (() -> Void)?
     
-    private var validLayout: ContainerViewLayout?
+    public private(set) var validLayout: ContainerViewLayout?
     private var validStatusBarStyle: NavigationStatusBarStyle?
     private var validStatusBarHidden: Bool = false
     
