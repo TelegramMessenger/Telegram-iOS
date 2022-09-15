@@ -362,17 +362,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         } else if useSimpleAnimation {
             self.scrollView.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
         }
-        
-        if let navigationController = self.baseNavigationController() {
-            navigationController.updateContainerPulled(true)
-        }
     }
     
     open func animateOut(animateContent: Bool, completion: @escaping () -> Void) {
-        if let navigationController = self.baseNavigationController() {
-            navigationController.updateContainerPulled(false)
-        }
-        
         self.isDismissed = true
         
         self.pager.isScrollEnabled = false
