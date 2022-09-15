@@ -83,6 +83,9 @@
 "PtgSettings.SuppressForeignAgentNotice" = "Скрывать в сообщениях";
 "PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фильтровать результаты поиска";
 "PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов.";
+"PtgSettings.EnableLiveText" = "Сканер текста";
+"PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
+
 "Profile.Id" = "id";
 "Conversation.IdCopied" = "ID скопирован.";
 "Settings.CopyId" = "Копировать ID";
