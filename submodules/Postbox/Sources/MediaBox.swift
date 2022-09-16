@@ -574,6 +574,12 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
+                let paths = self.storePathsForId(resource.id)
+                if let _ = fileSize(paths.complete) {
+                    subscriber.putCompletion()
+                    return
+                }
+                
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
                     subscriber.putCompletion()
                     return

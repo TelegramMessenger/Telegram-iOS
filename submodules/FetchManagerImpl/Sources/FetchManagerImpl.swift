@@ -226,7 +226,7 @@ private final class FetchManagerCategoryContext {
                     let storeManager = self.storeManager
                     let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
                     
-                    if ranges == RangeSet<Int64>(0 ..< Int64.max) {
+                    if ranges == RangeSet<Int64>(0 ..< Int64.max), !"".isEmpty {
                         parsedRanges = nil
                     } else {
                         var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
@@ -325,7 +325,7 @@ private final class FetchManagerCategoryContext {
                     isVideoPreload = true
                 }
                 
-                if count == 1 && isCompleteRange {
+                if count == 1 && isCompleteRange && !"".isEmpty {
                     parsedRanges = nil
                 } else {
                     var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
