@@ -144,7 +144,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=armv7,arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32'
+                '--watchos_cpus=armv7k,arm64_32'
             ] + self.common_debug_args
         elif configuration == 'debug_arm64':
             self.configuration_args = [
@@ -155,7 +155,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32'
+                '--watchos_cpus=armv7k,arm64_32'
             ] + self.common_debug_args
         elif configuration == 'debug_sim_arm64':
             self.configuration_args = [
@@ -166,7 +166,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=sim_arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32'
+                '--watchos_cpus=armv7k,arm64_32'
             ] + self.common_debug_args
         elif configuration == 'debug_armv7':
             self.configuration_args = [
@@ -187,7 +187,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32',
+                '--watchos_cpus=armv7k,arm64_32',
 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
@@ -204,7 +204,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=armv7',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32',
+                '--watchos_cpus=armv7k,arm64_32',
 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
@@ -221,7 +221,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=armv7,arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32',
+                '--watchos_cpus=armv7k,arm64_32',
                 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
