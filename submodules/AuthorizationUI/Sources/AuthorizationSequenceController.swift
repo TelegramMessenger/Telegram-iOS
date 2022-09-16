@@ -155,8 +155,8 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                     let _ = TelegramEngineUnauthorized(account: strongSelf.account).auth.setState(state: UnauthorizedAccountState(isTestingEnvironment: strongSelf.account.testingEnvironment, masterDatacenterId: strongSelf.account.masterDatacenterId, contents: .empty)).start()
                 }
             })
-            if let splahController = splashController {
-                controller.animateWithSplashController(splahController)
+            if let splashController = splashController {
+                controller.animateWithSplashController(splashController)
             }
             controller.accountUpdated = { [weak self] updatedAccount in
                 guard let strongSelf = self else {
@@ -1033,6 +1033,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                             break
                         }
                     }
+                
+                    if let validLayout = self.validLayout, case .tablet = validLayout.deviceMetrics.type {
+                        previousSplashController = nil
+                    }
+                
                     controllers.append(self.phoneEntryController(countryCode: countryCode, number: number, splashController: previousSplashController))
                     self.setViewControllers(controllers, animated: !self.viewControllers.isEmpty && (previousSplashController == nil || self.viewControllers.count > 2))
                 case let .confirmationCodeEntry(number, type, _, timeout, nextType, _):

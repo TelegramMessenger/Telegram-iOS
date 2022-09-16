@@ -685,6 +685,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         itemBackgroundColor: additionalBackgroundColor,
         pinnedItemBackgroundColor: mainBackgroundColor,
         itemHighlightedBackgroundColor: mainSelectionColor,
+        pinnedItemHighlightedBackgroundColor: mainSelectionColor,
         itemSelectedBackgroundColor: mainSelectionColor,
         titleColor: UIColor(rgb: 0xffffff),
         secretTitleColor: UIColor(rgb: 0x89df9e),

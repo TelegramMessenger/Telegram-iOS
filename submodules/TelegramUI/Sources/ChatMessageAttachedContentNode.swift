@@ -853,7 +853,43 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     }
                     
                     adjustedBoundingSize.width = max(boundingWidth, adjustedBoundingSize.width)
- 
+                    
+                    var contentMediaHeight: CGFloat?
+                    if let (contentImageSize, _) = contentImageSizeAndApply {
+                        contentMediaHeight = contentImageSize.height
+                    }
+                    
+                    if let (contentFileSize, _) = contentFileSizeAndApply {
+                        contentMediaHeight = contentFileSize.height
+                    }
+                    
+                    if let (videoLayout, _) = contentInstantVideoSizeAndApply {
+                        contentMediaHeight = videoLayout.contentSize.height
+                    }
+                    
+                    var textVerticalOffset: CGFloat = 0.0
+                    if let contentMediaHeight = contentMediaHeight, let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
+                        textVerticalOffset = contentMediaHeight + 7.0
+                    }
+                    let adjustedTextFrame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
+                                        
+                    var statusFrame: CGRect?
+                    if let statusSizeAndApply = statusSizeAndApply {
+                        var finalStatusFrame = CGRect(origin: CGPoint(x: adjustedTextFrame.minX, y: adjustedTextFrame.maxY), size: statusSizeAndApply.0)
+                        if let imageFrame = imageFrame {
+                            if finalStatusFrame.maxY < imageFrame.maxY + 10.0 {
+                                finalStatusFrame.origin.y = max(finalStatusFrame.minY, imageFrame.maxY + 2.0)
+                                if finalStatusFrame.height == 0.0 {
+                                    finalStatusFrame.origin.y += 14.0
+                                    
+                                    adjustedBoundingSize.height += 14.0
+                                    adjustedLineHeight += 14.0
+                                }
+                            }
+                        }
+                        statusFrame = finalStatusFrame
+                    }
+                    
                     return (adjustedBoundingSize, { [weak self] animation, synchronousLoads, applyInfo in
                         if let strongSelf = self {
                             strongSelf.context = context
@@ -900,12 +936,8 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             } else if strongSelf.inlineImageNode.supernode != nil {
                                 strongSelf.inlineImageNode.removeFromSupernode()
                             }
-                            
-                            var contentMediaHeight: CGFloat?
-                            
+                                                        
                             if let (contentImageSize, contentImageApply) = contentImageSizeAndApply {
-                                contentMediaHeight = contentImageSize.height
-                                
                                 let contentImageNode = contentImageApply(animation, synchronousLoads)
                                 if strongSelf.contentImageNode !== contentImageNode {
                                     strongSelf.contentImageNode = contentImageNode
@@ -960,8 +992,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             if let (contentFileSize, contentFileApply) = contentFileSizeAndApply {
-                                contentMediaHeight = contentFileSize.height
-                                
                                 let contentFileNode = contentFileApply(synchronousLoads, animation, applyInfo)
                                 if strongSelf.contentFileNode !== contentFileNode {
                                     strongSelf.contentFileNode = contentFileNode
@@ -988,7 +1018,6 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                             }
                             
                             if let (videoLayout, apply) = contentInstantVideoSizeAndApply {
-                                contentMediaHeight = videoLayout.contentSize.height
                                 let contentInstantVideoNode = apply(.unconstrained(width: boundingWidth - insets.left - insets.right), animation)
                                 if strongSelf.contentInstantVideoNode !== contentInstantVideoNode {
                                     strongSelf.contentInstantVideoNode = contentInstantVideoNode
@@ -1003,23 +1032,9 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                                 contentInstantVideoNode.removeFromSupernode()
                                 strongSelf.contentInstantVideoNode = nil
                             }
-                            
-                            var textVerticalOffset: CGFloat = 0.0
-                            if let contentMediaHeight = contentMediaHeight, let (_, flags) = mediaAndFlags, flags.contains(.preferMediaBeforeText) {
-                                textVerticalOffset = contentMediaHeight + 7.0
-                            }
-                            
-                            strongSelf.textNode.textNode.frame = textFrame.offsetBy(dx: 0.0, dy: textVerticalOffset)
-                            if let statusSizeAndApply = statusSizeAndApply {
-                                var statusFrame = CGRect(origin: CGPoint(x: strongSelf.textNode.textNode.frame.minX, y: strongSelf.textNode.textNode.frame.maxY), size: statusSizeAndApply.0)
-                                if let imageFrame = imageFrame {
-                                    if statusFrame.maxY < imageFrame.maxY + 10.0 {
-                                        statusFrame.origin.y = max(statusFrame.minY, imageFrame.maxY + 2.0)
-                                        if statusFrame.height == 0.0 {
-                                            statusFrame.origin.y += 14.0
-                                        }
-                                    }
-                                }
+                                                        
+                            strongSelf.textNode.textNode.frame = adjustedTextFrame
+                            if let statusSizeAndApply = statusSizeAndApply, let statusFrame = statusFrame {
                                 if strongSelf.statusNode.supernode == nil {
                                     strongSelf.addSubnode(strongSelf.statusNode)
                                     strongSelf.statusNode.frame = statusFrame

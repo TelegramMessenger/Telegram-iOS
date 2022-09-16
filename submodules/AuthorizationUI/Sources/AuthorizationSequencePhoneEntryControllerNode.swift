@@ -426,7 +426,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         }
         
         self.animationNode.completed = { [weak self] _ in
-            self?.animationNode.isHidden = true
+            self?.animationNode.removeFromSupernode()
             self?.managedAnimationNode.isHidden = false
         }
     }

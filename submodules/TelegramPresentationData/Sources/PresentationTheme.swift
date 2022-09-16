@@ -561,6 +561,7 @@ public final class PresentationThemeChatList {
     public let itemBackgroundColor: UIColor
     public let pinnedItemBackgroundColor: UIColor
     public let itemHighlightedBackgroundColor: UIColor
+    public let pinnedItemHighlightedBackgroundColor: UIColor
     public let itemSelectedBackgroundColor: UIColor
     public let titleColor: UIColor
     public let secretTitleColor: UIColor
@@ -597,6 +598,7 @@ public final class PresentationThemeChatList {
         itemBackgroundColor: UIColor,
         pinnedItemBackgroundColor: UIColor,
         itemHighlightedBackgroundColor: UIColor,
+        pinnedItemHighlightedBackgroundColor: UIColor,
         itemSelectedBackgroundColor: UIColor,
         titleColor: UIColor,
         secretTitleColor: UIColor,
@@ -632,6 +634,7 @@ public final class PresentationThemeChatList {
         self.itemBackgroundColor = itemBackgroundColor
         self.pinnedItemBackgroundColor = pinnedItemBackgroundColor
         self.itemHighlightedBackgroundColor = itemHighlightedBackgroundColor
+        self.pinnedItemHighlightedBackgroundColor = pinnedItemHighlightedBackgroundColor
         self.itemSelectedBackgroundColor = itemSelectedBackgroundColor
         self.titleColor = titleColor
         self.secretTitleColor = secretTitleColor
@@ -669,6 +672,7 @@ public final class PresentationThemeChatList {
         itemBackgroundColor: UIColor? = nil,
         pinnedItemBackgroundColor: UIColor? = nil,
         itemHighlightedBackgroundColor: UIColor? = nil,
+        pinnedItemHighlightedBackgroundColor: UIColor? = nil,
         itemSelectedBackgroundColor: UIColor? = nil,
         titleColor: UIColor? = nil,
         secretTitleColor: UIColor? = nil,
@@ -705,6 +709,7 @@ public final class PresentationThemeChatList {
             itemBackgroundColor: itemBackgroundColor ?? self.itemBackgroundColor,
             pinnedItemBackgroundColor: pinnedItemBackgroundColor ?? self.pinnedItemBackgroundColor,
             itemHighlightedBackgroundColor: itemHighlightedBackgroundColor ?? self.itemHighlightedBackgroundColor,
+            pinnedItemHighlightedBackgroundColor: pinnedItemHighlightedBackgroundColor ?? self.pinnedItemHighlightedBackgroundColor,
             itemSelectedBackgroundColor: itemSelectedBackgroundColor ?? self.itemSelectedBackgroundColor,
             titleColor: titleColor ?? self.titleColor,
             secretTitleColor: secretTitleColor ?? self.secretTitleColor,

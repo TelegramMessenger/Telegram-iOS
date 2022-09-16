@@ -966,6 +966,7 @@ extension PresentationThemeChatList: Codable {
         case itemBg
         case pinnedItemBg
         case itemHighlightedBg
+        case pinnedItemHighlightedBg
         case itemSelectedBg
         case title
         case secretTitle
@@ -1005,6 +1006,7 @@ extension PresentationThemeChatList: Codable {
                   itemBackgroundColor: try decodeColor(values, .itemBg),
                   pinnedItemBackgroundColor: try decodeColor(values, .pinnedItemBg),
                   itemHighlightedBackgroundColor: try decodeColor(values, .itemHighlightedBg),
+                  pinnedItemHighlightedBackgroundColor: try decodeColor(values, .pinnedItemHighlightedBg, fallbackKey: "\(codingPath).itemHighlightedBg"),
                   itemSelectedBackgroundColor: try decodeColor(values, .itemSelectedBg),
                   titleColor: try decodeColor(values, .title),
                   secretTitleColor: try decodeColor(values, .secretTitle),

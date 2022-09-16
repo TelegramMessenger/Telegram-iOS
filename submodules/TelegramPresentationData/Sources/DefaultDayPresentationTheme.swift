@@ -526,6 +526,7 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
         itemBackgroundColor: UIColor(rgb: 0xffffff),
         pinnedItemBackgroundColor: UIColor(rgb: 0xf7f7f7),
         itemHighlightedBackgroundColor: UIColor(rgb: 0xe5e5ea),
+        pinnedItemHighlightedBackgroundColor: UIColor(rgb: 0xe5e5ea),
         itemSelectedBackgroundColor: UIColor(rgb: 0xe9f0fa),
         titleColor: UIColor(rgb: 0x000000),
         secretTitleColor: UIColor(rgb: 0x00b12c),
