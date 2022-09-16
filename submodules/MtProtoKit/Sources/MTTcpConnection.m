@@ -25,6 +25,8 @@
 
 #import <EncryptionProvider/EncryptionProvider.h>
 
+#import <libkern/OSAtomic.h>
+
 static id<MTBignum> get_y2(id<MTBignum> x, id<MTBignum> mod, id<MTBignumContext> context) {
     // returns y^2 = x^3 + 486662 * x^2 + x
     id<MTBignum> y = [context clone:x];
@@ -495,7 +497,10 @@ static NSData *executeGenerationCode(id<EncryptionProvider> provider, NSData *do
 
 @end
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 MTInternalIdClass(MTTcpConnection)
+#pragma clang diagnostic pop
 
 struct socks5_ident_req
 {

@@ -478,8 +478,28 @@ public extension DeviceContactExtendedData {
     }
 }
 
-extension DeviceContactAddressData {
-    public var dictionary: [String: String]  {
+public extension DeviceContactAddressData {
+    var asPostalAddress: CNPostalAddress {
+        let address = CNMutablePostalAddress()
+        if !self.street1.isEmpty {
+            address.street = self.street1
+        }
+        if !self.city.isEmpty {
+            address.city = self.city
+        }
+        if !self.state.isEmpty {
+            address.state = self.state
+        }
+        if !self.country.isEmpty {
+            address.country = self.country
+        }
+        if !self.postcode.isEmpty {
+            address.postalCode = self.postcode
+        }
+        return address
+    }
+    
+    var dictionary: [String: String]  {
         var dictionary: [String: String] = [:]
         if !self.street1.isEmpty {
             dictionary["Street"] = self.street1
@@ -499,7 +519,7 @@ extension DeviceContactAddressData {
         return dictionary
     }
     
-    public var string: String {
+    var string: String {
         var array: [String] = []
         if !self.street1.isEmpty {
             array.append(self.street1)
@@ -519,7 +539,7 @@ extension DeviceContactAddressData {
         return array.joined(separator: " ")
     }
     
-    public var displayString: String {
+    var displayString: String {
         var array: [String] = []
         if !self.street1.isEmpty {
             array.append(self.street1)

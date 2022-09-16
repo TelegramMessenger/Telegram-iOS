@@ -99,7 +99,7 @@ public final class CallKitIntegration {
             let handle = INPersonHandle(value: "tg\(peerId.id._internalGetInt64Value())", type: .unknown)
             let contact = INPerson(personHandle: handle, nameComponents: nil, displayName: displayTitle, image: nil, contactIdentifier: localContactId, customIdentifier: "tg\(peerId.id._internalGetInt64Value())")
         
-            let intent = INStartAudioCallIntent(contacts: [contact])
+            let intent = INStartAudioCallIntent(destinationType: .normal, contacts: [contact])
             
             let interaction = INInteraction(intent: intent, response: nil)
             interaction.direction = .outgoing

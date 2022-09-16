@@ -5,7 +5,7 @@
 #import <Accelerate/Accelerate.h>
 #import <CommonCrypto/CommonCrypto.h>
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 #import <map>
 
 #import <objc/runtime.h>

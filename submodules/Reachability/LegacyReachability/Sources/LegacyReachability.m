@@ -17,6 +17,7 @@
 #import <LegacyReachability/LegacyReachability.h>
 
 #import <pthread.h>
+#import <os/lock.h>
 #import <libkern/OSAtomic.h>
 
 #pragma mark IPv6 Support
