@@ -692,7 +692,7 @@ watchos_extension(
         ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
     ],
-    minimum_os_version = "5.0",
+    minimum_os_version = "7.0",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchExtension.mobileprovision",
