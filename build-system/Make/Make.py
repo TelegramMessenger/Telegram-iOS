@@ -15,6 +15,12 @@ from BazelLocation import locate_bazel
 from BuildConfiguration import CodesigningSource, GitCodesigningSource, DirectoryCodesigningSource, BuildConfiguration, build_configuration_from_json
 import RemoteBuild
 
+
+class ResolvedCodesigningData:
+    def __init__(self, aps_environment):
+        self.aps_environment = aps_environment
+
+
 class BazelCommandLine:
     def __init__(self, bazel, override_bazel_version, override_xcode_version, bazel_user_root):
         self.build_environment = BuildEnvironment(
@@ -384,7 +390,7 @@ def clean(bazel, arguments):
     bazel_command_line.invoke_clean()
 
 
-def resolve_codesigning(arguments, base_path, build_configuration, provisioning_profiles_path, additional_codesigning_output_path):
+def resolve_codesigning(arguments, base_path, build_configuration, provisioning_profiles_path, additional_codesigning_output_path) -> ResolvedCodesigningData:
     profile_source = None
     if arguments.gitCodesigningRepository is not None:
         password = os.getenv('TELEGRAM_CODESIGNING_GIT_PASSWORD')
@@ -427,8 +433,10 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
         profile_source.copy_profiles_to_destination(destination_path=additional_codesigning_output_path + '/profiles')
         profile_source.copy_certificates_to_destination(destination_path=additional_codesigning_output_path + '/certs')
 
+    return ResolvedCodesigningData(aps_environment=profile_source.resolve_aps_environment())
 
-def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, aps_environment, additional_codesigning_output_path):
+
+def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, arguments, additional_codesigning_output_path):
     configuration_repository_path = '{}/build-input/configuration-repository'.format(base_path)
     os.makedirs(configuration_repository_path, exist_ok=True)
 
@@ -440,20 +448,23 @@ def resolve_configuration(base_path, bazel_command_line: BazelCommandLine, argum
     with open(configuration_repository_path + '/BUILD', 'w+') as file:
         pass
 
-    build_configuration.write_to_variables_file(aps_environment=aps_environment, path=configuration_repository_path + '/variables.bzl')
-
     provisioning_path = '{}/provisioning'.format(configuration_repository_path)
     if os.path.exists(provisioning_path):
         shutil.rmtree(provisioning_path)
     os.makedirs(provisioning_path, exist_ok=True)
 
-    resolve_codesigning(
+    codesigning_data = resolve_codesigning(
         arguments=arguments,
         base_path=base_path,
         build_configuration=build_configuration,
         provisioning_profiles_path=provisioning_path,
         additional_codesigning_output_path=additional_codesigning_output_path
     )
+    if codesigning_data.aps_environment is None:
+        print('Could not find a valid aps-environment entitlement in the provided provisioning profiles')
+        sys.exit(1)
+
+    build_configuration.write_to_variables_file(aps_environment=codesigning_data.aps_environment, path=configuration_repository_path + '/variables.bzl')
 
     provisioning_profile_files = []
     for file_name in os.listdir(provisioning_path):
@@ -489,7 +500,6 @@ def generate_project(bazel, arguments):
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
-        aps_environment=arguments.apsEnvironment,
         additional_codesigning_output_path=None
     )
 
@@ -539,7 +549,6 @@ def build(bazel, arguments):
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
-        aps_environment=arguments.apsEnvironment,
         additional_codesigning_output_path=None
     )
 
@@ -603,7 +612,6 @@ def test(bazel, arguments):
         base_path=os.getcwd(),
         bazel_command_line=bazel_command_line,
         arguments=arguments,
-        aps_environment=arguments.apsEnvironment,
         additional_codesigning_output_path=None
     )
 
@@ -669,16 +677,6 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
 
 
 def add_project_and_build_common_arguments(current_parser: argparse.ArgumentParser):
-    current_parser.add_argument(
-        '--apsEnvironment',
-        choices=[
-            'development',
-            'production'
-        ],
-        required=True,
-        help='APNS environment',
-    )
-
     add_codesigning_common_arguments(current_parser=current_parser)
 
 
@@ -928,7 +926,6 @@ if __name__ == '__main__':
                 base_path=os.getcwd(),
                 bazel_command_line=None,
                 arguments=args,
-                aps_environment='production',
                 additional_codesigning_output_path=remote_input_path
             )
             
