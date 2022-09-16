@@ -53,6 +53,9 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                         let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempFilePath)
                         
                         let request = SFSpeechURLRecognitionRequest(url: URL(fileURLWithPath: tempFilePath))
+                        if #available(iOS 16.0, *) {
+                            request.addsPunctuation = true
+                        }
                         request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
                         request.shouldReportPartialResults = true
                         

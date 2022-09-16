@@ -1496,8 +1496,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if packReferences.count > 1 {
                         items.tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_EmojiSet(Int32(packReferences.count)), arguments: nil, file: nil, action: action)
                     } else if let reference = packReferences.first {
-                        items.tipSignal = context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
-                        |> delay(1.0, queue: .mainQueue())
+                        var tipSignal: Signal<LoadedStickerPack, NoError>
+                        tipSignal = context.engine.stickers.loadedStickerPack(reference: reference, forceActualized: false)
+                        
+                        items.tipSignal = tipSignal
+                        
                         |> filter { result in
                             if case .result = result {
                                 return true

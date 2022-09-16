@@ -1,4 +1,50 @@
 public extension Api {
+    enum StickerKeyword: TypeConstructorDescription {
+        case stickerKeyword(documentId: Int64, keyword: [String])
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .stickerKeyword(let documentId, let keyword):
+                    if boxed {
+                        buffer.appendInt32(-50416996)
+                    }
+                    serializeInt64(documentId, buffer: buffer, boxed: false)
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keyword.count))
+                    for item in keyword {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .stickerKeyword(let documentId, let keyword):
+                return ("stickerKeyword", [("documentId", String(describing: documentId)), ("keyword", String(describing: keyword))])
+    }
+    }
+    
+        public static func parse_stickerKeyword(_ reader: BufferReader) -> StickerKeyword? {
+            var _1: Int64?
+            _1 = reader.readInt64()
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.StickerKeyword.stickerKeyword(documentId: _1!, keyword: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
     enum StickerPack: TypeConstructorDescription {
         case stickerPack(emoticon: String, documents: [Int64])
     
@@ -133,7 +179,7 @@ public extension Api {
 public extension Api {
     enum StickerSetCovered: TypeConstructorDescription {
         case stickerSetCovered(set: Api.StickerSet, cover: Api.Document)
-        case stickerSetFullCovered(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
+        case stickerSetFullCovered(set: Api.StickerSet, packs: [Api.StickerPack], keywords: [Api.StickerKeyword], documents: [Api.Document])
         case stickerSetMultiCovered(set: Api.StickerSet, covers: [Api.Document])
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -145,14 +191,19 @@ public extension Api {
                     set.serialize(buffer, true)
                     cover.serialize(buffer, true)
                     break
-                case .stickerSetFullCovered(let set, let packs, let documents):
+                case .stickerSetFullCovered(let set, let packs, let keywords, let documents):
                     if boxed {
-                        buffer.appendInt32(451763941)
+                        buffer.appendInt32(1087454222)
                     }
                     set.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(packs.count))
                     for item in packs {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keywords.count))
+                    for item in keywords {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -179,8 +230,8 @@ public extension Api {
         switch self {
                 case .stickerSetCovered(let set, let cover):
                 return ("stickerSetCovered", [("set", String(describing: set)), ("cover", String(describing: cover))])
-                case .stickerSetFullCovered(let set, let packs, let documents):
-                return ("stickerSetFullCovered", [("set", String(describing: set)), ("packs", String(describing: packs)), ("documents", String(describing: documents))])
+                case .stickerSetFullCovered(let set, let packs, let keywords, let documents):
+                return ("stickerSetFullCovered", [("set", String(describing: set)), ("packs", String(describing: packs)), ("keywords", String(describing: keywords)), ("documents", String(describing: documents))])
                 case .stickerSetMultiCovered(let set, let covers):
                 return ("stickerSetMultiCovered", [("set", String(describing: set)), ("covers", String(describing: covers))])
     }
@@ -213,15 +264,20 @@ public extension Api {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
             }
-            var _3: [Api.Document]?
+            var _3: [Api.StickerKeyword]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerKeyword.self)
+            }
+            var _4: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.StickerSetCovered.stickerSetFullCovered(set: _1!, packs: _2!, documents: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.StickerSetCovered.stickerSetFullCovered(set: _1!, packs: _2!, keywords: _3!, documents: _4!)
             }
             else {
                 return nil

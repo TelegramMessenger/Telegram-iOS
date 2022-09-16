@@ -104,6 +104,7 @@ swift_library(
         "//submodules/Components/UndoPanelComponent:UndoPanelComponent",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
         "//submodules/PeerInfoUI/CreateExternalMediaStreamScreen:CreateExternalMediaStreamScreen",
+        "//submodules/PhoneNumberFormat:PhoneNumberFormat",
     ],
     visibility = [
         "//visibility:public",
