@@ -722,7 +722,7 @@ watchos_application(
         ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
     ],
-    minimum_os_version = "5.0",
+    minimum_os_version = "7.0",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
@@ -1960,7 +1960,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": None,#":TelegramWatchApp",
+        "//conditions:default": ":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",
