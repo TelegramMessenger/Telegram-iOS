@@ -113,7 +113,6 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_
         guest_build_sh += '--configuration={} \\'.format(configuration)
         guest_build_sh += '--configurationPath=$HOME/telegram-build-input/configuration.json \\'
         guest_build_sh += '--codesigningInformationPath=$HOME/telegram-build-input \\'
-        guest_build_sh += '--apsEnvironment=production \\'
         guest_build_sh += '--outputBuildArtifactsPath=/Users/Shared/telegram-ios/build/artifacts \\'
 
         guest_build_file_path = tempfile.mktemp()
