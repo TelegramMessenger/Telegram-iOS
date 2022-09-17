@@ -8080,3 +8080,18 @@ Sorry for the inconvenience.";
 "PeerInfo.LabelAllReactions" = "All Reactions";
 
 "TextFormat.Format" = "Format";
+
+"Group.Setup.PublicLink" = "PUBLIC LINK";
+"Group.Setup.LinksOrder" = "LINKS ORDER";
+"Group.Setup.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the group info page.";
+
+"Group.Setup.LinkActive" = "active";
+"Group.Setup.LinkInactive" = "inactive";
+
+"Channel.Setup.PublicLink" = "PUBLIC LINK";
+"Channel.Setup.LinksOrder" = "LINKS ORDER";
+"Channel.Setup.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the channel info page.";
+
+"Username.Username" = "USERNAME";
+"Username.LinksOrder" = "USERNAMES ORDER";
+"Username.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on your info page.";
