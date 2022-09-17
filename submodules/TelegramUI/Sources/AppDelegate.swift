@@ -34,6 +34,7 @@ import DebugSettingsUI
 import BackgroundTasks
 import UIKitRuntimeUtils
 import StoreKit
+import PhoneNumberFormat
 
 #if canImport(AppCenter)
 import AppCenter
@@ -1557,11 +1558,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             completion()
             return
         }
+        
+        let phoneNumber = payloadJson["phoneNumber"] as? String
 
         callKitIntegration.reportIncomingCall(
             uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
             stableId: callUpdate.callId,
             handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
+            phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
             isVideo: false,
             displayTitle: callUpdate.peer.debugDisplayTitle,
             completion: { error in
@@ -1745,52 +1749,65 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
                 
                 if let contact = startCallContacts.first {
-                    var processed = false
-                    if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
-                        let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                        if let userId = Int64(string) {
-                            startCall(userId)
-                            processed = true
-                        }
+                    let contactByIdentifier: Signal<EnginePeer?, NoError>
+                    if let context = self.contextValue?.context, let contactIdentifier = contact.contactIdentifier {
+                        contactByIdentifier = context.engine.contacts.findPeerByLocalContactIdentifier(identifier: contactIdentifier)
+                    } else {
+                        contactByIdentifier = .single(nil)
                     }
-                    if !processed, let handle = contact.personHandle, let value = handle.value {
-                        switch handle.type {
-                            case .unknown:
-                                if let userId = Int64(value) {
-                                    startCall(userId)
-                                    processed = true
-                                }
-                            case .phoneNumber:
-                                let phoneNumber = cleanPhoneNumber(value)
-                                if !phoneNumber.isEmpty {
-                                    guard let context = self.contextValue?.context else {
-                                        return true
+                    
+                    let _ = (contactByIdentifier |> deliverOnMainQueue).start(next: { peerByContact in
+                        var processed = false
+                        if let peerByContact = peerByContact {
+                            startCall(peerByContact.id.id._internalGetInt64Value())
+                            processed = true
+                        } else if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                            if let userId = Int64(string) {
+                                startCall(userId)
+                                processed = true
+                            }
+                        }
+                        if !processed, let handle = contact.personHandle, let value = handle.value {
+                            switch handle.type {
+                                case .unknown:
+                                    if let userId = Int64(value) {
+                                        startCall(userId)
+                                        processed = true
                                     }
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                    |> map { contactList -> PeerId? in
-                                        var result: PeerId?
-                                        for peer in contactList.peers {
-                                            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
-                                                if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
-                                                    result = peer.id
-                                                    break
+                                case .phoneNumber:
+                                    let phoneNumber = cleanPhoneNumber(value)
+                                    if !phoneNumber.isEmpty {
+                                        guard let context = self.contextValue?.context else {
+                                            return
+                                        }
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                        |> map { contactList -> PeerId? in
+                                            var result: PeerId?
+                                            for peer in contactList.peers {
+                                                if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
+                                                    if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+                                                        result = peer.id
+                                                        break
+                                                    }
                                                 }
                                             }
+                                            return result
                                         }
-                                        return result
+                                        |> deliverOnMainQueue).start(next: { peerId in
+                                            if let peerId = peerId {
+                                                startCall(peerId.id._internalGetInt64Value())
+                                            }
+                                        })
+                                        processed = true
                                     }
-                                    |> deliverOnMainQueue).start(next: { peerId in
-                                        if let peerId = peerId {
-                                            startCall(peerId.id._internalGetInt64Value())
-                                        }
-                                    })
-                                    processed = true
-                                }
-                            default:
-                                break
+                                default:
+                                    break
+                            }
                         }
-                    }
-
+                    })
+                    
+                    return true
                 }
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {

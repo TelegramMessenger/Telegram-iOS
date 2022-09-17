@@ -52,7 +52,7 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
             switch result {
             case .stickerSetNotModified:
                 return .complete()
-            case let .stickerSet(set, packs, documents):
+            case let .stickerSet(set, packs, keywords, documents):
                 let namespace: ItemCollectionId.Namespace
                 switch set {
                     case let .stickerSet(flags, _, _, _, _, _, _, _, _, _, _, _):
@@ -78,6 +78,20 @@ func updatedRemoteStickerPack(postbox: Postbox, network: Network, reference: Sti
                                     indexKeysByFile[mediaId]!.append(key)
                                 }
                             }
+                    }
+                }
+                for keyword in keywords {
+                    switch keyword {
+                    case let .stickerKeyword(documentId, texts):
+                        for text in texts {
+                            let key = ValueBoxKey(text).toMemoryBuffer()
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: documentId)
+                            if indexKeysByFile[mediaId] == nil {
+                                indexKeysByFile[mediaId] = [key]
+                            } else {
+                                indexKeysByFile[mediaId]!.append(key)
+                            }
+                        }
                     }
                 }
                 

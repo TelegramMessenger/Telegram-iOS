@@ -132,6 +132,10 @@ public final class AppLockContextImpl: AppLockContext {
                 if !strongSelf.lastActiveValue {
                     strongSelf.lastActiveValue = true
                     strongSelf.lastActiveTimestamp = timestamp
+                    
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: strongSelf.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
+                        strongSelf.currentStateValue = current
+                    }
                 }
                 
                 if let lastActiveTimestamp = strongSelf.lastActiveTimestamp {

@@ -1253,6 +1253,7 @@ final class MediaBoxFileContext {
     func fetched(range: Range<Int64>, priority: MediaBoxFetchPriority, fetch: @escaping (Signal<[(Range<Int64>, MediaBoxFetchPriority)], NoError>) -> Signal<MediaResourceDataFetchResult, MediaResourceDataFetchError>, error: @escaping (MediaResourceDataFetchError) -> Void, completed: @escaping () -> Void) -> Disposable {
         switch self.content {
             case .complete:
+                completed()
                 return EmptyDisposable
             case let .partial(file):
                 return file.fetched(range: range, priority: priority, fetch: fetch, error: error, completed: completed)

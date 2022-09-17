@@ -71,7 +71,7 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
         switch result {
             case .stickerSetNotModified:
                 return .complete()
-            case let .stickerSet(set, packs, documents):
+            case let .stickerSet(set, packs, keywords, documents):
                 info = StickerPackCollectionInfo(apiSet: set, namespace: Namespaces.ItemCollection.CloudStickerPacks)
                 
                 switch set {
@@ -93,6 +93,20 @@ func _internal_requestStickerSet(postbox: Postbox, network: Network, reference: 
                             }
                         }
                         break
+                    }
+                }
+                for keyword in keywords {
+                    switch keyword {
+                    case let .stickerKeyword(documentId, texts):
+                        for text in texts {
+                            let key = ValueBoxKey(text).toMemoryBuffer()
+                            let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: documentId)
+                            if indexKeysByFile[mediaId] == nil {
+                                indexKeysByFile[mediaId] = [key]
+                            } else {
+                                indexKeysByFile[mediaId]!.append(key)
+                            }
+                        }
                     }
                 }
                 
@@ -167,7 +181,7 @@ func _internal_installStickerSetInteractively(account: Account, info: StickerPac
                 case let .stickerSetMultiCovered(set: set, covers: covers):
                     apiSet = set
                     apiDocuments = covers
-                case let .stickerSetFullCovered(set, _, documents):
+                case let .stickerSetFullCovered(set, _, _, documents):
                     apiSet = set
                     apiDocuments = documents
                 }

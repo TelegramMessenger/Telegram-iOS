@@ -499,7 +499,10 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         
         var emojiStatus: PeerEmojiStatus?
         if let user = interfaceState.renderedPeer?.peer as? TelegramUser, let emojiStatusValue = user.emojiStatus {
-            emojiStatus = emojiStatusValue
+            if user.isFake || user.isScam {
+            } else {
+                emojiStatus = emojiStatusValue
+            }
         }
         
         /*#if DEBUG

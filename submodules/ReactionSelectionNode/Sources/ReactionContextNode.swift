@@ -1334,20 +1334,16 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 for attribute in item.file.attributes {
                                     switch attribute {
                                     case let .CustomEmoji(_, alt, _):
-                                        if !alt.isEmpty, let keyword = allEmoticons[alt] {
-                                            if !item.file.isPremiumEmoji || hasPremium {
+                                        if !item.file.isPremiumEmoji || hasPremium {
+                                            if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                 result.append((alt, item.file, keyword))
+                                            } else if alt == query {
+                                                result.append((alt, item.file, alt))
                                             }
                                         }
                                     default:
                                         break
                                     }
-                                }
-                            }
-                            
-                            for keyword in keywords {
-                                for emoticon in keyword.emoticons {
-                                    result.append((emoticon, nil, keyword.keyword))
                                 }
                             }
                             

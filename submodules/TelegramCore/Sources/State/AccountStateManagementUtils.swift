@@ -3604,7 +3604,7 @@ func replayFinalState(
                         let namespace: ItemCollectionId.Namespace
                         var items: [ItemCollectionItem] = []
                         let info: StickerPackCollectionInfo
-                        if case let .stickerSet(set, packs, documents) = apiSet {
+                        if case let .stickerSet(set, packs, keywords, documents) = apiSet {
                             var indexKeysByFile: [MediaId: [MemoryBuffer]] = [:]
                             for pack in packs {
                                 switch pack {
@@ -3619,6 +3619,20 @@ func replayFinalState(
                                         }
                                     }
                                     break
+                                }
+                            }
+                            for keyword in keywords {
+                                switch keyword {
+                                case let .stickerKeyword(documentId, texts):
+                                    for text in texts {
+                                        let key = ValueBoxKey(text).toMemoryBuffer()
+                                        let mediaId = MediaId(namespace: Namespaces.Media.CloudFile, id: documentId)
+                                        if indexKeysByFile[mediaId] == nil {
+                                            indexKeysByFile[mediaId] = [key]
+                                        } else {
+                                            indexKeysByFile[mediaId]!.append(key)
+                                        }
+                                    }
                                 }
                             }
                             

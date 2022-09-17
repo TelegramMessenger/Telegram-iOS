@@ -638,19 +638,24 @@ public extension Api.messages {
 }
 public extension Api.messages {
     enum StickerSet: TypeConstructorDescription {
-        case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], documents: [Api.Document])
+        case stickerSet(set: Api.StickerSet, packs: [Api.StickerPack], keywords: [Api.StickerKeyword], documents: [Api.Document])
         case stickerSetNotModified
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .stickerSet(let set, let packs, let documents):
+                case .stickerSet(let set, let packs, let keywords, let documents):
                     if boxed {
-                        buffer.appendInt32(-1240849242)
+                        buffer.appendInt32(1846886166)
                     }
                     set.serialize(buffer, true)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(packs.count))
                     for item in packs {
+                        item.serialize(buffer, true)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(keywords.count))
+                    for item in keywords {
                         item.serialize(buffer, true)
                     }
                     buffer.appendInt32(481674261)
@@ -670,8 +675,8 @@ public extension Api.messages {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .stickerSet(let set, let packs, let documents):
-                return ("stickerSet", [("set", String(describing: set)), ("packs", String(describing: packs)), ("documents", String(describing: documents))])
+                case .stickerSet(let set, let packs, let keywords, let documents):
+                return ("stickerSet", [("set", String(describing: set)), ("packs", String(describing: packs)), ("keywords", String(describing: keywords)), ("documents", String(describing: documents))])
                 case .stickerSetNotModified:
                 return ("stickerSetNotModified", [])
     }
@@ -686,15 +691,20 @@ public extension Api.messages {
             if let _ = reader.readInt32() {
                 _2 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerPack.self)
             }
-            var _3: [Api.Document]?
+            var _3: [Api.StickerKeyword]?
             if let _ = reader.readInt32() {
-                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                _3 = Api.parseVector(reader, elementSignature: 0, elementType: Api.StickerKeyword.self)
+            }
+            var _4: [Api.Document]?
+            if let _ = reader.readInt32() {
+                _4 = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.messages.StickerSet.stickerSet(set: _1!, packs: _2!, documents: _3!)
+            let _c4 = _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.messages.StickerSet.stickerSet(set: _1!, packs: _2!, keywords: _3!, documents: _4!)
             }
             else {
                 return nil

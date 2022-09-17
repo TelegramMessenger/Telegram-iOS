@@ -482,7 +482,7 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         
         for node in nodes {
             other.addSubnode(node)
-            node.layer.animateAlpha(from: node.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { [weak node] _ in
+            node.layer.animateAlpha(from: node.alpha, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak node] _ in
                 node?.removeFromSupernode()
             })
         }
@@ -491,12 +491,11 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     func animateContentIn() {
         let nodes: [ASDisplayNode] = [
             self.textNode.textNode,
-            self.iconNode,
-            self.placeholderNode
+            self.iconNode
         ]
         
         for node in nodes {
-            node.layer.animateAlpha(from: 0.0, to: node.alpha, duration: 0.2)
+            node.layer.animateAlpha(from: 0.0, to: node.alpha, duration: 0.25)
         }
     }
     

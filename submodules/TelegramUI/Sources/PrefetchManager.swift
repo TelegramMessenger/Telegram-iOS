@@ -104,6 +104,11 @@ private final class PrefetchManagerInnerImpl {
     }
     
     private func updateOrderedPreloadMedia(_ items: [PrefetchMediaItem], automaticDownloadSettings: MediaAutoDownloadSettings, networkType: MediaAutoDownloadNetworkType) {
+        #if DEBUG
+        if "".isEmpty {
+            return
+        }
+        #endif
         var validIds = Set<MediaId>()
         var order: Int32 = 0
         for mediaItem in items {

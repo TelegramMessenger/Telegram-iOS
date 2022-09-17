@@ -730,10 +730,11 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1660637285] = { return Api.StatsGroupTopPoster.parse_statsGroupTopPoster($0) }
     dict[-875679776] = { return Api.StatsPercentValue.parse_statsPercentValue($0) }
     dict[1202287072] = { return Api.StatsURL.parse_statsURL($0) }
+    dict[-50416996] = { return Api.StickerKeyword.parse_stickerKeyword($0) }
     dict[313694676] = { return Api.StickerPack.parse_stickerPack($0) }
     dict[768691932] = { return Api.StickerSet.parse_stickerSet($0) }
     dict[1678812626] = { return Api.StickerSetCovered.parse_stickerSetCovered($0) }
-    dict[451763941] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
+    dict[1087454222] = { return Api.StickerSetCovered.parse_stickerSetFullCovered($0) }
     dict[872932635] = { return Api.StickerSetCovered.parse_stickerSetMultiCovered($0) }
     dict[-1609668650] = { return Api.Theme.parse_theme($0) }
     dict[-94849324] = { return Api.ThemeSettings.parse_themeSettings($0) }
@@ -1029,7 +1030,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1802240206] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedFile($0) }
     dict[1443858741] = { return Api.messages.SentEncryptedMessage.parse_sentEncryptedMessage($0) }
     dict[1705297877] = { return Api.messages.SponsoredMessages.parse_sponsoredMessages($0) }
-    dict[-1240849242] = { return Api.messages.StickerSet.parse_stickerSet($0) }
+    dict[1846886166] = { return Api.messages.StickerSet.parse_stickerSet($0) }
     dict[-738646805] = { return Api.messages.StickerSet.parse_stickerSetNotModified($0) }
     dict[904138920] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultArchive($0) }
     dict[946083368] = { return Api.messages.StickerSetInstallResult.parse_stickerSetInstallResultSuccess($0) }
@@ -1583,6 +1584,8 @@ public extension Api {
             case let _1 as Api.StatsPercentValue:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StatsURL:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.StickerKeyword:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.StickerPack:
                 _1.serialize(buffer, boxed)

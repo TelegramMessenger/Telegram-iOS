@@ -2311,13 +2311,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
         
         let credibilityIcon: CredibilityIcon
-        if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
-            credibilityIcon = .emojiStatus(emojiStatus)
-        } else if let peer = peer {
+        if let peer = peer {
             if peer.isFake {
                 credibilityIcon = .fake
             } else if peer.isScam {
                 credibilityIcon = .scam
+            } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+                credibilityIcon = .emojiStatus(emojiStatus)
             } else if peer.isVerified {
                 credibilityIcon = .verified
             } else if peer.isPremium && !premiumConfiguration.isPremiumDisabled && (peer.id != self.context.account.peerId || self.isSettings) {
