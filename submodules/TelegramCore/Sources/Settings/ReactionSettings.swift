@@ -11,6 +11,21 @@ public struct ReactionSettings: Equatable, Codable {
     }
 }
 
+public extension ReactionSettings {
+    func effectiveQuickReaction(hasPremium: Bool) -> MessageReaction.Reaction {
+        switch self.quickReaction {
+        case .builtin:
+            return self.quickReaction
+        case .custom:
+            if hasPremium {
+                return self.quickReaction
+            } else {
+                return ReactionSettings.default.quickReaction
+            }
+        }
+    }
+}
+
 func updateReactionSettings(transaction: Transaction, _ f: (ReactionSettings) -> ReactionSettings) {
     transaction.updatePreferencesEntry(key: PreferencesKeys.reactionSettings, { current in
         let previous = current?.get(ReactionSettings.self) ?? ReactionSettings.default

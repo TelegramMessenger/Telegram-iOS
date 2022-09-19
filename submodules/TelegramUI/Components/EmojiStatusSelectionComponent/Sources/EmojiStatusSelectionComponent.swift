@@ -243,6 +243,8 @@ public final class EmojiStatusSelectionController: ViewController {
         private var presentationData: PresentationData
         private var validLayout: ContainerViewLayout?
         
+        private let currentSelection: Int64?
+        
         private var emojiContentDisposable: Disposable?
         private var emojiContent: EmojiPagerContentComponent?
         private var freezeUpdates: Bool = false
@@ -263,9 +265,10 @@ public final class EmojiStatusSelectionController: ViewController {
         private var isAnimatingOut: Bool = false
         private var isDismissed: Bool = false
         
-        init(controller: EmojiStatusSelectionController, context: AccountContext, sourceView: UIView?, emojiContent: Signal<EmojiPagerContentComponent, NoError>) {
+        init(controller: EmojiStatusSelectionController, context: AccountContext, sourceView: UIView?, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?) {
             self.controller = controller
             self.context = context
+            self.currentSelection = currentSelection
             
             if let sourceView = sourceView {
                 self.globalSourceRect = sourceView.convert(sourceView.bounds, to: nil)
@@ -920,6 +923,13 @@ public final class EmojiStatusSelectionController: ViewController {
             } else {
                 self.freezeUpdates = true
                 
+                if case .statusSelection = controller.mode, let item = item, let currentSelection = self.currentSelection, item.itemFile?.fileId.id == currentSelection {
+                    let _ = (self.context.engine.accountData.setEmojiStatus(file: nil, expirationDate: nil)
+                    |> deliverOnMainQueue).start()
+                    controller.dismiss()
+                    return
+                }
+                
                 if let _ = item, let destinationView = controller.destinationItemView() {
                     if let snapshotView = destinationView.snapshotView(afterScreenUpdates: false) {
                         snapshotView.frame = destinationView.frame
@@ -1026,6 +1036,7 @@ public final class EmojiStatusSelectionController: ViewController {
     private let context: AccountContext
     private weak var sourceView: UIView?
     private let emojiContent: Signal<EmojiPagerContentComponent, NoError>
+    private let currentSelection: Int64?
     private let mode: Mode
     private let destinationItemView: () -> UIView?
     
@@ -1034,11 +1045,12 @@ public final class EmojiStatusSelectionController: ViewController {
         return self._ready
     }
     
-    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, destinationItemView: @escaping () -> UIView?) {
+    public init(context: AccountContext, mode: Mode, sourceView: UIView, emojiContent: Signal<EmojiPagerContentComponent, NoError>, currentSelection: Int64?, destinationItemView: @escaping () -> UIView?) {
         self.context = context
         self.mode = mode
         self.sourceView = sourceView
         self.emojiContent = emojiContent
+        self.currentSelection = currentSelection
         self.destinationItemView = destinationItemView
         
         super.init(navigationBarPresentationData: nil)
@@ -1068,7 +1080,7 @@ public final class EmojiStatusSelectionController: ViewController {
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = Node(controller: self, context: self.context, sourceView: self.sourceView, emojiContent: self.emojiContent)
+        self.displayNode = Node(controller: self, context: self.context, sourceView: self.sourceView, emojiContent: self.emojiContent, currentSelection: self.currentSelection)
 
         super.displayNodeDidLoad()
     }

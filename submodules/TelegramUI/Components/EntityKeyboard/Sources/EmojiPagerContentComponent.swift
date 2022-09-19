@@ -1551,6 +1551,11 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     
     private let searchIconView: UIImageView
     private let searchIconTintView: UIImageView
+    
+    private let clearIconView: UIImageView
+    private let clearIconTintView: UIImageView
+    private let clearIconButton: HighlightTrackingButton
+    
     private let tintTextView: ComponentView<Empty>
     private let textView: ComponentView<Empty>
     private let cancelButtonTintTitle: ComponentView<Empty>
@@ -1580,6 +1585,13 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.searchIconView = UIImageView()
         self.searchIconTintView = UIImageView()
         
+        self.clearIconView = UIImageView()
+        self.clearIconTintView = UIImageView()
+        self.clearIconButton = HighlightableButton()
+        self.clearIconView.isHidden = true
+        self.clearIconTintView.isHidden = true
+        self.clearIconButton.isHidden = true
+        
         self.tintTextView = ComponentView()
         self.textView = ComponentView()
         self.cancelButtonTintTitle = ComponentView()
@@ -1593,6 +1605,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         self.addSubview(self.searchIconView)
         self.tintContainerView.addSubview(self.searchIconTintView)
+        
+        self.addSubview(self.clearIconView)
+        self.tintContainerView.addSubview(self.clearIconTintView)
+        self.addSubview(self.clearIconButton)
         
         self.addSubview(self.cancelButton)
         self.clipsToBounds = true
@@ -1627,6 +1643,23 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             }
         }
         self.cancelButton.addTarget(self, action: #selector(self.cancelPressed), for: .touchUpInside)
+        
+        self.clearIconButton.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.clearIconView.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.clearIconView.alpha = 0.4
+                    strongSelf.clearIconTintView.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.clearIconTintView.alpha = 0.4
+                } else {
+                    strongSelf.clearIconView.alpha = 1.0
+                    strongSelf.clearIconView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    strongSelf.clearIconTintView.alpha = 1.0
+                    strongSelf.clearIconTintView.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
+        self.clearIconButton.addTarget(self, action: #selector(self.clearPressed), for: .touchUpInside)
     }
     
     required public init?(coder: NSCoder) {
@@ -1641,7 +1674,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 
                 let textField = EmojiSearchTextField(frame: textFieldFrame)
                 self.textField = textField
-                self.addSubview(textField)
+                self.insertSubview(textField, belowSubview: self.clearIconView)
                 textField.delegate = self
                 textField.addTarget(self, action: #selector(self.textFieldChanged(_:)), for: .editingChanged)
             }
@@ -1655,6 +1688,10 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     @objc private func cancelPressed() {
         self.updateQuery("")
         
+        self.clearIconView.isHidden = true
+        self.clearIconTintView.isHidden = true
+        self.clearIconButton.isHidden = true
+        
         if let textField = self.textField {
             self.textField = nil
             
@@ -1662,6 +1699,15 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             textField.removeFromSuperview()
         }
         self.deactivated()
+    }
+    
+    @objc private func clearPressed() {
+        self.updateQuery("")
+        self.textField?.text = ""
+        
+        self.clearIconView.isHidden = true
+        self.clearIconTintView.isHidden = true
+        self.clearIconButton.isHidden = true
     }
     
     public func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -1673,7 +1719,13 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     @objc private func textFieldChanged(_ textField: UITextField) {
         self.update(transition: .immediate)
         
-        self.updateQuery(textField.text ?? "")
+        let text = textField.text ?? ""
+        
+        self.clearIconView.isHidden = text.isEmpty
+        self.clearIconTintView.isHidden = text.isEmpty
+        self.clearIconButton.isHidden = text.isEmpty
+        
+        self.updateQuery(text)
     }
     
     private func update(transition: Transition) {
@@ -1700,6 +1752,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         if self.params?.theme !== theme {
             self.searchIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
             self.searchIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: .white)
+            
+            self.clearIconView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: theme.chat.inputMediaPanel.panelContentVibrantOverlayColor)
+            self.clearIconTintView.image = generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Clear"), color: .white)
         }
         
         self.params = params
@@ -1783,6 +1838,13 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             let iconFrame = CGRect(origin: CGPoint(x: textFrame.minX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
             transition.setFrame(view: self.searchIconView, frame: iconFrame)
             transition.setFrame(view: self.searchIconTintView, frame: iconFrame)
+        }
+        
+        if let image = self.clearIconView.image {
+            let iconFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX - image.size.width - 4.0, y: backgroundFrame.minY + floor((backgroundFrame.height - image.size.height) / 2.0)), size: image.size)
+            transition.setFrame(view: self.clearIconView, frame: iconFrame)
+            transition.setFrame(view: self.clearIconTintView, frame: iconFrame)
+            transition.setFrame(view: self.clearIconButton, frame: iconFrame.insetBy(dx: -8.0, dy: -10.0))
         }
         
         if let textComponentView = self.textView.view {
@@ -3856,7 +3918,7 @@ public final class EmojiPagerContentComponent: Component {
                     for (id, layer) in self.visibleItemLayers {
                         previousVisibleLayers[id] = (layer, layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
                     }
-                    var previousVisibleItemSelectionLayers: [ItemLayer.Key: (CALayer, CGRect)] = [:]
+                    var previousVisibleItemSelectionLayers: [ItemLayer.Key: (ItemSelectionLayer, CGRect)] = [:]
                     for (id, layer) in self.visibleItemSelectionLayers {
                         previousVisibleItemSelectionLayers[id] = (layer, layer.frame.offsetBy(dx: 0.0, dy: -self.scrollView.bounds.minY))
                     }
@@ -3980,6 +4042,10 @@ public final class EmojiPagerContentComponent: Component {
                         for (_, layer) in self.visibleItemLayers {
                             layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
                         }
+                        for (_, layer) in self.visibleItemSelectionLayers {
+                            layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, additive: true)
+                        }
+                        
                         for (id, layerAndFrame) in previousVisibleLayers {
                             if self.visibleItemLayers[id] != nil {
                                 continue
@@ -3988,6 +4054,19 @@ public final class EmojiPagerContentComponent: Component {
                             self.scrollView.layer.addSublayer(layer)
                             layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer] _ in
                                 layer?.removeFromSuperlayer()
+                            })
+                        }
+                        for (id, layerAndFrame) in previousVisibleItemSelectionLayers {
+                            if self.visibleItemSelectionLayers[id] != nil {
+                                continue
+                            }
+                            let layer = layerAndFrame.0
+                            self.scrollView.layer.addSublayer(layer)
+                            let tintContainerLayer = layer.tintContainerLayer
+                            self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                            layer.animatePosition(from: CGPoint(x: 0.0, y: commonItemOffset), to: CGPoint(), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer, weak tintContainerLayer] _ in
+                                layer?.removeFromSuperlayer()
+                                tintContainerLayer?.removeFromSuperlayer()
                             })
                         }
                         
@@ -4163,8 +4242,11 @@ public final class EmojiPagerContentComponent: Component {
                                 let layer = layerAndFrame.0
                                 layer.frame = layerAndFrame.1.offsetBy(dx: 0.0, dy: self.scrollView.bounds.minY)
                                 self.scrollView.layer.addSublayer(layer)
-                                layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer] _ in
+                                let tintContainerLayer = layer.tintContainerLayer
+                                self.mirrorContentScrollView.layer.addSublayer(tintContainerLayer)
+                                layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -commonItemOffset), duration: duration, timingFunction: timingFunction, removeOnCompletion: false, additive: true, completion: { [weak layer, weak tintContainerLayer] _ in
                                     layer?.removeFromSuperlayer()
+                                    tintContainerLayer?.removeFromSuperlayer()
                                 })
                             }
                             
@@ -5073,7 +5155,7 @@ public final class EmojiPagerContentComponent: Component {
                                 }
                             }
                             
-                            itemSelectionLayer.frame = baseItemFrame
+                            itemTransition.setFrame(layer: itemSelectionLayer, frame: baseItemFrame)
                             
                             itemLayer.transform = CATransform3DMakeScale(0.8, 0.8, 1.0)
                         } else {
@@ -5455,10 +5537,10 @@ public final class EmojiPagerContentComponent: Component {
                 longTapRecognizer.isEnabled = component.enableLongPress
             }
             if let tapRecognizer = self.tapRecognizer {
-                tapRecognizer.isEnabled = component.enableLongPress
+                tapRecognizer.isEnabled = component.enableLongPress || component.inputInteractionHolder.inputInteraction?.peekBehavior != nil
             }
             if let contextGesture = self.contextGesture {
-                contextGesture.isEnabled = !component.enableLongPress
+                contextGesture.isEnabled = !component.enableLongPress && component.inputInteractionHolder.inputInteraction?.peekBehavior == nil
             }
             
             if let shimmerHostView = self.shimmerHostView {
@@ -6085,6 +6167,10 @@ public final class EmojiPagerContentComponent: Component {
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
+                            if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
+                                break
+                            }
+                            
                             itemGroups[groupIndex].items.append(resultItem)
                         }
                     }
@@ -6128,6 +6214,10 @@ public final class EmojiPagerContentComponent: Component {
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
+                            if itemGroups[groupIndex].items.count >= (5 + 8) * 8 {
+                                break
+                            }
+                            
                             itemGroups[groupIndex].items.append(resultItem)
                         }
                     }

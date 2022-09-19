@@ -927,16 +927,22 @@ public func installedStickerPacksController(context: AccountContext, mode: Insta
         case .general, .modal:
             featured.set(context.account.viewTracker.featuredStickerPacks())
             archivedPromise.set(.single(archivedPacks) |> then(context.engine.stickers.archivedStickerPacks() |> map(Optional.init)))
-            quickReaction = context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
-            |> map { preferencesView -> MessageReaction.Reaction? in
+            quickReaction = combineLatest(
+                context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
+            )
+            |> map { peer, preferencesView -> MessageReaction.Reaction? in
                 let reactionSettings: ReactionSettings
                 if let entry = preferencesView.values[PreferencesKeys.reactionSettings], let value = entry.get(ReactionSettings.self) {
                     reactionSettings = value
                 } else {
                     reactionSettings = .default
                 }
-                
-                return reactionSettings.quickReaction
+                var hasPremium = false
+                if case let .user(user) = peer {
+                    hasPremium = user.isPremium
+                }
+                return reactionSettings.effectiveQuickReaction(hasPremium: hasPremium)
             }
             |> distinctUntilChanged
         case .masks:

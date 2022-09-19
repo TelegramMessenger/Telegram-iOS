@@ -853,8 +853,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.emojiStatusSelectionController?.dismiss()
         var selectedItems = Set<MediaId>()
         var topStatusTitle = self.presentationData.strings.PeerStatusSetup_NoTimerTitle
+        var currentSelection: Int64?
         if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
             selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
+            currentSelection = emojiStatus.fileId
             
             if let timestamp = emojiStatus.expirationDate {
                 topStatusTitle = peerStatusExpirationString(statusTimestamp: timestamp, relativeTo: Int32(Date().timeIntervalSince1970), strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat)
@@ -878,6 +880,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 selectedItems: selectedItems,
                 topStatusTitle: topStatusTitle
             ),
+            currentSelection: currentSelection,
             destinationItemView: { [weak sourceView] in
                 return sourceView
             }

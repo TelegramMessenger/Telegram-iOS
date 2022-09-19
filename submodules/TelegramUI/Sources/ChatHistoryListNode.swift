@@ -1004,15 +1004,22 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
         let availableReactions = context.engine.stickers.availableReactions()
         
-        let defaultReaction = context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
-        |> map { preferencesView -> MessageReaction.Reaction? in
+        let defaultReaction = combineLatest(
+            context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+            context.account.postbox.preferencesView(keys: [PreferencesKeys.reactionSettings])
+        )
+        |> map { peer, preferencesView -> MessageReaction.Reaction? in
             let reactionSettings: ReactionSettings
             if let entry = preferencesView.values[PreferencesKeys.reactionSettings], let value = entry.get(ReactionSettings.self) {
                 reactionSettings = value
             } else {
                 reactionSettings = .default
             }
-            return reactionSettings.quickReaction
+            var hasPremium = false
+            if case let .user(user) = peer {
+                hasPremium = user.isPremium
+            }
+            return reactionSettings.effectiveQuickReaction(hasPremium: hasPremium)
         }
         |> distinctUntilChanged
         
