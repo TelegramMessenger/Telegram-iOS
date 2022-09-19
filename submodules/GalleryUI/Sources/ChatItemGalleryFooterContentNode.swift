@@ -615,9 +615,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             if media is TelegramMediaImage {
                 canEdit = true
             } else if let media = media as? TelegramMediaFile, !media.isAnimated {
+                var isVideo = false
                 for attribute in media.attributes {
                     switch attribute {
                     case let .Video(_, dimensions, _):
+                        isVideo = true
                         if dimensions.height > 0 {
                             if CGFloat(dimensions.width) / CGFloat(dimensions.height) > 1.33 {
                                 canFullscreen = true
@@ -626,6 +628,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     default:
                         break
                     }
+                }
+                
+                if !isVideo {
+                    canEdit = true
                 }
             } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
                 let type = webEmbedType(content: content)

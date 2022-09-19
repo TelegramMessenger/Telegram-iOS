@@ -2348,7 +2348,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             let offset: CGFloat = incoming ? 42.0 : 0.0
             
             if let selectionNode = self.selectionNode {
-                selectionNode.updateSelected(selected, animated: false)
+                selectionNode.updateSelected(selected, animated: animated)
                 let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: self.contentBounds.size.width, height: self.contentBounds.size.height))
                 selectionNode.frame = selectionFrame
                 selectionNode.updateLayout(size: selectionFrame.size, leftInset: self.safeInsets.left)

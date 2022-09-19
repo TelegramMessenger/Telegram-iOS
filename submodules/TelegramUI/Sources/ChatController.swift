@@ -929,9 +929,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     var mediaReference: AnyMediaReference?
-                    for m in message.media {
-                        if let image = m as? TelegramMediaImage {
+                    for media in message.media {
+                        if let image = media as? TelegramMediaImage {
                             mediaReference = AnyMediaReference.standalone(media: image)
+                        } else if let file = media as? TelegramMediaFile {
+                            mediaReference = AnyMediaReference.standalone(media: file)
                         }
                     }
                     

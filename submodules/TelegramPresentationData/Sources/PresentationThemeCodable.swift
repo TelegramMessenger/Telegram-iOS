@@ -1045,6 +1045,7 @@ extension PresentationThemeChatList: Codable {
         try encodeColor(&values, self.itemBackgroundColor, .itemBg)
         try encodeColor(&values, self.pinnedItemBackgroundColor, .pinnedItemBg)
         try encodeColor(&values, self.itemHighlightedBackgroundColor, .itemHighlightedBg)
+        try encodeColor(&values, self.pinnedItemHighlightedBackgroundColor, .pinnedItemHighlightedBg)
         try encodeColor(&values, self.itemSelectedBackgroundColor, .itemSelectedBg)
         try encodeColor(&values, self.titleColor, .title)
         try encodeColor(&values, self.secretTitleColor, .secretTitle)

@@ -320,13 +320,4 @@ public enum DeviceMetrics: CaseIterable, Equatable {
                 return false
         }
     }
-    
-    public var maybeHasDynamicIsland: Bool {
-        switch self {
-            case .iPhone12, .iPhone12ProMax, .iPhone14Pro, .iPhone14ProMax:
-                return true
-            default:
-                return false
-        }
-    }
 }
