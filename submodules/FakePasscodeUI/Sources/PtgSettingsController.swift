@@ -13,17 +13,20 @@ private final class PtgSettingsControllerArguments {
     let switchShowPeerId: (Bool) -> Void
     let switchSuppressForeignAgentNotice: (Bool) -> Void
     let switchEnableForeignAgentNoticeSearchFiltering: (Bool) -> Void
+    let switchEnableLiveText: (Bool) -> Void
     
-    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void) {
+    init(switchShowPeerId: @escaping (Bool) -> Void, switchSuppressForeignAgentNotice: @escaping (Bool) -> Void, switchEnableForeignAgentNoticeSearchFiltering: @escaping (Bool) -> Void, switchEnableLiveText: @escaping (Bool) -> Void) {
         self.switchShowPeerId = switchShowPeerId
         self.switchSuppressForeignAgentNotice = switchSuppressForeignAgentNotice
         self.switchEnableForeignAgentNoticeSearchFiltering = switchEnableForeignAgentNoticeSearchFiltering
+        self.switchEnableLiveText = switchEnableLiveText
     }
 }
 
 private enum PtgSettingsSection: Int32 {
     case showPeerId
     case foreignAgentNotice
+    case liveText
 }
 
 private enum PtgSettingsEntry: ItemListNodeEntry {
@@ -35,12 +38,17 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
     case enableForeignAgentNoticeSearchFiltering(String, Bool, Bool)
     case enableForeignAgentNoticeSearchFilteringInfo(String)
 
+    case enableLiveText(String, Bool)
+    case enableLiveTextInfo(String)
+
     var section: ItemListSectionId {
         switch self {
         case .showPeerId, .showPeerIdInfo:
             return PtgSettingsSection.showPeerId.rawValue
         case .foreignAgentNoticeHeader, .suppressForeignAgentNotice, .enableForeignAgentNoticeSearchFiltering, .enableForeignAgentNoticeSearchFilteringInfo:
             return PtgSettingsSection.foreignAgentNotice.rawValue
+        case .enableLiveText, .enableLiveTextInfo:
+            return PtgSettingsSection.liveText.rawValue
         }
     }
     
@@ -58,6 +66,10 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return 4
         case .enableForeignAgentNoticeSearchFilteringInfo:
             return 5
+        case .enableLiveText:
+            return 6
+        case .enableLiveTextInfo:
+            return 7
         }
     }
     
@@ -82,7 +94,11 @@ private enum PtgSettingsEntry: ItemListNodeEntry {
             return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { updatedValue in
                 arguments.switchEnableForeignAgentNoticeSearchFiltering(updatedValue)
             })
-        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text):
+        case let .enableLiveText(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { updatedValue in
+                arguments.switchEnableLiveText(updatedValue)
+            })
+        case let .showPeerIdInfo(text), let .enableForeignAgentNoticeSearchFilteringInfo(text), let .enableLiveTextInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
     }
@@ -107,6 +123,11 @@ private func ptgSettingsControllerEntries(presentationData: PresentationData, se
     entries.append(.enableForeignAgentNoticeSearchFiltering(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFiltering, settings.enableForeignAgentNoticeSearchFiltering, settings.suppressForeignAgentNotice))
     entries.append(.enableForeignAgentNoticeSearchFilteringInfo(presentationData.strings.PtgSettings_EnableForeignAgentNoticeSearchFilteringHelp))
 
+    if #available(iOS 11.0, *) {
+        entries.append(.enableLiveText(presentationData.strings.PtgSettings_EnableLiveText, settings.enableLiveText))
+        entries.append(.enableLiveTextInfo(presentationData.strings.PtgSettings_EnableLiveTextHelp))
+    }
+
     return entries
 }
 
@@ -127,6 +148,10 @@ public func ptgSettingsController(context: AccountContext) -> ViewController {
     }, switchEnableForeignAgentNoticeSearchFiltering: { value in
         updateSettings(context, statePromise) { settings in
             return settings.withUpdated(enableForeignAgentNoticeSearchFiltering: value)
+        }
+    }, switchEnableLiveText: { value in
+        updateSettings(context, statePromise) { settings in
+            return settings.withUpdated(enableLiveText: value)
         }
     })
     

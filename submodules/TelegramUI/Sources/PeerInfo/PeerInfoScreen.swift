@@ -590,12 +590,12 @@ private enum SettingsSection: Int, CaseIterable {
     case phone
     case accounts
     case proxy
+    case cloudballon
     case shortcuts
     case advanced
     case payment
     case extra
     case support
-    case cloudballon
 }
 
 private func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentationData: PresentationData, interaction: PeerInfoInteraction, isExpanded: Bool) -> [(AnyHashable, [PeerInfoScreenItem])] {

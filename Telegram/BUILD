@@ -1846,7 +1846,7 @@ plist_fragment(
     <key>NSSiriUsageDescription</key>
     <string>You can use Siri to send messages.</string>
     <key>NSSpeechRecognitionUsageDescription</key>
-    <string>We need this to transcribe audio messages on your request.</string>
+    <string>We need this to transcribe voice messages on your request.</string>
     <key>NSUserActivityTypes</key>
     <array>
         <string>INSendMessageIntent</string>

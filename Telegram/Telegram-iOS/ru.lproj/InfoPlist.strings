@@ -10,3 +10,5 @@
 "NSMicrophoneUsageDescription" = "Это необходимо, чтобы вы могли делиться голосовыми сообщениями и видео со звуком.";
 "NSSiriUsageDescription" = "Вы можете использовать Siri для отправки сообщений.";
 "NSFaceIDUsageDescription" = "Вы можете разблокировать приложение с помощью Face ID.";
+
+"NSSpeechRecognitionUsageDescription" = "Это необходимо для расшифровки голосовых сообщений по вашему запросу.";
