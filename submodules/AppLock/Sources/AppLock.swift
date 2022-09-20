@@ -66,6 +66,20 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     }).flatMap(applyScreenshotEffectToImage)
 }
 
+private func getCoveringViewSnaphot(containerView: UIView) -> UIImage? {
+    let scale: CGFloat = 0.5
+    let unscaledSize = containerView.frame.size
+    return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.scaleBy(x: scale, y: scale)
+        UIGraphicsPushContext(context)
+
+        containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
+        
+        UIGraphicsPopContext()
+    }).flatMap(applyScreenshotEffectToImage)
+}
+
 public final class AppLockContextImpl: AppLockContext {
     private let rootPath: String
     private let syncQueue = Queue()
@@ -97,6 +111,8 @@ public final class AppLockContextImpl: AppLockContext {
     private var lastActiveValue: Bool = false
     
     public weak var sharedAccountContext: SharedAccountContext?
+    
+    private var savedNativeViewController: UIViewController?
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -159,6 +175,7 @@ public final class AppLockContextImpl: AppLockContext {
             
             var shouldDisplayCoveringView = false
             var isCurrentlyLocked = false
+            var passcodeControllerToDismissAfterSavedNativeControllerPresented: ViewController?
             
             if !accessChallengeData.data.isLockable {
                 if let passcodeController = strongSelf.passcodeController {
@@ -203,7 +220,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: {
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: true, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
@@ -225,6 +242,9 @@ public final class AppLockContextImpl: AppLockContext {
                             if let _ = rootViewController.presentedViewController as? UIActivityViewController {
                             } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                             } else {
+                                if let controller = rootViewController.presentedViewController {
+                                    strongSelf.savedNativeViewController = controller
+                                }
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
                         }
@@ -232,7 +252,11 @@ public final class AppLockContextImpl: AppLockContext {
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
-                    passcodeController.dismiss()
+                    if !shouldDisplayCoveringView && strongSelf.savedNativeViewController != nil {
+                        passcodeControllerToDismissAfterSavedNativeControllerPresented = passcodeController
+                    } else {
+                        passcodeController.dismiss()
+                    }
                 }
             }
             
@@ -240,9 +264,13 @@ public final class AppLockContextImpl: AppLockContext {
             strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
             
             if shouldDisplayCoveringView {
-                if strongSelf.coveringView == nil, let window = strongSelf.window {
+                if strongSelf.coveringView == nil, let window = strongSelf.window, strongSelf.passcodeController == nil {
                     let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
-                    coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                    if let controller = strongSelf.rootController?.presentedViewController {
+                        coveringView.updateSnapshot(getCoveringViewSnaphot(containerView: controller.view))
+                    } else {
+                        coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                    }
                     strongSelf.coveringView = coveringView
                     window.coveringView = coveringView
                     
@@ -250,12 +278,25 @@ public final class AppLockContextImpl: AppLockContext {
                         if let _ = rootViewController.presentedViewController as? UIActivityViewController {
                         } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                         } else {
+                            if let controller = rootViewController.presentedViewController {
+                                strongSelf.savedNativeViewController = controller
+                            }
                             rootViewController.dismiss(animated: false, completion: nil)
                         }
                     }
                 }
-            } else {
-                if let _ = strongSelf.coveringView {
+            } else if strongSelf.passcodeController == nil {
+                if let controller = strongSelf.savedNativeViewController {
+                    weak var dismissingCoveringView = strongSelf.coveringView
+                    strongSelf.coveringView = nil
+                    strongSelf.rootController?.present(controller, animated: false, completion: { [weak self] in
+                        passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss()
+                        if let dismissingCoveringView = dismissingCoveringView, let window = self?.window, dismissingCoveringView == window.coveringView {
+                            window.coveringView = nil
+                        }
+                    })
+                    strongSelf.savedNativeViewController = nil
+                } else if let _ = strongSelf.coveringView {
                     strongSelf.coveringView = nil
                     strongSelf.window?.coveringView = nil
                 }

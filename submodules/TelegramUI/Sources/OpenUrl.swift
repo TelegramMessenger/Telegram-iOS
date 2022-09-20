@@ -819,16 +819,9 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
             if parsedUrl.host == "t.me" || parsedUrl.host == "telegram.me" {
                 handleInternalUrl(parsedUrl.absoluteString)
             } else {
-                let settings = combineLatest(context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings, ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]), context.sharedContext.accountManager.accessChallengeData())
+                let settings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.webBrowserSettings])
                 |> take(1)
-                |> map { sharedData, accessChallengeData -> WebBrowserSettings in
-                    let passcodeSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.presentationPasscodeSettings]?.get(PresentationPasscodeSettings.self) ?? PresentationPasscodeSettings.defaultSettings
-                    if accessChallengeData.data.isLockable {
-                        if passcodeSettings.autolockTimeout != nil {
-                            return WebBrowserSettings(defaultWebBrowser: "Safari")
-                        }
-                    }
-                    
+                |> map { sharedData -> WebBrowserSettings in
                     if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.webBrowserSettings]?.get(WebBrowserSettings.self) {
                         return current   
                     } else {
