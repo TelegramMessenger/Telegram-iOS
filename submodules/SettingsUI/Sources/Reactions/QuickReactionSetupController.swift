@@ -185,7 +185,7 @@ private func quickReactionSetupControllerEntries(
             dateTimeFormat: presentationData.dateTimeFormat,
             nameDisplayOrder: presentationData.nameDisplayOrder,
             availableReactions: availableReactions,
-            reaction: state.hasReaction ? reactionSettings.quickReaction : nil
+            reaction: state.hasReaction ? reactionSettings.effectiveQuickReaction(hasPremium: isPremium) : nil
         ))
         entries.append(.demoDescription(presentationData.strings.Settings_QuickReactionSetup_DemoInfo))
         
@@ -354,6 +354,7 @@ public func quickReactionSetupController(
                         chatPeerId: context.account.peerId,
                         selectedItems: selectedItems
                     ),
+                    currentSelection: nil,
                     destinationItemView: { [weak sourceItemNode] in
                         return sourceItemNode?.iconView
                     }

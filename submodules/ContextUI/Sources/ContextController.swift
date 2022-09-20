@@ -232,8 +232,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     private var customPosition: CGPoint?
     private let contentContainerNode: ContextContentContainerNode
     private var actionsContainerNode: ContextActionsContainerNode
-    private var reactionContextNode: ReactionContextNode?
-    private var reactionContextNodeIsAnimatingOut = false
     
     private var didCompleteAnimationIn = false
     private var initialContinueGesturePoint: CGPoint?
@@ -401,15 +399,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                     strongSelf.hapticFeedback.tap()
                                 }
                             }
-                            
-                            if let reactionContextNode = strongSelf.reactionContextNode {
-                                let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
-                                let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
-                                if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
-                                    strongSelf.highlightedReaction = highlightedReaction
-                                    strongSelf.hapticFeedback.tap()
-                                }
-                            }
                         }
                     }
                 }
@@ -427,9 +416,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
                                 strongSelf.highlightedActionNode = nil
                                 highlightedActionNode.performAction()
-                            }
-                            if let highlightedReaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction, isLarge: false)
                             }
                         } else {
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
@@ -479,15 +465,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                                     strongSelf.hapticFeedback.tap()
                                 }
                             }
-                            
-                            if let reactionContextNode = strongSelf.reactionContextNode {
-                                let reactionPoint = strongSelf.view.convert(localPoint, to: reactionContextNode.view)
-                                let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
-                                if strongSelf.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
-                                    strongSelf.highlightedReaction = highlightedReaction
-                                    strongSelf.hapticFeedback.tap()
-                                }
-                            }
                         }
                     }
                 }
@@ -505,10 +482,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
                                 strongSelf.highlightedActionNode = nil
                                 highlightedActionNode.performAction()
-                            }
-                            
-                            if let highlightedReaction = strongSelf.highlightedReaction {
-                                strongSelf.reactionContextNode?.performReactionSelection(reaction: highlightedReaction, isLarge: false)
                             }
                         } else {
                             if let highlightedActionNode = strongSelf.highlightedActionNode {
@@ -593,15 +566,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             actionNode.setIsHighlighted(true)
                         }
                     }
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        let reactionPoint = self.view.convert(localPoint, to: reactionContextNode.view)
-                        let highlightedReaction = reactionContextNode.reaction(at: reactionPoint)?.reaction
-                        if self.highlightedReaction?.rawValue != highlightedReaction?.rawValue {
-                            self.highlightedReaction = highlightedReaction
-                            self.hapticFeedback.tap()
-                        }
-                    }
                 }
             case .ended, .cancelled:
                 if let presentationNode = self.presentationNode {
@@ -610,10 +574,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     if let highlightedActionNode = self.highlightedActionNode {
                         self.highlightedActionNode = nil
                         highlightedActionNode.setIsHighlighted(false)
-                    }
-                    
-                    if let _ = self.reactionContextNode {
-                        self.highlightedReaction = nil
                     }
                 }
             default:
@@ -949,10 +909,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         localContentSourceFrame = localSourceFrame
                     }
                     
-                    if let reactionContextNode = self.reactionContextNode {
-                        reactionContextNode.animateIn(from: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size))
-                    }
-                    
                     self.actionsContainerNode.layer.animateSpring(from: NSValue(cgPoint: CGPoint(x: localSourceFrame.center.x - self.actionsContainerNode.position.x, y: localSourceFrame.center.y - self.actionsContainerNode.position.y + actionsOffset)), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: actionsDuration, initialVelocity: 0.0, damping: springDamping, additive: true)
                     let contentContainerOffset = CGPoint(x: localContentSourceFrame.center.x - self.contentContainerNode.frame.center.x - contentParentNode.contentRect.minX, y: localContentSourceFrame.center.y - self.contentContainerNode.frame.center.y - contentParentNode.contentRect.minY)
                     self.contentContainerNode.layer.animateSpring(from: NSValue(cgPoint: contentContainerOffset), to: NSValue(cgPoint: CGPoint()), keyPath: "position", duration: contentDuration, initialVelocity: 0.0, damping: springDamping, additive: true, completion: { [weak self] _ in
@@ -1286,10 +1242,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 contentParentNode.updateAbsoluteRect?(self.contentContainerNode.frame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y + contentContainerOffset.y), self.bounds.size)
                 contentParentNode.applyAbsoluteOffset?(CGPoint(x: 0.0, y: -contentContainerOffset.y), transitionCurve, transitionDuration)
                 
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: CGRect(origin: CGPoint(x: originalProjectedContentViewFrame.1.minX, y: originalProjectedContentViewFrame.1.minY), size: contentParentNode.contentRect.size), animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
-                
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
             } else {
                 if let snapshotView = contentParentNode.contentNode.view.snapshotContentTree(keepTransform: true) {
@@ -1308,10 +1260,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                 
                 contentParentNode.contentNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                 contentParentNode.willUpdateIsExtractedToContextPreview?(false, .animated(duration: 0.2, curve: .easeInOut))
-                
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: nil, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
             }
         case let .controller(source):
             guard let maybeContentNode = self.contentContainerNode.contentNode, case let .controller(controller) = maybeContentNode else {
@@ -1449,10 +1397,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     completedContentNode = true
                     intermediateCompletion()
                 })
-                
-                if let reactionContextNode = self.reactionContextNode {
-                    reactionContextNode.animateOut(to: nil, animatingOutToReaction: self.reactionContextNodeIsAnimatingOut)
-                }
             }
         }
     }
@@ -1460,10 +1404,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     func addRelativeContentOffset(_ offset: CGPoint, transition: ContainedViewLayoutTransition) {
         if let presentationNode = self.presentationNode {
             presentationNode.addRelativeContentOffset(offset, transition: transition)
-        }
-        if self.reactionContextNodeIsAnimatingOut, let reactionContextNode = self.reactionContextNode {
-            reactionContextNode.bounds = reactionContextNode.bounds.offsetBy(dx: 0.0, dy: offset.y)
-            transition.animateOffsetAdditive(node: reactionContextNode, offset: -offset.y)
         }
     }
     
@@ -1520,13 +1460,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         self.currentItems = items
         self.currentActionsMinHeight = minHeight
-        
-        if let reactionContextNode = self.reactionContextNode {
-            self.reactionContextNode = nil
-            reactionContextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reactionContextNode] _ in
-                reactionContextNode?.removeFromSupernode()
-            })
-        }
 
         let previousActionsContainerNode = self.actionsContainerNode
         let previousActionsContainerFrame = previousActionsContainerNode.view.convert(previousActionsContainerNode.bounds, to: self.view)
@@ -1648,11 +1581,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         transition.updateFrame(node: self.scrollNode, frame: CGRect(origin: CGPoint(), size: layout.size))
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 12.0
-        var contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
-        
-        if let _ = self.reactionContextNode {
-            contentTopInset += 34.0
-        }
+        let contentTopInset: CGFloat = max(11.0, layout.statusBarHeight ?? 0.0)
 
         let actionsBottomInset: CGFloat = 11.0
         
@@ -1897,12 +1826,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
                     
                     contentParentNode.updateAbsoluteRect?(absoluteContentRect, layout.size)
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        let insets = layout.insets(options: [.statusBar])
-                        transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX + contentParentNode.contentRect.minX, y: absoluteContentRect.minY + contentParentNode.contentRect.minY), size: contentParentNode.contentRect.size), isAnimatingOut: false, transition: transition)
-                    }
                 }
             case let .controller(contentParentNode):
                 var projectedFrame: CGRect = convertFrame(contentParentNode.sourceView.bounds, from: contentParentNode.sourceView, to: self.view)
@@ -2033,14 +1956,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                             transition.animateOffsetAdditive(node: self.scrollNode, offset: currentContainerFrame.minY - previousContainerFrame.minY)
                         }
                     }
-                    
-                    let absoluteContentRect = contentContainerFrame.offsetBy(dx: 0.0, dy: -self.scrollNode.view.contentOffset.y)
-                    
-                    if let reactionContextNode = self.reactionContextNode {
-                        let insets = layout.insets(options: [.statusBar])
-                        transition.updateFrame(node: reactionContextNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-                        reactionContextNode.updateLayout(size: layout.size, insets: insets, anchorRect: CGRect(origin: CGPoint(x: absoluteContentRect.minX, y: absoluteContentRect.minY), size: contentSize), isAnimatingOut: false, transition: transition)
-                    }
                 }
             }
         }
@@ -2147,12 +2062,6 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         
         if let presentationNode = self.presentationNode {
             return presentationNode.hitTest(self.view.convert(point, to: presentationNode.view), with: event)
-        }
-        
-        if let reactionContextNode = self.reactionContextNode {
-            if let result = reactionContextNode.hitTest(self.view.convert(point, to: reactionContextNode.view), with: event) {
-                return result
-            }
         }
         
         let mappedPoint = self.view.convert(point, to: self.scrollNode.view)

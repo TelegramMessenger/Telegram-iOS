@@ -1,6 +1,6 @@
 #import "SSignal+Multicast.h"
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 #import "SBag.h"
 #import "SBlockDisposable.h"
 
@@ -12,7 +12,7 @@ typedef enum {
 
 @interface SSignalMulticastSubscribers : NSObject
 {
-    volatile OSSpinLock _lock;
+    os_unfair_lock _lock;
     SBag *_subscribers;
     SSignalMulticastState _state;
     id<SDisposable> _disposable;
@@ -40,7 +40,7 @@ typedef enum {
 
 - (id<SDisposable>)addSubscriber:(SSubscriber *)subscriber start:(bool *)start
 {
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     NSInteger index = [_subscribers addItem:subscriber];
     switch (_state) {
         case SSignalMulticastStateReady:
@@ -50,7 +50,7 @@ typedef enum {
         default:
             break;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     return [[SBlockDisposable alloc] initWithBlock:^
     {
@@ -62,7 +62,7 @@ typedef enum {
 {
     id<SDisposable> currentDisposable = nil;
     
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     [_subscribers removeItem:index];
     switch (_state) {
         case SSignalMulticastStateStarted:
@@ -75,7 +75,7 @@ typedef enum {
         default:
             break;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     [currentDisposable dispose];
 }
@@ -83,9 +83,9 @@ typedef enum {
 - (void)notifyNext:(id)next
 {
     NSArray *currentSubscribers = nil;
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     currentSubscribers = [_subscribers copyItems];
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     for (SSubscriber *subscriber in currentSubscribers)
     {
@@ -96,10 +96,10 @@ typedef enum {
 - (void)notifyError:(id)error
 {
     NSArray *currentSubscribers = nil;
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     currentSubscribers = [_subscribers copyItems];
     _state = SSignalMulticastStateCompleted;
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     for (SSubscriber *subscriber in currentSubscribers)
     {
@@ -110,10 +110,10 @@ typedef enum {
 - (void)notifyCompleted
 {
     NSArray *currentSubscribers = nil;
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     currentSubscribers = [_subscribers copyItems];
     _state = SSignalMulticastStateCompleted;
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     for (SSubscriber *subscriber in currentSubscribers)
     {

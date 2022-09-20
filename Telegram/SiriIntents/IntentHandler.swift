@@ -116,7 +116,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let logsPath = rootPath + "/logs/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
-        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        setupSharedLogger(rootPath: logsPath, path: logsPath)
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         

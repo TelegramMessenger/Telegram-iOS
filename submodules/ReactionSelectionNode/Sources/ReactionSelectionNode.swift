@@ -167,17 +167,13 @@ public final class ReactionNode: ASDisplayNode, ReactionItemNode {
                 self.animateInAnimationNode?.visibility = true
             }
             
-            self.selectionView.alpha = 1.0
-            self.selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.selectionView.layer.animateAlpha(from: 0.0, to: self.selectionView.alpha, duration: 0.2)
             self.selectionView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
             
-            self.selectionTintView.alpha = 1.0
-            self.selectionTintView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.selectionTintView.layer.animateAlpha(from: 0.0, to: self.selectionTintView.alpha, duration: 0.2)
             self.selectionTintView.layer.animateSpring(from: 0.01 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
         } else {
             self.animateInAnimationNode?.completed(true)
-            self.selectionView.alpha = 1.0
-            self.selectionTintView.alpha = 1.0
         }
     }
     

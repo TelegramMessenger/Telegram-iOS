@@ -1,6 +1,6 @@
 #import <MtProtoKit/MTSubscriber.h>
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 
 @interface MTSubscriberBlocks : NSObject {
 @public
@@ -28,7 +28,7 @@
 @interface MTSubscriber ()
 {
 @protected
-    OSSpinLock _lock;
+    os_unfair_lock _lock;
     bool _terminated;
     id<MTDisposable> _disposable;
     MTSubscriberBlocks *_blocks;
@@ -51,13 +51,13 @@
 - (void)_assignDisposable:(id<MTDisposable>)disposable
 {
     bool dispose = false;
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     if (_terminated) {
         dispose = true;
     } else {
         _disposable = disposable;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     if (dispose) {
         [disposable dispose];
@@ -66,7 +66,7 @@
 
 - (void)_markTerminatedWithoutDisposal
 {
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     MTSubscriberBlocks *blocks = nil;
     if (!_terminated)
     {
@@ -75,7 +75,7 @@
         
         _terminated = true;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     if (blocks) {
         blocks = nil;
@@ -86,11 +86,11 @@
 {
     MTSubscriberBlocks *blocks = nil;
     
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     if (!_terminated) {
         blocks = _blocks;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     if (blocks && blocks->_next) {
         blocks->_next(next);
@@ -102,7 +102,7 @@
     bool shouldDispose = false;
     MTSubscriberBlocks *blocks = nil;
     
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     if (!_terminated)
     {
         blocks = _blocks;
@@ -111,7 +111,7 @@
         shouldDispose = true;
         _terminated = true;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     if (blocks && blocks->_error) {
         blocks->_error(error);
@@ -126,7 +126,7 @@
     bool shouldDispose = false;
     MTSubscriberBlocks *blocks = nil;
     
-    OSSpinLockLock(&_lock);
+    os_unfair_lock_lock(&_lock);
     if (!_terminated)
     {
         blocks = _blocks;
@@ -135,7 +135,7 @@
         shouldDispose = true;
         _terminated = true;
     }
-    OSSpinLockUnlock(&_lock);
+    os_unfair_lock_unlock(&_lock);
     
     if (blocks && blocks->_completed)
         blocks->_completed();

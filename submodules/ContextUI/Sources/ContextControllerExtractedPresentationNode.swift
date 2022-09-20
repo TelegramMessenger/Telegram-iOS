@@ -724,11 +724,13 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 var reactionAnchorRect = contentRect.offsetBy(dx: contentParentGlobalFrame.minX, dy: 0.0)
                 
                 let bottomInset = layout.insets(options: [.input]).bottom
+                var isCoveredByInput = false
                 if reactionAnchorRect.minY > layout.size.height - bottomInset {
                     reactionAnchorRect.origin.y = layout.size.height - bottomInset
+                    isCoveredByInput = true
                 }
                 
-                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: reactionAnchorRect, isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
+                reactionContextNode.updateLayout(size: layout.size, insets: UIEdgeInsets(top: topInset, left: layout.safeInsets.left, bottom: 0.0, right: layout.safeInsets.right), anchorRect: reactionAnchorRect, isCoveredByInput: isCoveredByInput, isAnimatingOut: isAnimatingOut, transition: reactionContextNodeTransition)
                 
                 self.proposedReactionsPositionLock = contentRect.minY - 18.0 - reactionContextNode.contentHeight - 46.0
             } else {

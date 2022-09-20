@@ -25,6 +25,7 @@ swift_library(
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent:EmojiStatusComponent",
         "//submodules/TextFormat:TextFormat",
     ],
     visibility = [

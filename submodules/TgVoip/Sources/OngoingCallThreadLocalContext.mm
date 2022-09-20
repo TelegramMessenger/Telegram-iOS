@@ -5,6 +5,8 @@
 #import <MtProtoKit/MtProtoKit.h>
 #include <memory>
 
+#import <libkern/OSAtomic.h>
+
 static void TGCallAesIgeEncrypt(uint8_t *inBytes, uint8_t *outBytes, size_t length, uint8_t *key, uint8_t *iv) {
     MTAesEncryptRaw(inBytes, outBytes, length, key, iv);
 }

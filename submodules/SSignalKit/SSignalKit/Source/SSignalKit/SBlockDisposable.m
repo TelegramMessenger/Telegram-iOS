@@ -1,7 +1,8 @@
 #import "SBlockDisposable.h"
 
-#import <libkern/OSAtomic.h>
+#import <os/lock.h>
 #import <objc/runtime.h>
+#import <libkern/OSAtomic.h>
 
 @interface SBlockDisposable ()
 {
@@ -27,6 +28,8 @@
     void *block = _block;
     if (block != NULL)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (OSAtomicCompareAndSwapPtr(block, 0, &_block))
         {
             if (block != nil)
@@ -35,6 +38,7 @@
                 strongBlock = nil;
             }
         }
+#pragma clang diagnostic pop
     }
 }
 
@@ -43,6 +47,8 @@
     void *block = _block;
     if (block != NULL)
     {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
         if (OSAtomicCompareAndSwapPtr(block, 0, &_block))
         {
             if (block != nil)
@@ -52,6 +58,7 @@
                 strongBlock = nil;
             }
         }
+#pragma clang diagnostic pop
     }
 }
 

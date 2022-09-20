@@ -573,7 +573,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             })
         case .sendNotificationLogs:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Send Notification Logs (Up to 40 MB)", label: "", sectionId: self.section, style: .blocks, action: {
-                let _ = (Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/notification-logs").collectLogs()
+                let logsPath = arguments.sharedContext.basePath + "/logs/notification-logs"
+                let _ = (Logger(rootPath: logsPath, basePath: logsPath).collectLogs()
                     |> deliverOnMainQueue).start(next: { logs in
                     let presentationData = arguments.sharedContext.currentPresentationData.with { $0 }
                     let actionSheet = ActionSheetController(presentationData: presentationData)
@@ -721,7 +722,8 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                 
                 var logByType: [Signal<(type: String, logs: [(String, String)]), NoError>] = []
                 for type in logTypes {
-                    logByType.append(Logger(rootPath: arguments.sharedContext.basePath, basePath: arguments.sharedContext.basePath + "/logs/\(type)").collectLogs()
+                    let logsPath = arguments.sharedContext.basePath + "/logs/\(type)"
+                    logByType.append(Logger(rootPath: logsPath, basePath: logsPath).collectLogs()
                     |> map { result -> (type: String, logs: [(String, String)]) in
                         return (type, result)
                     })

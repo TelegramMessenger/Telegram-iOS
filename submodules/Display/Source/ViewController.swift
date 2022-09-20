@@ -375,7 +375,7 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
             }
         }
         self.navigationBar?.item = self.navigationItem
-        self.automaticallyAdjustsScrollViewInsets = false
+        //self.automaticallyAdjustsScrollViewInsets = false
         
         self.scrollToTopWithTabBar = { [weak self] in
             self?.scrollToTop?()

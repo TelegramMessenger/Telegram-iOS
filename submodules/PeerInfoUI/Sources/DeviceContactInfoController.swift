@@ -727,7 +727,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
     
     var addressIndex = 0
     for address in contactData.addresses {
-        let signal = geocodeLocation(dictionary: address.dictionary)
+        let signal = geocodeLocation(address: address.asPostalAddress)
         |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
             if let (latitude, longitude) = coordinates {
                 let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)

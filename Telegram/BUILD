@@ -115,6 +115,8 @@ genrule(
     ],
 )
 
+minimum_os_version = "11.0"
+
 empty_languages = [
     "ar",
     "be",
@@ -589,6 +591,18 @@ plist_fragment(
 )
 
 plist_fragment(
+    name = "RequiredDeviceCapabilitiesPlist",
+    extension = "plist",
+    template =
+    """
+    <key>UIRequiredDeviceCapabilities</key>
+    <array>
+        <string>arm64</string>
+    </array>
+    """
+)
+
+plist_fragment(
     name = "AppNameInfoPlist",
     extension = "plist",
     template =
@@ -690,7 +704,7 @@ watchos_extension(
         ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
     ],
-    minimum_os_version = "5.0",
+    minimum_os_version = "9.0",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchExtension.mobileprovision",
@@ -716,11 +730,11 @@ watchos_application(
     infoplists = [
         ":WatchAppInfoPlist",
         ":VersionInfoPlist",
-        "BuildNumberInfoPlist",
+        ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
     ],
-    minimum_os_version = "5.0",
+    minimum_os_version = "9.0",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
@@ -767,8 +781,9 @@ ios_framework(
         ":MtProtoKitInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -807,8 +822,9 @@ ios_framework(
         ":SwiftSignalKitInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -847,11 +863,12 @@ ios_framework(
         ":PostboxInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
     frameworks = [
         ":SwiftSignalKitFramework",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -890,8 +907,9 @@ ios_framework(
         ":TelegramApiInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -930,13 +948,14 @@ ios_framework(
         ":TelegramCoreInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
     frameworks = [
         ":MtProtoKitFramework",
         ":SwiftSignalKitFramework",
         ":PostboxFramework",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -975,8 +994,9 @@ ios_framework(
         ":AsyncDisplayKitInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -1058,12 +1078,13 @@ ios_framework(
         ":DisplayInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
     frameworks = [
         ":SwiftSignalKitFramework",
         ":AsyncDisplayKitFramework",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -1102,6 +1123,7 @@ ios_framework(
         ":TelegramUIInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
     ],
     frameworks = [
         ":MtProtoKitFramework",
@@ -1111,7 +1133,7 @@ ios_framework(
         ":AsyncDisplayKitFramework",
         ":DisplayFramework",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     extension_safe = True,
     ipa_post_processor = strip_framework,
     deps = [
@@ -1195,10 +1217,11 @@ ios_extension(
     infoplists = [
         ":ShareInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Share.mobileprovision",
@@ -1269,7 +1292,7 @@ swift_library(
     ],
 )
 
-genrule(
+'''genrule(
     name = "SetMinOsVersionNotificationContentExtension",
     cmd_bash =
 """
@@ -1286,7 +1309,7 @@ genrule(
     visibility = [
         "//visibility:public",
     ]
-)
+)'''
 
 ios_extension(
     name = "NotificationContentExtension",
@@ -1300,11 +1323,12 @@ ios_extension(
     infoplists = [
         ":NotificationContentInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
-    ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
+    minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
+    #ipa_post_processor = ":SetMinOsVersionNotificationContentExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationContent.mobileprovision",
@@ -1404,10 +1428,11 @@ ios_extension(
     infoplists = [
         ":WidgetInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
+    minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
     ipa_post_processor = ":SetMinOsVersionWidgetExtension",
     #provides_main = True,
     provisioning_profile = select({
@@ -1506,7 +1531,7 @@ swift_library(
     ],
 )
 
-genrule(
+'''genrule(
     name = "SetMinOsVersionIntentsExtension",
     cmd_bash =
 """
@@ -1523,7 +1548,7 @@ genrule(
     visibility = [
         "//visibility:public",
     ]
-)
+)'''
 
 ios_extension(
     name = "IntentsExtension",
@@ -1537,11 +1562,12 @@ ios_extension(
     infoplists = [
         ":IntentsInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
-    ipa_post_processor = ":SetMinOsVersionIntentsExtension",
+    minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
+    #ipa_post_processor = ":SetMinOsVersionIntentsExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Intents.mobileprovision",
@@ -1600,7 +1626,7 @@ swift_library(
     ],
 )
 
-genrule(
+'''genrule(
     name = "SetMinOsVersionBroadcastUploadExtension",
     cmd_bash =
 """
@@ -1617,7 +1643,7 @@ genrule(
     visibility = [
         "//visibility:public",
     ]
-)
+)'''
 
 ios_extension(
     name = "BroadcastUploadExtension",
@@ -1631,11 +1657,12 @@ ios_extension(
     infoplists = [
         ":BroadcastUploadInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
-    ipa_post_processor = ":SetMinOsVersionBroadcastUploadExtension",
+    minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
+    #ipa_post_processor = ":SetMinOsVersionBroadcastUploadExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:BroadcastUpload.mobileprovision",
@@ -1679,7 +1706,7 @@ plist_fragment(
     )
 )
 
-genrule(
+'''genrule(
     name = "SetMinOsVersionNotificationServiceExtension",
     cmd_bash =
 """
@@ -1696,7 +1723,7 @@ genrule(
     visibility = [
         "//visibility:public",
     ]
-)
+)'''
 
 ios_extension(
     name = "NotificationServiceExtension",
@@ -1710,11 +1737,12 @@ ios_extension(
     infoplists = [
         ":NotificationServiceInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":BuildNumberInfoPlist",
         ":AppNameInfoPlist",
     ],
-    minimum_os_version = "9.0", # maintain the same minimum OS version across extensions
-    ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
+    minimum_os_version = minimum_os_version, # maintain the same minimum OS version across extensions
+    #ipa_post_processor = ":SetMinOsVersionNotificationServiceExtension",
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:NotificationService.mobileprovision",
@@ -1846,10 +1874,6 @@ plist_fragment(
     <false/>
     <key>UILaunchStoryboardName</key>
     <string>LaunchScreen</string>
-    <key>UIRequiredDeviceCapabilities</key>
-    <array>
-        <string>armv7</string>
-    </array>
     <key>UIRequiresPersistentWiFi</key>
     <true/>
     <key>UIStatusBarStyle</key>
@@ -1912,7 +1936,7 @@ ios_application(
         telegram_bundle_id = telegram_bundle_id,
     ),
     families = ["iphone", "ipad"],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
@@ -1922,6 +1946,7 @@ ios_application(
         ":TelegramInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
     ],
     alternate_icons = [
@@ -1958,7 +1983,7 @@ ios_application(
     }),
     watch_application = select({
         ":disableExtensionsSetting": None,
-        "//conditions:default": None,#":TelegramWatchApp",
+        "//conditions:default": ":TelegramWatchApp",
     }) if telegram_enable_watch else None,
     deps = [
         ":Main",
@@ -1974,7 +1999,7 @@ ios_application(
         telegram_bundle_id = telegram_bundle_id,
     ),
     families = ["iphone", "ipad"],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
@@ -1984,6 +2009,7 @@ ios_application(
         ":TelegramInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
     ],
     deps = [
@@ -1997,7 +2023,7 @@ ios_application(
         telegram_bundle_id = telegram_bundle_id,
     ),
     families = ["iphone", "ipad"],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_os_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
@@ -2007,6 +2033,7 @@ ios_application(
         ":TelegramInfoPlist",
         ":BuildNumberInfoPlist",
         ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
         ":UrlTypesInfoPlist",
     ],
     deps = [

@@ -537,7 +537,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
-                displaySearch: false,
+                displaySearchWithPlaceholder: nil,
+                emptySearchResults: nil,
                 enableLongPress: false,
                 selectedItems: Set()
             )
@@ -1714,9 +1715,9 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private func processInputData(inputData: InputData) -> InputData {
         return InputData(
-            emoji: inputData.emoji.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.itemGroups), itemContentUniqueId: nil),
+            emoji: inputData.emoji.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .emoji, itemGroups: inputData.emoji.itemGroups), itemContentUniqueId: nil, emptySearchResults: nil),
             stickers: inputData.stickers.flatMap { stickers in
-                return stickers.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.itemGroups), itemContentUniqueId: nil)
+                return stickers.withUpdatedItemGroups(itemGroups: self.processStableItemGroupList(category: .stickers, itemGroups: stickers.itemGroups), itemContentUniqueId: nil, emptySearchResults: nil)
             },
             gifs: inputData.gifs,
             availableGifSearchEmojies: inputData.availableGifSearchEmojies

@@ -465,7 +465,7 @@ final class AuthorizedApplicationContext {
                     declineImpl?()
                 }, openUrl: { url in
                     if let parsedUrl = URL(string: url) {
-                        UIApplication.shared.openURL(parsedUrl)
+                        UIApplication.shared.open(parsedUrl, options: [:], completionHandler: nil)
                     }
                 })
                 
