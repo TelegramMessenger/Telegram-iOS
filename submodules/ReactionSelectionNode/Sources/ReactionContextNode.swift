@@ -235,7 +235,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
     private var emojiContentDisposable: Disposable?
     
     private let emojiSearchDisposable = MetaDisposable()
-    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+    private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, emptyResultEmoji: TelegramMediaFile?)?>(nil)
+    private var stableEmptyResultEmoji: TelegramMediaFile?
     
     private var horizontalExpandRecognizer: UIPanGestureRecognizer?
     private var horizontalExpandStartLocation: CGPoint?
@@ -419,7 +420,22 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 
                 var emojiContent = emojiContent
                 if let emojiSearchResult = emojiSearchResult {
-                    emojiContent = emojiContent.withUpdatedItemGroups(itemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id)
+                    var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
+                    if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
+                        if strongSelf.stableEmptyResultEmoji == nil {
+                            strongSelf.stableEmptyResultEmoji = emojiSearchResult.emptyResultEmoji
+                        }
+                        //TODO:localize
+                        emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
+                            text: "No emoji found",
+                            iconFile: strongSelf.stableEmptyResultEmoji
+                        )
+                    } else {
+                        strongSelf.stableEmptyResultEmoji = nil
+                    }
+                    emojiContent = emojiContent.withUpdatedItemGroups(itemGroups: emojiSearchResult.groups, itemContentUniqueId: emojiSearchResult.id, emptySearchResults: emptySearchResults)
+                } else {
+                    strongSelf.stableEmptyResultEmoji = nil
                 }
                 
                 strongSelf.emojiContent = emojiContent
@@ -1315,12 +1331,14 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     |> distinctUntilChanged
                     
                     let resultSignal = signal
-                    |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
+                    |> mapToSignal { keywords -> Signal<(result: [EmojiPagerContentComponent.ItemGroup], emptyResultEmoji: TelegramMediaFile?), NoError> in
                         return combineLatest(
                             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
+                            context.engine.stickers.availableReactions(),
                             hasPremium
                         )
-                        |> map { view, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
+                        |> take(1)
+                        |> map { view, availableReactions, hasPremium -> (result: [EmojiPagerContentComponent.ItemGroup], emptyResultEmoji: TelegramMediaFile?) in
                             var result: [(String, TelegramMediaFile?, String)] = []
                             
                             var allEmoticons: [String: String] = [:]
@@ -1371,8 +1389,42 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                             }
                             
-                            return [EmojiPagerContentComponent.ItemGroup(
-                                supergroupId: "search", groupId: "search", title: nil, subtitle: nil, actionButtonTitle: nil, isFeatured: false, isPremiumLocked: false, isEmbedded: false, hasClear: false, collapsedLineCount: nil, displayPremiumBadges: false, headerItem: nil, items: items)]
+                            var emptyResultEmoji: TelegramMediaFile?
+                            if let availableReactions = availableReactions {
+                                //let reactionFilter: [String] = ["😖", "😫", "🫠", "😨", "❓"]
+                                let filteredReactions: [TelegramMediaFile] = availableReactions.reactions.compactMap { reaction -> TelegramMediaFile? in
+                                    switch reaction.value {
+                                    case let .builtin(value):
+                                        let _ = value
+                                        //if reactionFilter.contains(value) {
+                                            return reaction.selectAnimation
+                                        /*} else {
+                                            return nil
+                                        }*/
+                                    case .custom:
+                                        return nil
+                                    }
+                                }
+                                emptyResultEmoji = filteredReactions.randomElement()
+                            }
+                            
+                            return (result: [EmojiPagerContentComponent.ItemGroup(
+                                    supergroupId: "search",
+                                    groupId: "search",
+                                    title: nil,
+                                    subtitle: nil,
+                                    actionButtonTitle: nil,
+                                    isFeatured: false,
+                                    isPremiumLocked: false,
+                                    isEmbedded: false,
+                                    hasClear: false,
+                                    collapsedLineCount: nil,
+                                    displayPremiumBadges: false,
+                                    headerItem: nil,
+                                    items: items
+                                )],
+                                emptyResultEmoji: emptyResultEmoji
+                            )
                         }
                     }
                     
@@ -1382,7 +1434,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
+                        strongSelf.emojiSearchResult.set(.single((result.result, AnyHashable(query), result.emptyResultEmoji)))
                     }))
                 }
             },
