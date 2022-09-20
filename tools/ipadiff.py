@@ -145,7 +145,7 @@ def diff_binaries(tempdir, self_base_path, file1, file2):
         if not os.path.isfile(self_base_path + '/main.cpp'):
             print('Could not find ' + self_base_path + '/main.cpp')
             sys.exit(1)
-        subprocess.call(['clang', self_base_path + '/main.cpp', '-lc++', '-o', diff_app])
+        subprocess.call(['clang-12', self_base_path + '/main.cpp', '-lc++', '-o', diff_app])
         if not os.path.isfile(diff_app):
             print('Could not compile ' + self_base_path + '/main.cpp')
             sys.exit(1)
