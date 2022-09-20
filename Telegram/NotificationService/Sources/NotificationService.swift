@@ -642,7 +642,7 @@ private final class NotificationServiceHandler {
         let logsPath = rootPath + "/logs/notification-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
 
-        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        setupSharedLogger(rootPath: logsPath, path: logsPath)
 
         initializeAccountManagement()
 
@@ -652,6 +652,24 @@ private final class NotificationServiceHandler {
 
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
         self.encryptionParameters = ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: deviceSpecificEncryptionParameters.key)!, salt: ValueBoxEncryptionParameters.Salt(data: deviceSpecificEncryptionParameters.salt)!)
+        
+        let semaphore = DispatchSemaphore(value: 0)
+        var loggingSettings = LoggingSettings.defaultSettings
+        let _ = (self.accountManager.transaction { transaction -> LoggingSettings in
+            if let value = transaction.getSharedData(SharedDataKeys.loggingSettings)?.get(LoggingSettings.self) {
+                return value
+            } else {
+                return LoggingSettings.defaultSettings
+            }
+        }).start(next: { value in
+            loggingSettings = value
+            semaphore.signal()
+        })
+        semaphore.wait()
+        
+        Logger.shared.logToFile = loggingSettings.logToFile
+        Logger.shared.logToConsole = loggingSettings.logToConsole
+        Logger.shared.redactSensitiveData = loggingSettings.redactSensitiveData
 
         let networkArguments = NetworkInitializationArguments(apiId: apiId, apiHash: apiHash, languagesCategory: languagesCategory, appVersion: appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(buildConfig.bundleData(withAppToken: nil, signatureDict: nil)), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
         

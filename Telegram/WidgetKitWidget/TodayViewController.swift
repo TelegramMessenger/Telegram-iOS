@@ -94,7 +94,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
     let logsPath = rootPath + "/logs/widget-logs"
     let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
     
-    setupSharedLogger(rootPath: rootPath, path: logsPath)
+    setupSharedLogger(rootPath: logsPath, path: logsPath)
     
     initializeAccountManagement()
     

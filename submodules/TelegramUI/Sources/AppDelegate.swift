@@ -479,7 +479,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let legacyLogs: [String] = [
-            "logs",
             "broadcast-logs",
             "siri-logs",
             "widget-logs",
