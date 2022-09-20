@@ -22,7 +22,6 @@ import PeerInfoAvatarListNode
 import AnimationUI
 import ContextUI
 import ManagedAnimationNode
-import FakePasscode
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -2298,7 +2297,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     private var currentCredibilityIcon: CredibilityIcon?
     
     private var currentPanelStatusData: PeerInfoStatusData?
-    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition, additive: Bool, cloudballonSettings: CloudballonSettings?) -> CGFloat {
+    func update(width: CGFloat, containerHeight: CGFloat, containerInset: CGFloat, statusBarHeight: CGFloat, navigationHeight: CGFloat, isModalOverlay: Bool, isMediaOnly: Bool, contentOffset: CGFloat, paneContainerY: CGFloat, presentationData: PresentationData, peer: Peer?, cachedData: CachedPeerData?, notificationSettings: TelegramPeerNotificationSettings?, statusData: PeerInfoStatusData?, panelStatusData: (PeerInfoStatusData?, PeerInfoStatusData?, CGFloat?), isSecretChat: Bool, isContact: Bool, isSettings: Bool, state: PeerInfoState, metrics: LayoutMetrics, transition: ContainedViewLayoutTransition, additive: Bool, showPeerId: Bool) -> CGFloat {
         self.state = state
         self.peer = peer
         self.avatarListNode.listContainerNode.peer = peer
@@ -2532,7 +2531,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
                 smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                if cloudballonSettings?.showPeerId ?? false {
+                if showPeerId {
                     let id = "\(presentationData.strings.Profile_Id): \(String(user.id.id._internalGetInt64Value()))"
                     smallIdString = NSAttributedString(string: id, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                     idString = NSAttributedString(string: id, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)

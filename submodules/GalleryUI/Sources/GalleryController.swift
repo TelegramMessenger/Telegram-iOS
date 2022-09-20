@@ -15,6 +15,7 @@ import WebsiteType
 import OpenInExternalAppUI
 import ScreenCaptureDetection
 import UndoUI
+import PtgForeignAgentNoticeRemoval
 
 private func tagsForMessage(_ message: Message) -> MessageTags? {
     for media in message.media {
@@ -176,7 +177,8 @@ public func galleryItemForEntry(context: AccountContext, presentationData: Prese
                     entities = result
                 }
                                 
-                let caption = galleryCaptionStringWithAppliedEntities(text, entities: entities, message: message)
+                let (text_, entities_) = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: text, entities: entities, media: message.media) : (text, entities)
+                let caption = galleryCaptionStringWithAppliedEntities(text_, entities: entities_, message: message)
                 return UniversalVideoGalleryItem(context: context, presentationData: presentationData, content: content, originData: GalleryItemOriginData(title: message.effectiveAuthor.flatMap(EnginePeer.init)?.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), timestamp: message.timestamp), indexData: location.flatMap { GalleryItemIndexData(position: Int32($0.index), totalCount: Int32($0.count)) }, contentInfo: .message(message), caption: caption, displayInfoOnTop: displayInfoOnTop, hideControls: hideControls, fromPlayingVideo: fromPlayingVideo, isSecret: isSecret, landscape: landscape, timecode: timecode, playbackRate: playbackRate, configuration: configuration, playbackCompleted: playbackCompleted, performAction: performAction, openActionOptions: openActionOptions, storeMediaPlaybackState: storeMediaPlaybackState, present: present)
             } else {
                 if let fileName = file.fileName, (fileName as NSString).pathExtension.lowercased() == "json" {

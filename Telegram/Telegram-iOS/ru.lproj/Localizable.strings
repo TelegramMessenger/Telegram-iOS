@@ -76,9 +76,13 @@
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "Эта функция не сработает, если после входа в аккаунт на этом устройстве прошло менее 24 часов.";
 
-"CloudballonSettings.Title" = "Cloudballon";
-"CloudballonSettings.ShowPeerId" = "Показывать ID";
-"CloudballonSettings.ShowPeerIdHelp" = "Показывать ID в профилях пользователей, групп, каналов, ботов.";
+"PtgSettings.Title" = "Cloudballon";
+"PtgSettings.ShowPeerId" = "Показывать ID";
+"PtgSettings.ShowPeerIdHelp" = "Показывать ID в профилях пользователей, групп, каналов, ботов.";
+"PtgSettings.ForeignAgentNoticeHeader" = "Маркировка иноагентов";
+"PtgSettings.SuppressForeignAgentNotice" = "Скрывать в сообщениях";
+"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Фильтровать результаты поиска";
+"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Отфильтровывать из результатов поиска сообщения, которые были включены только из-за текста маркировки иноагентов.";
 "Profile.Id" = "id";
 "Conversation.IdCopied" = "ID скопирован.";
 "Settings.CopyId" = "Копировать ID";

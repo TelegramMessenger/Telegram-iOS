@@ -16,6 +16,8 @@ import CallKit
 import AppLockState
 import NotificationsPresentationData
 import FakePasscode
+import PtgForeignAgentNoticeRemoval
+import PtgSettings
 
 private let queue = Queue()
 
@@ -445,6 +447,9 @@ private struct NotificationContent: CustomStringConvertible {
     
     var isLockedMessage: String?
     
+    var suppressForeignAgentNotice: Bool = false
+    var messageType: String?
+    
     init(isLockedMessage: String?) {
         self.isLockedMessage = isLockedMessage
     }
@@ -506,7 +511,14 @@ private struct NotificationContent: CustomStringConvertible {
             content.subtitle = subtitle
         }
         if let body = self.body {
-            content.body = body
+            if self.suppressForeignAgentNotice && !body.isEmpty {
+                content.body = removeForeignAgentNotice(text: body, mayRemoveWholeText: self.messageType != nil)
+                if content.body.isEmpty, let messageType = self.messageType {
+                    content.body = messageType
+                }
+            } else {
+                content.body = body
+            }
         }
         
         if !content.title.isEmpty || !content.subtitle.isEmpty || !content.body.isEmpty {
@@ -668,10 +680,13 @@ private final class NotificationServiceHandler {
         }
         
         let incomingCallMessage: String
+        let presentationStrings: NotificationsPresentationData?
         if let notificationsPresentationData = try? Data(contentsOf: URL(fileURLWithPath: notificationsPresentationDataPath(rootPath: rootPath))), let notificationsPresentationDataValue = try? JSONDecoder().decode(NotificationsPresentationData.self, from: notificationsPresentationData) {
             incomingCallMessage = notificationsPresentationDataValue.incomingCallString
+            presentationStrings = notificationsPresentationDataValue
         } else {
             incomingCallMessage = "is calling you"
+            presentationStrings = nil
         }
 
         Logger.shared.log("NotificationService \(episode)", "Begin processing payload")
@@ -692,7 +707,7 @@ private final class NotificationServiceHandler {
 
         let _ = (combineLatest(queue: self.queue,
             self.accountManager.accountRecords(),
-            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
+            self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings, ApplicationSpecificSharedDataKeys.voiceCallSettings, SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.fakePasscodeSettings, ApplicationSpecificSharedDataKeys.ptgSettings])
         )
         |> take(1)
         |> deliverOn(self.queue)).start(next: { [weak self] records, sharedData in
@@ -940,6 +955,9 @@ private final class NotificationServiceHandler {
                                 completed()
                                 return
                             }
+                            
+                            let ptgSettings = PtgSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSettings])
+                            content.suppressForeignAgentNotice = ptgSettings.suppressForeignAgentNotice
 
                             var messageIdValue: MessageId?
                             if let messageId = messageId {
@@ -1293,6 +1311,26 @@ private final class NotificationServiceHandler {
                                                             if let attachment = try? UNNotificationAttachment(identifier: "image", url: URL(fileURLWithPath: storedPath), options: nil) {
                                                                 content.attachments.append(attachment)
                                                             }
+                                                        }
+                                                    }
+                                                }
+                                                
+                                                if content.suppressForeignAgentNotice && content.messageType == nil {
+                                                    if mediaAttachment is TelegramMediaImage {
+                                                        content.messageType = presentationStrings?.messagePhoto ?? "Photo"
+                                                    } else if let file = mediaAttachment as? TelegramMediaFile {
+                                                        if file.isVideo {
+                                                            content.messageType = presentationStrings?.messageVideo ?? "Video"
+                                                        } else if file.isMusic {
+                                                            content.messageType = presentationStrings?.messageMusic ?? "Music"
+                                                        } else if file.isVoice {
+                                                            content.messageType = presentationStrings?.messageVoice ?? "Voice Message"
+                                                        } else if file.isSticker || file.isAnimatedSticker {
+                                                            content.messageType = presentationStrings?.messageSticker ?? "Sticker"
+                                                        } else if file.isAnimated {
+                                                            content.messageType = presentationStrings?.messageAnimation ?? "GIF"
+                                                        } else {
+                                                            content.messageType = presentationStrings?.messageFile ?? "File"
                                                         }
                                                     }
                                                 }

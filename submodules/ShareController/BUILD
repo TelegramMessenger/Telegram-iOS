@@ -35,6 +35,7 @@ swift_library(
         "//submodules/AnimatedStickerNode:AnimatedStickerNode",
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
     visibility = [
         "//visibility:public",

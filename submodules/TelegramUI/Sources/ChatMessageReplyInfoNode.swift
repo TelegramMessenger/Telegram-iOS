@@ -16,6 +16,8 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 
+import PtgForeignAgentNoticeRemoval
+
 enum ChatMessageReplyInfoType {
     case bubble(incoming: Bool)
     case standalone
@@ -114,7 +116,9 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(arguments.message), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
+            let message_ = arguments.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: arguments.message) : arguments.message
+            
+            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
             
             let placeholderColor: UIColor = arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor
@@ -167,7 +171,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
             
             let messageText: NSAttributedString
             if isText {
-                let entities = (arguments.message.textEntitiesAttribute?.entities ?? []).filter { entity in
+                let entities = (message_.textEntitiesAttribute?.entities ?? []).filter { entity in
                     if case .Spoiler = entity.type {
                         return true
                     } else if case .CustomEmoji = entity.type {
@@ -177,7 +181,7 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                     }
                 }
                 if entities.count > 0 {
-                    messageText = stringWithAppliedEntities(trimToLineCount(arguments.message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: arguments.message)
+                    messageText = stringWithAppliedEntities(trimToLineCount(message_.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont, underlineLinks: false, message: arguments.message)
                 } else {
                     messageText = NSAttributedString(string: textString.string, font: textFont, textColor: textColor)
                 }

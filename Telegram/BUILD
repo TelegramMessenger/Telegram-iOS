@@ -1391,6 +1391,7 @@ swift_library(
         "//submodules/TelegramCore:TelegramCore",
         "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
         "//Telegram:GeneratedSources",
+        "//submodules/PtgForeignAgentNoticeRemoval:PtgForeignAgentNoticeRemoval",
     ],
 )
 

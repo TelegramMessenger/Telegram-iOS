@@ -26,6 +26,7 @@ import ChatPresentationInterfaceState
 import ChatMessageBackground
 import AnimationCache
 import MultiAnimationRenderer
+import PtgForeignAgentNoticeRemoval
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -71,17 +72,19 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             }
         }
         
+        var messageText = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+
         var isFile = false
         inner: for media in message.media {
             if let _ = media as? TelegramMediaImage {
-                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
+                if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), messageText.isEmpty {
                     messageWithCaptionToAdd = (message, itemAttributes)
                 }
                 result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
             } else if let file = media as? TelegramMediaFile {
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
-                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
+                    if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), messageText.isEmpty {
                         messageWithCaptionToAdd = (message, itemAttributes)
                     }
                     result.append((message, ChatMessageMediaBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .media, neighborSpacing: .default)))
@@ -135,7 +138,6 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
             previousItemIsFile = isFile
         }
         
-        var messageText = message.text
         if let updatingMedia = itemAttributes.updatingMedia {
             messageText = updatingMedia.text
         }

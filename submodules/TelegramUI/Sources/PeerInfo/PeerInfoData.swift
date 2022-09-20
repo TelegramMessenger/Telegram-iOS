@@ -12,7 +12,7 @@ import TelegramUIPreferences
 import TelegramNotices
 import AccountUtils
 import DeviceAccess
-import FakePasscode
+import PtgSettings
 
 enum PeerInfoUpdatingAvatar {
     case none
@@ -188,7 +188,7 @@ final class PeerInfoScreenData {
     let invitations: PeerExportedInvitationsState?
     let requests: PeerInvitationImportersState?
     let requestsContext: PeerInvitationImportersContext?
-    let cloudballonSettings: CloudballonSettings?
+    let showPeerId: Bool
     
     init(
         peer: Peer?,
@@ -207,7 +207,7 @@ final class PeerInfoScreenData {
         invitations: PeerExportedInvitationsState?,
         requests: PeerInvitationImportersState?,
         requestsContext: PeerInvitationImportersContext?,
-        cloudballonSettings: CloudballonSettings?
+        showPeerId: Bool
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -225,7 +225,7 @@ final class PeerInfoScreenData {
         self.invitations = invitations
         self.requests = requests
         self.requestsContext = requestsContext
-        self.cloudballonSettings = cloudballonSettings
+        self.showPeerId = showPeerId
     }
 }
 
@@ -377,8 +377,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
     let preferences = context.sharedContext.accountManager.sharedData(keys: [
         SharedDataKeys.proxySettings,
         ApplicationSpecificSharedDataKeys.inAppNotificationSettings,
-        ApplicationSpecificSharedDataKeys.experimentalUISettings,
-        ApplicationSpecificSharedDataKeys.cloudballonSettings
+        ApplicationSpecificSharedDataKeys.experimentalUISettings
     ])
     
     let notificationsAuthorizationStatus = Promise<AccessType>(.allowed)
@@ -422,9 +421,10 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         context.engine.data.get(
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
             TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
-        )
+        ),
+        context.sharedContext.ptgSettings
     )
-    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits -> PeerInfoScreenData in
+    |> map { peerView, accountsAndPeers, accountSessions, privacySettings, sharedPreferences, notifications, stickerPacks, hasPassport, hasWatchApp, accountPreferences, suggestions, limits, ptgSettings -> PeerInfoScreenData in
         let (notificationExceptions, notificationsAuthorizationStatus, notificationsWarningSuppressed) = notifications
         let (featuredStickerPacks, archivedStickerPacks) = stickerPacks
         
@@ -478,7 +478,7 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             invitations: nil,
             requests: nil,
             requestsContext: nil,
-            cloudballonSettings: CloudballonSettings(sharedPreferences.entries[ApplicationSpecificSharedDataKeys.cloudballonSettings])
+            showPeerId: ptgSettings.showPeerId
         )
     }
 }
@@ -505,7 +505,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitations: nil,
                 requests: nil,
                 requestsContext: nil,
-                cloudballonSettings: nil
+                showPeerId: false
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -610,9 +610,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 context.engine.data.subscribe(TelegramEngine.EngineData.Item.NotificationSettings.Global()),
                 secretChatKeyFingerprint,
                 status,
-                context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                context.sharedContext.ptgSettings
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, sharedData -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, encryptionKeyFingerprint, status, ptgSettings -> PeerInfoScreenData in
                 var availablePanes = availablePanes
                 if availablePanes != nil, groupsInCommon != nil, let cachedData = peerView.cachedData as? CachedUserData {
                     if cachedData.commonGroupCount != 0 {
@@ -637,7 +637,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: nil,
                     requests: nil,
                     requestsContext: nil,
-                    cloudballonSettings: CloudballonSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                    showPeerId: ptgSettings.showPeerId
                 )
             }
         case .channel:
@@ -669,9 +669,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                context.sharedContext.ptgSettings
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, sharedData -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -714,7 +714,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    cloudballonSettings: CloudballonSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                    showPeerId: ptgSettings.showPeerId
                 )
             }
         case let .group(groupId):
@@ -824,9 +824,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                context.sharedContext.ptgSettings
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, sharedData -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, ptgSettings -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -884,7 +884,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    cloudballonSettings: CloudballonSettings(sharedData.entries[ApplicationSpecificSharedDataKeys.cloudballonSettings])
+                    showPeerId: ptgSettings.showPeerId
                 )
             }
         }

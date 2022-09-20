@@ -75,6 +75,7 @@ swift_library(
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
         "//submodules/FakePasscode:FakePasscode",
+        "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
     ],
     visibility = [
         "//visibility:public",

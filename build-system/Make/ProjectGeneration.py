@@ -120,6 +120,7 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
         tulsi_config_json = json.load(tulsi_config)
     for category in ['BazelBuildOptionsDebug', 'BazelBuildOptionsRelease']:
         tulsi_config_json['optionSet'][category]['p'] += ' {}'.format(additional_arguments_string)
+    tulsi_config_json['optionSet']['Use64BitWatchSimulator'] = {'p': 'YES'}
     tulsi_config_json['sourceFilters'] = [
         '{}/...'.format(app_target),
         'submodules/...',

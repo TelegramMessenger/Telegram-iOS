@@ -31,6 +31,7 @@ import ChatPresentationInterfaceState
 import Pasteboard
 import SettingsUI
 import PremiumUI
+import PtgForeignAgentNoticeRemoval
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -946,10 +947,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         }
         
         var messageText: String = ""
+        var messageEntities: [MessageTextEntity]?
+        let suppressForeignAgentNotice = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice }
         for message in messages {
             if !message.text.isEmpty {
                 if messageText.isEmpty {
-                    messageText = message.text
+                    (messageText, messageEntities) = suppressForeignAgentNotice ? removeForeignAgentNotice(text: message.text, entities: message.textEntitiesAttribute?.entities ?? [], media: message.media) : (message.text, message.textEntitiesAttribute?.entities ?? [])
                 } else {
                     messageText = ""
                     break
@@ -999,12 +1002,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             UIPasteboard.general.string = diceEmoji
                         } else {
                             let copyTextWithEntities = {
-                                var messageEntities: [MessageTextEntity]?
+//                                var messageEntities: [MessageTextEntity]?
                                 var restrictedText: String?
                                 for attribute in message.attributes {
-                                    if let attribute = attribute as? TextEntitiesMessageAttribute {
-                                        messageEntities = attribute.entities
-                                    }
+//                                    if let attribute = attribute as? TextEntitiesMessageAttribute {
+//                                        messageEntities = attribute.entities
+//                                    }
                                     if let attribute = attribute as? RestrictedContentMessageAttribute {
                                         restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
                                     }

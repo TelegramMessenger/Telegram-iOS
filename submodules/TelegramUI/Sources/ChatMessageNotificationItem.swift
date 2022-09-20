@@ -19,6 +19,8 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 
+import PtgForeignAgentNoticeRemoval
+
 public final class ChatMessageNotificationItem: NotificationItem {
     let context: AccountContext
     let strings: PresentationStrings
@@ -198,10 +200,13 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
             if message.containsSecretMedia {
                 imageDimensions = nil
             }
-            let (textString, _, isText) = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId)
+            
+            let message_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+            
+            let (textString, _, isText) = descriptionStringForMessage(contentSettings: item.context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: item.strings, nameDisplayOrder: item.nameDisplayOrder, dateTimeFormat: item.dateTimeFormat, accountPeerId: item.context.account.peerId)
             if isText {
-                messageText = message.text
-                messageEntities = message.textEntitiesAttribute?.entities.filter { entity in
+                messageText = message_.text
+                messageEntities = message_.textEntitiesAttribute?.entities.filter { entity in
                     if case .Spoiler = entity.type {
                         return true
                     } else if case .CustomEmoji = entity.type {

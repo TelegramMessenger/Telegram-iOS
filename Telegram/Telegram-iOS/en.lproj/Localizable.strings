@@ -8035,9 +8035,13 @@ Sorry for the inconvenience.";
 
 "AccountActions.SessionsToTerminate.24hWarningMessage" = "This feature will not work if less than 24 hours have passed since you signed in to your account on this device.";
 
-"CloudballonSettings.Title" = "Cloudballon";
-"CloudballonSettings.ShowPeerId" = "Show ID";
-"CloudballonSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
+"PtgSettings.Title" = "Cloudballon";
+"PtgSettings.ShowPeerId" = "Show ID";
+"PtgSettings.ShowPeerIdHelp" = "Show ID in user, group, channel, bot profiles.";
+"PtgSettings.ForeignAgentNoticeHeader" = "Foreign agent notice";
+"PtgSettings.SuppressForeignAgentNotice" = "Suppress in messages";
+"PtgSettings.EnableForeignAgentNoticeSearchFiltering" = "Filter search results";
+"PtgSettings.EnableForeignAgentNoticeSearchFilteringHelp" = "Filter out search result messages that were included only because of the foreign agent notice.";
 "Profile.Id" = "id";
 "Conversation.IdCopied" = "ID copied to clipboard.";
 "Settings.CopyId" = "Copy ID";

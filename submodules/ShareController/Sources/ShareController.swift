@@ -16,6 +16,7 @@ import StickerResources
 import SaveToCameraRoll
 import TelegramStringFormatting
 import WallpaperBackgroundNode
+import PtgForeignAgentNoticeRemoval
 
 public struct ShareControllerAction {
     let title: String
@@ -795,7 +796,8 @@ public final class ShareController: ViewController {
                             if let restrictedText = restrictedText {
                                 collectableItems.append(CollectableExternalShareItem(url: url, text: restrictedText, author: authorPeerId, timestamp: message.timestamp, mediaReference: nil))
                             } else {
-                                collectableItems.append(CollectableExternalShareItem(url: url, text: message.text, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                                let text_ = strongSelf.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
+                                collectableItems.append(CollectableExternalShareItem(url: url, text: text_, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
                             }
                         }
                     case .fromExternal:

@@ -10,6 +10,7 @@ import TelegramUIPreferences
 import WidgetItemsUtils
 import AccountContext
 import AppLock
+import PtgSettings
 
 import GeneratedSources
 
@@ -97,7 +98,7 @@ final class WidgetDataContext {
     private var widgetPresentationDataDisposable: Disposable?
     private var notificationPresentationDataDisposable: Disposable?
     
-    init(basePath: String, inForeground: Signal<Bool, NoError>, activeAccounts: Signal<[Account], NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl) {
+    init(basePath: String, inForeground: Signal<Bool, NoError>, activeAccounts: Signal<[Account], NoError>, presentationData: Signal<PresentationData, NoError>, appLockContext: AppLockContextImpl, ptgSettings: Signal<PtgSettings, NoError>) {
         self.reloadManager = WidgetReloadManager(inForeground: inForeground)
         
         let queue = Queue()
@@ -254,8 +255,8 @@ final class WidgetDataContext {
             self?.reloadManager.requestReload()
         })
         
-        self.widgetPresentationDataDisposable = (presentationData
-        |> map { presentationData -> WidgetPresentationData in
+        self.widgetPresentationDataDisposable = (combineLatest(presentationData, ptgSettings)
+        |> map { presentationData, ptgSettings -> WidgetPresentationData in
             return WidgetPresentationData(
                 widgetChatsGalleryTitle: presentationData.strings.Widget_ChatsGalleryTitle,
                 widgetChatsGalleryDescription: presentationData.strings.Widget_ChatsGalleryDescription,
@@ -278,7 +279,8 @@ final class WidgetDataContext {
                 autodeleteTimerRemoved: presentationData.strings.Widget_MessageAutoremoveTimerRemoved,
                 generalLockedTitle: presentationData.strings.Intents_ErrorLockedTitle,
                 generalLockedText: presentationData.strings.Intents_ErrorLockedText,
-                chatSavedMessages: presentationData.strings.DialogList_SavedMessages
+                chatSavedMessages: presentationData.strings.DialogList_SavedMessages,
+                suppressForeignAgentNotice: ptgSettings.suppressForeignAgentNotice
             )
         }
         |> distinctUntilChanged).start(next: { value in
@@ -305,7 +307,14 @@ final class WidgetDataContext {
             
             return NotificationsPresentationData(
                 applicationLockedMessageString: presentationData.strings.PUSH_LOCKED_MESSAGE("").string,
-                incomingCallString: incomingCallString
+                incomingCallString: incomingCallString,
+                messagePhoto: presentationData.strings.Message_Photo,
+                messageVideo: presentationData.strings.Message_Video,
+                messageSticker: presentationData.strings.Message_Sticker,
+                messageMusic: presentationData.strings.Cache_Music,
+                messageVoice: presentationData.strings.Message_Audio,
+                messageAnimation: presentationData.strings.Message_Animation,
+                messageFile: presentationData.strings.Message_File
             )
         }
         |> distinctUntilChanged).start(next: { value in

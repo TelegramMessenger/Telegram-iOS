@@ -410,7 +410,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             return
         }
         
-        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights)
+        let currentLayout = instantPageLayoutForWebPage(webPage, boundingWidth: containerLayout.size.width, safeInset: containerLayout.safeInsets.left, strings: self.strings, theme: theme, dateTimeFormat: self.dateTimeFormat, webEmbedHeights: self.currentWebEmbedHeights, suppressForeignAgentNotice: self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice })
         
         for (_, tileNode) in self.visibleTiles {
             tileNode.removeFromSupernode()
