@@ -3563,10 +3563,10 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 headerNode = current
                 switch transition.0 {
                     case .immediate:
-                        headerNode.frame = headerFrame
+                        headerNode.updateFrame(headerFrame, within: self.visibleSize)
                     case let .animated(duration, curve):
                         let previousFrame = headerNode.frame
-                        headerNode.frame = headerFrame
+                        headerNode.updateFrame(headerFrame, within: self.visibleSize)
                         var offset = headerFrame.minY - previousFrame.minY + transition.2
                         if headerNode.isRotated {
                             offset = -offset

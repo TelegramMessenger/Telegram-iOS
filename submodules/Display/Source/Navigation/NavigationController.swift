@@ -378,7 +378,7 @@ open class NavigationController: UINavigationController, ContainableController, 
         
         let belowKeyboardOverlayLayout = layout
         var globalOverlayLayout = layout
-        globalOverlayLayout.inputHeight = nil
+//        globalOverlayLayout.inputHeight = nil
         
         if let globalOverlayBelowKeyboardContainerParent = self.globalOverlayBelowKeyboardContainerParent {
             if globalOverlayBelowKeyboardContainerParent.view.superview != self.displayNode.view {

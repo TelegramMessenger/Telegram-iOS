@@ -877,7 +877,7 @@ public final class MediaPlayerScrubbingNode: ASDisplayNode {
                             }
                             let endPosition: CGFloat = max(startPosition, floor(backgroundFrame.width * CGFloat(chapter.start / duration)) - lineWidth / 2.0)
                             let width = endPosition - startPosition
-                            if width < lineWidth * 2.0 {
+                            if width < lineWidth * 0.5 {
                                 previousChapterNode.frame = CGRect()
                                 continue
                             }

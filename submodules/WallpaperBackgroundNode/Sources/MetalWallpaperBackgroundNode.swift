@@ -291,6 +291,10 @@ final class MetalWallpaperBackgroundNode: ASDisplayNode, WallpaperBackgroundNode
         return false
     }
     
+    func hasExtraBubbleBackground() -> Bool {
+        return false
+    }
+    
     func makeBubbleBackground(for type: WallpaperBubbleType) -> WallpaperBubbleBackgroundNode? {
         return nil
     }
