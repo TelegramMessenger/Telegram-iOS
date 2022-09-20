@@ -1592,26 +1592,29 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         var tip: ContextController.Tip?
                         
                         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                         
-                        if customReactionEmojiPacks.count == 1, let firstCustomEmojiReaction = firstCustomEmojiReaction {
-                            tip = .animatedEmoji(
-                                text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(customReactionEmojiPacks[0].title).string,
-                                arguments: TextNodeWithEntities.Arguments(
-                                    context: context,
-                                    cache: controllerInteraction.presentationContext.animationCache,
-                                    renderer: controllerInteraction.presentationContext.animationRenderer,
-                                    placeholderColor: .clear,
-                                    attemptSynchronous: true
-                                ),
-                                file: firstCustomEmojiReaction,
-                                action: {
+                        if !premiumConfiguration.isPremiumDisabled {
+                            if customReactionEmojiPacks.count == 1, let firstCustomEmojiReaction = firstCustomEmojiReaction {
+                                tip = .animatedEmoji(
+                                    text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(customReactionEmojiPacks[0].title).string,
+                                    arguments: TextNodeWithEntities.Arguments(
+                                        context: context,
+                                        cache: controllerInteraction.presentationContext.animationCache,
+                                        renderer: controllerInteraction.presentationContext.animationRenderer,
+                                        placeholderColor: .clear,
+                                        attemptSynchronous: true
+                                    ),
+                                    file: firstCustomEmojiReaction,
+                                    action: {
+                                        (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
+                                    }
+                                )
+                            } else if customReactionEmojiPacks.count > 1 {
+                                tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_ReactionEmojiSet(Int32(customReactionEmojiPacks.count)), arguments: nil, file: nil, action: {
                                     (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
-                                }
-                            )
-                        } else if customReactionEmojiPacks.count > 1 {
-                            tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_ReactionEmojiSet(Int32(customReactionEmojiPacks.count)), arguments: nil, file: nil, action: {
-                                (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
-                            })
+                                })
+                            }
                         }
                         
                         c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(

@@ -25,6 +25,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let id: AnyHashable
     let label: String
     let text: String
+    let additionalText: String?
     let textColor: PeerInfoScreenLabeledValueTextColor
     let textBehavior: PeerInfoScreenLabeledValueTextBehavior
     let icon: PeerInfoScreenLabeledValueIcon?
@@ -38,6 +39,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         id: AnyHashable,
         label: String,
         text: String,
+        additionalText: String? = nil,
         textColor: PeerInfoScreenLabeledValueTextColor = .primary,
         textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine,
         icon: PeerInfoScreenLabeledValueIcon? = nil,
@@ -50,6 +52,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         self.id = id
         self.label = label
         self.text = text
+        self.additionalText = additionalText
         self.textColor = textColor
         self.textBehavior = textBehavior
         self.icon = icon
@@ -86,6 +89,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     private let maskNode: ASImageNode
     private let labelNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
+    private let additionalTextNode: ImmediateTextNode
     private let measureTextNode: ImmediateTextNode
     private let bottomSeparatorNode: ASDisplayNode
     
@@ -120,6 +124,10 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.textNode = ImmediateTextNode()
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
+        
+        self.additionalTextNode = ImmediateTextNode()
+        self.additionalTextNode.displaysAsynchronously = false
+        self.additionalTextNode.isUserInteractionEnabled = false
         
         self.measureTextNode = ImmediateTextNode()
         self.measureTextNode.displaysAsynchronously = false
@@ -156,6 +164,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.maskNode)
         self.addSubnode(self.labelNode)
         self.addSubnode(self.textNode)
+        self.addSubnode(self.additionalTextNode)
         
         self.addSubnode(self.expandBackgroundNode)
         self.addSubnode(self.expandNode)
@@ -314,6 +323,25 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             self.textNode.maximumNumberOfLines = maxNumberOfLines
             self.textNode.cutout = nil
             self.textNode.attributedText = NSAttributedString(string: item.text, font: Font.regular(17.0), textColor: textColorValue)
+            
+            let fontSize: CGFloat = 15.0
+            
+            let baseFont = Font.regular(fontSize)
+            let linkFont = baseFont
+            let boldFont = Font.medium(fontSize)
+            let italicFont = Font.italic(fontSize)
+            let boldItalicFont = Font.semiboldItalic(fontSize)
+            let titleFixedFont = Font.monospace(fontSize)
+            
+            if let additionalText = item.additionalText {
+                let entities = generateTextEntities(additionalText, enabledTypes: [.mention])
+                let attributedAdditionalText = stringWithAppliedEntities(additionalText, entities: entities, baseColor: presentationData.theme.list.itemPrimaryTextColor, linkColor: presentationData.theme.list.itemAccentColor, baseFont: baseFont, linkFont: linkFont, boldFont: boldFont, italicFont: italicFont, boldItalicFont: boldItalicFont, fixedFont: titleFixedFont, blockQuoteFont: baseFont, underlineLinks: false, message: nil)
+                
+                self.additionalTextNode.maximumNumberOfLines = 3
+                self.additionalTextNode.attributedText = attributedAdditionalText
+            } else {
+                self.additionalTextNode.attributedText = nil
+            }
         case let .multiLine(maxLines, enabledEntities):
             let originalText = text
             if !self.isExpanded {
@@ -358,6 +386,8 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         let textLayout = self.textNode.updateLayoutInfo(CGSize(width: width - sideInset * 2.0 - additionalSideInset, height: .greatestFiniteMagnitude))
         let textSize = textLayout.size
         
+        let additionalTextSize = self.additionalTextNode.updateLayout(CGSize(width: width - sideInset * 2.0, height: .greatestFiniteMagnitude))
+        
         var displayMore = false
         if !self.isExpanded {
             if textLayout.truncated || text.count < item.text.count {
@@ -377,6 +407,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         let labelFrame = CGRect(origin: CGPoint(x: sideInset, y: 11.0), size: labelSize)
         let textFrame = CGRect(origin: CGPoint(x: sideInset, y: labelFrame.maxY + 3.0), size: textSize)
+        let additionalTextFrame = CGRect(origin: CGPoint(x: sideInset, y: textFrame.maxY + 3.0), size: additionalTextSize)
         
         let expandFrame = CGRect(origin: CGPoint(x: width - safeInsets.right - expandSize.width - 14.0 - UIScreenPixel, y: textFrame.maxY - expandSize.height), size: expandSize)
         self.expandNode.frame = expandFrame
@@ -396,12 +427,18 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         }
         textTransition.updateFrame(node: self.textNode, frame: textFrame)
         
-        let height = labelSize.height + 3.0 + textSize.height + 22.0
+        transition.updateFrame(node: self.additionalTextNode, frame: additionalTextFrame)
+        
+        var height = labelSize.height + 3.0 + textSize.height + 22.0
         
         let iconButtonFrame = CGRect(x: width - safeInsets.right - height, y: 0.0, width: height, height: height)
         transition.updateFrame(node: self.iconButtonNode, frame: iconButtonFrame)
         if let iconSize = self.iconNode.image?.size {
             transition.updateFrame(node: self.iconNode, frame: CGRect(origin: CGPoint(x: width - safeInsets.right - sideInset - iconSize.width + 5.0, y: floorToScreenPixels((height - iconSize.height) / 2.0)), size: iconSize))
+        }
+        
+        if additionalTextSize.height > 0.0 {
+            height += additionalTextSize.height + 3.0
         }
         
         let highlightNodeOffset: CGFloat = topItem == nil ? 0.0 : UIScreenPixel
@@ -439,6 +476,18 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 return nil
             }
         }
+        let additionalTextNodeFrame = self.additionalTextNode.frame
+        if let (_, attributes) = self.additionalTextNode.attributesAtPoint(CGPoint(x: point.x - additionalTextNodeFrame.minX, y: point.y - additionalTextNodeFrame.minY)) {
+            if let url = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.URL)] as? String {
+                return .url(url: url, concealed: false)
+            } else if let peerName = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.PeerTextMention)] as? String {
+                return .mention(peerName)
+            } else if let hashtag = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Hashtag)] as? TelegramHashtag {
+                return .hashtag(hashtag.peerName, hashtag.hashtag)
+            } else {
+                return nil
+            }
+        }
         return nil
     }
     
@@ -447,6 +496,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             return
         }
         var rects: [CGRect]?
+        var textNode: ASDisplayNode?
         if let point = point {
             let textNodeFrame = self.textNode.frame
             if let (index, attributes) = self.textNode.attributesAtPoint(CGPoint(x: point.x - textNodeFrame.minX, y: point.y - textNodeFrame.minY)) {
@@ -460,22 +510,42 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                 for name in possibleNames {
                     if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
                         rects = self.textNode.attributeRects(name: name, at: index)
+                        textNode = self.textNode
                         break
+                    }
+                }
+            }
+            if textNode == nil {
+                let additionalTextNodeFrame = self.additionalTextNode.frame
+                if let (index, attributes) = self.additionalTextNode.attributesAtPoint(CGPoint(x: point.x - additionalTextNodeFrame.minX, y: point.y - additionalTextNodeFrame.minY)) {
+                    let possibleNames: [String] = [
+                        TelegramTextAttributes.URL,
+                        TelegramTextAttributes.PeerMention,
+                        TelegramTextAttributes.PeerTextMention,
+                        TelegramTextAttributes.BotCommand,
+                        TelegramTextAttributes.Hashtag
+                    ]
+                    for name in possibleNames {
+                        if let _ = attributes[NSAttributedString.Key(rawValue: name)] {
+                            rects = self.additionalTextNode.attributeRects(name: name, at: index)
+                            textNode = self.additionalTextNode
+                            break
+                        }
                     }
                 }
             }
         }
         
-        if let rects = rects {
+        if let rects = rects, let textNode = textNode {
             let linkHighlightingNode: LinkHighlightingNode
             if let current = self.linkHighlightingNode {
                 linkHighlightingNode = current
             } else {
                 linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
                 self.linkHighlightingNode = linkHighlightingNode
-                self.insertSubnode(linkHighlightingNode, belowSubnode: self.textNode)
+                self.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }
-            linkHighlightingNode.frame = self.textNode.frame
+            linkHighlightingNode.frame = textNode.frame
             linkHighlightingNode.updateRects(rects)
         } else if let linkHighlightingNode = self.linkHighlightingNode {
             self.linkHighlightingNode = nil

@@ -1125,7 +1125,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 emojiFileIds.append(fileId)
                             }
                         }
-                        if !emojiFileIds.isEmpty {
+                        
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                        
+                        if !emojiFileIds.isEmpty && !premiumConfiguration.isPremiumDisabled {
                             tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
                             actions.tip = tip
                             disableTransitionAnimations = true
@@ -1491,8 +1494,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 let presentationContext = strongSelf.controllerInteraction?.presentationContext
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                 
-                if !packReferences.isEmpty {
+                if !packReferences.isEmpty && !premiumConfiguration.isPremiumDisabled {
                     items.tip = .animatedEmoji(text: nil, arguments: nil, file: nil, action: nil)
                     
                     if packReferences.count > 1 {

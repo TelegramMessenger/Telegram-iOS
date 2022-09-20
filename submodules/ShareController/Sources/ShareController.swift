@@ -538,7 +538,7 @@ public final class ShareController: ViewController {
         }, externalShare: self.externalShare, immediateExternalShare: self.immediateExternalShare, immediatePeerId: self.immediatePeerId, fromForeignApp: self.fromForeignApp, forceTheme: self.forceTheme, fromPublicChannel: fromPublicChannel, segmentedValues: self.segmentedValues)
         self.controllerNode.completed = self.completed
         self.controllerNode.present = { [weak self] c in
-            self?.present(c, in: .window(.root))
+            self?.presentInGlobalOverlay(c)
         }
         self.controllerNode.dismiss = { [weak self] shared in
             self?.dismissed?(shared)

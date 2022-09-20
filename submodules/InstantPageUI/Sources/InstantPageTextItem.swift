@@ -877,7 +877,7 @@ func layoutTextItemWithString(_ string: NSAttributedString, boundingWidth: CGFlo
             let lineFrame = frameForLine(line, boundingWidth: boundingWidth, alignment: alignment)
             for imageItem in line.imageItems {
                 if let image = media[imageItem.id] as? TelegramMediaFile {
-                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: true, roundCorners: false, fit: false)
+                    let item = InstantPageImageItem(frame: imageItem.frame.offsetBy(dx: lineFrame.minX + offset.x, dy: offset.y), webPage: webpage, media: InstantPageMedia(index: -1, media: image, url: nil, caption: nil, credit: nil), interactive: false, roundCorners: false, fit: false)
                     additionalItems.append(item)
                     
                     if item.frame.minY < topInset {

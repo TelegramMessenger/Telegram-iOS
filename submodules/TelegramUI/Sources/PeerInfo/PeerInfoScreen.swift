@@ -951,15 +951,25 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let username = user.username {
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 1, label: presentationData.strings.Profile_Username, text: "@\(username)", textColor: .accent, icon: .qrCode, action: {
-                interaction.openUsername(username)
-            }, longTapAction: { sourceNode in
-                interaction.openPeerInfoContextMenu(.link, sourceNode)
-            }, iconAction: {
-                interaction.openQrCode()
-            }, requestLayout: {
-                interaction.requestLayout(false)
-            }))
+            items[.peerInfo]!.append(
+                PeerInfoScreenLabeledValueItem(
+                    id: 1,
+                    label: presentationData.strings.Profile_Username,
+                    text: "@\(username)",
+                    additionalText: nil, //presentationData.strings.Profile_AdditionalUsernames("@username1, @username2, @username3, @username4"),
+                    textColor: .accent,
+                    icon: .qrCode,
+                    action: {
+                        interaction.openUsername(username)
+                    }, longTapAction: { sourceNode in
+                        interaction.openPeerInfoContextMenu(.link, sourceNode)
+                    }, iconAction: {
+                        interaction.openQrCode()
+                    }, requestLayout: {
+                        interaction.requestLayout(false)
+                    }
+                )
+            )
         }
         if let cachedData = data.cachedData as? CachedUserData {
             if user.isFake {

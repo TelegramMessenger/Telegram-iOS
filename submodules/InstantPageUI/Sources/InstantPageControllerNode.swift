@@ -1382,7 +1382,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let detailsItem = item as? InstantPageDetailsItem {
                 medias.append(contentsOf: mediasFromItems(detailsItem.items))
             } else {
-                medias.append(contentsOf: item.medias)
+                if let item = item as? InstantPageImageItem, item.interactive {
+                    medias.append(contentsOf: item.medias)
+                } else if let item = item as? InstantPagePlayableVideoItem, item.interactive {
+                    medias.append(contentsOf: item.medias)
+                }
             }
         }
         return medias

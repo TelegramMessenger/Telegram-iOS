@@ -346,7 +346,7 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
             var timerValue: TimerNode.Value?
             
             
-            if let invite = item.invite, case let .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount) = invite {
+            if let invite = item.invite, case let  .link(_, title, _, _, _, _, date, startDate, expireDate, usageLimit, count, requestedCount) = invite {
                 if let title = title, !title.isEmpty {
                     titleText = title
                 }

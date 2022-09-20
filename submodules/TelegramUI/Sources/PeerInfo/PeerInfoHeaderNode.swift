@@ -2316,7 +2316,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 credibilityIcon = .fake
             } else if peer.isScam {
                 credibilityIcon = .scam
-            } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+            } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                 credibilityIcon = .emojiStatus(emojiStatus)
             } else if peer.isVerified {
                 credibilityIcon = .verified

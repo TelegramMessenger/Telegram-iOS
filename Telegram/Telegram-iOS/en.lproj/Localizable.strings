@@ -8095,3 +8095,5 @@ Sorry for the inconvenience.";
 "Username.Username" = "USERNAME";
 "Username.LinksOrder" = "USERNAMES ORDER";
 "Username.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on your info page.";
+
+"Profile.AdditionalUsernames" = "also %@";

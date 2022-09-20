@@ -154,7 +154,7 @@ final class ChatTitleView: UIView, NavigationBarTitleView {
                                         titleCredibilityIcon = .fake
                                     } else if peer.isScam {
                                         titleCredibilityIcon = .scam
-                                    } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus {
+                                    } else if let user = peer as? TelegramUser, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                                         titleCredibilityIcon = .emojiStatus(emojiStatus)
                                     } else if peer.isVerified {
                                         titleCredibilityIcon = .verified
