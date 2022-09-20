@@ -52,7 +52,7 @@ def import_certificates(certificatesPath):
                 '/usr/bin/codesign',
                 '-T',
                 '/usr/bin/security'
-            ], check_result=True)
+            ], check_result=False)
 
     run_executable_with_output('security', arguments=[
         'import',
@@ -65,7 +65,7 @@ def import_certificates(certificatesPath):
         '/usr/bin/codesign',
         '-T',
         '/usr/bin/security'
-    ], check_result=True)
+    ], check_result=False)
 
     run_executable_with_output('security', arguments=[
         'set-key-partition-list',
