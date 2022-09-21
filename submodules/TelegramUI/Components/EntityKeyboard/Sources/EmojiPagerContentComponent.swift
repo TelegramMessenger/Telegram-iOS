@@ -6790,9 +6790,9 @@ public final class EmojiPagerContentComponent: Component {
             
             var displaySearchWithPlaceholder: String?
             if isReactionSelection {
-                displaySearchWithPlaceholder = "Search Reactions"
+                displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
             } else if isStatusSelection {
-                displaySearchWithPlaceholder = "Search Statuses"
+                displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
             }
             
             return EmojiPagerContentComponent(

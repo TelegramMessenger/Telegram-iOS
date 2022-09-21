@@ -358,9 +358,8 @@ public final class EmojiStatusSelectionController: ViewController {
                         if strongSelf.stableEmptyResultEmoji == nil {
                             strongSelf.stableEmptyResultEmoji = strongSelf.emptyResultEmojis.randomElement()
                         }
-                        //TODO:localize
                         emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                            text: "No emoji found",
+                            text: strongSelf.presentationData.strings.EmojiSearch_SearchStatusesEmptyResult,
                             iconFile: strongSelf.stableEmptyResultEmoji
                         )
                     } else {

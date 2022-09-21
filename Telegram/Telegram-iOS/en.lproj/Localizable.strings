@@ -8097,3 +8097,8 @@ Sorry for the inconvenience.";
 "Username.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on your info page.";
 
 "Profile.AdditionalUsernames" = "also %@";
+
+"EmojiSearch.SearchReactionsPlaceholder" = "Search Reactions";
+"EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
+"EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
+"EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";

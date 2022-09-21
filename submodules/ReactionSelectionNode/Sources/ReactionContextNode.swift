@@ -453,9 +453,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                         if strongSelf.stableEmptyResultEmoji == nil {
                             strongSelf.stableEmptyResultEmoji = strongSelf.emptyResultEmojis.randomElement()
                         }
-                        //TODO:localize
                         emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
-                            text: "No emoji found",
+                            text: strongSelf.presentationData.strings.EmojiSearch_SearchReactionsEmptyResult,
                             iconFile: strongSelf.stableEmptyResultEmoji
                         )
                     } else {
