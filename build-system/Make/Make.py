@@ -190,7 +190,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=armv7k,arm64_32',
+                '--watchos_cpus=arm64_32',
 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',

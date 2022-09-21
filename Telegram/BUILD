@@ -116,7 +116,7 @@ genrule(
 )
 
 minimum_os_version = "11.0"
-minimum_watchos_version="6.0"
+minimum_watchos_version="9.0"
 
 empty_languages = [
     "ar",
@@ -721,6 +721,23 @@ watchos_extension(
     ],
 )
 
+
+genrule(
+    name = "StripWatchosStubBinary",
+    cmd_bash =
+"""
+    echo 'lipo -remove armv7k -remove arm64 -remove arm64e $$1/TelegramWatch.app/_WatchKitStub/WK -output $$1/TelegramWatch.app/_WatchKitStub/WK' > $(location StripWatchosStubBinary.sh)
+    echo '' >> $(location StripWatchosStubBinary.sh)
+""",
+    outs = [
+        "StripWatchosStubBinary.sh",
+    ],
+    executable = True,
+    visibility = [
+        "//visibility:public",
+    ]
+)
+
 watchos_application(
     name = "TelegramWatchApp",
     bundle_id = "{telegram_bundle_id}.watchkitapp".format(
@@ -740,6 +757,7 @@ watchos_application(
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
     }),
+    ipa_post_processor = ":StripWatchosStubBinary",
     resources = [
         ":TelegramWatchAppResources",
         ":TelegramWatchAppAssets",
