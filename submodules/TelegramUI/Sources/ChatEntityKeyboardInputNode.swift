@@ -1123,7 +1123,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             requestUpdate: { _ in
             },
-            updateSearchQuery: { _ in
+            updateSearchQuery: { _, _ in
             },
             chatPeerId: chatPeerId,
             peekBehavior: nil,
@@ -1327,7 +1327,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             },
             requestUpdate: { _ in
             },
-            updateSearchQuery: { _ in
+            updateSearchQuery: { _, _ in
             },
             chatPeerId: chatPeerId,
             peekBehavior: stickerPeekBehavior,
@@ -2053,7 +2053,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             },
             requestUpdate: { _ in   
             },
-            updateSearchQuery: { _ in
+            updateSearchQuery: { _, _ in
             },
             chatPeerId: nil,
             peekBehavior: nil,

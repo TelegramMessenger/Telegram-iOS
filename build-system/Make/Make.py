@@ -891,6 +891,26 @@ if __name__ == '__main__':
         help='Bazel remote cache host address.'
     )
 
+    remote_upload_testflight_parser = subparsers.add_parser('remote-deploy-testflight', help='Build the app using a remote environment.')
+    remote_upload_testflight_parser.add_argument(
+        '--darwinContainersHost',
+        required=True,
+        type=str,
+        help='DarwinContainers host address.'
+    )
+    remote_upload_testflight_parser.add_argument(
+        '--ipa',
+        required=True,
+        type=str,
+        help='Path to IPA file.'
+    )
+    remote_upload_testflight_parser.add_argument(
+        '--dsyms',
+        required=True,
+        type=str,
+        help='Path to DSYMs.zip file.'
+    )
+
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -901,7 +921,7 @@ if __name__ == '__main__':
         print(args)
 
     if args.commandName is None:
-        exit(0)
+        sys.exit(0)
 
     bazel_path = None
     if args.bazel is None:
@@ -939,6 +959,22 @@ if __name__ == '__main__':
                 bazel_cache_host=args.cacheHost,
                 configuration=args.configuration,
                 build_input_data_path=remote_input_path
+            )
+        elif args.commandName == 'remote-deploy-testflight':
+            env = os.environ
+            if 'APPSTORE_CONNECT_USERNAME' not in env:
+                print('APPSTORE_CONNECT_USERNAME environment variable is not set')
+                sys.exit(1)
+            if 'APPSTORE_CONNECT_PASSWORD' not in env:
+                print('APPSTORE_CONNECT_PASSWORD environment variable is not set')
+                sys.exit(1)
+
+            RemoteBuild.remote_deploy_testflight(
+                darwin_containers_host=args.darwinContainersHost,
+                ipa_path=args.ipa,
+                dsyms_path=args.dsyms,
+                username=env['APPSTORE_CONNECT_USERNAME'],
+                password=env['APPSTORE_CONNECT_PASSWORD']
             )
         elif args.commandName == 'test':
             test(bazel=bazel_path, arguments=args)

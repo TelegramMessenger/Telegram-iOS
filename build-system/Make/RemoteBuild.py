@@ -139,3 +139,47 @@ def remote_build(darwin_containers_host, bazel_cache_host, configuration, build_
         else:
             print('Telegram.ipa not found')
             sys.exit(1)
+
+def remote_deploy_testflight(darwin_containers_host, ipa_path, dsyms_path, username, password):
+    macos_version = '12.5'
+
+    from darwin_containers import DarwinContainers
+
+    configuration_path = 'versions.json'
+    xcode_version = ''
+    with open(configuration_path) as file:
+        configuration_dict = json.load(file)
+        if configuration_dict['xcode'] is None:
+            raise Exception('Missing xcode version in {}'.format(configuration_path))
+        xcode_version = configuration_dict['xcode']
+
+    print('Xcode version: {}'.format(xcode_version))
+
+    image_name = 'macos-{macos_version}-xcode-{xcode_version}'.format(macos_version=macos_version, xcode_version=xcode_version)
+
+    print('Image name: {}'.format(image_name))
+
+    darwinContainers = DarwinContainers(serverAddress=darwin_containers_host, verbose=False)
+
+    print('Opening container session...')
+    with darwinContainers.workingImageSession(name=image_name) as session:
+        print('Uploading data to container...')
+        session_scp_upload(session=session, source_path=ipa_path, destination_path='')
+        session_scp_upload(session=session, source_path=dsyms_path, destination_path='')
+
+        guest_upload_sh = '''
+            set -e
+
+            export DELIVER_ITMSTRANSPORTER_ADDITIONAL_UPLOAD_PARAMETERS="-t DAV"
+            FASTLANE_PASSWORD="{password}" xcrun altool --upload-app --type ios --file "Telegram.ipa" --username "{username}" --password "@env:FASTLANE_PASSWORD"
+        '''.format(username=username, password=password)
+
+        guest_upload_file_path = tempfile.mktemp()
+        with open(guest_upload_file_path, 'w+') as file:
+            file.write(guest_upload_sh)
+        session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-upload-telegram.sh')
+        os.unlink(guest_upload_file_path)
+
+        print('Executing remote upload...')
+        session_ssh(session=session, command='bash -l guest-upload-telegram.sh')
+
