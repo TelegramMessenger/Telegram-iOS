@@ -154,11 +154,6 @@ jobs:
           APP_STORE_CONNECT_USERNAME: ${{ secrets.APP_STORE_CONNECT_USERNAME }}
           APP_STORE_CONNECT_PASSWORD: ${{ secrets.APP_STORE_CONNECT_PASSWORD }}
         run: |
-          xcrun altool --validate-app --type ios \
-            --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
-            --username "$APP_STORE_CONNECT_USERNAME" \
-            --password "$APP_STORE_CONNECT_PASSWORD"
-
           xcrun altool --upload-app --type ios \
             --file /Users/telegram/telegram-ios/build/artifacts/Telegram.ipa \
             --username "$APP_STORE_CONNECT_USERNAME" \
