@@ -145,8 +145,6 @@ def remote_deploy_testflight(darwin_containers_host, ipa_path, dsyms_path, usern
 
     from darwin_containers import DarwinContainers
 
-    base_dir = os.getcwd()
-
     configuration_path = 'versions.json'
     xcode_version = ''
     with open(configuration_path) as file:
