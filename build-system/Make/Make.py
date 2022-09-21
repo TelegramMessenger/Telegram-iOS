@@ -190,7 +190,7 @@ class BazelCommandLine:
                 '--ios_multi_cpus=arm64',
 
                 # Always build universal Watch binaries.
-                '--watchos_cpus=arm64_32',
+                '--watchos_cpus=armv7k,arm64_32',
 
                 # Generate DSYM files when building.
                 '--apple_generate_dsym',
@@ -911,6 +911,26 @@ if __name__ == '__main__':
         help='Path to DSYMs.zip file.'
     )
 
+    remote_ipadiff_parser = subparsers.add_parser('remote-ipa-diff', help='Execute ipa-diff using a remote environment.')
+    remote_ipadiff_parser.add_argument(
+        '--darwinContainersHost',
+        required=True,
+        type=str,
+        help='DarwinContainers host address.'
+    )
+    remote_ipadiff_parser.add_argument(
+        '--ipa1',
+        required=True,
+        type=str,
+        help='Path to IPA 1 file.'
+    )
+    remote_ipadiff_parser.add_argument(
+        '--ipa2',
+        required=True,
+        type=str,
+        help='Path to IPA 2 file.'
+    )
+
     if len(sys.argv) < 2:
         parser.print_help()
         sys.exit(1)
@@ -975,6 +995,12 @@ if __name__ == '__main__':
                 dsyms_path=args.dsyms,
                 username=env['APPSTORE_CONNECT_USERNAME'],
                 password=env['APPSTORE_CONNECT_PASSWORD']
+            )
+        elif args.commandName == 'remote-ipa-diff':
+            RemoteBuild.remote_ipa_diff(
+                darwin_containers_host=args.darwinContainersHost,
+                ipa1_path=args.ipa1,
+                ipa2_path=args.ipa2
             )
         elif args.commandName == 'test':
             test(bazel=bazel_path, arguments=args)

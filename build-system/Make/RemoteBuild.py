@@ -183,3 +183,57 @@ def remote_deploy_testflight(darwin_containers_host, ipa_path, dsyms_path, usern
         print('Executing remote upload...')
         session_ssh(session=session, command='bash -l guest-upload-telegram.sh')
 
+def remote_ipa_diff(darwin_containers_host, ipa1_path, ipa2_path):
+    macos_version = '12.5'
+
+    from darwin_containers import DarwinContainers
+
+    configuration_path = 'versions.json'
+    xcode_version = ''
+    with open(configuration_path) as file:
+        configuration_dict = json.load(file)
+        if configuration_dict['xcode'] is None:
+            raise Exception('Missing xcode version in {}'.format(configuration_path))
+        xcode_version = configuration_dict['xcode']
+
+    print('Xcode version: {}'.format(xcode_version))
+
+    image_name = 'macos-{macos_version}-xcode-{xcode_version}'.format(macos_version=macos_version, xcode_version=xcode_version)
+
+    print('Image name: {}'.format(image_name))
+
+    darwinContainers = DarwinContainers(serverAddress=darwin_containers_host, verbose=False)
+
+    print('Opening container session...')
+    with darwinContainers.workingImageSession(name=image_name) as session:
+        print('Uploading data to container...')
+        session_scp_upload(session=session, source_path='tools/ipadiff.py', destination_path='ipadiff.py')
+        session_scp_upload(session=session, source_path='tools/main.cpp', destination_path='main.cpp')
+        session_scp_upload(session=session, source_path=ipa1_path, destination_path='ipa1.ipa')
+        session_scp_upload(session=session, source_path=ipa2_path, destination_path='ipa2.ipa')
+
+        guest_upload_sh = '''
+            set -e
+
+            python3 ipadiff.py ipa1.ipa ipa2.ipa
+            echo $? > result.txt
+        '''
+
+        guest_upload_file_path = tempfile.mktemp()
+        with open(guest_upload_file_path, 'w+') as file:
+            file.write(guest_upload_sh)
+        session_scp_upload(session=session, source_path=guest_upload_file_path, destination_path='guest-ipa-diff.sh')
+        os.unlink(guest_upload_file_path)
+
+        print('Executing remote ipa-diff...')
+        session_ssh(session=session, command='bash -l guest-ipa-diff.sh')
+        guest_result_path = tempfile.mktemp()
+        session_scp_download(session=session, source_path='result.txt', destination_path=guest_result_path)
+        guest_result = ''
+        with open(guest_result_path, 'r') as file:
+            guest_result = file.read().rstrip()
+        os.unlink(guest_result_path)
+
+        if guest_result != '0':
+            sys.exit(1)
+

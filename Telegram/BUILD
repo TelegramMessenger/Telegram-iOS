@@ -116,6 +116,7 @@ genrule(
 )
 
 minimum_os_version = "11.0"
+minimum_watchos_version="6.0"
 
 empty_languages = [
     "ar",
@@ -704,7 +705,7 @@ watchos_extension(
         ":AppNameInfoPlist",
         ":WatchExtensionNSExtensionInfoPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_watchos_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchExtension.mobileprovision",
@@ -734,7 +735,7 @@ watchos_application(
         ":AppNameInfoPlist",
         ":WatchAppCompanionInfoPlist",
     ],
-    minimum_os_version = "9.0",
+    minimum_os_version = minimum_watchos_version,
     provisioning_profile = select({
         ":disableProvisioningProfilesSetting": None,
         "//conditions:default": "@build_configuration//provisioning:WatchApp.mobileprovision",
