@@ -648,10 +648,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
         }, registerForNotifications: { completion in
+            Logger.shared.log("App \(self.episodeId)", "register for notifications begin")
             let _ = (self.context.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
+                    Logger.shared.log("App \(self.episodeId)", "register for notifications initiate")
                     self.registerForNotifications(context: context.context, authorize: true, completion: completion)
                 }
             })
@@ -2079,7 +2081,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         if #available(iOS 10.0, *) {
             let notificationCenter = UNUserNotificationCenter.current()
+            Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
             notificationCenter.getNotificationSettings(completionHandler: { settings in
+                Logger.shared.log("App \(self.episodeId)", "register for notifications: received settings: \(settings.authorizationStatus)")
+                
                 switch (settings.authorizationStatus, authorize) {
                     case (.authorized, _), (.notDetermined, true):
                         var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
@@ -2089,7 +2094,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if #available(iOS 13.0, *) {
                             authorizationOptions.insert(.announcement)
                         }
+                        Logger.shared.log("App \(self.episodeId)", "register for notifications: request authorization")
                         notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
+                            Logger.shared.log("App \(self.episodeId)", "register for notifications: received authorization: \(result)")
                             completion(result)
                             if result {
                                 Queue.mainQueue().async {
