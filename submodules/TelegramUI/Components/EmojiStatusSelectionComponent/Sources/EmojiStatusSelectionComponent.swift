@@ -252,8 +252,10 @@ public final class EmojiStatusSelectionController: ViewController {
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private let emojiSearchDisposable = MetaDisposable()
-        private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable, emptyResultEmoji: TelegramMediaFile?)?>(nil)
+        private let emojiSearchResult = Promise<(groups: [EmojiPagerContentComponent.ItemGroup], id: AnyHashable)?>(nil)
+        private var emptyResultEmojis: [TelegramMediaFile] = []
         private var stableEmptyResultEmoji: TelegramMediaFile?
+        private let stableEmptyResultEmojiDisposable = MetaDisposable()
         
         private var previewItem: (groupId: AnyHashable, item: EmojiPagerContentComponent.Item)?
         private var dismissedPreviewItem: (groupId: AnyHashable, item: EmojiPagerContentComponent.Item)?
@@ -313,6 +315,32 @@ public final class EmojiStatusSelectionController: ViewController {
             self.layer.addSublayer(self.cloudLayer0)
             self.layer.addSublayer(self.cloudLayer1)
             
+            let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+            self.stableEmptyResultEmojiDisposable.set((self.context.account.postbox.combinedView(keys: [viewKey])
+            |> take(1)
+            |> deliverOnMainQueue).start(next: { [weak self] views in
+                guard let strongSelf = self, let view = views.views[viewKey] as? OrderedItemListView else {
+                    return
+                }
+                var filteredFiles: [TelegramMediaFile] = []
+                let filterList: [String] = ["😖", "😫", "🫠", "😨", "❓"]
+                for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                    for item in featuredEmojiPack.topItems {
+                        for attribute in item.file.attributes {
+                            switch attribute {
+                            case let .CustomEmoji(_, alt, _):
+                                if filterList.contains(alt) {
+                                    filteredFiles.append(item.file)
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                }
+                strongSelf.emptyResultEmojis = filteredFiles
+            }))
+            
             self.emojiContentDisposable = (combineLatest(queue: .mainQueue(),
                 emojiContent,
                 self.emojiSearchResult.get()
@@ -328,7 +356,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
                     if !emojiSearchResult.groups.contains(where: { !$0.items.isEmpty }) {
                         if strongSelf.stableEmptyResultEmoji == nil {
-                            strongSelf.stableEmptyResultEmoji = emojiSearchResult.emptyResultEmoji
+                            strongSelf.stableEmptyResultEmoji = strongSelf.emptyResultEmojis.randomElement()
                         }
                         //TODO:localize
                         emptySearchResults = EmojiPagerContentComponent.EmptySearchResults(
@@ -397,7 +425,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     },
                     requestUpdate: { _ in
                     },
-                    updateSearchQuery: { rawQuery in
+                    updateSearchQuery: { rawQuery, languageCode in
                         guard let strongSelf = self else {
                             return
                         }
@@ -410,7 +438,6 @@ public final class EmojiStatusSelectionController: ViewController {
                         } else {
                             let context = strongSelf.context
                             
-                            let languageCode = "en"
                             var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                             if !languageCode.lowercased().hasPrefix("en") {
                                 signal = signal
@@ -435,14 +462,14 @@ public final class EmojiStatusSelectionController: ViewController {
                             |> distinctUntilChanged
                             
                             let resultSignal = signal
-                            |> mapToSignal { keywords -> Signal<(result: [EmojiPagerContentComponent.ItemGroup], emptyResultEmoji: TelegramMediaFile?), NoError> in
+                            |> mapToSignal { keywords -> Signal<[EmojiPagerContentComponent.ItemGroup], NoError> in
                                 return combineLatest(
                                     context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: [], namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
                                     context.engine.stickers.availableReactions(),
                                     hasPremium
                                 )
                                 |> take(1)
-                                |> map { view, availableReactions, hasPremium -> (result: [EmojiPagerContentComponent.ItemGroup], emptyResultEmoji: TelegramMediaFile?) in
+                                |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
                                     var result: [(String, TelegramMediaFile?, String)] = []
                                     
                                     var allEmoticons: [String: String] = [:]
@@ -493,42 +520,21 @@ public final class EmojiStatusSelectionController: ViewController {
                                         }
                                     }
                                     
-                                    var emptyResultEmoji: TelegramMediaFile?
-                                    if let availableReactions = availableReactions {
-                                        //let reactionFilter: [String] = ["😖", "😫", "🫠", "😨", "❓"]
-                                        let filteredReactions: [TelegramMediaFile] = availableReactions.reactions.compactMap { reaction -> TelegramMediaFile? in
-                                            switch reaction.value {
-                                            case let .builtin(value):
-                                                let _ = value
-                                                //if reactionFilter.contains(value) {
-                                                    return reaction.selectAnimation
-                                                /*} else {
-                                                    return nil
-                                                }*/
-                                            case .custom:
-                                                return nil
-                                            }
-                                        }
-                                        emptyResultEmoji = filteredReactions.randomElement()
-                                    }
-                                    
-                                    return (result: [EmojiPagerContentComponent.ItemGroup(
-                                            supergroupId: "search",
-                                            groupId: "search",
-                                            title: nil,
-                                            subtitle: nil,
-                                            actionButtonTitle: nil,
-                                            isFeatured: false,
-                                            isPremiumLocked: false,
-                                            isEmbedded: false,
-                                            hasClear: false,
-                                            collapsedLineCount: nil,
-                                            displayPremiumBadges: false,
-                                            headerItem: nil,
-                                            items: items
-                                        )],
-                                        emptyResultEmoji: emptyResultEmoji
-                                    )
+                                    return [EmojiPagerContentComponent.ItemGroup(
+                                        supergroupId: "search",
+                                        groupId: "search",
+                                        title: nil,
+                                        subtitle: nil,
+                                        actionButtonTitle: nil,
+                                        isFeatured: false,
+                                        isPremiumLocked: false,
+                                        isEmbedded: false,
+                                        hasClear: false,
+                                        collapsedLineCount: nil,
+                                        displayPremiumBadges: false,
+                                        headerItem: nil,
+                                        items: items
+                                    )]
                                 }
                             }
                             
@@ -538,7 +544,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.emojiSearchResult.set(.single((result.result, AnyHashable(query), result.emptyResultEmoji)))
+                                strongSelf.emojiSearchResult.set(.single((result, AnyHashable(query))))
                             }))
                         }
                     },
@@ -1100,6 +1106,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     return
                 }
                 self.previewItem = (groupId, item)
+                self.view.endEditing(true)
                 self.refreshLayout(transition: .immediate)
             } else {
                 self.freezeUpdates = true

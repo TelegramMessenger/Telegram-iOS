@@ -1547,7 +1547,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     
     private let activated: () -> Void
     private let deactivated: () -> Void
-    private let updateQuery: (String) -> Void
+    private let updateQuery: (String, String) -> Void
     
     let tintContainerView: UIView
     
@@ -1577,7 +1577,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         return self.textField != nil
     }
     
-    init(activated: @escaping () -> Void, deactivated: @escaping () -> Void, updateQuery: @escaping (String) -> Void) {
+    init(activated: @escaping () -> Void, deactivated: @escaping () -> Void, updateQuery: @escaping (String, String) -> Void) {
         self.activated = activated
         self.deactivated = deactivated
         self.updateQuery = updateQuery
@@ -1691,7 +1691,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     }
     
     @objc private func cancelPressed() {
-        self.updateQuery("")
+        self.updateQuery("", "en")
         
         self.clearIconView.isHidden = true
         self.clearIconTintView.isHidden = true
@@ -1707,7 +1707,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     }
     
     @objc private func clearPressed() {
-        self.updateQuery("")
+        self.updateQuery("", "en")
         self.textField?.text = ""
         
         self.clearIconView.isHidden = true
@@ -1726,11 +1726,19 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         let text = textField.text ?? ""
         
+        var inputLanguage = textField.textInputMode?.primaryLanguage ?? "en"
+        if let range = inputLanguage.range(of: "-") {
+            inputLanguage = String(inputLanguage[inputLanguage.startIndex ..< range.lowerBound])
+        }
+        if let range = inputLanguage.range(of: "_") {
+            inputLanguage = String(inputLanguage[inputLanguage.startIndex ..< range.lowerBound])
+        }
+        
         self.clearIconView.isHidden = text.isEmpty
         self.clearIconTintView.isHidden = text.isEmpty
         self.clearIconButton.isHidden = text.isEmpty
         
-        self.updateQuery(text)
+        self.updateQuery(text, inputLanguage)
     }
     
     private func update(transition: Transition) {
@@ -2068,7 +2076,7 @@ public final class EmojiPagerContentComponent: Component {
         public let presentGlobalOverlayController: (ViewController) -> Void
         public let navigationController: () -> NavigationController?
         public let requestUpdate: (Transition) -> Void
-        public let updateSearchQuery: (String) -> Void
+        public let updateSearchQuery: (String, String) -> Void
         public let chatPeerId: PeerId?
         public let peekBehavior: EmojiContentPeekBehavior?
         public let customLayout: CustomLayout?
@@ -2088,7 +2096,7 @@ public final class EmojiPagerContentComponent: Component {
             presentGlobalOverlayController: @escaping (ViewController) -> Void,
             navigationController: @escaping () -> NavigationController?,
             requestUpdate: @escaping (Transition) -> Void,
-            updateSearchQuery: @escaping (String) -> Void,
+            updateSearchQuery: @escaping (String, String) -> Void,
             chatPeerId: PeerId?,
             peekBehavior: EmojiContentPeekBehavior?,
             customLayout: CustomLayout?,
@@ -6036,11 +6044,11 @@ public final class EmojiPagerContentComponent: Component {
                         strongSelf.isSearchActivated = false
                         strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
                         strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
-                    }, updateQuery: { [weak self] query in
+                    }, updateQuery: { [weak self] query, languageCode in
                         guard let strongSelf = self else {
                             return
                         }
-                        strongSelf.component?.inputInteractionHolder.inputInteraction?.updateSearchQuery(query)
+                        strongSelf.component?.inputInteractionHolder.inputInteraction?.updateSearchQuery(query, languageCode)
                     })
                     self.visibleSearchHeader = visibleSearchHeader
                     if self.isSearchActivated {

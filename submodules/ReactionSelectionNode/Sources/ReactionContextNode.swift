@@ -1334,7 +1334,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.requestUpdateOverlayWantsToBeBelowKeyboard(transition.containedViewLayoutTransition)
             },
-            updateSearchQuery: { [weak self] rawQuery in
+            updateSearchQuery: { [weak self] rawQuery, languageCode in
                 guard let strongSelf = self else {
                     return
                 }
@@ -1347,7 +1347,6 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 } else {
                     let context = strongSelf.context
                     
-                    let languageCode = "en"
                     var signal = context.engine.stickers.searchEmojiKeywords(inputLanguageCode: languageCode, query: query, completeMatch: false)
                     if !languageCode.lowercased().hasPrefix("en") {
                         signal = signal
