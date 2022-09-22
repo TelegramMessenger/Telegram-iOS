@@ -1399,6 +1399,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.notificationTokenPromise.set(.single(deviceToken))
     }
     
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        Logger.shared.log("App \(self.episodeId)", "register for notifications: didFailToRegisterForRemoteNotificationsWithError (error: \(error))")
+    }
+    
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
         let _ = (self.sharedContextPromise.get()
         |> take(1)
