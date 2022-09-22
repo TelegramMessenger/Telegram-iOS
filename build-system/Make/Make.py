@@ -561,7 +561,7 @@ def build(bazel, arguments):
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
 
-    bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
+    bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
 
@@ -832,7 +832,7 @@ if __name__ == '__main__':
         help='Build configuration'
     )
     buildParser.add_argument(
-        '--disableParallelSwiftmoduleGeneration',
+        '--enableParallelSwiftmoduleGeneration',
         action='store_true',
         default=False,
         help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core '

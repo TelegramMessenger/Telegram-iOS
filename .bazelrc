@@ -10,6 +10,9 @@ build --per_file_copt="submodules/LottieMeshSwift/LottieMeshBinding/Sources/.*\.
 
 build --swiftcopt=-whole-module-optimization
 
+build --per_file_copt=".*\.m$","@-fno-objc-msgsend-selector-stubs"
+build --per_file_copt=".*\.mm$","@-fno-objc-msgsend-selector-stubs"
+
 # Uncomment for address sanitizer
 #build --swiftcopt=-sanitize=address
 #build --copt=-fsanitize=address
