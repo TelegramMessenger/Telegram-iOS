@@ -187,7 +187,7 @@ class ChatUnreadItemNode: ListViewItemNode {
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
             backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
+            backgroundFrame.origin.y += containerSize.height - rect.minY
             backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
         }
     }

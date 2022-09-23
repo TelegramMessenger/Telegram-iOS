@@ -210,7 +210,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             node.insertSubnode(backgroundContent, at: 0)
                             
                             let backgroundColorNode = ASDisplayNode()
-                            backgroundColorNode.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
+                            backgroundColorNode.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.08)
                             backgroundContent.addSubnode(backgroundColorNode)
                             node.backgroundColorNode = backgroundColorNode
                         }
@@ -326,7 +326,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
         
         return { context, theme, chatBubbleCorners, strings, backgroundNode, replyMarkup, message, constrainedWidth in
             let buttonHeight: CGFloat = 42.0
-            let buttonSpacing: CGFloat = 4.0
+            let buttonSpacing: CGFloat = 2.0
             
             var overallMinimumRowWidth: CGFloat = 0.0
             
@@ -379,7 +379,7 @@ final class ChatMessageActionButtonsNode: ASDisplayNode {
                 var buttonFramesAndApply: [(CGRect, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonNode)] = []
                 
                 var verticalRowOffset: CGFloat = 0.0
-                verticalRowOffset += buttonSpacing
+                verticalRowOffset += buttonSpacing * 0.5
                 
                 var rowIndex = 0
                 for finalizeRowButtonLayouts in finalizeRowLayouts {
