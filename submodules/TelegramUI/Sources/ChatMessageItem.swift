@@ -177,7 +177,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
         for attribute in lhs.attributes {
             if let attribute = attribute as? ReplyMarkupMessageAttribute {
                 if attribute.flags.contains(.inline) && !attribute.rows.isEmpty {
-                    upperStyle = ChatMessageMerge.semanticallyMerged.rawValue
+                    upperStyle = ChatMessageMerge.none.rawValue
                 }
                 break
             }

@@ -954,8 +954,9 @@ final class ChatEmptyNode: ASDisplayNode {
         
         if let backgroundContent = self.backgroundContent {
             self.backgroundNode.isHidden = true
-            backgroundContent.cornerRadius = min(20.0, self.backgroundNode.bounds.height / 2.0)
-            backgroundContent.frame = contentFrame
+            backgroundContent.cornerRadius = min(20.0, self.backgroundNode.bounds.height / 2.0)            
+            transition.updateFrame(node: backgroundContent, frame: contentFrame)
+
             if let (rect, containerSize) = self.absolutePosition {
                 var backgroundFrame = backgroundContent.frame
                 backgroundFrame.origin.x += rect.minX

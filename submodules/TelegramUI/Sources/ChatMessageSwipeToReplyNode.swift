@@ -3,6 +3,7 @@ import UIKit
 import Display
 import AsyncDisplayKit
 import AppBundle
+import WallpaperBackgroundNode
 
 final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     enum Action {
@@ -11,10 +12,14 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         case unlike
     }
     
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
     private let backgroundNode: NavigationBackgroundNode
     private let foregroundNode: ASImageNode
     
-    init(fillColor: UIColor, enableBlur: Bool, foregroundColor: UIColor, action: ChatMessageSwipeToReplyNode.Action) {
+    private var absolutePosition: (CGRect, CGSize)?
+    
+    init(fillColor: UIColor, enableBlur: Bool, foregroundColor: UIColor, backgroundNode: WallpaperBackgroundNode?, action: ChatMessageSwipeToReplyNode.Action) {
         self.backgroundNode = NavigationBackgroundNode(color: fillColor, enableBlur: enableBlur)
         self.backgroundNode.isUserInteractionEnabled = false
 
@@ -57,11 +62,49 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         
         super.init()
         
+        self.allowsGroupOpacity = true
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.foregroundNode)
         self.backgroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 33.0, height: 33.0))
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: self.backgroundNode.bounds.height / 2.0, transition: .immediate)
         self.foregroundNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 33.0, height: 33.0))
+        
+        if backgroundNode?.hasExtraBubbleBackground() == true {
+            if let backgroundContent = backgroundNode?.makeBubbleBackground(for: .free) {
+                backgroundContent.clipsToBounds = true
+                backgroundContent.allowsGroupOpacity = true
+                self.backgroundContent = backgroundContent
+                self.insertSubnode(backgroundContent, at: 0)
+            }
+        } else {
+            self.backgroundContent?.removeFromSupernode()
+            self.backgroundContent = nil
+        }
+        
+        if let backgroundContent = self.backgroundContent {
+            self.backgroundNode.isHidden = true
+            backgroundContent.cornerRadius =  min(self.backgroundNode.bounds.width, self.backgroundNode.bounds.height) / 2.0
+            backgroundContent.frame = self.backgroundNode.frame
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += containerSize.height - rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+            }
+        } else {
+            self.backgroundNode.isHidden = false
+        }
+    }
+    
+    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += containerSize.height - rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+        }
     }
 }
 

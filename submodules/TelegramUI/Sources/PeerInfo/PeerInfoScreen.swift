@@ -3509,9 +3509,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 var mediaReference: AnyMediaReference?
-                for m in message.media {
-                    if let image = m as? TelegramMediaImage {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
                         mediaReference = AnyMediaReference.standalone(media: image)
+                    } else if let file = media as? TelegramMediaFile {
+                        mediaReference = AnyMediaReference.standalone(media: file)
                     }
                 }
                 

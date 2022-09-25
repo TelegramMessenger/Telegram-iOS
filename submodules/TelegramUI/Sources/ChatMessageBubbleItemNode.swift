@@ -2257,10 +2257,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
 
         var layoutSize = CGSize(width: params.width, height: layoutBubbleSize.height)
         if let reactionButtonsSizeAndApply = reactionButtonsSizeAndApply {
-            layoutSize.height += 2.0 + reactionButtonsSizeAndApply.0.height
+            layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
         }
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-            layoutSize.height += actionButtonsSizeAndApply.0.height
+            layoutSize.height += 1.0 + actionButtonsSizeAndApply.0.height
         }
         
         var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
@@ -3899,7 +3899,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
 
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
                         animateReplyNodeIn = true
@@ -3917,6 +3917,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                    
+                    if let (rect, containerSize) = self.absoluteRect {
+                        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
+                        swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
+                    }
+                    
                     if animateReplyNodeIn {
                         swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                         swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
