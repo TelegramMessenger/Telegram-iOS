@@ -66,7 +66,7 @@ public final class ShareInputFieldNode: ASDisplayNode, ASEditableTextNodeDelegat
     public var updateText: ((String) -> Void)?
     
     private let backgroundInsets = UIEdgeInsets(top: 16.0, left: 16.0, bottom: 1.0, right: 16.0)
-    private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 16.0)
+    private let inputInsets = UIEdgeInsets(top: 10.0, left: 8.0, bottom: 10.0, right: 22.0)
     private let accessoryButtonsWidth: CGFloat = 10.0
     
     private var selectTextOnce: Bool = false

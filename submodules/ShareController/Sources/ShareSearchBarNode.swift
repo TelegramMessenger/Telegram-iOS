@@ -99,6 +99,11 @@ final class ShareSearchBarNode: ASDisplayNode, UITextFieldDelegate {
         self.textUpdated?(self.textInputNode.textField.text ?? "")
     }
     
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        self.deactivateInput()
+        return true
+    }
+    
     @objc func clearPressed() {
         self.textInputNode.textField.text = ""
         self.textFieldDidChangeText()

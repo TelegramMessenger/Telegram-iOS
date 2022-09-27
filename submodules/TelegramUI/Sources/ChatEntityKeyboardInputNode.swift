@@ -2305,7 +2305,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             switch attribute {
                             case let .CustomEmoji(_, _, packReference), let .Sticker(_, packReference, _):
                                 if let packReference = packReference {
-                                    let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
+                                    let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                         sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
                                         return true
                                     })

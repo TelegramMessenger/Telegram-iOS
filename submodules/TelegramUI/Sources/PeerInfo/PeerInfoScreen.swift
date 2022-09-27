@@ -3155,7 +3155,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
                        
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPackTitle, white in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3172,11 +3172,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     let source: Signal<PremiumSource, NoError>
                     if let peerStatus = peerStatus {
-                        source = emojiStatusFileAndPackTitle
+                        source = emojiStatusFileAndPack
                         |> take(1)
-                        |> mapToSignal { emojiStatusFileAndPackTitle -> Signal<PremiumSource, NoError> in
-                            if let (file, packTitle) = emojiStatusFileAndPackTitle {
-                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, packTitle))
+                        |> mapToSignal { emojiStatusFileAndPack -> Signal<PremiumSource, NoError> in
+                            if let (file, pack) = emojiStatusFileAndPack {
+                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, pack))
                             } else {
                                 return .complete()
                             }
@@ -3185,7 +3185,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         source = .single(.profile(strongSelf.peerId))
                     }
                     
-                    let _ = source.start(next: { [weak self] source in
+                    let _ = (source
+                    |> deliverOnMainQueue).start(next: { [weak self] source in
                         guard let strongSelf = self else {
                             return
                         }

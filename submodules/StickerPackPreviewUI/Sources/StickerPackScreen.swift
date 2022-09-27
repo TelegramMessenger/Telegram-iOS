@@ -151,6 +151,7 @@ private final class StickerPackContainer: ASDisplayNode {
         context: AccountContext,
         presentationData: PresentationData,
         stickerPacks: [StickerPackReference],
+        loadedStickerPacks: [LoadedStickerPack],
         decideNextAction: @escaping (StickerPackContainer, StickerPackAction) -> StickerPackNextAction,
         requestDismiss: @escaping () -> Void,
         expandProgressUpdated: @escaping (StickerPackContainer, ContainedViewLayoutTransition, ContainedViewLayoutTransition) -> Void,
@@ -343,11 +344,18 @@ private final class StickerPackContainer: ASDisplayNode {
             return updatedOffset
         }
         
-        let loadedStickerPacks = combineLatest(stickerPacks.map {
-            context.engine.stickers.loadedStickerPack(reference: $0, forceActualized: true)
+        
+        
+        let fetchedStickerPacks: Signal<[LoadedStickerPack], NoError> = combineLatest(stickerPacks.map { packReference in
+            for pack in loadedStickerPacks {
+                if case let .result(info, _, _) = pack, case let .id(id, _) = packReference, info.id.id == id {
+                    return .single(pack)
+                }
+            }
+            return context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: true)
         })
         
-        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), loadedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
+        self.itemsDisposable = combineLatest(queue: Queue.mainQueue(), fetchedStickerPacks, context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))).start(next: { [weak self] contents, peer in
             guard let strongSelf = self else {
                 return
             }
@@ -1332,7 +1340,7 @@ private final class StickerPackScreenNode: ViewControllerTracingNode {
                 wasAdded = true
                 containerTransition = .immediate
                 let index = i
-                container = StickerPackContainer(index: index, context: context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, decideNextAction: { [weak self] container, action in
+                container = StickerPackContainer(index: index, context: self.context, presentationData: self.presentationData, stickerPacks: self.stickerPacks, loadedStickerPacks: self.controller?.loadedStickerPacks ?? [], decideNextAction: { [weak self] container, action in
                     guard let strongSelf = self, let layout = strongSelf.validLayout else {
                         return .dismiss
                     }
@@ -1570,6 +1578,8 @@ public final class StickerPackScreenImpl: ViewController {
     private var presentationDataDisposable: Disposable?
     
     private let stickerPacks: [StickerPackReference]
+    fileprivate let loadedStickerPacks: [LoadedStickerPack]
+    
     private let initialSelectedStickerPackIndex: Int
     fileprivate weak var parentNavigationController: NavigationController?
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
@@ -1599,6 +1609,7 @@ public final class StickerPackScreenImpl: ViewController {
         context: AccountContext,
         updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil,
         stickerPacks: [StickerPackReference],
+        loadedStickerPacks: [LoadedStickerPack],
         selectedStickerPackIndex: Int = 0,
         parentNavigationController: NavigationController? = nil,
         sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
@@ -1608,6 +1619,7 @@ public final class StickerPackScreenImpl: ViewController {
         self.context = context
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.stickerPacks = stickerPacks
+        self.loadedStickerPacks = loadedStickerPacks
         self.initialSelectedStickerPackIndex = selectedStickerPackIndex
         self.parentNavigationController = parentNavigationController
         self.sendSticker = sendSticker
@@ -1820,6 +1832,7 @@ public func StickerPackScreen(
     mode: StickerPackPreviewControllerMode = .default,
     mainStickerPack: StickerPackReference,
     stickerPacks: [StickerPackReference],
+    loadedStickerPacks: [LoadedStickerPack] = [],
     parentNavigationController: NavigationController? = nil,
     sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil,
     sendEmoji: ((String, ChatTextInputTextCustomEmojiAttribute) -> Void)? = nil,
@@ -1829,6 +1842,7 @@ public func StickerPackScreen(
     let controller = StickerPackScreenImpl(
         context: context,
         stickerPacks: stickerPacks,
+        loadedStickerPacks: loadedStickerPacks,
         selectedStickerPackIndex: stickerPacks.firstIndex(of: mainStickerPack) ?? 0,
         parentNavigationController: parentNavigationController,
         sendSticker: sendSticker,

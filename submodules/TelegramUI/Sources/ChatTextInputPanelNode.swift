@@ -243,7 +243,6 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .emoji = previousInputMode {
                                         animationName = "input_anim_smileToSticker"
                                         animationMode = .animating(loop: false)
-//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSticker"
                                     }
@@ -258,7 +257,6 @@ private final class AccessoryItemIconButtonNode: HighlightTrackingButtonNode {
                                     } else if case .stickers = previousInputMode {
                                         animationName = "input_anim_stickerToSmile"
                                         animationMode = .animating(loop: false)
-//                                        colorKeys = emojiColorKeys
                                     } else {
                                         animationName = "input_anim_keyToSmile"
                                     }
@@ -1085,7 +1083,13 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
         let recognizer = TouchDownGestureRecognizer(target: self, action: #selector(self.textInputBackgroundViewTap(_:)))
         recognizer.touchDown = { [weak self] in
             if let strongSelf = self {
-                strongSelf.ensureFocusedOnTap()
+                if strongSelf.textInputNode?.isFirstResponder() == true {
+                    Queue.mainQueue().after(0.05) {
+                        strongSelf.ensureFocusedOnTap()
+                    }
+                } else {
+                    strongSelf.ensureFocusedOnTap()
+                }
             }
         }
         recognizer.waitForTouchUp = { [weak self] in
@@ -3397,17 +3401,24 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
             self.loadTextInputNode()
         }
         
-        self.textInputNode?.becomeFirstResponder()
+        if !self.switching {
+            self.textInputNode?.becomeFirstResponder()
+        }
     }
     
+    private var switching = false
     func ensureFocusedOnTap() {
         if self.textInputNode == nil {
             self.loadTextInputNode()
         }
         
-        self.textInputNode?.becomeFirstResponder()
-        
-        self.switchToTextInputIfNeeded?()
+        if !self.switching {
+            self.switching = true
+            self.textInputNode?.becomeFirstResponder()
+            
+            self.switchToTextInputIfNeeded?()
+            self.switching = false
+        }
     }
     
     func backwardsDeleteText() {
