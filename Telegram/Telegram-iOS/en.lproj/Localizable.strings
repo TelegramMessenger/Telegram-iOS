@@ -8048,3 +8048,5 @@ Sorry for the inconvenience.";
 "Profile.Id" = "id";
 "Conversation.IdCopied" = "ID copied to clipboard.";
 "Settings.CopyId" = "Copy ID";
+
+"SiriAndDictationAreDisabledAlert" = "To transcribe voice messages, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
