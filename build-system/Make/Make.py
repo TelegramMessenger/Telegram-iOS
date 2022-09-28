@@ -39,7 +39,9 @@ class BazelCommandLine:
         self.split_submodules = False
         self.custom_target = None
         self.continue_on_error = False
+        self.show_actions = False
         self.enable_sandbox = False
+        self.disable_provisioning_profiles = False
 
         self.common_args = [
             # https://docs.bazel.build/versions/master/command-line-reference.html
@@ -100,7 +102,8 @@ class BazelCommandLine:
             # --num-threads 0 forces swiftc to generate one object file per module; it:
             # 1. resolves issues with the linker caused by the swift-objc mixing.
             # 2. makes the resulting binaries significantly smaller (up to 9% for this project).
-            '--swiftcopt=-num-threads', '--swiftcopt=0',
+            '--swiftcopt=-num-threads', '--swiftcopt=1',
+            '--swiftcopt=-j1',
 
             # Strip unsused code.
             '--features=dead_strip',
@@ -128,6 +131,9 @@ class BazelCommandLine:
     def set_continue_on_error(self, continue_on_error):
         self.continue_on_error = continue_on_error
 
+    def set_show_actions(self, show_actions):
+        self.show_actions = show_actions
+
     def set_enable_sandbox(self, enable_sandbox):
         self.enable_sandbox = enable_sandbox
 
@@ -136,6 +142,9 @@ class BazelCommandLine:
 
     def set_configuration_path(self, path):
         self.configuration_path = path
+
+    def set_disable_provisioning_profiles(self):
+        self.disable_provisioning_profiles = True
 
     def set_configuration(self, configuration):
         if configuration == 'debug_universal':
@@ -164,6 +173,17 @@ class BazelCommandLine:
             self.configuration_args = [
                 # bazel debug build configuration
                 '-c', 'dbg',
+
+                # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
+                '--ios_multi_cpus=sim_arm64',
+
+                # Always build universal Watch binaries.
+                '--watchos_cpus=arm64_32'
+            ] + self.common_debug_args
+        elif configuration == 'release_sim_arm64':
+            self.configuration_args = [
+                # bazel optimized build configuration
+                '-c', 'opt',
 
                 # Build single-architecture binaries. It is almost 2 times faster is 32-bit support is not required.
                 '--ios_multi_cpus=sim_arm64',
@@ -278,6 +298,8 @@ class BazelCommandLine:
 
         if self.continue_on_error:
             combined_arguments += ['--keep_going']
+        if self.show_actions:
+            combined_arguments += ['--subcommands']
 
         return combined_arguments
 
@@ -308,9 +330,14 @@ class BazelCommandLine:
 
         if self.continue_on_error:
             combined_arguments += ['--keep_going']
+        if self.show_actions:
+            combined_arguments += ['--subcommands']
 
         if self.enable_sandbox:
             combined_arguments += ['--spawn_strategy=sandboxed']
+
+        if self.disable_provisioning_profiles:
+            combined_arguments += ['--//Telegram:disableProvisioningProfiles']
 
         if self.configuration_path is None:
             raise Exception('configuration_path is not defined')
@@ -422,6 +449,8 @@ def resolve_codesigning(arguments, base_path, build_configuration, provisioning_
             team_id=build_configuration.team_id,
             bundle_id=build_configuration.bundle_id
         )
+    elif arguments.noCodesigning is not None:
+        return ResolvedCodesigningData(aps_environment='production')
     else:
         raise Exception('Neither gitCodesigningRepository nor codesigningInformationPath are set')
 
@@ -559,9 +588,13 @@ def build(bazel, arguments):
     bazel_command_line.set_build_number(arguments.buildNumber)
     bazel_command_line.set_custom_target(arguments.target)
     bazel_command_line.set_continue_on_error(arguments.continueOnError)
+    bazel_command_line.set_show_actions(arguments.showActions)
     bazel_command_line.set_enable_sandbox(arguments.sandbox)
 
-    bazel_command_line.set_split_swiftmodules(not arguments.disableParallelSwiftmoduleGeneration)
+    if arguments.noCodesigning is not None:
+        bazel_command_line.set_disable_provisioning_profiles()
+
+    bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
     bazel_command_line.invoke_build()
 
@@ -646,6 +679,14 @@ def add_codesigning_common_arguments(current_parser: argparse.ArgumentParser):
     )
     codesigning_group.add_argument(
         '--codesigningInformationPath',
+        help='''
+            Use signing certificates and provisioning profiles from a local directory.
+            ''',
+        metavar='command'
+    )
+    codesigning_group.add_argument(
+        '--noCodesigning',
+        type=bool,
         help='''
             Use signing certificates and provisioning profiles from a local directory.
             ''',
@@ -824,6 +865,8 @@ if __name__ == '__main__':
             'debug_universal',
             'debug_arm64',
             'debug_armv7',
+            'debug_sim_arm64',
+            'release_sim_arm64',
             'release_arm64',
             'release_armv7',
             'release_universal'
@@ -832,7 +875,7 @@ if __name__ == '__main__':
         help='Build configuration'
     )
     buildParser.add_argument(
-        '--disableParallelSwiftmoduleGeneration',
+        '--enableParallelSwiftmoduleGeneration',
         action='store_true',
         default=False,
         help='Generate .swiftmodule files in parallel to building modules, can speed up compilation on multi-core '
@@ -849,6 +892,12 @@ if __name__ == '__main__':
         action='store_true',
         default=False,
         help='Continue build process after an error.',
+    )
+    buildParser.add_argument(
+        '--showActions',
+        action='store_true',
+        default=False,
+        help='Show bazel actions.',
     )
     buildParser.add_argument(
         '--sandbox',

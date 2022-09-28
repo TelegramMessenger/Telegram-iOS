@@ -12,6 +12,7 @@ import PeerAvatarGalleryUI
 import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
+import ForumTopicListScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -221,4 +222,29 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     }
     
     return false
+}
+
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, navigationController: NavigationController) -> Signal<Never, NoError> {
+    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil)
+    |> deliverOnMainQueue
+    |> beforeNext { [weak context, weak navigationController] result in
+        guard let context = context, let navigationController = navigationController else {
+            return
+        }
+        
+        let chatLocation: ChatLocation = .replyThread(message: result.message)
+        
+        let subject: ChatControllerSubject?
+        subject = nil
+        
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty ? .text : nil, keepStack: .always))
+    }
+    |> ignoreValues
+    |> `catch` { _ -> Signal<Never, NoError> in
+        return .complete()
+    }
+}
+
+public func navigateToForumChannelImpl(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController) {
+    navigationController.pushViewController(ChatListControllerImpl(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, enableDebugActions: false))
 }

@@ -440,8 +440,11 @@ public extension TelegramEngine {
         }
         
         public func getRelativeUnreadChatListIndex(filtered: Bool, position: EngineChatList.RelativePosition, groupId: EngineChatList.Group) -> Signal<EngineChatList.Item.Index?, NoError> {
+            guard let position = position._asPosition() else {
+                return .single(nil)
+            }
             return self.account.postbox.transaction { transaction -> EngineChatList.Item.Index? in
-                return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position._asPosition(), groupId: groupId._asGroup())
+                return transaction.getRelativeUnreadChatListIndex(filtered: filtered, position: position, groupId: groupId._asGroup()).flatMap(EngineChatList.Item.Index.chatList)
             }
         }
         

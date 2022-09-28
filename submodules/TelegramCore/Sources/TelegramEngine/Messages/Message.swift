@@ -1,6 +1,6 @@
 import Postbox
 
-public final class EngineMessage {
+public final class EngineMessage: Equatable {
     public typealias Id = MessageId
     public typealias Index = MessageIndex
     public typealias Tags = MessageTags
@@ -147,5 +147,51 @@ public final class EngineMessage {
 
     public func _asMessage() -> Message {
         return self.impl
+    }
+    
+    public static func ==(lhs: EngineMessage, rhs: EngineMessage) -> Bool {
+        if lhs.id != rhs.id {
+            return false
+        }
+        if lhs.globallyUniqueId != rhs.globallyUniqueId {
+            return false
+        }
+        if lhs.groupingKey != rhs.groupingKey {
+            return false
+        }
+        if lhs.groupInfo != rhs.groupInfo {
+            return false
+        }
+        if lhs.threadId != rhs.threadId {
+            return false
+        }
+        if lhs.timestamp != rhs.timestamp {
+            return false
+        }
+        if lhs.flags != rhs.flags {
+            return false
+        }
+        if lhs.tags != rhs.tags {
+            return false
+        }
+        if lhs.globalTags != rhs.globalTags {
+            return false
+        }
+        if lhs.localTags != rhs.localTags {
+            return false
+        }
+        if lhs.forwardInfo != rhs.forwardInfo {
+            return false
+        }
+        if lhs.author != rhs.author {
+            return false
+        }
+        if lhs.text != rhs.text {
+            return false
+        }
+        if !areMediaArraysEqual(lhs.media, rhs.media) {
+            return false
+        }
+        return true
     }
 }
