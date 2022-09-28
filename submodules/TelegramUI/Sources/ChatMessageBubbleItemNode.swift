@@ -2260,7 +2260,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             layoutSize.height += 4.0 + reactionButtonsSizeAndApply.0.height
         }
         if let actionButtonsSizeAndApply = actionButtonsSizeAndApply {
-            layoutSize.height += actionButtonsSizeAndApply.0.height
+            layoutSize.height += 1.0 + actionButtonsSizeAndApply.0.height
         }
         
         var layoutInsets = UIEdgeInsets(top: mergedTop.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, left: 0.0, bottom: mergedBottom.merged ? layoutConstants.bubble.mergedSpacing : layoutConstants.bubble.defaultSpacing, right: 0.0)
@@ -2919,81 +2919,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             shareButtonNode.removeFromSupernode()
         }
         
-        if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
-            if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
-                if useDisplayLinkAnimations {
-                    let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
-                        if let strongSelf = strongSelf {
-                            strongSelf.backgroundNode.frame = frame
-                            strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
-                            strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
-                            
-                            strongSelf.backgroundNode.updateLayout(size: frame.size, transition: .immediate)
-                            strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
-                            strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
-                        }
-                    })
-                    strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
-                } else {
-                    animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
-                    animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
-                    strongSelf.clippingNode.clipsToBounds = true
-                    animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
-                        strongSelf?.clippingNode.clipsToBounds = false
-                    })
-
-                    strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
-                    animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
-                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, animator: animation.animator)
-                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, animator: animation.animator)
-                }
-                
-                if let _ = strongSelf.backgroundNode.type {
-                    if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
-                        if let (rect, size) = strongSelf.absoluteRect {
-                            strongSelf.updateAbsoluteRect(rect, within: size)
-                        }
-                    }
-                }
-                strongSelf.messageAccessibilityArea.frame = backgroundFrame
-            }
-            if let shareButtonNode = strongSelf.shareButtonNode {
-                let currentBackgroundFrame = strongSelf.backgroundNode.frame
-                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                animation.animator.updateFrame(layer: shareButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize), completion: nil)
-            }
-        } else {
-            /*if let _ = strongSelf.backgroundFrameTransition {
-                strongSelf.animateFrameTransition(1.0, backgroundFrame.size.height)
-                strongSelf.backgroundFrameTransition = nil
-            }*/
-            strongSelf.messageAccessibilityArea.frame = backgroundFrame
-            if let shareButtonNode = strongSelf.shareButtonNode {
-                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
-            }
-            
-            if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
-                legacyTransition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
-
-                legacyTransition.updateFrame(node: strongSelf.clippingNode, frame: backgroundFrame)
-                legacyTransition.updateBounds(node: strongSelf.clippingNode, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size))
-
-                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: legacyTransition)
-                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: legacyTransition)
-                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: legacyTransition)
-            } else {
-                strongSelf.backgroundNode.frame = backgroundFrame
-                strongSelf.clippingNode.frame = backgroundFrame
-                strongSelf.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
-                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
-                strongSelf.backgroundWallpaperNode.frame = backgroundFrame
-                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
-            }
-            if let (rect, size) = strongSelf.absoluteRect {
-                strongSelf.updateAbsoluteRect(rect, within: size)
-            }
-        }
         let offset: CGFloat = params.leftInset + (incoming ? 42.0 : 0.0)
         let selectionFrame = CGRect(origin: CGPoint(x: -offset, y: 0.0), size: CGSize(width: params.width, height: layout.contentSize.height))
         strongSelf.selectionNode?.frame = selectionFrame
@@ -3085,6 +3010,82 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 })
             } else {
                 reactionButtonsNode.removeFromSupernode()
+            }
+        }
+        
+        if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
+            if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
+                if useDisplayLinkAnimations {
+                    let backgroundAnimation = ListViewAnimation(from: strongSelf.backgroundNode.frame, to: backgroundFrame, duration: duration * UIView.animationDurationFactor(), curve: strongSelf.preferredAnimationCurve, beginAt: beginAt, update: { [weak strongSelf] _, frame in
+                        if let strongSelf = strongSelf {
+                            strongSelf.backgroundNode.frame = frame
+                            strongSelf.clippingNode.position = CGPoint(x: frame.midX, y: frame.midY)
+                            strongSelf.clippingNode.bounds = CGRect(origin:  CGPoint(x: frame.minX, y: frame.minY), size: frame.size)
+                            
+                            strongSelf.backgroundNode.updateLayout(size: frame.size, transition: .immediate)
+                            strongSelf.backgroundWallpaperNode.updateFrame(frame, transition: .immediate)
+                            strongSelf.shadowNode.updateLayout(backgroundFrame: frame, transition: .immediate)
+                        }
+                    })
+                    strongSelf.setAnimationForKey("backgroundNodeFrame", animation: backgroundAnimation)
+                } else {
+                    animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
+                    animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
+                    strongSelf.clippingNode.clipsToBounds = true
+                    animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
+                        strongSelf?.clippingNode.clipsToBounds = false
+                    })
+
+                    strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: animation)
+                    animation.animator.updateFrame(layer: strongSelf.backgroundWallpaperNode.layer, frame: backgroundFrame, completion: nil)
+                    strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, animator: animation.animator)
+                    strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, animator: animation.animator)
+                }
+                
+                if let _ = strongSelf.backgroundNode.type {
+                    if !strongSelf.mainContextSourceNode.isExtractedToContextPreview {
+                        if let (rect, size) = strongSelf.absoluteRect {
+                            strongSelf.updateAbsoluteRect(rect, within: size)
+                        }
+                    }
+                }
+                strongSelf.messageAccessibilityArea.frame = backgroundFrame
+            }
+            if let shareButtonNode = strongSelf.shareButtonNode {
+                let currentBackgroundFrame = strongSelf.backgroundNode.frame
+                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
+                animation.animator.updateFrame(layer: shareButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize), completion: nil)
+            }
+        } else {
+            /*if let _ = strongSelf.backgroundFrameTransition {
+                strongSelf.animateFrameTransition(1.0, backgroundFrame.size.height)
+                strongSelf.backgroundFrameTransition = nil
+            }*/
+            strongSelf.messageAccessibilityArea.frame = backgroundFrame
+            if let shareButtonNode = strongSelf.shareButtonNode {
+                let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
+                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+            }
+            
+            if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {
+                legacyTransition.updateFrame(node: strongSelf.backgroundNode, frame: backgroundFrame)
+
+                legacyTransition.updateFrame(node: strongSelf.clippingNode, frame: backgroundFrame)
+                legacyTransition.updateBounds(node: strongSelf.clippingNode, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size))
+
+                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: legacyTransition)
+                strongSelf.backgroundWallpaperNode.updateFrame(backgroundFrame, transition: legacyTransition)
+                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: legacyTransition)
+            } else {
+                strongSelf.backgroundNode.frame = backgroundFrame
+                strongSelf.clippingNode.frame = backgroundFrame
+                strongSelf.clippingNode.bounds = CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size)
+                strongSelf.backgroundNode.updateLayout(size: backgroundFrame.size, transition: .immediate)
+                strongSelf.backgroundWallpaperNode.frame = backgroundFrame
+                strongSelf.shadowNode.updateLayout(backgroundFrame: backgroundFrame, transition: .immediate)
+            }
+            if let (rect, size) = strongSelf.absoluteRect {
+                strongSelf.updateAbsoluteRect(rect, within: size)
             }
         }
         
@@ -3859,7 +3860,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 let graphics = PresentationResourcesChat.principalGraphics(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper, bubbleCorners: item.presentationData.chatBubbleCorners)
                 
                 let hasWallpaper = item.presentationData.theme.wallpaper.hasWallpaper
-                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.mainContextSourceNode.isExtractedToContextPreview, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, backgroundNode: item.controllerInteraction.presentationContext.backgroundNode)
+                self.backgroundNode.setType(type: backgroundType, highlighted: highlighted, graphics: graphics, maskMode: self.backgroundMaskMode, hasWallpaper: hasWallpaper, transition: animated ? .animated(duration: 0.3, curve: .easeInOut) : .immediate, backgroundNode: item.controllerInteraction.presentationContext.backgroundNode)
             }
         }
     }
@@ -3898,7 +3899,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
 
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
                         animateReplyNodeIn = true
@@ -3916,6 +3917,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                    
+                    if let (rect, containerSize) = self.absoluteRect {
+                        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
+                        swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
+                    }
+                    
                     if animateReplyNodeIn {
                         swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                         swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)

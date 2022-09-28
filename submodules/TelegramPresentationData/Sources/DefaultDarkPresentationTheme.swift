@@ -56,6 +56,12 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
         if accentColor.rgb == 0xffffff {
             monochrome = true
             bubbleColors = [UIColor(rgb: 0x313131).rgb, UIColor(rgb: 0x313131).rgb]
+        } else if accentColor.rgb == 0x3e88f7 {
+            bubbleColors = [
+                0x0771ff,
+                0x9047ff,
+                0xa256bf,
+            ]
         } else {
             bubbleColors = [accentColor.withMultiplied(hue: 0.966, saturation: 0.61, brightness: 0.98).rgb, accentColor.rgb]
         }
@@ -312,10 +318,10 @@ public func customizeDefaultDarkPresentationTheme(theme: PresentationTheme, edit
 }
 
 public let defaultDarkWallpaperGradientColors: [UIColor] = [
-    UIColor(rgb: 0x00b3dd),
-    UIColor(rgb: 0x3b59f2),
-    UIColor(rgb: 0x358be2),
-    UIColor(rgb: 0xa434cf)
+    UIColor(rgb: 0x598bf6),
+    UIColor(rgb: 0x7a5eef),
+    UIColor(rgb: 0xd67cff),
+    UIColor(rgb: 0xf38b58)
 ]
 
 public func makeDefaultDarkPresentationTheme(extendingThemeReference: PresentationThemeReference? = nil, preview: Bool) -> PresentationTheme {
@@ -675,7 +681,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         badgeTextColor:  UIColor(rgb: 0x000000)
     )
 
-    let defaultPatternWallpaper: TelegramWallpaper = defaultBuiltinWallpaper(data: .default, colors: defaultDarkWallpaperGradientColors.map(\.rgb), intensity: -35)
+    let defaultPatternWallpaper: TelegramWallpaper = defaultBuiltinWallpaper(data: .default, colors: defaultDarkWallpaperGradientColors.map(\.rgb), intensity: -34)
     
     let chat = PresentationThemeChat(
         defaultWallpaper: defaultPatternWallpaper,

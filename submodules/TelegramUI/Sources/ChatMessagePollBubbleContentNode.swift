@@ -479,7 +479,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private var percentageImage: UIImage?
     private var titleNode: TextNode?
     private let buttonNode: HighlightTrackingButtonNode
-    private let separatorNode: ASDisplayNode
+    let separatorNode: ASDisplayNode
     private let resultBarNode: ASImageNode
     private let resultBarIconNode: ASImageNode
     var option: TelegramMediaPollOption?
@@ -488,6 +488,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
     private var theme: PresentationTheme?
+    
+    weak var previousOptionNode: ChatMessagePollOptionNode?
     
     override init() {
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -524,9 +526,21 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                 if highlighted {
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
+                    
+                    strongSelf.separatorNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.separatorNode.alpha = 0.0
+                    
+                    strongSelf.previousOptionNode?.separatorNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    
+                    strongSelf.separatorNode.alpha = 1.0
+                    strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    
+                    strongSelf.previousOptionNode?.separatorNode.alpha = 1.0
+                    strongSelf.previousOptionNode?.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 }
             }
         }
@@ -1373,6 +1387,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
                                 optionNode.isUserInteractionEnabled = canVote && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
+                                
+                                if i > 0 {
+                                    optionNode.previousOptionNode = updatedOptionNodes[i - 1]
+                                }
                             }
                             for optionNode in strongSelf.optionNodes {
                                 if !updatedOptionNodes.contains(where: { $0 === optionNode }) {

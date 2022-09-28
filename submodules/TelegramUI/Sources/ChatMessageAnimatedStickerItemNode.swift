@@ -2287,7 +2287,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -2302,6 +2302,12 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             if let swipeToReplyNode = self.swipeToReplyNode {
                 swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                
+                if let (rect, containerSize) = self.absoluteRect {
+                    let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
+                    swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
+                }
+                
                 if animateReplyNodeIn {
                     swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                     swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)

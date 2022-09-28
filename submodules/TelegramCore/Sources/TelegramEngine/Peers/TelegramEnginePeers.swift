@@ -242,8 +242,11 @@ public extension TelegramEngine {
             return _internal_updateChannelOwnership(account: self.account, accountStateManager: self.account.stateManager, channelId: channelId, memberId: memberId, password: password)
         }
 
-        public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
+        public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[EnginePeer], NoError> {
             return _internal_searchGroupMembers(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId, query: query)
+            |> map { peers -> [EnginePeer] in
+                return peers.map { EnginePeer($0) }
+            }
         }
 
         public func toggleShouldChannelMessagesSignatures(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {

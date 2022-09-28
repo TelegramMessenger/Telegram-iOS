@@ -4,6 +4,7 @@ import Display
 import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
@@ -15,6 +16,11 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private let backgroundNode: ASImageNode
     private let titleNode: TextNode
     private let textNode: TextNode
+    
+    private var wallpaperBackgroundNode: WallpaperBackgroundNode?
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var absolutePosition: (CGRect, CGSize)?
     
     private var layoutParams: CGSize?
     
@@ -36,6 +42,8 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         
         super.init()
         
+        self.allowsGroupOpacity = true
+        
         let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper, bubbleCorners: chatBubbleCorners)
         self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
         
@@ -44,7 +52,18 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         self.addSubnode(self.textNode)
     }
     
-    func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+        }
+    }
+    
+    func updateLayout(backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
+        self.wallpaperBackgroundNode = backgroundNode
         self.layoutParams = size
         
         let insets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
@@ -68,14 +87,40 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         
         let _ = titleApply()
         let _ = textApply()
+        
+        if backgroundNode.hasExtraBubbleBackground() == true {
+            if self.backgroundContent == nil, let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {
+                backgroundContent.clipsToBounds = true
+
+                self.backgroundContent = backgroundContent
+                self.insertSubnode(backgroundContent, at: 0)
+            }
+        } else {
+            self.backgroundContent?.removeFromSupernode()
+            self.backgroundContent = nil
+        }
+        
+        if let backgroundContent = self.backgroundContent {
+            self.backgroundNode.isHidden = true
+            backgroundContent.cornerRadius = 14.0
+            backgroundContent.frame = backgroundFrame
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+            }
+        } else {
+            self.backgroundNode.isHidden = false
+        }
     }
     
     func setup(title: String, text: String) {
         if self.title != title || self.text != text {
             self.title = title
             self.text = text
-            if let size = self.layoutParams {
-                self.updateLayout(size: size, transition: .immediate)
+            if let size = self.layoutParams, let wallpaperBackgroundNode = self.wallpaperBackgroundNode {
+                self.updateLayout(backgroundNode: wallpaperBackgroundNode, size: size, transition: .immediate)
             }
         }
     }

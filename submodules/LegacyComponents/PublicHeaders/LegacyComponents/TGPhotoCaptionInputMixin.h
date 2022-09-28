@@ -34,6 +34,6 @@
 
 - (void)setCaptionPanelHidden:(bool)hidden animated:(bool)animated;
 
-- (void)updateLayoutWithFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets;
+- (void)updateLayoutWithFrame:(CGRect)frame edgeInsets:(UIEdgeInsets)edgeInsets animated:(bool)animated;
 
 @end
