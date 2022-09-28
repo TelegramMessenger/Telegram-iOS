@@ -124,6 +124,9 @@ func parseTelegramGroupOrChannel(chat: Api.Chat) -> Peer? {
         if (flags & Int32(1 << 29)) != 0 {
             channelFlags.insert(.requestToJoin)
         }
+        if (flags & Int32(1 << 30)) != 0 {
+            channelFlags.insert(.isForum)
+        }
 
         let restrictionInfo: PeerAccessRestrictionInfo?
         if let restrictionReason = restrictionReason {

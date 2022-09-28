@@ -613,6 +613,7 @@ private final class NotificationServiceHandler {
     private let pollDisposable = MetaDisposable()
 
     init?(queue: Queue, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
+        //debug_linker_fail_test()
         self.queue = queue
 
         let episode = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)

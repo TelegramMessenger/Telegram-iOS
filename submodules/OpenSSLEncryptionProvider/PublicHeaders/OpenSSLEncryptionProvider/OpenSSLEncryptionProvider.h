@@ -6,4 +6,6 @@ NS_ASSUME_NONNULL_BEGIN
 
 @end
 
+void debug_linker_fail_test(void);
+
 NS_ASSUME_NONNULL_END

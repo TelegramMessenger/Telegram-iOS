@@ -243,7 +243,7 @@ public extension TelegramEngine.EngineData.Item {
                 guard let view = view as? ChatListIndexView else {
                     preconditionFailure()
                 }
-                return view.chatListIndex
+                return view.chatListIndex.flatMap(EngineChatList.Item.Index.chatList)
             }
         }
         

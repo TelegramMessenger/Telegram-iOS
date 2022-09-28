@@ -776,6 +776,10 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool) -> Signal<Never, NoError> {
+            return _internal_setChannelForumMode(account: self.account, peerId: id, isForum: isForum)
+        }
     }
 }
 

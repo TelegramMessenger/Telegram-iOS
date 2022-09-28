@@ -5,11 +5,18 @@ private func extractKey(_ key: ValueBoxKey) -> MessageIndex {
 }
 
 class MessageHistoryThreadsTable: Table {
+    struct ItemId: Hashable {
+        var peerId: PeerId
+        var threadId: Int64
+    }
+    
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
     private let sharedKey = ValueBoxKey(length: 8 + 8 + 4 + 4 + 4)
+    
+    private(set) var updatedIds = Set<ItemId>()
     
     override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
         super.init(valueBox: valueBox, table: table, useCaches: useCaches)
@@ -38,10 +45,12 @@ class MessageHistoryThreadsTable: Table {
     
     func add(threadId: Int64, index: MessageIndex) {
         self.valueBox.set(self.table, key: self.key(threadId: threadId, index: index, key: self.sharedKey), value: MemoryBuffer())
+        self.updatedIds.insert(ItemId(peerId: index.id.peerId, threadId: threadId))
     }
     
     func remove(threadId: Int64, index: MessageIndex) {
         self.valueBox.remove(self.table, key: self.key(threadId: threadId, index: index, key: self.sharedKey), secure: false)
+        self.updatedIds.insert(ItemId(peerId: index.id.peerId, threadId: threadId))
     }
     
     func earlierIndices(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, index: MessageIndex?, includeFrom: Bool, count: Int) -> [MessageIndex] {
@@ -82,6 +91,27 @@ class MessageHistoryThreadsTable: Table {
         return indices
     }
     
+    func getTop(peerId: PeerId, threadId: Int64, namespaces: Set<MessageId.Namespace>) -> MessageIndex? {
+        var maxIndex: MessageIndex?
+        for namespace in namespaces {
+            var namespaceIndex: MessageIndex?
+            self.valueBox.range(self.table, start: self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace), end: self.lowerBound(threadId: threadId, peerId: peerId, namespace: namespace), keys: { key in
+                namespaceIndex = extractKey(key)
+                return false
+            }, limit: 1)
+            if let namespaceIndex = namespaceIndex {
+                if let maxIndexValue = maxIndex {
+                    if namespaceIndex > maxIndexValue {
+                        maxIndex = namespaceIndex
+                    }
+                } else {
+                    maxIndex = namespaceIndex
+                }
+            }
+        }
+        return maxIndex
+    }
+    
     func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex?, upperBound: MessageIndex?) -> Int {
         if let lowerBound = lowerBound {
             precondition(lowerBound.id.namespace == namespace)
@@ -108,5 +138,11 @@ class MessageHistoryThreadsTable: Table {
             upperBoundKey = self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace)
         }
         return Int(self.valueBox.count(self.table, start: lowerBoundKey, end: upperBoundKey))
+    }
+    
+    override func beforeCommit() {
+        super.beforeCommit()
+        
+        self.updatedIds.removeAll()
     }
 }

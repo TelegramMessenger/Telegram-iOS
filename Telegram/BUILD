@@ -980,6 +980,9 @@ ios_framework(
     deps = [
         "//submodules/TelegramCore:TelegramCore",
     ],
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 plist_fragment(
@@ -1466,6 +1469,9 @@ ios_extension(
         ":PostboxFramework",
         ":TelegramCoreFramework",
     ],
+    visibility = [
+        "//visibility:public",
+    ]
 )
 
 plist_fragment(
@@ -2058,4 +2064,54 @@ ios_application(
     deps = [
         "//third-party/libvpx:vpx",
     ],
+)
+
+swift_library(
+    name = "TelegramCoreBuildTestLib",
+    module_name = "TelegramCoreBuildTestLib",
+    srcs = glob([
+        "Tests/TelegramCoreBuildTest/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    data = [
+        ":WidgetAssets",
+    ],
+    deps = [
+        "//submodules/BuildConfig:BuildConfig",
+        "//submodules/WidgetItems:WidgetItems_iOS14",
+        "//submodules/WidgetItemsUtils:WidgetItemsUtils",
+        "//submodules/AppLockState:AppLockState",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/OpenSSLEncryptionProvider:OpenSSLEncryptionProvider",
+        "//Telegram:GeneratedSources",
+    ],
+)
+
+ios_application(
+    name = "TelegramCoreBuildTest",
+    bundle_id = "{telegram_bundle_id}".format(
+        telegram_bundle_id = telegram_bundle_id,
+    ),
+    families = ["iphone", "ipad"],
+    minimum_os_version = minimum_os_version,
+    provisioning_profile = select({
+        ":disableProvisioningProfilesSetting": None,
+        "//conditions:default": "@build_configuration//provisioning:Telegram.mobileprovision",
+    }),
+    entitlements = ":TelegramEntitlements.entitlements",
+    infoplists = [
+        ":TelegramInfoPlist",
+        ":BuildNumberInfoPlist",
+        ":VersionInfoPlist",
+        ":RequiredDeviceCapabilitiesPlist",
+        ":UrlTypesInfoPlist",
+    ],
+    frameworks = [
+        ":TelegramCoreFramework",
+    ],
+    deps = [":TelegramCoreBuildTestLib"],
 )

@@ -82,12 +82,13 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                 return ChatListItem(
                     presentationData: presentationData,
                     context: context,
-                    peerGroupId: .root,
+                    chatListLocation: .chatList(groupId: .root),
                     filterData: nil,
-                    index: EngineChatList.Item.Index(pinningIndex: nil, messageIndex: message.index),
+                    index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index)),
                     content: .peer(
                         messages: [EngineMessage(message)],
                         peer: EngineRenderedPeer(peer),
+                        threadInfo: nil,
                         combinedReadState: readState.flatMap(EnginePeerReadCounters.init),
                         isRemovedFromTotalUnreadCount: false,
                         presence: nil,
@@ -206,12 +207,12 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }
         
         let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
-        }, peerSelected: { _, _, _ in
+        }, peerSelected: { _, _, _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in
         }, togglePeersSelection: { _, _ in
         }, additionalCategorySelected: { _ in
-        }, messageSelected: { [weak self] peer, message, _ in
+        }, messageSelected: { [weak self] peer, _, message, _ in
             if let strongSelf = self {
                 if let index = strongSelf.searchResult.messages.firstIndex(where: { $0.index == message.index }) {
                     if message.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -238,7 +239,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 return
             }
             switch item.content {
-            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _, _, _):
                 if let message = messages.first {
                     let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)

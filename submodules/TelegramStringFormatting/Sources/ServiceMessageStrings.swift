@@ -679,6 +679,16 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributes[1] = boldAttributes
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
+            case .topicCreated:
+                //TODO:localize
+                attributedString = NSAttributedString(string: "Topic created", font: titleFont, textColor: primaryTextColor)
+            case let .topicEditTitle(title):
+                //TODO:localize
+                attributedString = NSAttributedString(string: "Topic renamed to \"\(title)\"", font: titleFont, textColor: primaryTextColor)
+            case let .topicEditIcon(fileId):
+                let _ = fileId
+                //TODO:localize
+                attributedString = NSAttributedString(string: "Topic icon changed", font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }
