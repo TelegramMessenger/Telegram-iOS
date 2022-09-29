@@ -965,6 +965,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         }
     }
     
+    private var delayLayoutUpdate = false
     func animateOut(result initialResult: ContextMenuActionResult, completion: @escaping () -> Void) {
         self.isUserInteractionEnabled = false
         
@@ -973,11 +974,15 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
         if let _ = self.presentationNode {
             self.currentPresentationStateTransition = .animateOut(result: initialResult, completion: completion)
             if let validLayout = self.validLayout {
-                self.updateLayout(
-                    layout: validLayout,
-                    transition: .animated(duration: 0.35, curve: .easeInOut),
-                    previousActionsContainerNode: nil
-                )
+                self.delayLayoutUpdate = true
+                Queue.mainQueue().after(0.05) {
+                    self.delayLayoutUpdate = false
+                    self.updateLayout(
+                        layout: validLayout,
+                        transition: .animated(duration: 0.35, curve: .easeInOut),
+                        previousActionsContainerNode: nil
+                    )
+                }
             }
             return
         }
@@ -1520,7 +1525,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
     }
     
     func updateLayout(layout: ContainerViewLayout, transition: ContainedViewLayoutTransition, previousActionsContainerNode: ContextActionsContainerNode?, previousActionsContainerFrame: CGRect? = nil, previousActionsTransition: ContextController.PreviousActionsTransition = .scale) {
-        if self.isAnimatingOut {
+        if self.isAnimatingOut || self.delayLayoutUpdate {
             return
         }
         

@@ -1206,7 +1206,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     
                     for message in messages {
                         let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
-                        if beganContentKindScanning && currentKind != generalMessageContentKind {
+                        if beganContentKindScanning, let messageContentKind = generalMessageContentKind, !messageContentKind.isSemanticallyEqual(to: currentKind) {
                             generalMessageContentKind = nil
                         } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
                             beganContentKindScanning = true
@@ -1225,6 +1225,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             case .video:
                                 preferredAction = .saveToCameraRoll
                                 actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
+                            case .file:
+                                preferredAction = .saveToCameraRoll
                             default:
                                 break
                         }
