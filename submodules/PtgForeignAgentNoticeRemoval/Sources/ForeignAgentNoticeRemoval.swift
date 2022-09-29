@@ -102,3 +102,48 @@ public func removeForeignAgentNotice(attrString string: NSAttributedString) -> N
 private func mayRemoveWholeText(with media: [Media]) -> Bool {
     return media.contains { $0 is TelegramMediaImage || $0 is TelegramMediaFile }
 }
+
+// Should be called after regular removeForeignAgentNotice() have not found a match.
+// If constant foreignAgentNoticePattern changed, this function may need to be updated too.
+public func removeForeignAgentNoticePartialMatchAtEnd(text: String, mayRemoveWholeText: Bool) -> String {
+    let reStart = try! NSRegularExpression(pattern: #"\b(?:ДА|СО|(?i)данное\s+со|сообщение\s*\(ма)"#)
+    let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
+    let matches = reStart.matches(in: text, range: nsrange)
+    if !matches.isEmpty {
+        let flatPattern = foreignAgentNoticePattern
+            .replacingOccurrences(of: #"\s+"#, with: " ")
+            .replacingOccurrences(of: #"\s*"#, with: "")
+            .replacingOccurrences(of: #"\(\?:[^)]+\)\?"#, with: "", options: .regularExpression, range: nil)
+            .replacingOccurrences(of: #"\\\.\?$"#, with: "", options: .regularExpression, range: nil)
+            .replacingOccurrences(of: "\\", with: "")
+            .uppercased()
+
+        for match in matches {
+            if let range = Range(match.range, in: text) {
+                let flatPartialMatch = text[range.lowerBound...]
+                    .uppercased()
+                    .replacingOccurrences(of: #"\.{3}|…$"#, with: "", options: .regularExpression, range: nil)
+                    .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression, range: nil)
+                    .replacingOccurrences(of: " (", with: "(")
+                    .replacingOccurrences(of: ") ", with: ")")
+                    .replacingOccurrences(of: ", ", with: ",")
+                    .replacingOccurrences(of: #"\bД(А|$)(Н|$)(Н|$)(О|$)(Е|$)( |$)"#, with: "", options: .regularExpression, range: nil)
+                    .replacingOccurrences(of: #"\bИ(Н|$)(О|$)(С|$)(Т|$)(Р|$)(А|$)(Н|$)(Н|$)(Ы|$)(М|$)( |$)"#, with: "", options: .regularExpression, range: nil)
+                
+                if flatPattern.starts(with: flatPartialMatch) {
+                    let result = text[..<range.lowerBound]
+                        .trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !result.isEmpty {
+                        let endingEllipses = text.hasSuffix("…") ? "…" : (text.hasSuffix("...") ? "..." : "")
+                        return result + endingEllipses
+                    } else if mayRemoveWholeText {
+                        return result
+                    } else {
+                        return text
+                    }
+                }
+            }
+        }
+    }
+    return text
+}
