@@ -979,7 +979,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     for option in poll.options {
                         text.append("\n— \(option.text)")
                     }
-                    messageText = poll.text
+                    messageText = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
                     break
                 }
             }

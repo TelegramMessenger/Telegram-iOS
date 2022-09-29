@@ -44,21 +44,42 @@ public func removeForeignAgentNotice(text: String, media: [Media]) -> String {
     return removeForeignAgentNotice(text: text, entities: [], mayRemoveWholeText: mayRemoveWholeText(with: media)).text
 }
 
-public func removeForeignAgentNotice(message: Message) -> Message {
+public func removeForeignAgentNotice(message: Message, inAssociatedPinnedMessageToo: Bool = false) -> Message {
     let entitiesIndex = message.attributes.firstIndex { $0 is TextEntitiesMessageAttribute }
     let entities = entitiesIndex != nil ? (message.attributes[entitiesIndex!] as! TextEntitiesMessageAttribute).entities : []
     let (newText, newEntities) = removeForeignAgentNotice(text: message.text, entities: entities, mayRemoveWholeText: mayRemoveWholeText(with: message.media))
+    var newMessage = message
     if newText != message.text {
         if let entitiesIndex = entitiesIndex, (message.attributes[entitiesIndex] as! TextEntitiesMessageAttribute).entities != newEntities {
             var newAttributes = message.attributes
             newAttributes[entitiesIndex] = TextEntitiesMessageAttribute(entities: newEntities)
-            return message.withUpdatedText(newText).withUpdatedAttributes(newAttributes)
+            newMessage = message.withUpdatedText(newText).withUpdatedAttributes(newAttributes)
         } else {
-            return message.withUpdatedText(newText)
+            newMessage = message.withUpdatedText(newText)
         }
-    } else {
-        return message
     }
+    if let pollIndex = newMessage.media.firstIndex(where: { $0 is TelegramMediaPoll }) {
+        let poll = newMessage.media[pollIndex] as! TelegramMediaPoll
+        let newPollText = removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false)
+        if newPollText != poll.text {
+            var newMedia = newMessage.media
+            newMedia[pollIndex] = poll.withUpdatedText(newPollText)
+            newMessage = newMessage.withUpdatedMedia(newMedia)
+        }
+    }
+    if inAssociatedPinnedMessageToo,
+       let action = newMessage.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction,
+       action.action == .pinnedMessageUpdated,
+       let attribute = newMessage.attributes.first(where: { $0 is ReplyMessageAttribute }) as? ReplyMessageAttribute,
+       let associatedMessage = newMessage.associatedMessages[attribute.messageId] {
+        let newAssociatedMessage = removeForeignAgentNotice(message: associatedMessage)
+        if newAssociatedMessage !== associatedMessage {
+            var newAssociatedMessages = newMessage.associatedMessages
+            newAssociatedMessages[attribute.messageId] = newAssociatedMessage
+            newMessage = newMessage.withUpdatedAssociatedMessages(newAssociatedMessages)
+        }
+    }
+    return newMessage
 }
 
 public func removeForeignAgentNotice(attrString string: NSAttributedString) -> NSAttributedString {

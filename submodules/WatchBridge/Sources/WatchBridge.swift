@@ -259,7 +259,7 @@ func makeBridgeMedia(message: Message, strings: PresentationStrings, chatPeer: P
             let bridgeAttachment = TGBridgeUnsupportedMediaAttachment()
             bridgeAttachment.compactTitle = strings.Watch_Message_Poll
             bridgeAttachment.title = strings.Watch_Message_Poll
-            bridgeAttachment.subtitle = poll.text
+            bridgeAttachment.subtitle = suppressForeignAgentNotice ? removeForeignAgentNotice(text: poll.text, mayRemoveWholeText: false) : poll.text
             bridgeMedia.append(bridgeAttachment)
         } else if let contact = m as? TelegramMediaContact {
             let bridgeContact = TGBridgeContactMediaAttachment()

@@ -18,6 +18,8 @@ import AnimationCache
 import MultiAnimationRenderer
 import TextFormat
 
+import PtgForeignAgentNoticeRemoval
+
 final class EditAccessoryPanelNode: AccessoryPanelNode {
     let dateTimeFormat: PresentationDateTimeFormat
     let messageId: MessageId
@@ -180,12 +182,14 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         self.currentMessage = message
         
         var text = ""
+        var effectiveMessage_: Message!
         if let message = message {
             var effectiveMessage = message
             if let currentEditMediaReference = self.currentEditMediaReference {
                 effectiveMessage = effectiveMessage.withUpdatedMedia([currentEditMediaReference.media])
             }
-            let (attributedText, _, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(effectiveMessage), strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
+            effectiveMessage_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: effectiveMessage) : effectiveMessage
+            let (attributedText, _, _) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(effectiveMessage_), strings: self.strings, nameDisplayOrder: self.nameDisplayOrder, dateTimeFormat: self.dateTimeFormat, accountPeerId: self.context.account.peerId)
             text = attributedText.string
         }
         
@@ -291,7 +295,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         let textFont = Font.regular(14.0)
         let messageText: NSAttributedString
         if isText, let message = message {
-            let entities = (message.textEntitiesAttribute?.entities ?? []).filter { entity in
+            let entities = (effectiveMessage_.textEntitiesAttribute?.entities ?? []).filter { entity in
                 switch entity.type {
                 case .Spoiler, .CustomEmoji:
                     return true
@@ -301,7 +305,7 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
             }
             let textColor = self.theme.chat.inputPanel.primaryTextColor
             if entities.count > 0 {
-                messageText = stringWithAppliedEntities(trimToLineCount(message.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false, message: message)
+                messageText = stringWithAppliedEntities(trimToLineCount(effectiveMessage_.text, lineCount: 1), entities: entities, baseColor: textColor, linkColor: textColor, baseFont: textFont, linkFont: textFont, boldFont: textFont, italicFont: textFont, boldItalicFont: textFont, fixedFont: textFont, blockQuoteFont: textFont,  underlineLinks: false, message: message)
             } else {
                 messageText = NSAttributedString(string: text, font: textFont, textColor: isMedia ? self.theme.chat.inputPanel.secondaryTextColor : self.theme.chat.inputPanel.primaryTextColor)
             }
