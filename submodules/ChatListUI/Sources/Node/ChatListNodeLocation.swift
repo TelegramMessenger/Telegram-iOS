@@ -4,11 +4,12 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 import TelegramUIPreferences
+import AccountContext
 
 enum ChatListNodeLocation: Equatable {
     case initial(count: Int, filter: ChatListFilter?)
-    case navigation(index: ChatListIndex, filter: ChatListFilter?)
-    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
+    case navigation(index: EngineChatList.Item.Index, filter: ChatListFilter?)
+    case scroll(index: EngineChatList.Item.Index, sourceIndex: EngineChatList.Item.Index, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
     
     var filter: ChatListFilter? {
         switch self {
@@ -23,7 +24,7 @@ enum ChatListNodeLocation: Equatable {
 }
 
 struct ChatListNodeViewUpdate {
-    let view: ChatListView
+    let list: EngineChatList
     let type: ViewUpdateType
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
@@ -109,25 +110,30 @@ public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilte
     })
 }
 
-func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
-    let filterPredicate: ChatListFilterPredicate?
-    if let filter = location.filter, case let .filter(_, _, _, data) = filter {
-        filterPredicate = chatListFilterPredicate(filter: data)
-    } else {
-        filterPredicate = nil
-    }
-    
-    switch location {
+func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+    switch chatListLocation {
+    case let .chatList(groupId):
+        let filterPredicate: ChatListFilterPredicate?
+        if let filter = location.filter, case let .filter(_, _, _, data) = filter {
+            filterPredicate = chatListFilterPredicate(filter: data)
+        } else {
+            filterPredicate = nil
+        }
+        
+        switch location {
         case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
-            signal = account.viewTracker.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count)
+            signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
-                return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: updateType, scrollPosition: nil)
             }
         case let .navigation(index, _):
+            guard case let .chatList(index) = index else {
+                return .never()
+            }
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
@@ -136,13 +142,17 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: nil)
             }
         case let .scroll(index, sourceIndex, scrollPosition, animated, _):
-            let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
+            guard case let .chatList(index) = index else {
+                return .never()
+            }
+            
+            let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > .chatList(index) ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
@@ -152,7 +162,60 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(view: view, type: genericType, scrollPosition: scrollPosition)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: scrollPosition)
             }
+        }
+    case let .forum(peerId):
+        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(id: peerId)
+        var isFirst = false
+        return account.postbox.combinedView(keys: [viewKey])
+        |> map { views -> ChatListNodeViewUpdate in
+            guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
+                preconditionFailure()
+            }
+            
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let peer = view.peer else {
+                    continue
+                }
+                guard let info = item.info.get(EngineMessageHistoryThreads.Info.self) else {
+                    continue
+                }
+                items.append(EngineChatList.Item(
+                    id: .forum(item.id),
+                    index: .forum(timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
+                    messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
+                    readCounters: nil,
+                    isMuted: false,
+                    draft: nil,
+                    threadInfo: info,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                    presence: nil,
+                    hasUnseenMentions: false,
+                    hasUnseenReactions: false,
+                    hasFailed: false,
+                    isContact: false
+                ))
+            }
+            
+            let list = EngineChatList(
+                items: items.reversed(),
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: false
+            )
+            
+            let type: ViewUpdateType
+            if isFirst {
+                type = .Initial
+            } else {
+                type = .Generic
+            }
+            isFirst = false
+            return ChatListNodeViewUpdate(list: list, type: type, scrollPosition: nil)
+        }
     }
 }

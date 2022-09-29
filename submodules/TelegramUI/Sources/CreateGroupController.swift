@@ -425,7 +425,26 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             let createSignal: Signal<PeerId?, CreateGroupError>
             switch mode {
                 case .generic:
-                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
+                    if title.contains("*forum") {
+                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
+                        |> map(Optional.init)
+                        |> mapError { error -> CreateGroupError in
+                            switch error {
+                                case .generic:
+                                    return .generic
+                                case .restricted:
+                                    return .restricted
+                                case .tooMuchJoined:
+                                    return .tooMuchJoined
+                                case .tooMuchLocationBasedGroups:
+                                    return .tooMuchLocationBasedGroups
+                                case let .serverProvided(error):
+                                    return .serverProvided(error)
+                            }
+                        }
+                    } else {
+                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
+                    }
                 case .supergroup:
                     createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                     |> map(Optional.init)

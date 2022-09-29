@@ -1,6 +1,6 @@
 import Postbox
 
-public final class EngineChatList {
+public final class EngineChatList: Equatable {
     public enum Group {
         case root
         case archive
@@ -17,7 +17,7 @@ public final class EngineChatList {
         case earlier(than: EngineChatList.Item.Index?)
     }
     
-    public struct Draft {
+    public struct Draft: Equatable {
         public var text: String
         public var entities: [MessageTextEntity]
         
@@ -27,14 +27,52 @@ public final class EngineChatList {
         }
     }
 
-    public final class Item {
-        public typealias Index = ChatListIndex
+    public final class Item: Equatable {
+        public enum Id: Hashable {
+            case chatList(EnginePeer.Id)
+            case forum(Int64)
+        }
+        
+        public enum Index: Equatable, Comparable {
+            public typealias ChatList = ChatListIndex
+            
+            case chatList(ChatListIndex)
+            case forum(timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
+            
+            public static func <(lhs: Index, rhs: Index) -> Bool {
+                switch lhs {
+                case let .chatList(lhsIndex):
+                    if case let .chatList(rhsIndex) = rhs {
+                        return lhsIndex < rhsIndex
+                    } else {
+                        return true
+                    }
+                case let .forum(lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
+                    if case let .forum(rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                        if lhsTimestamp != rhsTimestamp {
+                            return lhsTimestamp < rhsTimestamp
+                        }
+                        if lhsThreadId != rhsThreadId {
+                            return lhsThreadId < rhsThreadId
+                        }
+                        if lhsNamespace != rhsNamespace {
+                            return lhsNamespace < rhsNamespace
+                        }
+                        return lhsId < rhsId
+                    } else {
+                        return false
+                    }
+                }
+            }
+        }
 
+        public let id: Id
         public let index: Index
         public let messages: [EngineMessage]
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draft: Draft?
+        public let threadInfo: EngineMessageHistoryThreads.Info?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
@@ -43,11 +81,13 @@ public final class EngineChatList {
         public let isContact: Bool
 
         public init(
+            id: Id,
             index: Index,
             messages: [EngineMessage],
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draft: Draft?,
+            threadInfo: EngineMessageHistoryThreads.Info?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
@@ -55,17 +95,62 @@ public final class EngineChatList {
             hasFailed: Bool,
             isContact: Bool
         ) {
+            self.id = id
             self.index = index
             self.messages = messages
             self.readCounters = readCounters
             self.isMuted = isMuted
             self.draft = draft
+            self.threadInfo = threadInfo
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
             self.hasFailed = hasFailed
             self.isContact = isContact
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.messages != rhs.messages {
+                return false
+            }
+            if lhs.readCounters != rhs.readCounters {
+                return false
+            }
+            if lhs.isMuted != rhs.isMuted {
+                return false
+            }
+            if lhs.draft != rhs.draft {
+                return false
+            }
+            if lhs.threadInfo != rhs.threadInfo {
+                return false
+            }
+            if lhs.renderedPeer != rhs.renderedPeer {
+                return false
+            }
+            if lhs.presence != rhs.presence {
+                return false
+            }
+            if lhs.hasUnseenMentions != rhs.hasUnseenMentions {
+                return false
+            }
+            if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
+                return false
+            }
+            if lhs.hasFailed != rhs.hasFailed {
+                return false
+            }
+            if lhs.isContact != rhs.isContact {
+                return false
+            }
+            return true
         }
     }
 
@@ -127,9 +212,9 @@ public final class EngineChatList {
         }
     }
 
-    public final class AdditionalItem {
-        public final class PromoInfo {
-            public enum Content {
+    public final class AdditionalItem: Equatable {
+        public final class PromoInfo: Equatable {
+            public enum Content: Equatable {
                 case proxy
                 case psa(type: String, message: String?)
             }
@@ -138,6 +223,14 @@ public final class EngineChatList {
 
             public init(content: Content) {
                 self.content = content
+            }
+            
+            public static func ==(lhs: PromoInfo, rhs: PromoInfo) -> Bool {
+                if lhs.content != rhs.content {
+                    return false
+                }
+                
+                return true
             }
         }
 
@@ -148,6 +241,17 @@ public final class EngineChatList {
             self.item = item
             self.promoInfo = promoInfo
         }
+        
+        public static func ==(lhs: AdditionalItem, rhs: AdditionalItem) -> Bool {
+            if lhs.item != rhs.item {
+                return false
+            }
+            if lhs.promoInfo != rhs.promoInfo {
+                return false
+            }
+            
+            return true
+        }
     }
 
     public let items: [Item]
@@ -157,7 +261,7 @@ public final class EngineChatList {
     public let hasLater: Bool
     public let isLoading: Bool
 
-    init(
+    public init(
         items: [Item],
         groupItems: [GroupItem],
         additionalItems: [AdditionalItem],
@@ -171,6 +275,29 @@ public final class EngineChatList {
         self.hasEarlier = hasEarlier
         self.hasLater = hasLater
         self.isLoading = isLoading
+    }
+    
+    public static func ==(lhs: EngineChatList, rhs: EngineChatList) -> Bool {
+        if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.groupItems != rhs.groupItems {
+            return false
+        }
+        if lhs.additionalItems != rhs.additionalItems {
+            return false
+        }
+        if lhs.hasEarlier != rhs.hasEarlier {
+            return false
+        }
+        if lhs.hasLater != rhs.hasLater {
+            return false
+        }
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -199,17 +326,23 @@ public extension EngineChatList.RelativePosition {
     init(_ position: ChatListRelativePosition) {
         switch position {
         case let .earlier(than):
-            self = .earlier(than: than)
+            self = .earlier(than: than.flatMap(EngineChatList.Item.Index.chatList))
         case let .later(than):
-            self = .later(than: than)
+            self = .later(than: than.flatMap(EngineChatList.Item.Index.chatList))
         }
     }
 
-    func _asPosition() -> ChatListRelativePosition {
+    func _asPosition() -> ChatListRelativePosition? {
         switch self {
         case let .earlier(than):
+            guard case let .chatList(than) = than else {
+                return nil
+            }
             return .earlier(than: than)
         case let .later(than):
+            guard case let .chatList(than) = than else {
+                return nil
+            }
             return .later(than: than)
         }
     }
@@ -245,11 +378,13 @@ extension EngineChatList.Item {
             }
             
             self.init(
-                index: index,
+                id: .chatList(index.messageIndex.id.peerId),
+                index: .chatList(index),
                 messages: messages.map(EngineMessage.init),
                 readCounters: readState.flatMap(EnginePeerReadCounters.init),
                 isMuted: isRemovedFromTotalUnreadCount,
                 draft: draft,
+                threadInfo: nil,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,

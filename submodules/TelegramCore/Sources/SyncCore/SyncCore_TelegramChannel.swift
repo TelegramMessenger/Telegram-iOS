@@ -147,6 +147,7 @@ public struct TelegramChannelFlags: OptionSet {
     public static let copyProtectionEnabled = TelegramChannelFlags(rawValue: 1 << 8)
     public static let joinToSend = TelegramChannelFlags(rawValue: 1 << 9)
     public static let requestToJoin = TelegramChannelFlags(rawValue: 1 << 10)
+    public static let isForum = TelegramChannelFlags(rawValue: 1 << 11)
 }
 
 public final class TelegramChannel: Peer, Equatable {

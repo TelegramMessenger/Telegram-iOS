@@ -222,6 +222,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-207944868] = { return Api.FileHash.parse_fileHash($0) }
     dict[-11252123] = { return Api.Folder.parse_folder($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
+    dict[1885902651] = { return Api.ForumTopic.parse_forumTopic($0) }
     dict[-1107729093] = { return Api.Game.parse_game($0) }
     dict[-1297942941] = { return Api.GeoPoint.parse_geoPoint($0) }
     dict[286776671] = { return Api.GeoPoint.parse_geoPointEmpty($0) }
@@ -445,6 +446,9 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[455635795] = { return Api.MessageAction.parse_messageActionSecureValuesSentMe($0) }
     dict[-1434950843] = { return Api.MessageAction.parse_messageActionSetChatTheme($0) }
     dict[-1441072131] = { return Api.MessageAction.parse_messageActionSetMessagesTTL($0) }
+    dict[1873254060] = { return Api.MessageAction.parse_messageActionTopicCreate($0) }
+    dict[-2113245653] = { return Api.MessageAction.parse_messageActionTopicEditIcon($0) }
+    dict[-838130739] = { return Api.MessageAction.parse_messageActionTopicEditTitle($0) }
     dict[-1262252875] = { return Api.MessageAction.parse_messageActionWebViewDataSent($0) }
     dict[1205698681] = { return Api.MessageAction.parse_messageActionWebViewDataSentMe($0) }
     dict[546203849] = { return Api.MessageEntity.parse_inputMessageEntityMentionName($0) }
@@ -1003,6 +1007,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1634752813] = { return Api.messages.FavedStickers.parse_favedStickersNotModified($0) }
     dict[-1103615738] = { return Api.messages.FeaturedStickers.parse_featuredStickers($0) }
     dict[-958657434] = { return Api.messages.FeaturedStickers.parse_featuredStickersNotModified($0) }
+    dict[913709011] = { return Api.messages.ForumTopics.parse_forumTopics($0) }
     dict[-1963942446] = { return Api.messages.FoundStickerSets.parse_foundStickerSets($0) }
     dict[223655517] = { return Api.messages.FoundStickerSets.parse_foundStickerSetsNotModified($0) }
     dict[-1707344487] = { return Api.messages.HighScores.parse_highScores($0) }
@@ -1280,6 +1285,8 @@ public extension Api {
             case let _1 as Api.Folder:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.FolderPeer:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.ForumTopic:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Game:
                 _1.serialize(buffer, boxed)
@@ -1778,6 +1785,8 @@ public extension Api {
             case let _1 as Api.messages.FavedStickers:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FeaturedStickers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.messages.ForumTopics:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.messages.FoundStickerSets:
                 _1.serialize(buffer, boxed)
