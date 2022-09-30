@@ -2225,13 +2225,21 @@ public final class ContextControllerPutBackViewInfo {
     }
 }
 
+public enum ContextActionsHorizontalAlignment {
+    case `default`
+    case left
+    case center
+    case right
+}
+
 public protocol ContextExtractedContentSource: AnyObject {
     var centerVertically: Bool { get }
     var keepInPlace: Bool { get }
     var ignoreContentTouches: Bool { get }
     var blurBackground: Bool { get }
-    var centerActionsHorizontally: Bool { get }
     var shouldBeDismissed: Signal<Bool, NoError> { get }
+    
+    var actionsHorizontalAlignment: ContextActionsHorizontalAlignment { get }
     
     func takeView() -> ContextControllerTakeViewInfo?
     func putBack() -> ContextControllerPutBackViewInfo?
@@ -2242,8 +2250,8 @@ public extension ContextExtractedContentSource {
         return false
     }
     
-    var centerActionsHorizontally: Bool {
-        return false
+    var actionsHorizontalAlignment: ContextActionsHorizontalAlignment {
+        return .default
     }
 
     var shouldBeDismissed: Signal<Bool, NoError> {

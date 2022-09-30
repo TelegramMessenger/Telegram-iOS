@@ -647,14 +647,14 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
         }
         
         let keepInPlace: Bool
-        let centerActionsHorizontally: Bool
+        let actionsHorizontalAlignment: ContextActionsHorizontalAlignment
         switch self.source {
         case .location, .reference:
             keepInPlace = true
-            centerActionsHorizontally = false
+            actionsHorizontalAlignment = .default
         case let .extracted(source):
             keepInPlace = source.keepInPlace
-            centerActionsHorizontally = source.centerActionsHorizontally
+            actionsHorizontalAlignment = source.actionsHorizontalAlignment
         }
         
         var defaultScrollY: CGFloat = 0.0
@@ -769,7 +769,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if let reactionContextNode = self.reactionContextNode {
                 additionalVisibleOffsetY += reactionContextNode.visibleExtensionDistance
             }
-            if centerActionsHorizontally {
+            if case .center = actionsHorizontalAlignment {
                 actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
                 if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
                     actionsFrame.origin.x = layout.size.width - actionsEdgeInset - actionsFrame.width
@@ -780,20 +780,24 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             } else {
                 if case .location = self.source {
                     actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.minX + actionsSideInset - 4.0
-                } else if contentRect.midX < layout.size.width / 2.0 {
-                    actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.minX + actionsSideInset - 4.0
+                } else if case .right = actionsHorizontalAlignment {
+                    actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.maxX - actionsSideInset - actionsSize.width - 1.0
                 } else {
-                    switch self.source {
-                    case .location, .reference:
-                        actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
-                        if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
-                            actionsFrame.origin.x = layout.size.width - actionsEdgeInset - actionsFrame.width
+                    if contentRect.midX < layout.size.width / 2.0 {
+                        actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.minX + actionsSideInset - 4.0
+                    } else {
+                        switch self.source {
+                        case .location, .reference:
+                            actionsFrame.origin.x = floor(contentParentGlobalFrame.minX + contentRect.midX - actionsFrame.width / 2.0)
+                            if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
+                                actionsFrame.origin.x = layout.size.width - actionsEdgeInset - actionsFrame.width
+                            }
+                            if actionsFrame.minX < actionsEdgeInset {
+                                actionsFrame.origin.x = actionsEdgeInset
+                            }
+                        case .extracted:
+                            actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.maxX - actionsSideInset - actionsSize.width - 1.0
                         }
-                        if actionsFrame.minX < actionsEdgeInset {
-                            actionsFrame.origin.x = actionsEdgeInset
-                        }
-                    case .extracted:
-                        actionsFrame.origin.x = contentParentGlobalFrame.minX + contentRect.maxX - actionsSideInset - actionsSize.width - 1.0
                     }
                 }
                 if actionsFrame.maxX > layout.size.width - actionsEdgeInset {
@@ -900,7 +904,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             let actionsSize = self.actionsStackNode.bounds.size
             
             var actionsPositionDeltaXDistance: CGFloat = 0.0
-            if centerActionsHorizontally {
+            if case .center = actionsHorizontalAlignment {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
             
@@ -1116,7 +1120,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             let actionsSize = self.actionsStackNode.bounds.size
             
             var actionsPositionDeltaXDistance: CGFloat = 0.0
-            if centerActionsHorizontally {
+            if case .center = actionsHorizontalAlignment {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
             let actionsPositionDeltaYDistance = -animationInContentDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
