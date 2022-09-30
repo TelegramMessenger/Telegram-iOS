@@ -80,6 +80,7 @@ final class ChatTextInputActionButtonsNode: ASDisplayNode {
             }
         }
         
+        self.micButton.layer.allowsGroupOpacity = true
         self.view.addSubview(self.micButton)
             
         self.addSubnode(self.sendContainerNode)
