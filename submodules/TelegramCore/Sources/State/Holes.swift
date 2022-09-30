@@ -735,6 +735,12 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
                 return updated
             })
             
+            for (threadMessageId, data) in fetchedChats.threadInfos {
+                if let entry = CodableEntry(data) {
+                    transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
+                }
+            }
+            
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: fetchedChats.peerPresences)
             transaction.updateCurrentPeerNotificationSettings(fetchedChats.notificationSettings)
             let _ = transaction.addMessages(fetchedChats.storeMessages, location: .UpperHistoryBlock)

@@ -336,7 +336,7 @@ enum ReplyThreadSubject {
     case groupMessage(MessageId)
 }
 
-func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThreadSubject, atMessageId: MessageId?) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
+func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThreadSubject, atMessageId: MessageId?, preload: Bool) -> Signal<ReplyThreadInfo, FetchChannelReplyThreadMessageError> {
     let message: Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError>
     switch subject {
     case .channelPost(let messageId), .groupMessage(let messageId):
@@ -380,42 +380,52 @@ func fetchAndPreloadReplyThreadInfo(context: AccountContext, subject: ReplyThrea
             ))
         }
         
-        let preloadSignal = preloadedChatHistoryViewForLocation(
-            input,
-            context: context,
-            chatLocation: .replyThread(message: replyThreadMessage),
-            subject: nil,
-            chatLocationContextHolder: chatLocationContextHolder,
-            fixedCombinedReadStates: nil,
-            tagMask: nil,
-            additionalData: []
-        )
-        return preloadSignal
-        |> map { historyView -> Bool? in
-            switch historyView {
-            case .Loading:
-                return nil
-            case let .HistoryView(view, _, _, _, _, _, _):
-                return view.entries.isEmpty
+        if preload {
+            let preloadSignal = preloadedChatHistoryViewForLocation(
+                input,
+                context: context,
+                chatLocation: .replyThread(message: replyThreadMessage),
+                subject: nil,
+                chatLocationContextHolder: chatLocationContextHolder,
+                fixedCombinedReadStates: nil,
+                tagMask: nil,
+                additionalData: []
+            )
+            return preloadSignal
+            |> map { historyView -> Bool? in
+                switch historyView {
+                case .Loading:
+                    return nil
+                case let .HistoryView(view, _, _, _, _, _, _):
+                    return view.entries.isEmpty
+                }
             }
-        }
-        |> mapToSignal { value -> Signal<Bool, NoError> in
-            if let value = value {
-                return .single(value)
-            } else {
-                return .complete()
+            |> mapToSignal { value -> Signal<Bool, NoError> in
+                if let value = value {
+                    return .single(value)
+                } else {
+                    return .complete()
+                }
             }
-        }
-        |> take(1)
-        |> map { isEmpty -> ReplyThreadInfo in
-            return ReplyThreadInfo(
+            |> take(1)
+            |> map { isEmpty -> ReplyThreadInfo in
+                return ReplyThreadInfo(
+                    message: replyThreadMessage,
+                    isChannelPost: replyThreadMessage.isChannelPost,
+                    isEmpty: isEmpty,
+                    scrollToLowerBoundMessage: scrollToLowerBoundMessage,
+                    contextHolder: chatLocationContextHolder
+                )
+            }
+            |> castError(FetchChannelReplyThreadMessageError.self)
+        } else {
+            return .single(ReplyThreadInfo(
                 message: replyThreadMessage,
                 isChannelPost: replyThreadMessage.isChannelPost,
-                isEmpty: isEmpty,
+                isEmpty: false,
                 scrollToLowerBoundMessage: scrollToLowerBoundMessage,
                 contextHolder: chatLocationContextHolder
-            )
+            ))
         }
-        |> castError(FetchChannelReplyThreadMessageError.self)
     }
 }

@@ -110,6 +110,26 @@ class MessageHistoryThreadIndexTable: Table {
         return self.lowerBound(peerId: peerId).successor
     }
     
+    func get(peerId: PeerId, threadId: Int64) -> CodableEntry? {
+        if let updated = self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] {
+            return updated
+        } else {
+            if let itemIndex = self.reverseIndexTable.get(peerId: peerId, threadId: threadId) {
+                if let value = self.valueBox.get(self.table, key: self.key(peerId: itemIndex.id.peerId, timestamp: itemIndex.timestamp, threadId: threadId, namespace: itemIndex.id.namespace, id: itemIndex.id.id, key: self.sharedKey)) {
+                    if value.length != 0 {
+                        return CodableEntry(data: value.makeData())
+                    } else {
+                        return nil
+                    }
+                } else {
+                    return nil
+                }
+            } else {
+                return nil
+            }
+        }
+    }
+    
     func set(peerId: PeerId, threadId: Int64, info: CodableEntry) {
         self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] = info
     }

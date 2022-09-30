@@ -129,3 +129,51 @@ public final class MessageHistoryThreadIndexView: PostboxView {
         self.items = items
     }
 }
+
+final class MutableMessageHistoryThreadInfoView: MutablePostboxView {
+    private let peerId: PeerId
+    private let threadId: Int64
+    
+    fileprivate var info: CodableEntry?
+    
+    init(postbox: PostboxImpl, peerId: PeerId, threadId: Int64) {
+        self.peerId = peerId
+        self.threadId = threadId
+        
+        self.reload(postbox: postbox)
+    }
+    
+    private func reload(postbox: PostboxImpl) {
+        self.info = postbox.messageHistoryThreadIndexTable.get(peerId: self.peerId, threadId: self.threadId)
+    }
+    
+    func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
+        var updated = false
+        
+        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) {
+            let info = postbox.messageHistoryThreadIndexTable.get(peerId: self.peerId, threadId: self.threadId)
+            if self.info != info {
+                self.info = info
+                updated = true
+            }
+        }
+        
+        return updated
+    }
+
+    func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
+        return false
+    }
+    
+    func immutableView() -> PostboxView {
+        return MessageHistoryThreadInfoView(self)
+    }
+}
+
+public final class MessageHistoryThreadInfoView: PostboxView {
+    public let info: CodableEntry?
+    
+    init(_ view: MutableMessageHistoryThreadInfoView) {
+        self.info = view.info
+    }
+}
