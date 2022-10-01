@@ -10,8 +10,12 @@ import AccountContext
 import TelegramStringFormatting
 import ChatPresentationInterfaceState
 
+import PtgForeignAgentNoticeRemoval
+
 final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private let webpageDisposable = MetaDisposable()
+    
+    private let context: AccountContext
     
     private(set) var webpage: TelegramMediaWebpage
     private(set) var url: String
@@ -31,6 +35,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
     private var validLayout: (size: CGSize, inset: CGFloat, interfaceState: ChatPresentationInterfaceState)?
     
     init(context: AccountContext, url: String, webpage: TelegramMediaWebpage, theme: PresentationTheme, strings: PresentationStrings) {
+        self.context = context
         self.url = url
         self.webpage = webpage
         self.theme = theme
@@ -127,7 +132,7 @@ final class WebpagePreviewAccessoryPanelNode: AccessoryPanelNode {
                 text = self.url
             case let .Loaded(content):
                 if let contentText = content.text {
-                    text = contentText
+                    text = self.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: contentText, mayRemoveWholeText: false) : contentText
                 } else {
                     if let file = content.file, let mediaKind = mediaContentKind(EngineMedia(file)) {
                         if content.type == "telegram_background" {

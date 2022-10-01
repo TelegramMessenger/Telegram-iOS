@@ -137,7 +137,7 @@ final class ReplyAccessoryPanelNode: AccessoryPanelNode {
                             isMedia = true
                     }
 
-                    message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+                    message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message, inAssociatedPinnedMessageToo: true) : message
                     let (attributedText, _, isTextValue) = descriptionStringForMessage(contentSettings: context.currentContentSettings.with { $0 }, message: EngineMessage(message_), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, accountPeerId: context.account.peerId)
                     text = attributedText.string
                     isText = isTextValue

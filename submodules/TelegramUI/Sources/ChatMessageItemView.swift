@@ -214,7 +214,7 @@ final class ChatMessageAccessibilityData {
                 
                 var text = messageText
                 
-                loop: for media in message.media {
+                loop: for media in message_.media {
                     if let _ = media as? TelegramMediaImage {
                         if isIncoming {
                             if announceIncomingAuthors, let authorName = authorName {
