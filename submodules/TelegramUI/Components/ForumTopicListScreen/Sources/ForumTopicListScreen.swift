@@ -407,7 +407,6 @@ public final class ForumTopicListScreen: ViewController {
         }
         
         func createPressed() {
-            self.forumChannelContext.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
         }
         
         private func update(transition: Transition) {

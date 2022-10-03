@@ -225,7 +225,7 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
 }
 
 public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, navigationController: NavigationController) -> Signal<Never, NoError> {
-    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil)
+    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
         guard let context = context, let navigationController = navigationController else {

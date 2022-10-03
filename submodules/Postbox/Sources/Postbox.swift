@@ -1164,6 +1164,11 @@ public final class Transaction {
         return self.postbox!.messageHistoryThreadIndexTable.getAll(peerId: peerId)
     }
     
+    public func getMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64) -> CodableEntry? {
+        assert(!self.disposed)
+        return self.postbox!.messageHistoryThreadIndexTable.get(peerId: peerId, threadId: threadId)
+    }
+    
     public func setMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64, info: CodableEntry) {
         assert(!self.disposed)
         self.postbox!.messageHistoryThreadIndexTable.set(peerId: peerId, threadId: threadId, info: info)

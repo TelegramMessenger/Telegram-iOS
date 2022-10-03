@@ -1265,7 +1265,7 @@ public final class ContactListNode: ASDisplayNode {
                         return context.engine.data.get(EngineDataMap(
                             view.entries.compactMap { entry -> EnginePeer.Id? in
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _):
                                     if let peer = renderedPeer.peer {
                                         if let channel = peer as? TelegramChannel, case .group = channel.info {
                                             return peer.id
@@ -1281,7 +1281,7 @@ public final class ContactListNode: ASDisplayNode {
                             var peers: [(EnginePeer, Int32)] = []
                             for entry in view.entries {
                                 switch entry {
-                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _):
+                                case let .MessageEntry(_, _, _, _, _, renderedPeer, _, _, _, _, _):
                                     if let peer = renderedPeer.peer {
                                         if peer is TelegramGroup {
                                             peers.append((EnginePeer(peer), 0))

@@ -2983,6 +2983,44 @@ public extension Api.functions.contacts {
                     })
                 }
 }
+public extension Api.functions.feed {
+                static func getFeed(flags: Int32, filterId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.FeedMessages>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(2121717715)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {offsetPosition!.serialize(buffer, true)}
+                    serializeInt32(addOffset, buffer: buffer, boxed: false)
+                    serializeInt32(limit, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 1) != 0 {maxPosition!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {minPosition!.serialize(buffer, true)}
+                    serializeInt64(hash, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "feed.getFeed", parameters: [("flags", String(describing: flags)), ("filterId", String(describing: filterId)), ("offsetPosition", String(describing: offsetPosition)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxPosition", String(describing: maxPosition)), ("minPosition", String(describing: minPosition)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.feed.FeedMessages? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.feed.FeedMessages?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.feed.FeedMessages
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.feed {
+                static func readFeed(filterId: Int32, maxPosition: Api.FeedPosition) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1271479809)
+                    serializeInt32(filterId, buffer: buffer, boxed: false)
+                    maxPosition.serialize(buffer, true)
+                    return (FunctionDescription(name: "feed.readFeed", parameters: [("filterId", String(describing: filterId)), ("maxPosition", String(describing: maxPosition))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
 public extension Api.functions.folders {
                 static func deleteFolder(folderId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()

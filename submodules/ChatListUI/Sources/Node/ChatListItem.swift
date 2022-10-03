@@ -49,12 +49,12 @@ public enum ChatListItemContent {
         }
     }
 
-    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThreads.Info?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool)
+    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThread.Info?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumThreadTitle: String?)
     case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 return .peer(id: peer.peerId)
             case .groupReference:
                 return nil
@@ -158,7 +158,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     
     public func selected(listView: ListView) {
         switch self.content {
-            case let .peer(messages, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _):
+            case let .peer(messages, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _):
                 if let message = messages.last, let peer = peer.peer {
                     var threadId: Int64?
                     if case let .forum(_, threadIdValue, _, _) = self.index {
@@ -539,7 +539,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(Int32(allCount)))"
                     }
                     return result
-                case let .peer(_, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _):
+                case let .peer(_, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _, _):
                     guard let chatMainPeer = peer.chatMainPeer else {
                         return nil
                     }
@@ -599,7 +599,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
-                case let .peer(messages, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _):
+                case let .peer(messages, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _, _):
                     if let message = messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
@@ -792,7 +792,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         var displayAsMessage = false
         var enablePreview = true
         switch item.content {
-            case let .peer(messages, peerValue, _, _, _, _, _, _, _, _, _, _, displayAsMessageValue, _):
+            case let .peer(messages, peerValue, _, _, _, _, _, _, _, _, _, _, displayAsMessageValue, _, _):
                 displayAsMessage = displayAsMessageValue
                 if displayAsMessage, case let .user(author) = messages.last?.author {
                     peer = .user(author)
@@ -819,7 +819,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             } else if peer.isDeleted {
                 overrideImage = .deletedIcon
             }
-            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
+            var isForum = false
+            if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                isForum = true
+            }
+            self.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoads, displayDimensions: CGSize(width: 60.0, height: 60.0))
             
             if peer.isPremium && peer.id != item.context.account.peerId {
                 let context = item.context
@@ -958,7 +962,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, item.editing else {
             return
         }
-        if case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _) = item.content {
+        if case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _) = item.content {
             if promoInfo == nil, let mainPeer = peer.peer {
                 item.interaction.togglePeerSelected(mainPeer)
             }
@@ -1007,12 +1011,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let promoInfo: ChatListNodeEntryPromoInfo?
             let displayAsMessage: Bool
             let hasFailedMessages: Bool
-            var threadInfo: EngineMessageHistoryThreads.Info?
+            var threadInfo: EngineMessageHistoryThread.Info?
+            var forumThreadTitle: String?
             
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _):
+                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumThreadTitleValue):
                     messages = messagesValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -1033,6 +1038,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     threadInfo = threadInfoValue
                     hasUnseenMentions = hasUnseenMentionsValue
                     hasUnseenReactions = hasUnseenReactionsValue
+                    forumThreadTitle = forumThreadTitleValue
                     
                     switch peerValue.peer {
                     case .user, .secretChat:
@@ -1144,7 +1150,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
             enum ContentData {
-                case chat(itemPeer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThreads.Info?, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
+                case chat(itemPeer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThread.Info?, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
                 case group(peers: [EngineChatList.GroupItem.Item])
             }
             
@@ -1230,6 +1236,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                             }
                         }
+                    }
+                
+                    if let forumThreadTitle = forumThreadTitle, let peerTextValue = peerText {
+                        peerText = "\(peerTextValue) → \(forumThreadTitle)"
                     }
                     
                     let messageText: String
@@ -1451,7 +1461,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
             case let .groupReference(_, _, message, _, _):
                 topIndex = message?.index
-            case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 topIndex = messages.first?.index
             }
             if let topIndex {
@@ -1588,7 +1598,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !isPeerGroup && !isAccountPeer {
                 if displayAsMessage {
                     switch item.content {
-                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _):
+                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                         if let peer = messages.last?.author {
                             if case let .user(user) = peer, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
@@ -1705,7 +1715,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let peerRevealOptions: [ItemListRevealOption]
             let peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
-                case let .peer(_, renderedPeer, _, _, _, presence, _, _, _, _, _, _, displayAsMessage, _):
+                case let .peer(_, renderedPeer, _, _, _, presence, _, _, _, _, _, _, displayAsMessage, _, _):
                     if !displayAsMessage {
                         if case let .user(peer) = renderedPeer.chatMainPeer, let presence = presence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
                             let updatedPresence = EnginePeer.Presence(status: presence.status, lastActivity: 0)
@@ -2547,7 +2557,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 close = false
             case RevealOptionKey.delete.rawValue:
                 var joined = false
-                if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+                if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
                     for media in message.media {
                         if let action = media as? TelegramMediaAction, action.action == .peerJoined {
                             joined = true
@@ -2583,7 +2593,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.toggleArchivedFolderHiddenByDefault()
                 close = false
             case RevealOptionKey.hidePsa.rawValue:
-                if let item = self.item, case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _) = item.content {
+                if let item = self.item, case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content {
                     item.interaction.hidePsa(peer.peerId)
                 }
                 close = false

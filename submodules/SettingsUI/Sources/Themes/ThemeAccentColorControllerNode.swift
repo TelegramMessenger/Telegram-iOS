@@ -902,7 +902,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     promoInfo: nil,
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
-                    hasFailedMessages: false
+                    hasFailedMessages: false,
+                    forumThreadTitle: nil
                 ),
                 editing: false,
                 hasActiveRevealControls: false,

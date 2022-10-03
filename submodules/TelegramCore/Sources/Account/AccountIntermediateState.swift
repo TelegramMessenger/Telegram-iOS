@@ -117,6 +117,7 @@ enum AccountStateMutationOperation {
     case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
     case UpdateConfig
     case UpdateExtendedMedia(MessageId, Api.MessageExtendedMedia)
+    case ResetForumTopic(topicId: MessageId, data: MessageHistoryThreadData, pts: Int32)
 }
 
 struct HoleFromPreviousState {
@@ -150,6 +151,8 @@ struct AccountMutableState {
     var readInboxMaxIds: [PeerId: MessageId]
     var namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]]
     var updatedOutgoingUniqueMessageIds: [Int64: Int32]
+    
+    var resetForumTopicLists: [PeerId: [MessageHistoryThreadData]] = [:]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
     var displayAlerts: [(text: String, isDropAuth: Bool)] = []
@@ -228,6 +231,8 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds.merge(other.updatedOutgoingUniqueMessageIds, uniquingKeysWith: { lhs, _ in lhs })
         self.displayAlerts.append(contentsOf: other.displayAlerts)
         self.dismissBotWebViews.append(contentsOf: other.dismissBotWebViews)
+        
+        self.resetForumTopicLists.merge(other.resetForumTopicLists, uniquingKeysWith: { lhs, _ in lhs })
     }
     
     mutating func addPreCachedResource(_ resource: MediaResource, data: Data) {
@@ -530,7 +535,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

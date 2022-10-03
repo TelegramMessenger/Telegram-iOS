@@ -4,6 +4,7 @@ public enum Api {
     public enum auth {}
     public enum channels {}
     public enum contacts {}
+    public enum feed {}
     public enum help {}
     public enum messages {}
     public enum payments {}
@@ -21,6 +22,7 @@ public enum Api {
         public enum bots {}
         public enum channels {}
         public enum contacts {}
+        public enum feed {}
         public enum folders {}
         public enum help {}
         public enum langpack {}
@@ -219,6 +221,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[179611673] = { return Api.ExportedChatInvite.parse_chatInviteExported($0) }
     dict[-317687113] = { return Api.ExportedChatInvite.parse_chatInvitePublicJoinRequests($0) }
     dict[1571494644] = { return Api.ExportedMessageLink.parse_exportedMessageLink($0) }
+    dict[1348066419] = { return Api.FeedPosition.parse_feedPosition($0) }
     dict[-207944868] = { return Api.FileHash.parse_fileHash($0) }
     dict[-11252123] = { return Api.Folder.parse_folder($0) }
     dict[-373643672] = { return Api.FolderPeer.parse_folderPeer($0) }
@@ -838,6 +841,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[-1218471511] = { return Api.Update.parse_updateReadChannelOutbox($0) }
     dict[-78886548] = { return Api.Update.parse_updateReadFeaturedEmojiStickers($0) }
     dict[1461528386] = { return Api.Update.parse_updateReadFeaturedStickers($0) }
+    dict[1951948721] = { return Api.Update.parse_updateReadFeed($0) }
     dict[-1667805217] = { return Api.Update.parse_updateReadHistoryInbox($0) }
     dict[791617983] = { return Api.Update.parse_updateReadHistoryOutbox($0) }
     dict[1757493555] = { return Api.Update.parse_updateReadMessagesContents($0) }
@@ -957,6 +961,8 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[1891070632] = { return Api.contacts.TopPeers.parse_topPeers($0) }
     dict[-1255369827] = { return Api.contacts.TopPeers.parse_topPeersDisabled($0) }
     dict[-567906571] = { return Api.contacts.TopPeers.parse_topPeersNotModified($0) }
+    dict[-587770695] = { return Api.feed.FeedMessages.parse_feedMessages($0) }
+    dict[-619039485] = { return Api.feed.FeedMessages.parse_feedMessagesNotModified($0) }
     dict[-860107216] = { return Api.help.AppUpdate.parse_appUpdate($0) }
     dict[-1000708810] = { return Api.help.AppUpdate.parse_noAppUpdate($0) }
     dict[-2016381538] = { return Api.help.CountriesList.parse_countriesList($0) }
@@ -1280,6 +1286,8 @@ public extension Api {
             case let _1 as Api.ExportedChatInvite:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.ExportedMessageLink:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.FeedPosition:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.FileHash:
                 _1.serialize(buffer, boxed)
@@ -1718,6 +1726,8 @@ public extension Api {
             case let _1 as Api.contacts.ResolvedPeer:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.contacts.TopPeers:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.feed.FeedMessages:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.help.AppUpdate:
                 _1.serialize(buffer, boxed)

@@ -23,6 +23,7 @@ public func avatarPlaceholderFont(size: CGFloat) -> UIFont {
 public enum AvatarNodeClipStyle {
     case none
     case round
+    case roundedRect
 }
 
 private class AvatarNodeParameters: NSObject {
@@ -330,7 +331,7 @@ public final class AvatarNode: ASDisplayNode {
             
             let account = account ?? genericContext.account
             
-            if let peer = peer, let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, round: clipStyle == .round, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
+            if let peer = peer, let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, clipStyle: clipStyle, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.contentReady)
@@ -431,6 +432,10 @@ public final class AvatarNode: ASDisplayNode {
                 context.beginPath()
                 context.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height:
                     bounds.size.height))
+                context.clip()
+            } else if case .roundedRect = parameters.clipStyle {
+                context.beginPath()
+                context.addPath(UIBezierPath(roundedRect: CGRect(x: 0.0, y: 0.0, width: bounds.size.width, height: bounds.size.height), cornerRadius: floor(bounds.size.width * 0.25)).cgPath)
                 context.clip()
             }
             

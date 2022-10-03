@@ -3,8 +3,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramApi
 
-public final class EngineMessageHistoryThreads {
-    public final class Info: Equatable, Codable {
+public extension EngineMessageHistoryThread {
+    final class Info: Equatable, Codable {
         private enum CodingKeys: String, CodingKey {
             case title
             case icon
@@ -43,6 +43,18 @@ public final class EngineMessageHistoryThreads {
             return true
         }
     }
+}
+
+public struct MessageHistoryThreadData: Codable {
+    public var info: EngineMessageHistoryThread.Info
+    public var incomingUnreadCount: Int32
+    public var maxIncomingReadId: Int32
+    public var maxKnownMessageId: Int32
+    public var maxOutgoingReadId: Int32
+}
+
+public enum CreateForumChannelTopicError {
+    case generic
 }
 
 func _internal_setChannelForumMode(account: Account, peerId: PeerId, isForum: Bool) -> Signal<Never, NoError> {
@@ -130,8 +142,18 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, _, title, iconEmojiId, _, _, _, _):
-                            guard let info = CodableEntry(EngineMessageHistoryThreads.Info(title: title, icon: iconEmojiId)) else {
+                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount):
+                            let data = MessageHistoryThreadData(
+                                info: EngineMessageHistoryThread.Info(
+                                    title: title,
+                                    icon: iconEmojiId
+                                ),
+                                incomingUnreadCount: unreadCount,
+                                maxIncomingReadId: readInboxMaxId,
+                                maxKnownMessageId: topMessage,
+                                maxOutgoingReadId: readOutboxMaxId
+                            )
+                            guard let info = CodableEntry(data) else {
                                 continue
                             }
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: info)
@@ -161,7 +183,7 @@ public final class ForumChannelTopics {
         }
         
         private let loadMoreDisposable = MetaDisposable()
-        private let createTopicDisposable = MetaDisposable()
+        private let updateDisposable = MetaDisposable()
         
         init(queue: Queue, account: Account, peerId: PeerId) {
             self.queue = queue
@@ -177,30 +199,32 @@ public final class ForumChannelTopics {
                     preconditionFailure()
                 }
                 return State(items: view.items.compactMap { item -> ForumChannelTopics.Item? in
-                    guard let info = item.info.get(EngineMessageHistoryThreads.Info.self) else {
+                    guard let data = item.info.get(MessageHistoryThreadData.self) else {
                         return nil
                     }
                     return ForumChannelTopics.Item(
                         id: item.id,
-                        info: info,
+                        info: data.info,
                         index: item.index,
                         topMessage: item.topMessage.flatMap(EngineMessage.init)
                     )
                 })
             })
+            
+            self.updateDisposable.set(account.viewTracker.polledChannel(peerId: peerId).start())
         }
         
         deinit {
             assert(self.queue.isCurrent())
             
             self.loadMoreDisposable.dispose()
-            self.createTopicDisposable.dispose()
+            self.updateDisposable.dispose()
         }
         
-        func createTopic(title: String) {
+        func createTopic(title: String) -> Signal<Int64, CreateForumChannelTopicError> {
             let peerId = self.peerId
             let account = self.account
-            let signal: Signal<Int32?, NoError> = self.account.postbox.transaction { transaction -> (Api.InputChannel?, Int64?) in
+            return self.account.postbox.transaction { transaction -> (Api.InputChannel?, Int64?) in
                 var fileId: Int64? = nil
                 
                 var filteredFiles: [TelegramMediaFile] = []
@@ -223,9 +247,10 @@ public final class ForumChannelTopics {
                 
                 return (transaction.getPeer(peerId).flatMap(apiInputChannel), fileId)
             }
-            |> mapToSignal { inputChannel, fileId -> Signal<Int32?, NoError> in
+            |> castError(CreateForumChannelTopicError.self)
+            |> mapToSignal { inputChannel, fileId -> Signal<Int64, CreateForumChannelTopicError> in
                 guard let inputChannel = inputChannel else {
-                    return .single(nil)
+                    return .fail(.generic)
                 }
                 var flags: Int32 = 0
                 if fileId != nil {
@@ -239,37 +264,46 @@ public final class ForumChannelTopics {
                     randomId: Int64.random(in: Int64.min ..< Int64.max),
                     sendAs: nil
                 ))
-                |> map(Optional.init)
-                |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                    return .single(nil)
+                |> mapError { _ -> CreateForumChannelTopicError in
+                    return .generic
                 }
-                |> mapToSignal { result -> Signal<Int32?, NoError> in
-                    guard let result = result else {
-                        return .single(nil)
-                    }
+                |> mapToSignal { result -> Signal<Int64, CreateForumChannelTopicError> in
                     account.stateManager.addUpdates(result)
-                    return .single(nil)
+                    
+                    var topicId: Int64?
+                    topicId = nil
+                    for update in result.allUpdates {
+                        switch update {
+                        case let .updateNewChannelMessage(message, _, _):
+                            if let message = StoreMessage(apiMessage: message) {
+                                if case let .Id(id) = message.id {
+                                    topicId = Int64(id.id)
+                                }
+                            }
+                        default:
+                            break
+                        }
+                    }
+                    
+                    if let topicId = topicId {
+                        return .single(topicId)
+                    } else {
+                        return .fail(.generic)
+                    }
                 }
             }
-            
-            self.createTopicDisposable.set((signal |> deliverOnMainQueue).start(next: { [weak self] _ in
-                guard let strongSelf = self else {
-                    return
-                }
-                let _ = _internal_loadMessageHistoryThreads(account: strongSelf.account, peerId: strongSelf.peerId).start()
-            }))
         }
     }
     
     public struct Item: Equatable {
         public var id: Int64
-        public var info: EngineMessageHistoryThreads.Info
+        public var info: EngineMessageHistoryThread.Info
         public var index: MessageIndex
         public var topMessage: EngineMessage?
         
         init(
             id: Int64,
-            info: EngineMessageHistoryThreads.Info,
+            info: EngineMessageHistoryThread.Info,
             index: MessageIndex,
             topMessage: EngineMessage?
         ) {
@@ -311,9 +345,19 @@ public final class ForumChannelTopics {
         })
     }
     
-    public func createTopic(title: String) {
-        self.impl.with { impl in
-            impl.createTopic(title: title)
+    public func createTopic(title: String) -> Signal<Int64, CreateForumChannelTopicError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.impl.with { impl in
+                disposable.set(impl.createTopic(title: title).start(next: { value in
+                    subscriber.putNext(value)
+                }, error: { error in
+                    subscriber.putError(error)
+                }, completed: {
+                    subscriber.putCompletion()
+                }))
+            }
+            return disposable
         }
     }
 }
