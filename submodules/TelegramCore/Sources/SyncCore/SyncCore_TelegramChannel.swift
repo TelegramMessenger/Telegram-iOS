@@ -165,7 +165,8 @@ public final class TelegramChannel: Peer, Equatable {
     public let adminRights: TelegramChatAdminRights?
     public let bannedRights: TelegramChatBannedRights?
     public let defaultBannedRights: TelegramChatBannedRights?
-    
+    public let usernames: [TelegramPeerUsername]?
+
     public var indexName: PeerIndexNameRepresentation {
         return .title(title: self.title, addressName: self.username)
     }
@@ -176,8 +177,7 @@ public final class TelegramChannel: Peer, Equatable {
     public let notificationSettingsPeerId: PeerId? = nil
     
     public var timeoutAttribute: UInt32? { return nil }
-    
-    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?) {
+    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, title: String, username: String?, photo: [TelegramMediaImageRepresentation], creationDate: Int32, version: Int32, participationStatus: TelegramChannelParticipationStatus, info: TelegramChannelInfo, flags: TelegramChannelFlags, restrictionInfo: PeerAccessRestrictionInfo?, adminRights: TelegramChatAdminRights?, bannedRights: TelegramChatBannedRights?, defaultBannedRights: TelegramChatBannedRights?, usernames: [TelegramPeerUsername]?) {
         self.id = id
         self.accessHash = accessHash
         self.title = title
@@ -192,6 +192,7 @@ public final class TelegramChannel: Peer, Equatable {
         self.adminRights = adminRights
         self.bannedRights = bannedRights
         self.defaultBannedRights = defaultBannedRights
+        self.usernames = usernames
     }
     
     public init(decoder: PostboxDecoder) {
@@ -219,6 +220,10 @@ public final class TelegramChannel: Peer, Equatable {
         self.adminRights = decoder.decodeObjectForKey("ar", decoder: { TelegramChatAdminRights(decoder: $0) }) as? TelegramChatAdminRights
         self.bannedRights = decoder.decodeObjectForKey("br", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
         self.defaultBannedRights = decoder.decodeObjectForKey("dbr", decoder: { TelegramChatBannedRights(decoder: $0) }) as? TelegramChatBannedRights
+        
+        self.usernames = try? decoder.decodeObjectArrayWithCustomDecoderForKey("un", decoder: {
+            TelegramPeerUsername(decoder: $0)
+        })
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -267,6 +272,12 @@ public final class TelegramChannel: Peer, Equatable {
         } else {
             encoder.encodeNil(forKey: "dbr")
         }
+        
+        if let usernames = self.usernames {
+            encoder.encodeObjectArray(usernames, forKey: "un")
+        } else {
+            encoder.encodeNil(forKey: "un")
+        }
     }
     
     public func isEqual(_ other: Peer) -> Bool {
@@ -301,19 +312,22 @@ public final class TelegramChannel: Peer, Equatable {
         if lhs.defaultBannedRights != rhs.defaultBannedRights {
             return false
         }
+        if lhs.usernames != rhs.usernames {
+            return false
+        }
 
         return true
     }
     
     public func withUpdatedAddressName(_ addressName: String?) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: addressName, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames)
     }
     
     public func withUpdatedDefaultBannedRights(_ defaultBannedRights: TelegramChatBannedRights?) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: defaultBannedRights)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: self.flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: defaultBannedRights, usernames: self.usernames)
     }
     
     public func withUpdatedFlags(_ flags: TelegramChannelFlags) -> TelegramChannel {
-        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights)
+        return TelegramChannel(id: self.id, accessHash: self.accessHash, title: self.title, username: self.username, photo: self.photo, creationDate: self.creationDate, version: self.version, participationStatus: self.participationStatus, info: self.info, flags: flags, restrictionInfo: self.restrictionInfo, adminRights: self.adminRights, bannedRights: self.bannedRights, defaultBannedRights: self.defaultBannedRights, usernames: self.usernames)
     }
 }

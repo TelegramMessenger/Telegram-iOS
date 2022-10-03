@@ -93,7 +93,7 @@ public enum GetThemeError {
 }
 
 public func getTheme(account: Account, slug: String) -> Signal<TelegramTheme, GetThemeError> {
-    return account.network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputThemeSlug(slug: slug), documentId: 0))
+    return account.network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputThemeSlug(slug: slug)))
     |> mapError { error -> GetThemeError in
         if error.errorDescription == "THEME_FORMAT_INVALID" {
             return .unsupported
@@ -118,7 +118,7 @@ private func checkThemeUpdated(network: Network, theme: TelegramTheme) -> Signal
     guard let documentId = id else {
         return .fail(.generic)
     }
-    return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash), documentId: documentId))
+    return network.request(Api.functions.account.getTheme(format: telegramThemeFormat, theme: .inputTheme(id: theme.id, accessHash: theme.accessHash)))
     |> mapError { _ -> GetThemeError in return .generic }
     |> map { theme -> ThemeUpdatedResult in
         return .updated(TelegramTheme(apiTheme: theme))

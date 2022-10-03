@@ -109,6 +109,47 @@ extension PeerEmojiStatus {
     }
 }
 
+
+public struct TelegramPeerUsername : PostboxCoding,Equatable {
+    public struct Flags: OptionSet {
+        public var rawValue: Int32
+        public init() {
+            self.rawValue = 0
+        }
+        public init(rawValue: Int32) {
+            self.rawValue = rawValue
+        }
+        public static let isEditable = Flags(rawValue: 1 << 0)
+    }
+
+    public let flags: Flags
+    public let value: String
+    
+    init(flags: Flags, value: String) {
+        self.flags = flags
+        self.value = value
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.flags = Flags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
+        self.value = decoder.decodeStringForKey("v", orElse: "")
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeInt32(self.flags.rawValue, forKey: "fl")
+        encoder.encodeString(self.value, forKey: "v")
+    }
+}
+
+extension TelegramPeerUsername {
+    init(api apiValue: Api.Username) {
+        switch apiValue {
+        case let .username(flags, username):
+            self.init(flags: .init(rawValue: flags), value: username)
+        }
+    }
+}
+
 public final class CachedUserData: CachedPeerData {
     public let about: String?
     public let botInfo: BotInfo?

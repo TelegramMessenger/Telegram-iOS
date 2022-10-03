@@ -71,6 +71,7 @@ public final class TelegramUser: Peer, Equatable {
     public let restrictionInfo: PeerAccessRestrictionInfo?
     public let flags: UserInfoFlags
     public let emojiStatus: PeerEmojiStatus?
+    public let usernames: [TelegramPeerUsername]?
     
     public var nameOrPhone: String {
         if let firstName = self.firstName {
@@ -127,7 +128,7 @@ public final class TelegramUser: Peer, Equatable {
         }
     }
     
-    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags, emojiStatus: PeerEmojiStatus?) {
+    public init(id: PeerId, accessHash: TelegramPeerAccessHash?, firstName: String?, lastName: String?, username: String?, phone: String?, photo: [TelegramMediaImageRepresentation], botInfo: BotUserInfo?, restrictionInfo: PeerAccessRestrictionInfo?, flags: UserInfoFlags, emojiStatus: PeerEmojiStatus?, usernames: [TelegramPeerUsername]?) {
         self.id = id
         self.accessHash = accessHash
         self.firstName = firstName
@@ -139,6 +140,7 @@ public final class TelegramUser: Peer, Equatable {
         self.restrictionInfo = restrictionInfo
         self.flags = flags
         self.emojiStatus = emojiStatus
+        self.usernames = usernames
     }
     
     public init(decoder: PostboxDecoder) {
@@ -175,6 +177,10 @@ public final class TelegramUser: Peer, Equatable {
         self.flags = UserInfoFlags(rawValue: decoder.decodeInt32ForKey("fl", orElse: 0))
         
         self.emojiStatus = decoder.decode(PeerEmojiStatus.self, forKey: "emjs")
+        
+        self.usernames = try? decoder.decodeObjectArrayWithCustomDecoderForKey("un", decoder: {
+            TelegramPeerUsername(decoder: $0)
+        })
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -226,6 +232,12 @@ public final class TelegramUser: Peer, Equatable {
         } else {
             encoder.encodeNil(forKey: "emjs")
         }
+        
+        if let usernames = self.usernames {
+            encoder.encodeObjectArray(usernames, forKey: "un")
+        } else {
+            encoder.encodeNil(forKey: "un")
+        }
     }
     
     public func isEqual(_ other: Peer) -> Bool {
@@ -275,27 +287,30 @@ public final class TelegramUser: Peer, Equatable {
         if lhs.emojiStatus != rhs.emojiStatus {
             return false
         }
+        if lhs.usernames != rhs.usernames {
+            return false
+        }
 
         return true
     }
     
     public func withUpdatedUsername(_ username:String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames)
     }
     
     public func withUpdatedNames(firstName: String?, lastName: String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: firstName, lastName: lastName, username: self.username, phone: self.phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames)
     }
     
     public func withUpdatedPhone(_ phone: String?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames)
     }
     
     public func withUpdatedPhoto(_ representations: [TelegramMediaImageRepresentation]) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: representations, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: self.emojiStatus, usernames: self.usernames)
     }
     
     public func withUpdatedEmojiStatus(_ emojiStatus: PeerEmojiStatus?) -> TelegramUser {
-        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus)
+        return TelegramUser(id: self.id, accessHash: self.accessHash, firstName: self.firstName, lastName: self.lastName, username: self.username, phone: phone, photo: self.photo, botInfo: self.botInfo, restrictionInfo: self.restrictionInfo, flags: self.flags, emojiStatus: emojiStatus, usernames: self.usernames)
     }
 }
