@@ -530,7 +530,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: contentSize)
         self.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
-        self.containerNode.isGestureEnabled = false
+        self.containerNode.isGestureEnabled = item.contextAction != nil
         
         let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: contentSize.height))
         let extractedRect = nonExtractedRect
@@ -627,7 +627,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             } else {
                 linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
                 self.linkHighlightingNode = linkHighlightingNode
-                self.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
+                self.contextSourceNode.contentNode.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }
             linkHighlightingNode.frame = textNode.frame
             linkHighlightingNode.updateRects(rects)

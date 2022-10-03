@@ -41,7 +41,9 @@ public enum WallpaperBubbleType {
 
 public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
     var frame: CGRect { get set }
-
+    
+    var implicitContentUpdate: Bool { get set }
+    
     func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
     func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
     func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator)
@@ -292,6 +294,8 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
 
 final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
     final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        var implicitContentUpdate: Bool = true
+        
         private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 
@@ -305,12 +309,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         override var frame: CGRect {
             didSet {
                 if oldValue.size != self.bounds.size {
-                    self.contentNode.frame = self.bounds
-                    if let cleanWallpaperNode = self.cleanWallpaperNode {
-                        cleanWallpaperNode.frame = self.bounds
-                    }
-                    if let gradientWallpaperNode = self.gradientWallpaperNode {
-                        gradientWallpaperNode.frame = self.bounds
+                    if self.implicitContentUpdate  {
+                        self.contentNode.frame = self.bounds
+                        if let cleanWallpaperNode = self.cleanWallpaperNode {
+                            cleanWallpaperNode.frame = self.bounds
+                        }
+                        if let gradientWallpaperNode = self.gradientWallpaperNode {
+                            gradientWallpaperNode.frame = self.bounds
+                        }
                     }
                 }
             }
@@ -1204,6 +1210,8 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
     }
 
     final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        var implicitContentUpdate = true
+        
         private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 

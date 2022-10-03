@@ -46,7 +46,15 @@ public extension TelegramEngine {
         public func updateAddressName(domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
             return _internal_updateAddressName(account: self.account, domain: domain, name: name)
         }
-
+        
+        public func toggleAddressNameActive(domain: AddressNameDomain, name: String, active: Bool) -> Signal<Void, ToggleAddressNameActiveError> {
+            return _internal_toggleAddressNameActive(account: self.account, domain: domain, name: name, active: active)
+        }
+        
+        public func reorderAddressNames(domain: AddressNameDomain, names: [TelegramPeerUsername]) -> Signal<Void, ReorderAddressNamesError> {
+            return _internal_reorderAddressNames(account: self.account, domain: domain, names: names)
+        }
+        
         public func checkPublicChannelCreationAvailability(location: Bool = false) -> Signal<Bool, NoError> {
             return _internal_checkPublicChannelCreationAvailability(account: self.account, location: location)
         }

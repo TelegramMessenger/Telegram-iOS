@@ -316,7 +316,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                             backgroundContent.clipsToBounds = true
 
                             strongSelf.backgroundContent = backgroundContent
-                            strongSelf.insertSubnode(backgroundContent, at: 0)
+                            strongSelf.offsetContainer.insertSubnode(backgroundContent, at: 0)
                         }
                     } else {
                         strongSelf.backgroundContent?.removeFromSupernode()

@@ -78,6 +78,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiStatusComponent",
         "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
         "//submodules/TelegramUI/Components/EntityKeyboard",
+        "//submodules/TelegramUI/Components/ForumCreateTopicScreen:ForumCreateTopicScreen",
     ],
     visibility = [
         "//visibility:public",

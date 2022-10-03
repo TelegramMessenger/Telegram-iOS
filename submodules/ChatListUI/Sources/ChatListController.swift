@@ -36,6 +36,7 @@ import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
 import EntityKeyboard
 import TelegramStringFormatting
+import ForumCreateTopicScreen
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -2020,8 +2021,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     @objc private func editPressed() {
-        if case .forum = self.location {
-            self.forumChannelTracker?.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
+        if case let .forum(peerId) = self.location {
+            let controller = ForumCreateTopicScreen(context: self.context, peerId: peerId, mode: .create)
+            controller.navigationPresentation = .modal
+            self.push(controller)
+//            self.forumChannelTracker?.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
             return
         }
         
