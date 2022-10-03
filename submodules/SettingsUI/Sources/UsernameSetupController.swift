@@ -268,10 +268,20 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         }
         
         var infoText = presentationData.strings.Username_Help
-        infoText += "\n\n"
-        let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
-        infoText += hintText
+        
+        let otherUsernames = peer.usernames.filter { !$0.flags.contains(.isEditable) }
+        
+        if otherUsernames.isEmpty {
+            infoText += "\n\n"
+            let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
+            infoText += hintText
+        }
         entries.append(.publicLinkInfo(presentationData.theme, infoText))
+        
+        if !otherUsernames.isEmpty {
+            entries.append(.additionalLinkHeader(presentationData.theme, presentationData.strings.Username_LinksOrder))
+            entries.append(.additionalLinkInfo(presentationData.theme, presentationData.strings.Username_LinksOrderInfo))
+        }
     }
     
     return entries

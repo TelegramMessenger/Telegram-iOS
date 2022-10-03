@@ -36,6 +36,7 @@ import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
 import EntityKeyboard
 import TelegramStringFormatting
+import ForumCreateTopicScreen
 import AnimationUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {

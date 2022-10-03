@@ -951,12 +951,18 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let username = user.username {
+            var additionalUsernames: String?
+            let usernames = user.usernames.filter { !$0.flags.contains(.isEditable) && $0.flags.contains(.isActive) }
+            if !usernames.isEmpty {
+                additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
+            }
+            
             items[.peerInfo]!.append(
                 PeerInfoScreenLabeledValueItem(
                     id: 1,
                     label: presentationData.strings.Profile_Username,
                     text: "@\(username)",
-                    additionalText: nil, //presentationData.strings.Profile_AdditionalUsernames("@username1, @username2, @username3, @username4"),
+                    additionalText: additionalUsernames,
                     textColor: .accent,
                     icon: .qrCode,
                     action: { _ in
@@ -1076,15 +1082,32 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         
         if let username = channel.username {
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemUsername, label: presentationData.strings.Channel_LinkItem, text: "https://t.me/\(username)", textColor: .accent, icon: .qrCode, action: { _ in
-                interaction.openUsername(username)
-            }, longTapAction: { sourceNode in
-                interaction.openPeerInfoContextMenu(.link, sourceNode)
-            }, iconAction: {
-                interaction.openQrCode()
-            }, requestLayout: {
-                interaction.requestLayout(false)
-            }))
+            var additionalUsernames: String?
+            let usernames = channel.usernames.filter { !$0.flags.contains(.isEditable) && $0.flags.contains(.isActive) }
+            if !usernames.isEmpty {
+                additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
+            }
+            
+            
+            items[.peerInfo]!.append(
+                PeerInfoScreenLabeledValueItem(
+                    id: ItemUsername,
+                    label: presentationData.strings.Channel_LinkItem,
+                    text: "https://t.me/\(username)",
+                    additionalText: additionalUsernames,
+                    textColor: .accent,
+                    icon: .qrCode,
+                    action: { _ in
+                        interaction.openUsername(username)
+                    }, longTapAction: { sourceNode in
+                        interaction.openPeerInfoContextMenu(.link, sourceNode)
+                    }, iconAction: {
+                        interaction.openQrCode()
+                    }, requestLayout: {
+                        interaction.requestLayout(false)
+                    }
+                )
+            )
         }
         if let cachedData = data.cachedData as? CachedChannelData {
             let aboutText: String?
@@ -4902,34 +4925,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self else {
                 return
             }
-//            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone, formatPhoneNumber(value) == formatPhoneNumber(peerPhoneNumber) {
-//                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-//                let dismissAction: () -> Void = { [weak actionSheet] in
-//                    actionSheet?.dismissAnimated()
-//                }
-//                actionSheet.setItemGroups([
-//                    ActionSheetItemGroup(items: [
-//                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_TelegramCall, action: {
-//                            dismissAction()
-//                            self?.requestCall(isVideo: false)
-//                        }),
-//                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_PhoneCall, action: {
-//                            dismissAction()
-//
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//                            strongSelf.context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(value).replacingOccurrences(of: " ", with: ""))")
-//                        }),
-//                    ]),
-//                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-//                ])
-//                strongSelf.view.endEditing(true)
-//                strongSelf.controller?.present(actionSheet, in: .window(.root))
-//            } else {
-//                strongSelf.context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(value).replacingOccurrences(of: " ", with: ""))")
-//            }
-//
             let presentationData = strongSelf.presentationData
             
             let telegramCallAction: (Bool) -> Void = { [weak self] isVideo in
@@ -4968,7 +4963,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                 })))
                 
-                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: ""), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss {
                         phoneCallAction()
                     }
@@ -4980,7 +4975,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 })))
             } else {
                 items = [
-                    .action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: ""), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    .action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                         c.dismiss {
                             phoneCallAction()
                         }
