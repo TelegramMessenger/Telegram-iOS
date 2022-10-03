@@ -394,7 +394,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.forumChannelTracker = ForumChannelTopics(account: self.context.account, peerId: peerId)
             
             self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
-                self?.openMoreMenu(sourceNode: sourceNode, gesture: gesture)
+                guard let self = self else {
+                    return
+                }
+                guard case let .forum(peerId) = self.location else {
+                    return
+                }
+                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, sourceView: sourceNode.view, gesture: gesture)
             }
             self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         }
@@ -2315,50 +2321,67 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
     
-    private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
-        guard case let .forum(peerId) = self.location else {
-            return
-        }
+    public static func openMoreMenu(context: AccountContext, peerId: EnginePeer.Id, sourceController: ViewController, sourceView: UIView, gesture: ContextGesture?) {
+        let isViewingAsTopics: Bool = true
         
         var items: [ContextMenuItem] = []
+        
+        items.append(.action(ContextMenuActionItem(text: "View as Topics", icon: { theme in
+            if !isViewingAsTopics {
+                return nil
+            }
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+        }, action: { _, a in
+            a(.default)
+        })))
+        items.append(.action(ContextMenuActionItem(text: "View as Messages", icon: { theme in
+            if isViewingAsTopics {
+                return nil
+            }
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak sourceController] _, a in
+            a(.default)
+
+            guard let sourceController = sourceController, let navigationController = sourceController.navigationController as? NavigationController else {
+                return
+            }
+            
+            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+            navigationController.replaceController(sourceController, with: chatController, animated: false)
+        })))
+        items.append(.separator)
         
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "Group Info", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, f in
+        }, action: { [weak sourceController] _, f in
             f(.default)
             
-            guard let strongSelf = self else {
-                return
-            }
-            let _ = (strongSelf.context.engine.data.get(
+            let _ = (context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
             )
             |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                guard let sourceController = sourceController, let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
                     return
                 }
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                (sourceController.navigationController as? NavigationController)?.pushViewController(controller)
             })
         })))
         
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "Add Member", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, f in
+        }, action: { [weak sourceController] _, f in
             f(.default)
             
-            guard let strongSelf = self else {
-                return
-            }
-            
-            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer else {
+                guard let sourceController = sourceController, let peer = peer else {
                     return
                 }
-                
-                strongSelf.context.sharedContext.openAddPeerMembers(context: strongSelf.context, updatedPresentationData: nil, parentController: strongSelf, groupPeer: peer._asPeer(), selectAddMemberDisposable: strongSelf.selectAddMemberDisposable, addMemberDisposable: strongSelf.addMemberDisposable)
+                let selectAddMemberDisposable = MetaDisposable()
+                let addMemberDisposable = MetaDisposable()
+                context.sharedContext.openAddPeerMembers(context: context, updatedPresentationData: nil, parentController: sourceController, groupPeer: peer._asPeer(), selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
             })
         })))
         
@@ -2367,24 +2390,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] action in
+        }, action: { action in
             action.dismissWithResult(.default)
             
-            guard let strongSelf = self, let forumChannelTracker = strongSelf.forumChannelTracker else {
-                return
-            }
-            
-            let _ = (forumChannelTracker.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
-            |> deliverOnMainQueue).start(next: { [weak self] topicId in
-                guard let strongSelf = self else {
-                    return
-                }
-                let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: "Topic#\(Int.random(in: 0 ..< 100000))", iconFileId: nil)
+            |> deliverOnMainQueue).start(next: { topicId in
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
             })
         })))
 
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceNode: self.moreBarButton.referenceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-        self.presentInGlobalOverlay(contextController)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        sourceController.presentInGlobalOverlay(contextController)
     }
     
     private var initializedFilters = false
@@ -3871,14 +3888,14 @@ private final class ChatListContextLocationContentSource: ContextLocationContent
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
 
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

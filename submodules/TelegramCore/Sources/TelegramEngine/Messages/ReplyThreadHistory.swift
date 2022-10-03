@@ -81,11 +81,13 @@ private class ReplyThreadHistoryContextImpl {
             var indices = transaction.getThreadIndexHoles(peerId: data.messageId.peerId, threadId: makeMessageThreadId(data.messageId), namespace: Namespaces.Message.Cloud)
             indices.subtract(data.initialFilledHoles)
             
-            let isParticipant = transaction.getPeerChatListIndex(data.messageId.peerId) != nil
+            /*let isParticipant = transaction.getPeerChatListIndex(data.messageId.peerId) != nil
             if isParticipant {
                 let historyHoles = transaction.getHoles(peerId: data.messageId.peerId, namespace: Namespaces.Message.Cloud)
                 indices.formIntersection(historyHoles)
             }
+            
+            print("after intersection: \(indices)")*/
             
             if let maxMessageId = data.maxMessage {
                 indices.remove(integersIn: Int(maxMessageId.id + 1) ..< Int(Int32.max))

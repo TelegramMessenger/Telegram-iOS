@@ -54,8 +54,6 @@ extension TelegramUser {
             if (flags & (1 << 28)) != 0 {
                 userFlags.insert(.isPremium)
             }
-
-            let mappedUsernames = username
             
             var botInfo: BotUserInfo?
             if (flags & (1 << 14)) != 0 {
