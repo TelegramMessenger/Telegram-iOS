@@ -72,11 +72,12 @@ public final class EngineChatList: Equatable {
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draft: Draft?
-        public let threadInfo: EngineMessageHistoryThreads.Info?
+        public let threadInfo: EngineMessageHistoryThread.Info?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
         public let hasUnseenReactions: Bool
+        public let forumTopicTitle: String?
         public let hasFailed: Bool
         public let isContact: Bool
 
@@ -87,11 +88,12 @@ public final class EngineChatList: Equatable {
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draft: Draft?,
-            threadInfo: EngineMessageHistoryThreads.Info?,
+            threadInfo: EngineMessageHistoryThread.Info?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
+            forumTopicTitle: String?,
             hasFailed: Bool,
             isContact: Bool
         ) {
@@ -106,6 +108,7 @@ public final class EngineChatList: Equatable {
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
+            self.forumTopicTitle = forumTopicTitle
             self.hasFailed = hasFailed
             self.isContact = isContact
         }
@@ -142,6 +145,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
+                return false
+            }
+            if lhs.forumTopicTitle != rhs.forumTopicTitle {
                 return false
             }
             if lhs.hasFailed != rhs.hasFailed {
@@ -351,7 +357,7 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailed, isContact):
             var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -377,6 +383,11 @@ extension EngineChatList.Item {
                 hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
             }
             
+            var forumTopicTitle: String?
+            if let forumTopicData = forumTopicData?.get(MessageHistoryThreadData.self) {
+                forumTopicTitle = forumTopicData.info.title
+            }
+            
             self.init(
                 id: .chatList(index.messageIndex.id.peerId),
                 index: .chatList(index),
@@ -389,6 +400,7 @@ extension EngineChatList.Item {
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,
                 hasUnseenReactions: hasUnseenReactions,
+                forumTopicTitle: forumTopicTitle,
                 hasFailed: hasFailed,
                 isContact: isContact
             )

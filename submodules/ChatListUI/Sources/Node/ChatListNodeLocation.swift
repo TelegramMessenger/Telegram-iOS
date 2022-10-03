@@ -179,21 +179,22 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 guard let peer = view.peer else {
                     continue
                 }
-                guard let info = item.info.get(EngineMessageHistoryThreads.Info.self) else {
+                guard let data = item.info.get(MessageHistoryThreadData.self) else {
                     continue
                 }
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
                     index: .forum(timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                     messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                    readCounters: nil,
+                    readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
                     isMuted: false,
                     draft: nil,
-                    threadInfo: info,
+                    threadInfo: data.info,
                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
                     presence: nil,
                     hasUnseenMentions: false,
                     hasUnseenReactions: false,
+                    forumTopicTitle: nil,
                     hasFailed: false,
                     isContact: false
                 ))

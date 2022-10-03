@@ -8,7 +8,7 @@ import WebPBinding
 
 public func cacheLottieAnimation(data: Data, width: Int, height: Int, keyframeOnly: Bool, writer: AnimationCacheItemWriter, firstFrameOnly: Bool) {
     let work: () -> Void = {
-        let decompressedData = TGGUnzipData(data, 1 * 1024 * 1024) ?? data
+        let decompressedData = TGGUnzipData(data, 2 * 1024 * 1024) ?? data
         guard let animation = LottieInstance(data: decompressedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
             writer.finish()
             return

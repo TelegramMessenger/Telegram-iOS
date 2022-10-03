@@ -2255,10 +2255,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 return nil
             })
             
+            var loadedEmojiPack: LoadedStickerPack?
             var highlightableLinks = false
             let secondaryTitleText: String
             if let otherPeerName = state.otherPeerName {
                 if case let .emojiStatus(_, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
+                    loadedEmojiPack = maybeEmojiPack
                     highlightableLinks = true
                     
                     var packReference: StickerPackReference?
@@ -2337,7 +2339,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             for attribute in emojiFile.attributes {
                                 if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
-                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: navigationController, sendSticker: { _, _, _ in
+                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], parentNavigationController: navigationController, sendSticker: { _, _, _ in
                                         return false
                                     })
                                     presentController(controller)

@@ -287,10 +287,10 @@ final class ChatHistoryPreloadManager {
         self.canPreloadHistoryDisposable = (networkState
         |> map { state -> Bool in
             switch state {
-                case .online:
-                    return true
-                default:
-                    return false
+            case .online:
+                return true
+            default:
+                return false
             }
         }
         |> distinctUntilChanged
@@ -298,6 +298,13 @@ final class ChatHistoryPreloadManager {
             guard let strongSelf = self, strongSelf.canPreloadHistoryValue != value else {
                 return
             }
+            
+            #if DEBUG
+            if "".isEmpty {
+                return
+            }
+            #endif
+            
             strongSelf.canPreloadHistoryValue = value
             if value {
                 for i in 0 ..< min(3, strongSelf.entries.count) {

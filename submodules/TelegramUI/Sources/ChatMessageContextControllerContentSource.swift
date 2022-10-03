@@ -99,7 +99,7 @@ final class ChatMessageReactionContextExtractedContentSource: ContextExtractedCo
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-    let centerActionsHorizontally: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private weak var chatNode: ChatControllerNode?
     private let engine: TelegramEngine
@@ -174,7 +174,7 @@ final class ChatMessageNavigationButtonContextExtractedContentSource: ContextExt
     let keepInPlace: Bool = false
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-    let centerActionsHorizontally: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private weak var chatNode: ChatControllerNode?
     private let contentNode: ContextExtractedContentContainingNode

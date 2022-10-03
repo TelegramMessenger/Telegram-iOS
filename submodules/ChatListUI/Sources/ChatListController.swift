@@ -36,6 +36,7 @@ import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
 import EntityKeyboard
 import TelegramStringFormatting
+import AnimationUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -108,6 +109,161 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
+private final class MoreHeaderButton: HighlightableButtonNode {
+    enum Content {
+        case image(UIImage?)
+        case more(UIImage?)
+    }
+
+    let referenceNode: ContextReferenceContentNode
+    let containerNode: ContextControllerSourceNode
+    private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
+
+    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+
+    private var color: UIColor
+
+    init(color: UIColor) {
+        self.color = color
+
+        self.referenceNode = ContextReferenceContentNode()
+        self.containerNode = ContextControllerSourceNode()
+        self.containerNode.animateScale = false
+        self.iconNode = ASImageNode()
+        self.iconNode.displaysAsynchronously = false
+        self.iconNode.displayWithoutProcessing = true
+        self.iconNode.contentMode = .scaleToFill
+
+        super.init()
+
+        self.containerNode.addSubnode(self.referenceNode)
+        self.referenceNode.addSubnode(self.iconNode)
+        self.addSubnode(self.containerNode)
+
+        self.containerNode.shouldBegin = { [weak self] location in
+            guard let strongSelf = self, let _ = strongSelf.contextAction else {
+                return false
+            }
+            return true
+        }
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.contextAction?(strongSelf.containerNode, gesture)
+        }
+
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
+        self.referenceNode.frame = self.containerNode.bounds
+
+        self.iconNode.image = optionsCircleImage(color: color)
+        if let image = self.iconNode.image {
+            self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+        }
+
+        self.hitTestSlop = UIEdgeInsets(top: 0.0, left: -4.0, bottom: 0.0, right: -4.0)
+    }
+
+    private var content: Content?
+    func setContent(_ content: Content, animated: Bool = false) {
+        if case .more = content, self.animationNode == nil {
+            let iconColor = self.color
+            let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
+                                                                                      "Point 3.Group 1.Fill 1": iconColor,
+                                                                                      "Point 1.Group 1.Fill 1": iconColor], scale: 1.0)
+            let animationSize = CGSize(width: 22.0, height: 22.0)
+            animationNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - animationSize.width) / 2.0), y: floor((self.containerNode.bounds.height - animationSize.height) / 2.0)), size: animationSize)
+            self.addSubnode(animationNode)
+            self.animationNode = animationNode
+        }
+        if animated {
+            if let snapshotView = self.referenceNode.view.snapshotContentTree() {
+                snapshotView.frame = self.referenceNode.frame
+                self.view.addSubview(snapshotView)
+
+                snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                    snapshotView?.removeFromSuperview()
+                })
+                snapshotView.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
+
+                self.iconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.iconNode.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+
+                self.animationNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                self.animationNode?.layer.animateScale(from: 0.1, to: 1.0, duration: 0.3)
+            }
+
+            switch content {
+                case let .image(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = false
+            }
+        } else {
+            self.content = content
+            switch content {
+                case let .image(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = true
+                case let .more(image):
+                    if let image = image {
+                        self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
+                    }
+
+                    self.iconNode.image = image
+                    self.iconNode.isHidden = false
+                    self.animationNode?.isHidden = false
+            }
+        }
+    }
+
+    override func didLoad() {
+        super.didLoad()
+        self.view.isOpaque = false
+    }
+
+    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+        return CGSize(width: 22.0, height: 44.0)
+    }
+
+    func onLayout() {
+    }
+
+    func play() {
+        self.animationNode?.playOnce()
+    }
+}
+
+private func optionsCircleImage(color: UIColor) -> UIImage? {
+    return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+
+        context.setStrokeColor(color.cgColor)
+        let lineWidth: CGFloat = 1.3
+        context.setLineWidth(lineWidth)
+
+        context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth, dy: lineWidth))
+    })
+}
+
 public class ChatListControllerImpl: TelegramBaseController, ChatListController {
     private var validLayout: ContainerViewLayout?
     
@@ -174,7 +330,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private weak var emojiStatusSelectionController: ViewController?
     
+    private let moreBarButton: MoreHeaderButton
+    private let moreBarButtonItem: UIBarButtonItem
     private var forumChannelTracker: ForumChannelTopics?
+    
+    private let selectAddMemberDisposable = MetaDisposable()
+    private let addMemberDisposable = MetaDisposable()
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -204,6 +365,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             animationRenderer: self.animationRenderer
         )
         
+        self.moreBarButton = MoreHeaderButton(color: self.presentationData.theme.rootController.navigationBar.buttonColor)
+        self.moreBarButton.isUserInteractionEnabled = true
+        self.moreBarButton.setContent(.more(optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
+        
+        self.moreBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
+        
         self.tabContainerNode = ChatListFilterTabContainerNode()
         
         super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: .all)
@@ -225,6 +392,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             title = "Forum"
             
             self.forumChannelTracker = ForumChannelTopics(account: self.context.account, peerId: peerId)
+            
+            self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
+                self?.openMoreMenu(sourceNode: sourceNode, gesture: gesture)
+            }
+            self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         }
         
         self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
@@ -265,9 +437,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
                     self.navigationItem.backBarButtonItem = backBarButtonItem
                 } else {
-                    let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-                    rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
-                    self.navigationItem.rightBarButtonItem = rightBarButtonItem
+                    switch self.location {
+                    case .chatList:
+                        let rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                        rightBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+                        self.navigationItem.rightBarButtonItem = rightBarButtonItem
+                    case .forum:
+                        self.navigationItem.rightBarButtonItem = self.moreBarButtonItem
+                    }
+                    
                     let backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
                     backBarButtonItem.accessibilityLabel = self.presentationData.strings.Common_Back
                     self.navigationItem.backBarButtonItem = backBarButtonItem
@@ -454,9 +632,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 }
                             }
                         } else {
-                            let editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
-                            editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
-                            strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
+                            switch strongSelf.location {
+                            case .chatList:
+                                let editItem = UIBarButtonItem(title: strongSelf.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(strongSelf.editPressed))
+                                editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
+                                strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
+                            case .forum:
+                                strongSelf.navigationItem.setRightBarButton(strongSelf.moreBarButtonItem, animated: true)
+                            }
                         }
                         
                         let (hasProxy, connectsViaProxy) = proxy
@@ -865,6 +1048,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.filterDisposable.dispose()
         self.featuredFiltersDisposable.dispose()
         self.activeDownloadsDisposable?.dispose()
+        self.selectAddMemberDisposable.dispose()
+        self.addMemberDisposable.dispose()
     }
     
     private func openStatusSetup(sourceView: UIView) {
@@ -932,8 +1117,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
             editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         } else {
-            editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
-            editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            switch self.location {
+            case .chatList:
+                editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Edit, style: .plain, target: self, action: #selector(self.editPressed))
+                editItem.accessibilityLabel = self.presentationData.strings.Common_Edit
+            case .forum:
+                editItem = self.moreBarButtonItem
+            }
         }
         if case .chatList(.root) = self.location {
             self.navigationItem.leftBarButtonItem = editItem
@@ -1258,7 +1448,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             var joined = false
-            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
                 for media in message.media {
                     if let action = media as? TelegramMediaAction, action.action == .peerJoined {
                         joined = true
@@ -1272,7 +1462,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _):
                 let source: ContextContentSource
                 if let location = location {
                     source = .location(ChatListContextLocationContentSource(controller: strongSelf, location: location))
@@ -2020,11 +2210,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     @objc private func editPressed() {
-        if case .forum = self.location {
-            self.forumChannelTracker?.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
-            return
-        }
-        
         let editItem = UIBarButtonItem(title: self.presentationData.strings.Common_Done, style: .done, target: self, action: #selector(self.donePressed))
         editItem.accessibilityLabel = self.presentationData.strings.Common_Done
         if case .chatList(.root) = self.location {
@@ -2123,6 +2308,83 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 })
             })
         }
+    }
+    
+    @objc private func moreButtonPressed() {
+        self.moreBarButton.play()
+        self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
+    }
+    
+    private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
+        guard case let .forum(peerId) = self.location else {
+            return
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Group Info", icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] _, f in
+            f(.default)
+            
+            guard let strongSelf = self else {
+                return
+            }
+            let _ = (strongSelf.context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+            )
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self, let peer = peer, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                    return
+                }
+                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+            })
+        })))
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "Add Member", icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] _, f in
+            f(.default)
+            
+            guard let strongSelf = self else {
+                return
+            }
+            
+            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let strongSelf = self, let peer = peer else {
+                    return
+                }
+                
+                strongSelf.context.sharedContext.openAddPeerMembers(context: strongSelf.context, updatedPresentationData: nil, parentController: strongSelf, groupPeer: peer._asPeer(), selectAddMemberDisposable: strongSelf.selectAddMemberDisposable, addMemberDisposable: strongSelf.addMemberDisposable)
+            })
+        })))
+        
+        items.append(.separator)
+        
+        //TODO:localize
+        items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak self] action in
+            action.dismissWithResult(.default)
+            
+            guard let strongSelf = self, let forumChannelTracker = strongSelf.forumChannelTracker else {
+                return
+            }
+            
+            let _ = (forumChannelTracker.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
+            |> deliverOnMainQueue).start(next: { [weak self] topicId in
+                guard let strongSelf = self else {
+                    return
+                }
+                let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+            })
+        })))
+
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceNode: self.moreBarButton.referenceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        self.presentInGlobalOverlay(contextController)
     }
     
     private var initializedFilters = false
@@ -3551,7 +3813,7 @@ private final class ChatListTabBarContextExtractedContentSource: ContextExtracte
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-    let centerActionsHorizontally: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private let controller: ChatListController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -3604,5 +3866,19 @@ private final class ChatListContextLocationContentSource: ContextLocationContent
     
     func transitionInfo() -> ContextControllerLocationViewInfo? {
         return ContextControllerLocationViewInfo(location: self.location, contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+    private let controller: ViewController
+    private let sourceNode: ContextReferenceContentNode
+
+    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+        self.controller = controller
+        self.sourceNode = sourceNode
+    }
+
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

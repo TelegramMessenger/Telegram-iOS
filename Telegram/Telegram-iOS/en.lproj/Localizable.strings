@@ -2590,6 +2590,7 @@ Unused sets are archived when you add more.";
 "Conversation.HoldForVideo" = "Hold to record video. Tap to switch to audio.";
 
 "UserInfo.TelegramCall" = "Telegram Call";
+"UserInfo.TelegramVideoCall" = "Telegram Video Call";
 "UserInfo.PhoneCall" = "Phone Call";
 
 "SharedMedia.CategoryMedia" = "Media";
