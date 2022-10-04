@@ -317,6 +317,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var editingUrlPreviewQueryState: (String?, Disposable)?
     private var searchState: ChatSearchState?
     
+    private var shakeFeedback: HapticFeedback?
+    
     private var recordingModeFeedback: HapticFeedback?
     private var recorderFeedback: HapticFeedback?
     private var audioRecorderValue: ManagedAudioRecorder?
@@ -15510,6 +15512,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if case let .id(messageId) = messageSubject {
                                 strongSelf.navigateToMessage(from: sourceMessageId, to: .id(messageId, timecode))
                             }
+                        } else {
+                            self?.playShakeAnimation()
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: subject, keepStack: .always, peekData: peekData))
@@ -16974,6 +16978,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
+    }
+    
+    public func playShakeAnimation() {
+        if self.shakeFeedback == nil {
+            self.shakeFeedback = HapticFeedback()
+        }
+        self.shakeFeedback?.error()
+        
+        self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
     }
 }
 
