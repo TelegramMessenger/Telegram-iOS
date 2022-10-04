@@ -957,52 +957,6 @@ public extension Api {
     }
 }
 public extension Api {
-    enum FeedPosition: TypeConstructorDescription {
-        case feedPosition(date: Int32, peer: Api.Peer, id: Int32)
-    
-    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
-    switch self {
-                case .feedPosition(let date, let peer, let id):
-                    if boxed {
-                        buffer.appendInt32(1348066419)
-                    }
-                    serializeInt32(date, buffer: buffer, boxed: false)
-                    peer.serialize(buffer, true)
-                    serializeInt32(id, buffer: buffer, boxed: false)
-                    break
-    }
-    }
-    
-    public func descriptionFields() -> (String, [(String, Any)]) {
-        switch self {
-                case .feedPosition(let date, let peer, let id):
-                return ("feedPosition", [("date", String(describing: date)), ("peer", String(describing: peer)), ("id", String(describing: id))])
-    }
-    }
-    
-        public static func parse_feedPosition(_ reader: BufferReader) -> FeedPosition? {
-            var _1: Int32?
-            _1 = reader.readInt32()
-            var _2: Api.Peer?
-            if let signature = reader.readInt32() {
-                _2 = Api.parse(reader, signature: signature) as? Api.Peer
-            }
-            var _3: Int32?
-            _3 = reader.readInt32()
-            let _c1 = _1 != nil
-            let _c2 = _2 != nil
-            let _c3 = _3 != nil
-            if _c1 && _c2 && _c3 {
-                return Api.FeedPosition.feedPosition(date: _1!, peer: _2!, id: _3!)
-            }
-            else {
-                return nil
-            }
-        }
-    
-    }
-}
-public extension Api {
     enum FileHash: TypeConstructorDescription {
         case fileHash(offset: Int64, limit: Int32, hash: Buffer)
     
@@ -1130,6 +1084,82 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.FolderPeer.folderPeer(peer: _1!, folderId: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
+public extension Api {
+    enum ForumTopic: TypeConstructorDescription {
+        case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .forumTopic(let flags, let id, let date, let title, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount):
+                    if boxed {
+                        buffer.appendInt32(792599046)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeString(title, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
+                    serializeInt32(topMessage, buffer: buffer, boxed: false)
+                    serializeInt32(readInboxMaxId, buffer: buffer, boxed: false)
+                    serializeInt32(readOutboxMaxId, buffer: buffer, boxed: false)
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadMentionsCount, buffer: buffer, boxed: false)
+                    serializeInt32(unreadReactionsCount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .forumTopic(let flags, let id, let date, let title, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount):
+                return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount))])
+    }
+    }
+    
+        public static func parse_forumTopic(_ reader: BufferReader) -> ForumTopic? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: String?
+            _4 = parseString(reader)
+            var _5: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_5 = reader.readInt64() }
+            var _6: Int32?
+            _6 = reader.readInt32()
+            var _7: Int32?
+            _7 = reader.readInt32()
+            var _8: Int32?
+            _8 = reader.readInt32()
+            var _9: Int32?
+            _9 = reader.readInt32()
+            var _10: Int32?
+            _10 = reader.readInt32()
+            var _11: Int32?
+            _11 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = (Int(_1!) & Int(1 << 0) == 0) || _5 != nil
+            let _c6 = _6 != nil
+            let _c7 = _7 != nil
+            let _c8 = _8 != nil
+            let _c9 = _9 != nil
+            let _c10 = _10 != nil
+            let _c11 = _11 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 {
+                return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, title: _4!, iconEmojiId: _5, topMessage: _6!, readInboxMaxId: _7!, readOutboxMaxId: _8!, unreadCount: _9!, unreadMentionsCount: _10!, unreadReactionsCount: _11!)
             }
             else {
                 return nil

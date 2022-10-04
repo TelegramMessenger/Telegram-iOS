@@ -453,7 +453,14 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                 case let .url(url, concealed):
                                     self.item?.controllerInteraction.openUrl(url, concealed, nil, nil)
                                 case let .peerMention(peerId, _):
-                                    self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
+                                    if let item = self.item {
+                                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                        |> deliverOnMainQueue).start(next: { [weak self] peer in
+                                            if let peer = peer {
+                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                            }
+                                        })
+                                    }
                                 case let .textMention(name):
                                     self.item?.controllerInteraction.openPeerMention(name)
                                 case let .botCommand(command):

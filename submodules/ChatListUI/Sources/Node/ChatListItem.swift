@@ -29,6 +29,16 @@ import ComponentFlow
 import EmojiStatusComponent
 
 public enum ChatListItemContent {
+    public struct ThreadInfo: Equatable {
+        public var id: Int64
+        public var info: EngineMessageHistoryThread.Info
+        
+        public init(id: Int64, info: EngineMessageHistoryThread.Info) {
+            self.id = id
+            self.info = info
+        }
+    }
+    
     public final class DraftState: Equatable {
         let text: String
         let entities: [MessageTextEntity]
@@ -49,7 +59,7 @@ public enum ChatListItemContent {
         }
     }
 
-    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThread.Info?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumThreadTitle: String?)
+    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumThreadTitle: String?)
     case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -1011,7 +1021,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let promoInfo: ChatListNodeEntryPromoInfo?
             let displayAsMessage: Bool
             let hasFailedMessages: Bool
-            var threadInfo: EngineMessageHistoryThread.Info?
+            var threadInfo: ChatListItemContent.ThreadInfo?
             var forumThreadTitle: String?
             
             var groupHiddenByDefault = false
@@ -1150,7 +1160,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
             enum ContentData {
-                case chat(itemPeer: EngineRenderedPeer, threadInfo: EngineMessageHistoryThread.Info?, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
+                case chat(itemPeer: EngineRenderedPeer, threadInfo: ChatListItemContent.ThreadInfo?, peer: EnginePeer?, hideAuthor: Bool, messageText: String, spoilers: [NSRange]?, customEmojiRanges: [(NSRange, ChatTextInputTextCustomEmojiAttribute)]?)
                 case group(peers: [EngineChatList.GroupItem.Item])
             }
             
@@ -1238,8 +1248,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                 
-                    if let forumThreadTitle = forumThreadTitle, let peerTextValue = peerText {
-                        peerText = "\(peerTextValue) → \(forumThreadTitle)"
+                    if let peerTextValue = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
+                        if let forumThreadTitle = forumThreadTitle {
+                            peerText = "\(peerTextValue) → \(forumThreadTitle)"
+                        } else {
+                            //TODO:localize
+                            peerText = "\(peerTextValue) → General"
+                        }
                     }
                     
                     let messageText: String
@@ -1432,7 +1447,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch contentData {
                 case let .chat(itemPeer, threadInfo, _, _, _, _, _):
                     if let threadInfo = threadInfo {
-                        titleAttributedString = NSAttributedString(string: threadInfo.title, font: titleFont, textColor: theme.titleColor)
+                        titleAttributedString = NSAttributedString(string: threadInfo.info.title, font: titleFont, textColor: theme.titleColor)
                     } else if let message = messages.last, case let .user(author) = message.author, displayAsMessage {
                         titleAttributedString = NSAttributedString(string: author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer.user(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder), font: titleFont, textColor: theme.titleColor)
                     } else if isPeerGroup {
@@ -1687,9 +1702,17 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
             }
             let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            
+            let maxTitleLines: Int
+            switch item.index {
+            case .forum:
+                maxTitleLines = 2
+            case .chatList:
+                maxTitleLines = 1
+            }
                         
             let titleRectWidth = rawContentWidth - dateLayout.size.width - 10.0 - statusWidth - titleIconsWidth
-            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleLayout, titleApply) = titleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: maxTitleLines, truncationType: .end, constrainedSize: CGSize(width: titleRectWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
         
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
@@ -1777,6 +1800,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let titleSpacing: CGFloat = -1.0
             let authorSpacing: CGFloat = -3.0
             var itemHeight: CGFloat = 8.0 * 2.0 + 1.0
+            itemHeight -= 21.0
+            itemHeight += titleLayout.size.height
             itemHeight += measureLayout.size.height * 3.0
             itemHeight += titleSpacing
             itemHeight += authorSpacing
@@ -1892,7 +1917,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     transition.updateFrame(node: strongSelf.avatarNode, frame: avatarFrame)
                     strongSelf.updateVideoVisibility()
                     
-                    if let iconFileId = threadInfo?.icon {
+                    if let threadInfo = threadInfo {
                         let avatarIconView: ComponentHostView<Empty>
                         if let current = strongSelf.avatarIconView {
                             avatarIconView = current
@@ -1902,11 +1927,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.contextContainer.view.addSubview(avatarIconView)
                         }
                         
+                        let avatarIconContent: EmojiStatusComponent.Content
+                        if let fileId = threadInfo.info.icon {
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 40.0, height: 40.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
+                        } else {
+                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)))
+                        }
+                        
                         let avatarIconComponent = EmojiStatusComponent(
                             context: item.context,
                             animationCache: item.interaction.animationCache,
                             animationRenderer: item.interaction.animationRenderer,
-                            content: .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: 40.0, height: 40.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever),
+                            content: avatarIconContent,
                             isVisibleForAnimations: strongSelf.visibilityStatus,
                             action: nil
                         )

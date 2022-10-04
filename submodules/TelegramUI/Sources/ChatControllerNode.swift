@@ -20,6 +20,7 @@ import SparseItemGrid
 import ChatPresentationInterfaceState
 import ChatInputPanelContainer
 import PremiumUI
+import ChatTitleView
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode

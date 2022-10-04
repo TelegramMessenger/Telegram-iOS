@@ -7,6 +7,7 @@ private struct DiscussionMessage {
     var messageId: MessageId
     var channelMessageId: MessageId?
     var isChannelPost: Bool
+    var isForumPost: Bool
     var maxMessage: MessageId?
     var maxReadIncomingMessageId: MessageId?
     var maxReadOutgoingMessageId: MessageId?
@@ -242,10 +243,16 @@ private class ReplyThreadHistoryContextImpl {
                             })
                         }
                         
+                        var isForumPost = false
+                        if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                            isForumPost = true
+                        }
+                        
                         return .single(DiscussionMessage(
                             messageId: parsedIndex.id,
                             channelMessageId: channelMessageId,
                             isChannelPost: isChannelPost,
+                            isForumPost: isForumPost,
                             maxMessage: resolvedMaxMessage,
                             maxReadIncomingMessageId: maxReadIncomingMessageId,
                             maxReadOutgoingMessageId: readOutboxMaxId.flatMap { readMaxId in
@@ -554,6 +561,7 @@ public struct ChatReplyThreadMessage: Equatable {
     public var messageId: MessageId
     public var channelMessageId: MessageId?
     public var isChannelPost: Bool
+    public var isForumPost: Bool
     public var maxMessage: MessageId?
     public var maxReadIncomingMessageId: MessageId?
     public var maxReadOutgoingMessageId: MessageId?
@@ -562,10 +570,11 @@ public struct ChatReplyThreadMessage: Equatable {
     public var initialAnchor: Anchor
     public var isNotAvailable: Bool
     
-    fileprivate init(messageId: MessageId, channelMessageId: MessageId?, isChannelPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
+    fileprivate init(messageId: MessageId, channelMessageId: MessageId?, isChannelPost: Bool, isForumPost: Bool, maxMessage: MessageId?, maxReadIncomingMessageId: MessageId?, maxReadOutgoingMessageId: MessageId?, unreadCount: Int, initialFilledHoles: IndexSet, initialAnchor: Anchor, isNotAvailable: Bool) {
         self.messageId = messageId
         self.channelMessageId = channelMessageId
         self.isChannelPost = isChannelPost
+        self.isForumPost = isForumPost
         self.maxMessage = maxMessage
         self.maxReadIncomingMessageId = maxReadIncomingMessageId
         self.maxReadOutgoingMessageId = maxReadOutgoingMessageId
@@ -664,10 +673,16 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                         }
                     }
                     
+                    var isForumPost = false
+                    if let channel = transaction.getPeer(parsedIndex.id.peerId) as? TelegramChannel, channel.flags.contains(.isForum) {
+                        isForumPost = true
+                    }
+                    
                     return DiscussionMessage(
                         messageId: parsedIndex.id,
                         channelMessageId: channelMessageId,
                         isChannelPost: isChannelPost,
+                        isForumPost: isForumPost,
                         maxMessage: resolvedMaxMessage,
                         maxReadIncomingMessageId: readInboxMaxId.flatMap { readMaxId in
                             MessageId(peerId: parsedIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: readMaxId)
@@ -691,6 +706,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     messageId: messageId,
                     channelMessageId: nil,
                     isChannelPost: false,
+                    isForumPost: true,
                     maxMessage: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxKnownMessageId),
                     maxReadIncomingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxIncomingReadId),
                     maxReadOutgoingMessageId: MessageId(peerId: messageId.peerId, namespace: messageId.namespace, id: threadData.maxOutgoingReadId),
@@ -929,6 +945,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
                     messageId: discussionMessage.messageId,
                     channelMessageId: discussionMessage.channelMessageId,
                     isChannelPost: discussionMessage.isChannelPost,
+                    isForumPost: discussionMessage.isForumPost,
                     maxMessage: discussionMessage.maxMessage,
                     maxReadIncomingMessageId: discussionMessage.maxReadIncomingMessageId,
                     maxReadOutgoingMessageId: discussionMessage.maxReadOutgoingMessageId,

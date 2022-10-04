@@ -851,7 +851,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .setupPoll:
                         break
                     case let .openUserProfile(peerId):
-                        controllerInteraction.openPeer(peerId, .info, nil, false, nil)
+                        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            if let peer = peer {
+                                controllerInteraction.openPeer(peer, .info, nil, false)
+                            }
+                        })
                     case let .openWebView(url, simple):
                         controllerInteraction.openWebView(button.title, url, simple, false)
                     }

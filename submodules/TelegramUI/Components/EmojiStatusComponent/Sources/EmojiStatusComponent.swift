@@ -48,7 +48,7 @@ public final class EmojiStatusComponent: Component {
         case verified(fillColor: UIColor, foregroundColor: UIColor, sizeType: SizeType)
         case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
-        case topic(title: String)
+        case topic(title: String, colorIndex: Int)
     }
     
     public let context: AccountContext
@@ -223,7 +223,7 @@ public final class EmojiStatusComponent: Component {
                     } else {
                         iconImage = nil
                     }
-                case let .topic(title):
+                case let .topic(title, colorIndex):
                     func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor]) -> UIImage? {
                         return generateImage(CGSize(width: 44.0, height: 44.0), rotatedContext: { size, context in
                             context.clear(CGRect(origin: .zero, size: size))
@@ -279,7 +279,18 @@ public final class EmojiStatusComponent: Component {
                         })
                     }
                     
-                    if let image = generateTopicIcon(backgroundColors: [UIColor(rgb: 0x6FB9F0), UIColor(rgb: 0x0261E4)], strokeColors: [UIColor(rgb: 0x026CB5), UIColor(rgb: 0x064BB7)]) {
+                    let topicColors: [([UInt32], [UInt32])] = [
+                        ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+                        ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+                        ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+                        ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+                        ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+                        ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+                        ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+                    ]
+                    let clippedIndex = colorIndex % topicColors.count
+                    
+                    if let image = generateTopicIcon(backgroundColors: topicColors[clippedIndex].0.map(UIColor.init(rgb:)), strokeColors: topicColors[clippedIndex].1.map(UIColor.init(rgb:))) {
                         iconImage = image
                     } else {
                         iconImage = nil

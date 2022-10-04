@@ -669,7 +669,12 @@ public class GalleryController: ViewController, StandalonePresentableController,
                     case let .textMention(mention):
                         strongSelf.actionInteraction?.openPeerMention(mention)
                     case let .peerMention(peerId, _):
-                        strongSelf.actionInteraction?.openPeer(peerId)
+                        let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            if let strongSelf = self, let peer = peer {
+                                strongSelf.actionInteraction?.openPeer(peer)
+                            }
+                        })
                     case let .botCommand(command):
                         strongSelf.actionInteraction?.openBotCommand(command)
                     case let .hashtag(peerName, hashtag):
@@ -775,7 +780,13 @@ public class GalleryController: ViewController, StandalonePresentableController,
                             actionSheet?.dismissAnimated()
                             if let strongSelf = self {
                                 strongSelf.dismiss(forceAway: false)
-                                strongSelf.actionInteraction?.openPeer(peerId)
+                                
+                                let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    if let strongSelf = self, let peer = peer {
+                                        strongSelf.actionInteraction?.openPeer(peer)
+                                    }
+                                })
                             }
                         }))
                         if !mention.isEmpty {

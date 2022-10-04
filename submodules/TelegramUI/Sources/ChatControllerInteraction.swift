@@ -61,7 +61,7 @@ struct UnreadMessageRangeKey: Hashable {
 
 public final class ChatControllerInteraction {
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void
+    let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
@@ -167,7 +167,7 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (PeerId?, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool, Peer?) -> Void,
+        openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,

@@ -2983,44 +2983,6 @@ public extension Api.functions.contacts {
                     })
                 }
 }
-public extension Api.functions.feed {
-                static func getFeed(flags: Int32, filterId: Int32, offsetPosition: Api.FeedPosition?, addOffset: Int32, limit: Int32, maxPosition: Api.FeedPosition?, minPosition: Api.FeedPosition?, hash: Int64) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.feed.FeedMessages>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(2121717715)
-                    serializeInt32(flags, buffer: buffer, boxed: false)
-                    serializeInt32(filterId, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 0) != 0 {offsetPosition!.serialize(buffer, true)}
-                    serializeInt32(addOffset, buffer: buffer, boxed: false)
-                    serializeInt32(limit, buffer: buffer, boxed: false)
-                    if Int(flags) & Int(1 << 1) != 0 {maxPosition!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 2) != 0 {minPosition!.serialize(buffer, true)}
-                    serializeInt64(hash, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "feed.getFeed", parameters: [("flags", String(describing: flags)), ("filterId", String(describing: filterId)), ("offsetPosition", String(describing: offsetPosition)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxPosition", String(describing: maxPosition)), ("minPosition", String(describing: minPosition)), ("hash", String(describing: hash))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.feed.FeedMessages? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.feed.FeedMessages?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.feed.FeedMessages
-                        }
-                        return result
-                    })
-                }
-}
-public extension Api.functions.feed {
-                static func readFeed(filterId: Int32, maxPosition: Api.FeedPosition) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
-                    let buffer = Buffer()
-                    buffer.appendInt32(-1271479809)
-                    serializeInt32(filterId, buffer: buffer, boxed: false)
-                    maxPosition.serialize(buffer, true)
-                    return (FunctionDescription(name: "feed.readFeed", parameters: [("filterId", String(describing: filterId)), ("maxPosition", String(describing: maxPosition))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
-                        let reader = BufferReader(buffer)
-                        var result: Api.Updates?
-                        if let signature = reader.readInt32() {
-                            result = Api.parse(reader, signature: signature) as? Api.Updates
-                        }
-                        return result
-                    })
-                }
-}
 public extension Api.functions.folders {
                 static func deleteFolder(folderId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
@@ -5155,16 +5117,18 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getUnreadMentions(peer: Api.InputPeer, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                static func getUnreadMentions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1180140658)
+                    buffer.appendInt32(-251140208)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(addOffset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     serializeInt32(minId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getUnreadMentions", parameters: [("peer", String(describing: peer)), ("offsetId", String(describing: offsetId)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                    return (FunctionDescription(name: "messages.getUnreadMentions", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMsgId", String(describing: topMsgId)), ("offsetId", String(describing: offsetId)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
@@ -5175,16 +5139,18 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func getUnreadReactions(peer: Api.InputPeer, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
+                static func getUnreadReactions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?, offsetId: Int32, addOffset: Int32, limit: Int32, maxId: Int32, minId: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.Messages>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-396644838)
+                    buffer.appendInt32(841173339)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     serializeInt32(offsetId, buffer: buffer, boxed: false)
                     serializeInt32(addOffset, buffer: buffer, boxed: false)
                     serializeInt32(limit, buffer: buffer, boxed: false)
                     serializeInt32(maxId, buffer: buffer, boxed: false)
                     serializeInt32(minId, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.getUnreadReactions", parameters: [("peer", String(describing: peer)), ("offsetId", String(describing: offsetId)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
+                    return (FunctionDescription(name: "messages.getUnreadReactions", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMsgId", String(describing: topMsgId)), ("offsetId", String(describing: offsetId)), ("addOffset", String(describing: addOffset)), ("limit", String(describing: limit)), ("maxId", String(describing: maxId)), ("minId", String(describing: minId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.Messages? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.Messages?
                         if let signature = reader.readInt32() {
@@ -5466,11 +5432,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func readMentions(peer: Api.InputPeer) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
+                static func readMentions(flags: Int32, peer: Api.InputPeer, topMsgId: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.messages.AffectedHistory>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(251759059)
+                    buffer.appendInt32(921026381)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
-                    return (FunctionDescription(name: "messages.readMentions", parameters: [("peer", String(describing: peer))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.readMentions", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("topMsgId", String(describing: topMsgId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.messages.AffectedHistory? in
                         let reader = BufferReader(buffer)
                         var result: Api.messages.AffectedHistory?
                         if let signature = reader.readInt32() {

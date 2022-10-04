@@ -477,13 +477,13 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                         |> take(1)
                         |> map { botPeer -> ResolvedUrl? in
                             if let botPeer = botPeer?._asPeer() {
-                                return .peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false)))
+                                return .peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: startAttach, justInstalled: false)))
                             } else {
-                                return .peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
                             }
                         }
                     } else {
-                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                     }
                 } else {
                     return .single(.peer(nil, .info))
@@ -500,7 +500,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     if let parameter = parameter {
                         switch parameter {
                             case let .botStart(payload):
-                                return .single(.botStart(peerId: peer.id, payload: payload))
+                                return .single(.botStart(peer: peer, payload: payload))
                             case let .groupBotStart(payload, adminRights):
                                 return .single(.groupBotStart(peerId: peer.id, payload: payload, adminRights: adminRights))
                             case let .attachBotStart(name, payload):
@@ -511,13 +511,13 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> mapToSignal { botPeer -> Signal<ResolvedUrl?, NoError> in
                                     if let botPeer = botPeer {
-                                        return .single(.peer(peer.id, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
+                                        return .single(.peer(peer, .withAttachBot(ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: false))))
                                     } else {
-                                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                     }
                                 }
                             case let .channelMessage(id, timecode):
-                                return .single(.channelMessage(peerId: peer.id, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
+                                return .single(.channelMessage(peer: peer, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
                                 return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
@@ -527,7 +527,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                                 |> map { result -> ResolvedUrl? in
                                     guard let result = result else {
-                                        return .channelMessage(peerId: peer.id, messageId: replyThreadMessageId, timecode: nil)
+                                        return .channelMessage(peer: peer, messageId: replyThreadMessageId, timecode: nil)
                                     }
                                     return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
                                 }
@@ -535,7 +535,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 return .single(.joinVoiceChat(peer.id, invite))
                         }
                     } else {
-                        return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                        return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                     }
                 } else {
                     return .single(.peer(nil, .info))
@@ -545,7 +545,7 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
             return context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
-                    return .single(.peer(peer.id, .chat(textInputState: nil, subject: nil, peekData: nil)))
+                    return .single(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                 } else {
                     return .single(.inaccessiblePeer)
                 }
@@ -571,12 +571,12 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                             }
                             |> map { result -> ResolvedUrl? in
                                 guard let result = result else {
-                                    return .channelMessage(peerId: foundPeer.id, messageId: replyThreadMessageId, timecode: timecode)
+                                    return .channelMessage(peer: foundPeer._asPeer(), messageId: replyThreadMessageId, timecode: timecode)
                                 }
                                 return .replyThreadMessage(replyThreadMessage: result, messageId: messageId)
                             }
                         } else {
-                            return .single(.peer(foundPeer.id, .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: true, timecode: timecode), peekData: nil)))
+                            return .single(.peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: .message(id: .id(messageId), highlight: true, timecode: timecode), peekData: nil)))
                         }
                     } else {
                         return .single(.inaccessiblePeer)

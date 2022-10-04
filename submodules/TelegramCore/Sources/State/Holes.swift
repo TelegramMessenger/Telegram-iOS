@@ -406,7 +406,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                 minMaxRange = 1 ... Int32.max - 1
                         }
                         
-                        request = source.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                        request = source.request(Api.functions.messages.getUnreadMentions(flags: 0, peer: inputPeer, topMsgId: nil, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     } else if tag == .unseenReaction {
                         let offsetId: Int32
                         let addOffset: Int32
@@ -454,7 +454,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                                 minMaxRange = 1 ... Int32.max - 1
                         }
                         
-                        request = source.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
+                        request = source.request(Api.functions.messages.getUnreadReactions(flags: 0, peer: inputPeer, topMsgId: nil, offsetId: offsetId, addOffset: addOffset, limit: Int32(selectedLimit), maxId: maxId, minId: minId))
                     } else if tag == .liveLocation {
                         let selectedLimit = count
                         

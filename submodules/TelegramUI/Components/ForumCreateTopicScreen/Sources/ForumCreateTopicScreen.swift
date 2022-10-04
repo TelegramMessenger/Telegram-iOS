@@ -106,7 +106,7 @@ private final class TitleFieldComponent: Component {
             
             let titleCredibilityContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
-                titleCredibilityContent = .topic(title: String(component.text.prefix(1)))
+                titleCredibilityContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0)
             } else {
                 titleCredibilityContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
             }

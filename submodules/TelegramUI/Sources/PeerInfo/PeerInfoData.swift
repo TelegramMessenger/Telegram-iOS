@@ -821,6 +821,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 }
                 
                 var availablePanes = availablePanes
+                if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
+                    availablePanes?.removeAll()
+                }
                 if let membersData = membersData, case .longList = membersData {
                     if availablePanes != nil {
                         availablePanes?.insert(.members, at: 0)

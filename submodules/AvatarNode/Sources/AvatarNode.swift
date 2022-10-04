@@ -70,7 +70,7 @@ public enum AvatarNodeExplicitIcon {
 
 private enum AvatarNodeState: Equatable {
     case empty
-    case peerAvatar(EnginePeer.Id, [String], TelegramMediaImageRepresentation?)
+    case peerAvatar(EnginePeer.Id, [String], TelegramMediaImageRepresentation?, AvatarNodeClipStyle)
     case custom(letter: [String], explicitColorIndex: Int?, explicitIcon: AvatarNodeExplicitIcon?)
 }
 
@@ -78,8 +78,8 @@ private func ==(lhs: AvatarNodeState, rhs: AvatarNodeState) -> Bool {
     switch (lhs, rhs) {
         case (.empty, .empty):
             return true
-        case let (.peerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations), .peerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations)):
-            return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations
+        case let (.peerAvatar(lhsPeerId, lhsLetters, lhsPhotoRepresentations, lhsClipStyle), .peerAvatar(rhsPeerId, rhsLetters, rhsPhotoRepresentations, rhsClipStyle)):
+            return lhsPeerId == rhsPeerId && lhsLetters == rhsLetters && lhsPhotoRepresentations == rhsPhotoRepresentations && lhsClipStyle == rhsClipStyle
         case let (.custom(lhsLetters, lhsIndex, lhsIcon), .custom(rhsLetters, rhsIndex, rhsIcon)):
             return lhsLetters == rhsLetters && lhsIndex == rhsIndex && lhsIcon == rhsIcon
         default:
@@ -321,7 +321,7 @@ public final class AvatarNode: ASDisplayNode {
         } else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil {
             representation = peer?.smallProfileImage
         }
-        let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation)
+        let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation, clipStyle)
         if updatedState != self.state || overrideImage != self.overrideImage || theme !== self.theme {
             self.state = updatedState
             self.overrideImage = overrideImage
@@ -588,9 +588,8 @@ public final class AvatarNode: ASDisplayNode {
         let currentState = node?.state
         let createNode = node == nil
         return { [weak node] context, peer, font in
-            let state: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage)
+            let state: AvatarNodeState = .peerAvatar(peer.id, peer.displayLetters, peer.smallProfileImage, .round)
             if currentState != state {
-                
             }
             var createdNode: AvatarNode?
             if createNode {
