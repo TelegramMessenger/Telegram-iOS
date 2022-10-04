@@ -223,16 +223,31 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         node.backgroundBlurNode.isHidden = false
                     }
                     
-                    if position == .bottomSingle {
-                        let rect = node.backgroundBlurNode.bounds
-                        let maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.mainRadius, bottomRightRadius: bubbleCorners.mainRadius)
-                        let shape = CAShapeLayer()
-                        shape.path = maskPath.cgPath
-                        node.layer.mask = shape
-                    } else {
-                        node.layer.mask = nil
+                    
+                    let rect = node.backgroundBlurNode.bounds
+                    let maskPath: CGPath?
+                    switch position {
+                        case .bottomSingle:
+                            maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.mainRadius, bottomRightRadius: bubbleCorners.mainRadius).cgPath
+                        case .bottomLeft:
+                            maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.mainRadius, bottomRightRadius: bubbleCorners.auxiliaryRadius).cgPath
+                        case .bottomRight:
+                            maskPath = UIBezierPath(roundRect: rect, topLeftRadius: bubbleCorners.auxiliaryRadius, topRightRadius: bubbleCorners.auxiliaryRadius, bottomLeftRadius: bubbleCorners.auxiliaryRadius, bottomRightRadius: bubbleCorners.mainRadius).cgPath
+                        default:
+                            maskPath = nil
                     }
                     
+                    let currentMaskPath = (node.layer.mask as? CAShapeLayer)?.path
+                    if currentMaskPath != maskPath {
+                        if let maskPath = maskPath {
+                            let shapeLayer = CAShapeLayer()
+                            shapeLayer.path = maskPath
+                            node.layer.mask = shapeLayer
+                        } else {
+                            node.layer.mask = nil
+                        }
+                    }
+                                        
                     if iconImage != nil {
                         if node.iconNode == nil {
                             let iconNode = ASImageNode()

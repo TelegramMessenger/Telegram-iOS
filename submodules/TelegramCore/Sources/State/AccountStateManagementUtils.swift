@@ -1020,7 +1020,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                     if updatedState.peers[peerId] == nil {
                         updatedState.updatePeer(peerId, { peer in
                             if peer == nil {
-                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: nil)
+                                return TelegramUser(id: peerId, accessHash: nil, firstName: "Telegram Notifications", lastName: nil, username: nil, phone: nil, photo: [], botInfo: BotUserInfo(flags: [], inlinePlaceholder: nil), restrictionInfo: nil, flags: [.isVerified], emojiStatus: nil, usernames: [])
                             } else {
                                 return peer
                             }
@@ -1374,7 +1374,8 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 }
             case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadMessagesContents((nil, messages))
-            case let .updateChannelReadMessagesContents(channelId, messages):
+            case let .updateChannelReadMessagesContents(_, channelId, topMsgId, messages):
+                let _ = topMsgId
                 updatedState.addReadMessagesContents((PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), messages))
             case let .updateChannelMessageViews(channelId, id, views):
                 updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: id), count: views)
@@ -1693,7 +1694,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount):
+                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
                                         state.operations.append(.ResetForumTopic(topicId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), data: MessageHistoryThreadData(
                                             info: EngineMessageHistoryThread.Info(
                                                 title: title,
@@ -1785,7 +1786,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount):
+                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
                                         fetchedChatList.threadInfos[MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)] = MessageHistoryThreadData(
                                             info: EngineMessageHistoryThread.Info(
                                                 title: title,
@@ -2429,7 +2430,8 @@ private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: 
                         updatedState.updateMessagesPinned(ids: messages.map { id in
                             MessageId(peerId: channelPeerId, namespace: Namespaces.Message.Cloud, id: id)
                         }, pinned: (flags & (1 << 0)) != 0)
-                    case let .updateChannelReadMessagesContents(_, messages):
+                    case let .updateChannelReadMessagesContents(_, _, topMsgId, messages):
+                        let _ = topMsgId
                         updatedState.addReadMessagesContents((peer.id, messages))
                     case let .updateChannelMessageViews(_, id, views):
                         updatedState.addUpdateMessageImpressionCount(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), count: views)

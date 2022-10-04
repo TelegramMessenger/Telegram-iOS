@@ -222,7 +222,7 @@ private class AdMessagesHistoryContextImpl {
                     adminRights: nil,
                     bannedRights: nil,
                     defaultBannedRights: nil,
-                    usernames: nil
+                    usernames: []
                 )
             }
             

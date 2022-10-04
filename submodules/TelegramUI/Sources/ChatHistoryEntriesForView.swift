@@ -238,9 +238,11 @@ func chatHistoryEntriesForView(
                         entries.insert(.MessageEntry(messages[0], presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[messages[0].id], isPlaying: false, isCentered: false)), at: 0)
                     }
                     
-                    let replyCount = view.entries.isEmpty ? 0 : 1
-                    
-                    entries.insert(.ReplyCountEntry(messages[0].index, replyThreadMessage.isChannelPost, replyCount, presentationData), at: 1)
+                    if !replyThreadMessage.isForumPost {
+                        let replyCount = view.entries.isEmpty ? 0 : 1
+                        
+                        entries.insert(.ReplyCountEntry(messages[0].index, replyThreadMessage.isChannelPost, replyCount, presentationData), at: 1)
+                    }
                 }
                 break loop
             default:

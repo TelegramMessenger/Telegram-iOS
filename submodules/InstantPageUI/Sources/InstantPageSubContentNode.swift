@@ -18,7 +18,7 @@ final class InstantPageSubContentNode : ASDisplayNode {
     
     private let openMedia: (InstantPageMedia) -> Void
     private let longPressMedia: (InstantPageMedia) -> Void
-    private let openPeer: (PeerId) -> Void
+    private let openPeer: (EnginePeer) -> Void
     private let openUrl: (InstantPageUrlItem) -> Void
     
     var currentLayoutTiles: [InstantPageTile] = []
@@ -40,7 +40,7 @@ final class InstantPageSubContentNode : ASDisplayNode {
     
     private var previousVisibleBounds: CGRect?
     
-    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, items: [InstantPageItem], contentSize: CGSize, inOverlayPanel: Bool = false, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder

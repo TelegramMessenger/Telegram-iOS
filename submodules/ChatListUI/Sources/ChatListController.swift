@@ -36,7 +36,9 @@ import MultiAnimationRenderer
 import EmojiStatusSelectionComponent
 import EntityKeyboard
 import TelegramStringFormatting
+import ForumCreateTopicScreen
 import AnimationUI
+import ChatTitleView
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -109,22 +111,22 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-private final class MoreHeaderButton: HighlightableButtonNode {
-    enum Content {
+public final class MoreHeaderButton: HighlightableButtonNode {
+    public enum Content {
         case image(UIImage?)
         case more(UIImage?)
     }
 
-    let referenceNode: ContextReferenceContentNode
-    let containerNode: ContextControllerSourceNode
+    public let referenceNode: ContextReferenceContentNode
+    public let containerNode: ContextControllerSourceNode
     private let iconNode: ASImageNode
     private var animationNode: AnimationNode?
 
-    var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
+    public var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
 
     private var color: UIColor
 
-    init(color: UIColor) {
+    public init(color: UIColor) {
         self.color = color
 
         self.referenceNode = ContextReferenceContentNode()
@@ -157,7 +159,7 @@ private final class MoreHeaderButton: HighlightableButtonNode {
         self.containerNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 26.0, height: 44.0))
         self.referenceNode.frame = self.containerNode.bounds
 
-        self.iconNode.image = optionsCircleImage(color: color)
+        self.iconNode.image = MoreHeaderButton.optionsCircleImage(color: color)
         if let image = self.iconNode.image {
             self.iconNode.frame = CGRect(origin: CGPoint(x: floor((self.containerNode.bounds.width - image.size.width) / 2.0), y: floor((self.containerNode.bounds.height - image.size.height) / 2.0)), size: image.size)
         }
@@ -166,7 +168,7 @@ private final class MoreHeaderButton: HighlightableButtonNode {
     }
 
     private var content: Content?
-    func setContent(_ content: Content, animated: Bool = false) {
+    public func setContent(_ content: Content, animated: Bool = false) {
         if case .more = content, self.animationNode == nil {
             let iconColor = self.color
             let animationNode = AnimationNode(animation: "anim_profilemore", colors: ["Point 2.Group 1.Fill 1": iconColor,
@@ -235,33 +237,33 @@ private final class MoreHeaderButton: HighlightableButtonNode {
         }
     }
 
-    override func didLoad() {
+    override public func didLoad() {
         super.didLoad()
         self.view.isOpaque = false
     }
 
-    override func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
+    override public func calculateSizeThatFits(_ constrainedSize: CGSize) -> CGSize {
         return CGSize(width: 22.0, height: 44.0)
     }
 
-    func onLayout() {
+    public func onLayout() {
     }
 
-    func play() {
+    public func play() {
         self.animationNode?.playOnce()
     }
-}
+    
+    public static func optionsCircleImage(color: UIColor) -> UIImage? {
+        return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
+            context.clear(CGRect(origin: CGPoint(), size: size))
 
-private func optionsCircleImage(color: UIColor) -> UIImage? {
-    return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
+            context.setStrokeColor(color.cgColor)
+            let lineWidth: CGFloat = 1.3
+            context.setLineWidth(lineWidth)
 
-        context.setStrokeColor(color.cgColor)
-        let lineWidth: CGFloat = 1.3
-        context.setLineWidth(lineWidth)
-
-        context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth, dy: lineWidth))
-    })
+            context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: lineWidth, dy: lineWidth))
+        })
+    }
 }
 
 public class ChatListControllerImpl: TelegramBaseController, ChatListController {
@@ -283,11 +285,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         return super.displayNode as! ChatListControllerNode
     }
     
-    private let titleView: ChatListTitleView
+    private var titleView: ChatListTitleView?
+    private var chatTitleView: ChatTitleView?
+    private let infoReady = Promise<Bool>()
+    
     private var proxyUnavailableTooltipController: TooltipController?
     private var didShowProxyUnavailableTooltipController = false
     
     private var titleDisposable: Disposable?
+    private var chatTitleDisposable: Disposable?
     private var badgeDisposable: Disposable?
     private var badgeIconDisposable: Disposable?
     
@@ -357,17 +363,22 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
         
-        self.titleView = ChatListTitleView(
-            context: context,
-            theme: self.presentationData.theme,
-            strings: self.presentationData.strings,
-            animationCache: self.animationCache,
-            animationRenderer: self.animationRenderer
-        )
+        switch self.location {
+        case .chatList:
+            self.titleView = ChatListTitleView(
+                context: context,
+                theme: self.presentationData.theme,
+                strings: self.presentationData.strings,
+                animationCache: self.animationCache,
+                animationRenderer: self.animationRenderer
+            )
+        case .forum:
+            self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer)
+        }
         
         self.moreBarButton = MoreHeaderButton(color: self.presentationData.theme.rootController.navigationBar.buttonColor)
         self.moreBarButton.isUserInteractionEnabled = true
-        self.moreBarButton.setContent(.more(optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
+        self.moreBarButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: self.presentationData.theme.rootController.navigationBar.buttonColor)))
         
         self.moreBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
         
@@ -394,16 +405,102 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.forumChannelTracker = ForumChannelTopics(account: self.context.account, peerId: peerId)
             
             self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
-                self?.openMoreMenu(sourceNode: sourceNode, gesture: gesture)
+                guard let self = self else {
+                    return
+                }
+                guard case let .forum(peerId) = self.location else {
+                    return
+                }
+                ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: true, sourceView: sourceNode.view, gesture: gesture)
             }
             self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         }
         
-        self.titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
-        self.navigationItem.titleView = self.titleView
-        
-        self.titleView.openStatusSetup = { [weak self] sourceView in
-            self?.openStatusSetup(sourceView: sourceView)
+        switch self.location {
+        case .chatList:
+            if let titleView = self.titleView {
+                titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
+                self.navigationItem.titleView = titleView
+                
+                titleView.openStatusSetup = { [weak self] sourceView in
+                    self?.openStatusSetup(sourceView: sourceView)
+                }
+            }
+            self.infoReady.set(.single(true))
+        case let .forum(peerId):
+            if let chatTitleView = self.chatTitleView {
+                self.navigationItem.titleView = chatTitleView
+                
+                chatTitleView.pressed = { [weak self] in
+                    guard let self = self else {
+                        return
+                    }
+                    let _ = (self.context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let self = self, let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                            return
+                        }
+                        (self.navigationController as? NavigationController)?.pushViewController(controller)
+                    })
+                }
+                
+                let peerView = Promise<PeerView>()
+                peerView.set(context.account.viewTracker.peerView(peerId))
+                
+                var onlineMemberCount: Signal<Int32?, NoError> = .single(nil)
+                
+                let recentOnlineSignal: Signal<Int32?, NoError> = peerView.get()
+                |> map { view -> Bool? in
+                    if let cachedData = view.cachedData as? CachedChannelData, let peer = peerViewMainPeer(view) as? TelegramChannel {
+                        if case .broadcast = peer.info {
+                            return nil
+                        } else if let memberCount = cachedData.participantsSummary.memberCount, memberCount > 50 {
+                            return true
+                        } else {
+                            return false
+                        }
+                    } else {
+                        return false
+                    }
+                }
+                |> distinctUntilChanged
+                |> mapToSignal { isLarge -> Signal<Int32?, NoError> in
+                    if let isLarge = isLarge {
+                        if isLarge {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnline(account: context.account, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map(Optional.init)
+                        } else {
+                            return context.peerChannelMemberCategoriesContextsManager.recentOnlineSmall(engine: context.engine, postbox: context.account.postbox, network: context.account.network, accountPeerId: context.account.peerId, peerId: peerId)
+                            |> map(Optional.init)
+                        }
+                    } else {
+                        return .single(nil)
+                    }
+                }
+                onlineMemberCount = recentOnlineSignal
+                
+                self.chatTitleDisposable = (combineLatest(queue: Queue.mainQueue(),
+                    peerView.get(),
+                    onlineMemberCount
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount in
+                    guard let strongSelf = self, let chatTitleView = strongSelf.chatTitleView else {
+                        return
+                    }
+                    
+                    chatTitleView.titleContent = .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: false)
+                    strongSelf.infoReady.set(.single(true))
+                    
+                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel, !channel.flags.contains(.isForum) {
+                        if let navigationController = strongSelf.navigationController as? NavigationController {
+                            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+                            navigationController.replaceController(strongSelf, with: chatController, animated: true)
+                        }
+                    }
+                })
+            }
         }
         
         if !previewing {
@@ -574,7 +671,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 animated = true
                             }
                         }
-                        strongSelf.titleView.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus), animated: animated)
+                        strongSelf.titleView?.setTitle(NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus), animated: animated)
                     } else if isReorderingTabs {
                         if case .chatList(.root) = strongSelf.location {
                             strongSelf.navigationItem.setRightBarButton(nil, animated: true)
@@ -585,17 +682,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let (_, connectsViaProxy) = proxy
                         switch networkState {
                         case .waitingForNetwork:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                            strongSelf.titleView?.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case let .connecting(proxy):
                             var text = strongSelf.presentationData.strings.State_Connecting
                             if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
                                 text = strongSelf.presentationData.strings.State_ConnectingToProxy
                             }
-                            strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                            strongSelf.titleView?.title = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case .updating:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                            strongSelf.titleView?.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         case .online:
-                            strongSelf.titleView.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                            strongSelf.titleView?.title = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
                         }
                     } else {
                         var isRoot = false
@@ -647,7 +744,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         var checkProxy = false
                         switch networkState {
                             case .waitingForNetwork:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
+                                strongSelf.titleView?.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case let .connecting(proxy):
                                 var text = strongSelf.presentationData.strings.State_Connecting
                                 if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
@@ -656,11 +753,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 if let proxy = proxy, proxy.hasConnectionIssues {
                                     checkProxy = true
                                 }
-                                strongSelf.titleView.title = NetworkStatusTitle(text: text, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
+                                strongSelf.titleView?.title = NetworkStatusTitle(text: text, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case .updating:
-                                strongSelf.titleView.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
+                                strongSelf.titleView?.title = NetworkStatusTitle(text: strongSelf.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
                             case .online:
-                                strongSelf.titleView.setTitle(NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus), animated: (previousEditingAndNetworkState?.0 ?? false) != stateAndFilterId.state.editing)
+                                strongSelf.titleView?.setTitle(NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus), animated: (previousEditingAndNetworkState?.0 ?? false) != stateAndFilterId.state.editing)
                         }
                         if case .chatList(.root) = location, checkProxy {
                             if strongSelf.proxyUnavailableTooltipController == nil && !strongSelf.didShowProxyUnavailableTooltipController && strongSelf.isNodeLoaded && strongSelf.displayNode.view.window != nil && strongSelf.navigationController?.topViewController === self {
@@ -673,8 +770,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     }
                                 }
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: {
-                                    if let strongSelf = self, let rect = strongSelf.titleView.proxyButtonFrame {
-                                        return (strongSelf.titleView, rect.insetBy(dx: 0.0, dy: -4.0))
+                                    if let strongSelf = self, let titleView = strongSelf.titleView, let rect = titleView.proxyButtonFrame {
+                                        return (titleView, rect.insetBy(dx: 0.0, dy: -4.0))
                                     }
                                     return nil
                                 }))
@@ -701,13 +798,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         })
         
-        self.titleView.toggleIsLocked = { [weak self] in
+        self.titleView?.toggleIsLocked = { [weak self] in
             if let strongSelf = self {
                 strongSelf.context.sharedContext.appLockContext.lock()
             }
         }
         
-        self.titleView.openProxySettings = { [weak self] in
+        self.titleView?.openProxySettings = { [weak self] in
             if let strongSelf = self {
                 (strongSelf.navigationController as? NavigationController)?.pushViewController(context.sharedContext.makeProxySettingsController(context: context))
             }
@@ -1037,6 +1134,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     deinit {
         self.openMessageFromSearchDisposable.dispose()
         self.titleDisposable?.dispose()
+        self.chatTitleDisposable?.dispose()
         self.badgeDisposable?.dispose()
         self.badgeIconDisposable?.dispose()
         self.passcodeLockTooltipDisposable.dispose()
@@ -1057,7 +1155,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         var selectedItems = Set<MediaId>()
         var topStatusTitle = self.presentationData.strings.PeerStatusSetup_NoTimerTitle
         var currentSelection: Int64?
-        if let peerStatus = self.titleView.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
+        if let peerStatus = self.titleView?.title.peerStatus, case let .emoji(emojiStatus) = peerStatus {
             selectedItems.insert(MediaId(namespace: Namespaces.Media.CloudFile, id: emojiStatus.fileId))
             currentSelection = emojiStatus.fileId
             
@@ -1134,8 +1232,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.rightBarButtonItem = editItem
         }
         
-        self.titleView.theme = self.presentationData.theme
-        self.titleView.strings = self.presentationData.strings
+        self.titleView?.theme = self.presentationData.theme
+        self.titleView?.strings = self.presentationData.strings
+        
+        self.chatTitleView?.updateThemeAndStrings(theme: self.presentationData.theme, strings: self.presentationData.strings, hasEmbeddedTitleContent: false)
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
@@ -1818,7 +1918,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if case .chatList(.root) = self.location {
             self.ready.set(.never())
         } else {
-            self.ready.set(self.chatListDisplayNode.containerNode.ready)
+            self.ready.set(combineLatest([
+                self.chatListDisplayNode.containerNode.ready,
+                self.infoReady.get()
+            ])
+            |> map { values -> Bool in
+                return !values.contains(where: { !$0 })
+            }
+            |> filter { $0 })
         }
         
         self.displayNodeDidLoad()
@@ -1891,7 +1998,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         #endif
 
-        if let lockViewFrame = self.titleView.lockViewFrame, !self.didShowPasscodeLockTooltipController {
+        if let lockViewFrame = self.titleView?.lockViewFrame, !self.didShowPasscodeLockTooltipController {
             self.passcodeLockTooltipDisposable.set(combineLatest(queue: .mainQueue(), ApplicationSpecificNotice.getPasscodeLockTips(accountManager: self.context.sharedContext.accountManager), self.context.sharedContext.accountManager.accessChallengeData() |> take(1)).start(next: { [weak self] tooltipValue, passcodeView in
                     if let strongSelf = self {
                         if !tooltipValue {
@@ -1901,8 +2008,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 
                                 let tooltipController = TooltipController(content: .text(strongSelf.presentationData.strings.DialogList_PasscodeLockHelp), baseFontSize: strongSelf.presentationData.listsFontSize.baseDisplaySize, dismissByTapOutside: true)
                                 strongSelf.present(tooltipController, in: .window(.root), with: TooltipControllerPresentationArguments(sourceViewAndRect: { [weak self] in
-                                    if let strongSelf = self {
-                                        return (strongSelf.titleView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
+                                    if let strongSelf = self, let titleView = strongSelf.titleView {
+                                        return (titleView, lockViewFrame.offsetBy(dx: 4.0, dy: 14.0))
                                     }
                                     return nil
                                 }))
@@ -2315,50 +2422,72 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.moreBarButton.contextAction?(self.moreBarButton.containerNode, nil)
     }
     
-    private func openMoreMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {
-        guard case let .forum(peerId) = self.location else {
-            return
-        }
-        
+    public static func openMoreMenu(context: AccountContext, peerId: EnginePeer.Id, sourceController: ViewController, isViewingAsTopics: Bool, sourceView: UIView, gesture: ContextGesture?) {
         var items: [ContextMenuItem] = []
+        
+        items.append(.action(ContextMenuActionItem(text: "View as Topics", icon: { theme in
+            if !isViewingAsTopics {
+                return nil
+            }
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak sourceController] _, a in
+            a(.default)
+            
+            guard let sourceController = sourceController, let navigationController = sourceController.navigationController as? NavigationController else {
+                return
+            }
+            
+            let chatController = context.sharedContext.makeChatListController(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
+            navigationController.replaceController(sourceController, with: chatController, animated: false)
+        })))
+        items.append(.action(ContextMenuActionItem(text: "View as Messages", icon: { theme in
+            if isViewingAsTopics {
+                return nil
+            }
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+        }, action: { [weak sourceController] _, a in
+            a(.default)
+
+            guard let sourceController = sourceController, let navigationController = sourceController.navigationController as? NavigationController else {
+                return
+            }
+            
+            let chatController = context.sharedContext.makeChatController(context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+            navigationController.replaceController(sourceController, with: chatController, animated: false)
+        })))
+        items.append(.separator)
         
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "Group Info", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, f in
+        }, action: { [weak sourceController] _, f in
             f(.default)
             
-            guard let strongSelf = self else {
-                return
-            }
-            let _ = (strongSelf.context.engine.data.get(
+            let _ = (context.engine.data.get(
                 TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
             )
             |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer, let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
+                guard let sourceController = sourceController, let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
                     return
                 }
-                (strongSelf.navigationController as? NavigationController)?.pushViewController(controller)
+                (sourceController.navigationController as? NavigationController)?.pushViewController(controller)
             })
         })))
         
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "Add Member", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] _, f in
+        }, action: { [weak sourceController] _, f in
             f(.default)
             
-            guard let strongSelf = self else {
-                return
-            }
-            
-            let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
             |> deliverOnMainQueue).start(next: { peer in
-                guard let strongSelf = self, let peer = peer else {
+                guard let sourceController = sourceController, let peer = peer else {
                     return
                 }
-                
-                strongSelf.context.sharedContext.openAddPeerMembers(context: strongSelf.context, updatedPresentationData: nil, parentController: strongSelf, groupPeer: peer._asPeer(), selectAddMemberDisposable: strongSelf.selectAddMemberDisposable, addMemberDisposable: strongSelf.addMemberDisposable)
+                let selectAddMemberDisposable = MetaDisposable()
+                let addMemberDisposable = MetaDisposable()
+                context.sharedContext.openAddPeerMembers(context: context, updatedPresentationData: nil, parentController: sourceController, groupPeer: peer._asPeer(), selectAddMemberDisposable: selectAddMemberDisposable, addMemberDisposable: addMemberDisposable)
             })
         })))
         
@@ -2367,24 +2496,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         //TODO:localize
         items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-        }, action: { [weak self] action in
+        }, action: { action in
             action.dismissWithResult(.default)
             
-            guard let strongSelf = self, let forumChannelTracker = strongSelf.forumChannelTracker else {
-                return
-            }
-            
-            let _ = (forumChannelTracker.createTopic(title: "Topic#\(Int.random(in: 0 ..< 100000))")
-            |> deliverOnMainQueue).start(next: { [weak self] topicId in
-                guard let strongSelf = self else {
-                    return
-                }
-                let _ = enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: "Topic#\(Int.random(in: 0 ..< 100000)) very long title to fill two lines", iconFileId: nil)
+            |> deliverOnMainQueue).start(next: { topicId in
+                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
             })
         })))
 
-        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(HeaderContextReferenceContentSource(controller: self, sourceNode: self.moreBarButton.referenceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-        self.presentInGlobalOverlay(contextController)
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+        sourceController.presentInGlobalOverlay(contextController)
     }
     
     private var initializedFilters = false
@@ -3655,8 +3778,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public var lockViewFrame: CGRect? {
-        if let lockViewFrame = self.titleView.lockViewFrame {
-            return self.titleView.convert(lockViewFrame, to: self.view)
+        if let titleView = self.titleView, let lockViewFrame = titleView.lockViewFrame {
+            return titleView.convert(lockViewFrame, to: self.view)
         } else {
             return nil
         }
@@ -3871,14 +3994,14 @@ private final class ChatListContextLocationContentSource: ContextLocationContent
 
 private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
-    private let sourceNode: ContextReferenceContentNode
+    private let sourceView: UIView
 
-    init(controller: ViewController, sourceNode: ContextReferenceContentNode) {
+    init(controller: ViewController, sourceView: UIView) {
         self.controller = controller
-        self.sourceNode = sourceNode
+        self.sourceView = sourceView
     }
 
     func transitionInfo() -> ContextControllerReferenceViewInfo? {
-        return ContextControllerReferenceViewInfo(referenceView: self.sourceNode.view, contentAreaInScreenSpace: UIScreen.main.bounds)
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds)
     }
 }

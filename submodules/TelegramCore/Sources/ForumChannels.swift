@@ -57,6 +57,57 @@ public enum CreateForumChannelTopicError {
     case generic
 }
 
+func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: String, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    }
+    |> castError(CreateForumChannelTopicError.self)
+    |> mapToSignal { inputChannel -> Signal<Int64, CreateForumChannelTopicError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        if iconFileId != nil {
+            flags |= (1 << 3)
+        }
+        return account.network.request(Api.functions.channels.createForumTopic(
+            flags: flags,
+            channel: inputChannel,
+            title: title,
+            iconEmojiId: iconFileId,
+            randomId: Int64.random(in: Int64.min ..< Int64.max),
+            sendAs: nil
+        ))
+        |> mapError { _ -> CreateForumChannelTopicError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Int64, CreateForumChannelTopicError> in
+            account.stateManager.addUpdates(result)
+            
+            var topicId: Int64?
+            topicId = nil
+            for update in result.allUpdates {
+                switch update {
+                case let .updateNewChannelMessage(message, _, _):
+                    if let message = StoreMessage(apiMessage: message) {
+                        if case let .Id(id) = message.id {
+                            topicId = Int64(id.id)
+                        }
+                    }
+                default:
+                    break
+                }
+            }
+            
+            if let topicId = topicId {
+                return .single(topicId)
+            } else {
+                return .fail(.generic)
+            }
+        }
+    }
+}
+
 func _internal_setChannelForumMode(account: Account, peerId: PeerId, isForum: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
@@ -142,7 +193,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount):
+                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
                             let data = MessageHistoryThreadData(
                                 info: EngineMessageHistoryThread.Info(
                                     title: title,
@@ -220,79 +271,6 @@ public final class ForumChannelTopics {
             self.loadMoreDisposable.dispose()
             self.updateDisposable.dispose()
         }
-        
-        func createTopic(title: String) -> Signal<Int64, CreateForumChannelTopicError> {
-            let peerId = self.peerId
-            let account = self.account
-            return self.account.postbox.transaction { transaction -> (Api.InputChannel?, Int64?) in
-                var fileId: Int64? = nil
-                
-                var filteredFiles: [TelegramMediaFile] = []
-                for featuredEmojiPack in transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks) {
-                    guard let featuredEmojiPack = featuredEmojiPack.contents.get(FeaturedStickerPackItem.self) else {
-                        continue
-                    }
-                    for item in featuredEmojiPack.topItems {
-                        for attribute in item.file.attributes {
-                            switch attribute {
-                            case .CustomEmoji:
-                                filteredFiles.append(item.file)
-                            default:
-                                break
-                            }
-                        }
-                    }
-                }
-                fileId = filteredFiles.randomElement()?.fileId.id
-                
-                return (transaction.getPeer(peerId).flatMap(apiInputChannel), fileId)
-            }
-            |> castError(CreateForumChannelTopicError.self)
-            |> mapToSignal { inputChannel, fileId -> Signal<Int64, CreateForumChannelTopicError> in
-                guard let inputChannel = inputChannel else {
-                    return .fail(.generic)
-                }
-                var flags: Int32 = 0
-                if fileId != nil {
-                    flags |= (1 << 3)
-                }
-                return account.network.request(Api.functions.channels.createForumTopic(
-                    flags: flags,
-                    channel: inputChannel,
-                    title: title,
-                    iconEmojiId: fileId,
-                    randomId: Int64.random(in: Int64.min ..< Int64.max),
-                    sendAs: nil
-                ))
-                |> mapError { _ -> CreateForumChannelTopicError in
-                    return .generic
-                }
-                |> mapToSignal { result -> Signal<Int64, CreateForumChannelTopicError> in
-                    account.stateManager.addUpdates(result)
-                    
-                    var topicId: Int64?
-                    topicId = nil
-                    for update in result.allUpdates {
-                        switch update {
-                        case let .updateNewChannelMessage(message, _, _):
-                            if let message = StoreMessage(apiMessage: message) {
-                                if case let .Id(id) = message.id {
-                                    topicId = Int64(id.id)
-                                }
-                            }
-                        default:
-                            break
-                        }
-                    }
-                    
-                    if let topicId = topicId {
-                        return .single(topicId)
-                    } else {
-                        return .fail(.generic)
-                    }
-                }
-            }
-        }
     }
     
     public struct Item: Equatable {
@@ -343,21 +321,5 @@ public final class ForumChannelTopics {
         self.impl = QueueLocalObject(queue: queue, generate: {
             return Impl(queue: queue, account: account, peerId: peerId)
         })
-    }
-    
-    public func createTopic(title: String) -> Signal<Int64, CreateForumChannelTopicError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.createTopic(title: title).start(next: { value in
-                    subscriber.putNext(value)
-                }, error: { error in
-                    subscriber.putError(error)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
-            }
-            return disposable
-        }
     }
 }

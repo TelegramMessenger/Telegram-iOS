@@ -46,7 +46,15 @@ public extension TelegramEngine {
         public func updateAddressName(domain: AddressNameDomain, name: String?) -> Signal<Void, UpdateAddressNameError> {
             return _internal_updateAddressName(account: self.account, domain: domain, name: name)
         }
-
+        
+        public func toggleAddressNameActive(domain: AddressNameDomain, name: String, active: Bool) -> Signal<Void, ToggleAddressNameActiveError> {
+            return _internal_toggleAddressNameActive(account: self.account, domain: domain, name: name, active: active)
+        }
+        
+        public func reorderAddressNames(domain: AddressNameDomain, names: [TelegramPeerUsername]) -> Signal<Void, ReorderAddressNamesError> {
+            return _internal_reorderAddressNames(account: self.account, domain: domain, names: names)
+        }
+        
         public func checkPublicChannelCreationAvailability(location: Bool = false) -> Signal<Bool, NoError> {
             return _internal_checkPublicChannelCreationAvailability(account: self.account, location: location)
         }
@@ -516,8 +524,18 @@ public extension TelegramEngine {
             }
         }
 
-        public func joinChatInteractively(with hash: String) -> Signal <PeerId?, JoinLinkError> {
+        public func joinChatInteractively(with hash: String) -> Signal <EnginePeer?, JoinLinkError> {
+            let account = self.account
             return _internal_joinChatInteractively(with: hash, account: self.account)
+            |> mapToSignal { id -> Signal <EnginePeer?, JoinLinkError> in
+                guard let id = id else {
+                    return .single(nil)
+                }
+                return account.postbox.transaction { transaction -> EnginePeer? in
+                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                }
+                |> castError(JoinLinkError.self)
+            }
         }
 
         public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {
@@ -782,6 +800,10 @@ public extension TelegramEngine {
         
         public func setChannelForumMode(id: EnginePeer.Id, isForum: Bool) -> Signal<Never, NoError> {
             return _internal_setChannelForumMode(account: self.account, peerId: id, isForum: isForum)
+        }
+        
+        public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
+            return _internal_createForumChannelTopic(account: self.account, peerId: id, title: title, iconFileId: iconFileId)
         }
     }
 }

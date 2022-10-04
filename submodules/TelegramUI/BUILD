@@ -298,6 +298,8 @@ swift_library(
         "//submodules/Components/PagerComponent:PagerComponent",
         "//submodules/Components/LottieAnimationComponent:LottieAnimationComponent",
         "//submodules/TelegramUI/Components/ForumTopicListScreen:ForumTopicListScreen",
+        "//submodules/TelegramUI/Components/ForumCreateTopicScreen:ForumCreateTopicScreen",
+        "//submodules/TelegramUI/Components/ChatTitleView",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

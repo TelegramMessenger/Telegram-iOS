@@ -123,7 +123,7 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
     let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
     let limit: Int32 = 100
     let oneOperation: (Int32) -> Signal<Int32?, MTRpcError> = { maxId in
-        return network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
+        return network.request(Api.functions.messages.getUnreadMentions(flags: 0, peer: inputPeer, topMsgId: nil, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
         |> mapToSignal { result -> Signal<[MessageId], MTRpcError> in
             switch result {
                 case let .messages(messages, _, _):
