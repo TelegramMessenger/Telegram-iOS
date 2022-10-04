@@ -15673,7 +15673,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId.id), subject: subject, keepStack: .always, peekData: peekData))
+                        if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                            strongSelf.context.sharedContext.navigateToForumChannel(context: strongSelf.context, peerId: peerId.id, navigationController: navigationController)
+                        } else {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId.id), subject: subject, keepStack: .always, peekData: peekData))
+                        }
                     }
                 case .info:
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId.id)
