@@ -45,7 +45,7 @@ public extension EngineMessageHistoryThread {
     }
 }
 
-public struct MessageHistoryThreadData: Codable {
+public struct MessageHistoryThreadData: Codable, Equatable {
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
     public var maxIncomingReadId: Int32
