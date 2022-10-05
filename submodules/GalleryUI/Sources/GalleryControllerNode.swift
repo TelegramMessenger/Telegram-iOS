@@ -337,7 +337,6 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
     
     open func animateIn(animateContent: Bool, useSimpleAnimation: Bool) {
         let duration: Double = animateContent ? 0.2 : 0.3
-        let fadeDuration: Double = 0.2
         
         let backgroundColor = self.backgroundNode.backgroundColor ?? .black
         
@@ -346,9 +345,9 @@ open class GalleryControllerNode: ASDisplayNode, UIScrollViewDelegate, UIGesture
         self.footerNode.alpha = 0.0
         self.currentThumbnailContainerNode?.alpha = 0.0
         
-        self.backgroundNode.layer.animate(from: backgroundColor.withAlphaComponent(0.0).cgColor, to: backgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: fadeDuration)
+        self.backgroundNode.layer.animate(from: backgroundColor.withAlphaComponent(0.0).cgColor, to: backgroundColor.cgColor, keyPath: "backgroundColor", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15)
         
-        UIView.animate(withDuration: fadeDuration, delay: 0.0, options: [.curveLinear], animations: {
+        UIView.animate(withDuration: 0.15, delay: 0.0, options: [.curveLinear], animations: {
             if !self.areControlsHidden {
                 self.statusBar?.alpha = 1.0
                 self.navigationBar?.alpha = 1.0

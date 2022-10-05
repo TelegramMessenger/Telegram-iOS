@@ -1419,7 +1419,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if isAnimated || disablePlayerControls {
                         strongSelf.footerContentNode.content = .info
-                    } else if isPaused && !strongSelf.ignorePauseStatus {
+                    } else if isPaused && !strongSelf.ignorePauseStatus && strongSelf.isCentral == true {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {
