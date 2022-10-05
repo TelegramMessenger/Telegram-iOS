@@ -27,6 +27,7 @@ import EmojiStatusComponent
 import AnimationCache
 import MultiAnimationRenderer
 import ComponentDisplayAdapters
+import ChatTitleView
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -407,7 +408,17 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.containerNode.isGestureEnabled = false
             }
             
-            self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
+            self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
+            
+            let avatarCornerRadius: CGFloat
+            if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                avatarCornerRadius = floor(avatarSize * 0.25)
+            } else {
+                avatarCornerRadius = avatarSize / 2.0
+            }
+            self.avatarNode.layer.cornerRadius = avatarCornerRadius
+            self.avatarNode.layer.masksToBounds = true
+            
             self.isFirstAvatarLoading = false
             
             self.containerNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
@@ -708,8 +719,17 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
             overrideImage = item == nil && canEdit ? .editAvatarIcon(forceNone: true) : nil
         }
         self.avatarNode.font = avatarPlaceholderFont(size: floor(avatarSize * 16.0 / 37.0))
-        self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
+        self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: false, displayDimensions: CGSize(width: avatarSize, height: avatarSize))
         self.avatarNode.frame = CGRect(origin: CGPoint(x: -avatarSize / 2.0, y: -avatarSize / 2.0), size: CGSize(width: avatarSize, height: avatarSize))
+        
+        let avatarCornerRadius: CGFloat
+        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            avatarCornerRadius = floor(avatarSize * 0.25)
+        } else {
+            avatarCornerRadius = avatarSize / 2.0
+        }
+        self.avatarNode.layer.cornerRadius = avatarCornerRadius
+        self.avatarNode.layer.masksToBounds = true
         
         if let item = item {
             let representations: [ImageRepresentationWithReference]
@@ -2550,8 +2570,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
-                if let addressName = user.addressName, !addressName.isEmpty {
-                    subtitle = "\(subtitle) • @\(addressName)"
+                let mainUsername = user.usernames.first?.username ?? user.username
+                if let mainUsername = mainUsername, !mainUsername.isEmpty {
+                    subtitle = "\(subtitle) • @\(mainUsername)"
                 }
                 smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
@@ -2785,6 +2806,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
         }
+        
+        let avatarCornerRadius: CGFloat
+        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            avatarCornerRadius = floor(avatarSize * 0.25)
+        } else {
+            avatarCornerRadius = avatarSize / 2.0
+        }
                 
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
@@ -2795,9 +2823,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: 0.0)
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: 0.0)
             }
-        } else if self.avatarListNode.listContainerNode.cornerRadius != avatarSize / 2.0 {
-            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: avatarSize / 2.0)
-            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: avatarSize / 2.0, completion: { [weak self] _ in
+        } else if self.avatarListNode.listContainerNode.cornerRadius != avatarCornerRadius {
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: avatarCornerRadius)
+            transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: avatarCornerRadius, completion: { [weak self] _ in
                 guard let strongSelf = self else {
                     return
                 }

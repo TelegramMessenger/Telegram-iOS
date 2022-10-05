@@ -524,8 +524,18 @@ public extension TelegramEngine {
             }
         }
 
-        public func joinChatInteractively(with hash: String) -> Signal <PeerId?, JoinLinkError> {
+        public func joinChatInteractively(with hash: String) -> Signal <EnginePeer?, JoinLinkError> {
+            let account = self.account
             return _internal_joinChatInteractively(with: hash, account: self.account)
+            |> mapToSignal { id -> Signal <EnginePeer?, JoinLinkError> in
+                guard let id = id else {
+                    return .single(nil)
+                }
+                return account.postbox.transaction { transaction -> EnginePeer? in
+                    return transaction.getPeer(id).flatMap(EnginePeer.init)
+                }
+                |> castError(JoinLinkError.self)
+            }
         }
 
         public func joinLinkInformation(_ hash: String) -> Signal<ExternalJoiningChatState, JoinLinkInfoError> {

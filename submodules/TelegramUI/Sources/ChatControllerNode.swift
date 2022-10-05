@@ -20,6 +20,7 @@ import SparseItemGrid
 import ChatPresentationInterfaceState
 import ChatInputPanelContainer
 import PremiumUI
+import ChatTitleView
 
 final class VideoNavigationControllerDropContentItem: NavigationControllerDropContentItem {
     let itemNode: OverlayMediaItemNode
@@ -92,7 +93,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
     private var emptyNode: ChatEmptyNode?
-    private var emptyType: ChatHistoryNodeLoadState.EmptyType?
+    private(set) var emptyType: ChatHistoryNodeLoadState.EmptyType?
     private var didDisplayEmptyGreeting = false
     private var validEmptyNodeLayout: (CGSize, UIEdgeInsets)?
     var restrictedNode: ChatRecentActionsEmptyNode?

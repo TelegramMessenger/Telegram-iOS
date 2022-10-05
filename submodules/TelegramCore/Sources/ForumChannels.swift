@@ -193,7 +193,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount):
+                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
                             let data = MessageHistoryThreadData(
                                 info: EngineMessageHistoryThread.Info(
                                     title: title,

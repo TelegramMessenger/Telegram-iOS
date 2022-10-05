@@ -35,7 +35,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (PeerId) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder

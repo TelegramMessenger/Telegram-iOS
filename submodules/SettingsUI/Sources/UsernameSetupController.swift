@@ -572,6 +572,10 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         })
     })
     
+    controller.beganInteractiveDragging = {
+        dismissInputImpl?()
+    }
+    
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()

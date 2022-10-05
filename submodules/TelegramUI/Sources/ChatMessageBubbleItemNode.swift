@@ -3295,7 +3295,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                         })
                                     } else {
                                         return .optionalAction({
-                                            item.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, item.message.peers[peerId])
+                                            if let peer = item.message.peers[peerId] {
+                                                item.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                            }
                                         })
                                     }
                                 }
@@ -3327,7 +3329,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 }
                                 item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                             } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
+                                item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
                             } else if let _ = forwardInfo.authorSignature {
                                 item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                             }
@@ -3365,8 +3367,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             self.item?.controllerInteraction.openUrl(url, concealed, nil, self.item?.content.firstMessage)
                         })
                     case let .peerMention(peerId, _):
-                        return .action({
-                            self.item?.controllerInteraction.openPeer(peerId, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
+                        return .action({ [weak self] in
+                            if let item = self?.item {
+                                let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    if let self = self, let item = self.item, let peer = peer {
+                                        item.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                    }
+                                })
+                            }
                         })
                     case let .textMention(name):
                         return .action({

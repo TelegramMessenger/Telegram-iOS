@@ -76,7 +76,12 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
                         }
-                        item.controllerInteraction.openPeer(id, navigationData, nil, false, nil)
+                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            if let peer = peer {
+                                item.controllerInteraction.openPeer(peer, navigationData, nil, false)
+                            }
+                        })
                     case let .join(_, joinHash):
                         item.controllerInteraction.openJoinLink(joinHash)
                     }

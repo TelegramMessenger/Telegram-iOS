@@ -635,11 +635,11 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         if case .ended = recognizer.state {
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, id, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
-            } else {
-                if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false, nil)
+            } else if let peer = self.peer {
+                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                    self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false)
                 } else {
-                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, false, nil)
+                    self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, false)
                 }
             }
         }

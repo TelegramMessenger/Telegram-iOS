@@ -253,11 +253,8 @@ func chatHistoryEntriesForView(
                         }
                     }
                     
-                    let replyCount = view.entries.isEmpty ? 0 : 1
-                    
-                    if hasTopicCreated && replyCount == 0 {
-                        
-                    } else {
+                    if !replyThreadMessage.isForumPost {
+                        let replyCount = view.entries.isEmpty ? 0 : 1
                         entries.insert(.ReplyCountEntry(messages[0].index, replyThreadMessage.isChannelPost, replyCount, presentationData), at: 1)
                     }
                 }
