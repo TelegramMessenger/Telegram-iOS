@@ -178,6 +178,11 @@ private func createThemeImage(theme: PresentationTheme) -> Signal<(TransformImag
             context.withContext { c in
                 c.clear(CGRect(origin: CGPoint(), size: drawingRect.size))
                 
+                c.setFillColor(theme.list.plainBackgroundColor.cgColor)
+                let path = UIBezierPath(roundedRect: drawingRect, cornerRadius: arguments.corners.topLeft.radius)
+                c.addPath(path.cgPath)
+                c.fillPath()
+                
                 c.translateBy(x: drawingRect.width / 2.0, y: drawingRect.height / 2.0)
                 c.scaleBy(x: 1.0, y: -1.0)
                 c.translateBy(x: -drawingRect.width / 2.0, y: -drawingRect.height / 2.0)
@@ -287,7 +292,7 @@ private final class ThemeSettingsThemeItemIconNode : ListViewItemNode {
                         strongSelf.containerNode.isGestureEnabled = true
                     }
                     if updatedTheme || updatedSelected {
-                        strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: true, selected: item.selected)
+                        strongSelf.overlayNode.image = generateBorderImage(theme: item.theme, bordered: false, selected: item.selected)
                     }
                     
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: itemLayout.contentSize)

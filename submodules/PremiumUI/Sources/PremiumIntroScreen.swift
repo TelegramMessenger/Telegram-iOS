@@ -25,6 +25,137 @@ import AnimationCache
 import MultiAnimationRenderer
 
 public enum PremiumSource: Equatable {
+    public static func == (lhs: PremiumSource, rhs: PremiumSource) -> Bool {
+        switch lhs {
+        case .settings:
+            if case .settings = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .stickers:
+            if case .stickers = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .reactions:
+            if case .reactions = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .ads:
+            if case .ads = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .upload:
+            if case .upload = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .groupsAndChannels:
+            if case .groupsAndChannels = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .pinnedChats:
+            if case .pinnedChats = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .publicLinks:
+            if case .publicLinks = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .savedGifs:
+            if case .savedGifs = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .savedStickers:
+            if case .savedStickers = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .folders:
+            if case .folders = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .chatsPerFolder:
+            if case .chatsPerFolder = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .accounts:
+            if case .accounts = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .about:
+            if case .about = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .appIcons:
+            if case .appIcons = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .animatedEmoji:
+            if case .animatedEmoji = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .deeplink(link):
+            if case .deeplink(link) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .profile(peerId):
+            if case .profile(peerId) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case let .emojiStatus(lhsPeerId, lhsFileId, lhsFile, _):
+            if case let .emojiStatus(rhsPeerId, rhsFileId, rhsFile, _) = rhs {
+                return lhsPeerId == rhsPeerId && lhsFileId == rhsFileId && lhsFile == rhsFile
+            } else {
+                return false
+            }
+        case let .gift(from, to, duration):
+            if case .gift(from, to, duration) = rhs {
+                return true
+            } else {
+                return false
+            }
+        case .giftTerms:
+            if case .giftTerms = rhs {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
     case settings
     case stickers
     case reactions
@@ -43,7 +174,7 @@ public enum PremiumSource: Equatable {
     case animatedEmoji
     case deeplink(String?)
     case profile(PeerId)
-    case emojiStatus(PeerId, Int64, TelegramMediaFile?, String?)
+    case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case gift(from: PeerId, to: PeerId, duration: Int32)
     case giftTerms
     
@@ -1873,10 +2004,10 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 }
             })
             
-            if case let .emojiStatus(_, emojiFileId, emojiFile, emojiPackTitle) = source {
+            if case let .emojiStatus(_, emojiFileId, emojiFile, maybeEmojiPack) = source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
                 if let emojiFile = emojiFile {
                     self.emojiFile = emojiFile
-                    self.emojiPackTitle = emojiPackTitle
+                    self.emojiPackTitle = info.title
                     self.updated(transition: .immediate)
                 } else {
                     self.emojiFileDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [emojiFileId])
@@ -2124,10 +2255,12 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                 return nil
             })
             
+            var loadedEmojiPack: LoadedStickerPack?
             var highlightableLinks = false
             let secondaryTitleText: String
             if let otherPeerName = state.otherPeerName {
-                if case let .emojiStatus(_, _, file, emojiPackTitle) = context.component.source {
+                if case let .emojiStatus(_, _, file, maybeEmojiPack) = context.component.source, let emojiPack = maybeEmojiPack, case let .result(info, _, _) = emojiPack {
+                    loadedEmojiPack = maybeEmojiPack
                     highlightableLinks = true
                     
                     var packReference: StickerPackReference?
@@ -2141,7 +2274,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                     if let packReference = packReference, case let .id(id, _) = packReference, id == 773947703670341676 {
                         secondaryTitleText = environment.strings.Premium_EmojiStatusShortTitle(otherPeerName).string
                     } else {
-                        secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, emojiPackTitle ?? "").string.replacingOccurrences(of: "#", with: " #  ")
+                        secondaryTitleText = environment.strings.Premium_EmojiStatusTitle(otherPeerName, info.title).string.replacingOccurrences(of: "#", with: " #  ")
                     }
                 } else if case .profile = context.component.source {
                     secondaryTitleText = environment.strings.Premium_PersonalTitle(otherPeerName).string
@@ -2206,7 +2339,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         if let emojiFile = state?.emojiFile, let controller = environment?.controller() as? PremiumIntroScreen, let navigationController = controller.navigationController as? NavigationController {
                             for attribute in emojiFile.attributes {
                                 if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
-                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: navigationController, sendSticker: { _, _, _ in
+                                    let controller = accountContext.sharedContext.makeStickerPackScreen(context: accountContext, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: loadedEmojiPack.flatMap { [$0] } ?? [], parentNavigationController: navigationController, sendSticker: { _, _, _ in
                                         return false
                                     })
                                     presentController(controller)

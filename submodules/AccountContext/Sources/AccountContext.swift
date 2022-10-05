@@ -753,7 +753,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     
-    func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
+    func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
     
@@ -786,7 +786,7 @@ public enum PremiumIntroSource {
     case about
     case deeplink(String?)
     case profile(PeerId)
-    case emojiStatus(PeerId, Int64, TelegramMediaFile?, String?)
+    case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
 }
 
 #if ENABLE_WALLET

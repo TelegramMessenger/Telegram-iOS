@@ -6,6 +6,7 @@ import TextFormat
 import UIKit
 import AppBundle
 import TelegramStringFormatting
+import ContextUI
 
 enum PeerInfoScreenLabeledValueTextColor {
     case primary
@@ -29,10 +30,11 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
     let textColor: PeerInfoScreenLabeledValueTextColor
     let textBehavior: PeerInfoScreenLabeledValueTextBehavior
     let icon: PeerInfoScreenLabeledValueIcon?
-    let action: (() -> Void)?
+    let action: ((ASDisplayNode) -> Void)?
     let longTapAction: ((ASDisplayNode) -> Void)?
     let linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)?
     let iconAction: (() -> Void)?
+    let contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     let requestLayout: () -> Void
     
     init(
@@ -43,10 +45,11 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         textColor: PeerInfoScreenLabeledValueTextColor = .primary,
         textBehavior: PeerInfoScreenLabeledValueTextBehavior = .singleLine,
         icon: PeerInfoScreenLabeledValueIcon? = nil,
-        action: (() -> Void)?,
+        action: ((ASDisplayNode) -> Void)?,
         longTapAction: ((ASDisplayNode) -> Void)? = nil,
         linkItemAction: ((TextLinkItemActionType, TextLinkItem) -> Void)? = nil,
         iconAction: (() -> Void)? = nil,
+        contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil,
         requestLayout: @escaping () -> Void
     ) {
         self.id = id
@@ -60,6 +63,7 @@ final class PeerInfoScreenLabeledValueItem: PeerInfoScreenItem {
         self.longTapAction = longTapAction
         self.linkItemAction = linkItemAction
         self.iconAction = iconAction
+        self.contextAction = contextAction
         self.requestLayout = requestLayout
     }
     
@@ -85,6 +89,14 @@ private func generateExpandBackground(size: CGSize, color: UIColor) -> UIImage? 
 }
 
 private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
+    private let containerNode: ContextControllerSourceNode
+    private let contextSourceNode: ContextExtractedContentContainingNode
+    
+    private let extractedBackgroundImageNode: ASImageNode
+    
+    private var extractedRect: CGRect?
+    private var nonExtractedRect: CGRect?
+    
     private let selectionNode: PeerInfoScreenSelectableBackgroundNode
     private let maskNode: ASImageNode
     private let labelNode: ImmediateTextNode
@@ -111,6 +123,14 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
     
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
+        
+        self.contextSourceNode = ContextExtractedContentContainingNode()
+        self.containerNode = ContextControllerSourceNode()
+        
+        self.extractedBackgroundImageNode = ASImageNode()
+        self.extractedBackgroundImageNode.displaysAsynchronously = false
+        self.extractedBackgroundImageNode.alpha = 0.0
+        
         self.selectionNode = PeerInfoScreenSelectableBackgroundNode(bringToFrontForHighlight: { bringToFrontForHighlightImpl?() })
         self.selectionNode.isUserInteractionEnabled = false
         
@@ -161,17 +181,25 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         
         self.addSubnode(self.bottomSeparatorNode)
         self.addSubnode(self.selectionNode)
+        
+        self.containerNode.addSubnode(self.contextSourceNode)
+        self.containerNode.targetNodeForActivationProgress = self.contextSourceNode.contentNode
+        self.addSubnode(self.containerNode)
+        
         self.addSubnode(self.maskNode)
-        self.addSubnode(self.labelNode)
-        self.addSubnode(self.textNode)
-        self.addSubnode(self.additionalTextNode)
         
-        self.addSubnode(self.expandBackgroundNode)
-        self.addSubnode(self.expandNode)
-        self.addSubnode(self.expandButonNode)
+        self.contextSourceNode.contentNode.addSubnode(self.extractedBackgroundImageNode)
         
-        self.addSubnode(self.iconNode)
-        self.addSubnode(self.iconButtonNode)
+        self.contextSourceNode.contentNode.addSubnode(self.labelNode)
+        self.contextSourceNode.contentNode.addSubnode(self.textNode)
+        self.contextSourceNode.contentNode.addSubnode(self.additionalTextNode)
+        
+        self.contextSourceNode.contentNode.addSubnode(self.expandBackgroundNode)
+        self.contextSourceNode.contentNode.addSubnode(self.expandNode)
+        self.contextSourceNode.contentNode.addSubnode(self.expandButonNode)
+        
+        self.contextSourceNode.contentNode.addSubnode(self.iconNode)
+        self.contextSourceNode.contentNode.addSubnode(self.iconButtonNode)
         
         self.addSubnode(self.activateArea)
         
@@ -199,6 +227,35 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                     strongSelf.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
                 }
             }
+        }
+        
+        self.containerNode.activated = { [weak self] gesture, _ in
+            guard let strongSelf = self, let item = strongSelf.item, let contextAction = item.contextAction else {
+                gesture.cancel()
+                return
+            }
+            contextAction(strongSelf.contextSourceNode, gesture, nil)
+        }
+        
+        self.contextSourceNode.willUpdateIsExtractedToContextPreview = { [weak self] isExtracted, transition in
+            guard let strongSelf = self, let theme = strongSelf.theme else {
+                return
+            }
+            
+            if isExtracted {
+                strongSelf.extractedBackgroundImageNode.image = generateStretchableFilledCircleImage(diameter: 28.0, color: theme.list.plainBackgroundColor)
+            }
+            
+            if let extractedRect = strongSelf.extractedRect, let nonExtractedRect = strongSelf.nonExtractedRect {
+                let rect = isExtracted ? extractedRect : nonExtractedRect
+                transition.updateFrame(node: strongSelf.extractedBackgroundImageNode, frame: rect)
+            }
+            
+            transition.updateAlpha(node: strongSelf.extractedBackgroundImageNode, alpha: isExtracted ? 1.0 : 0.0, completion: { _ in
+                if !isExtracted {
+                    self?.extractedBackgroundImageNode.image = nil
+                }
+            })
         }
     }
     
@@ -260,7 +317,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
                         } else if case .longTap = gesture {
                             item.longTapAction?(self)
                         } else if case .tap = gesture {
-                            item.action?()
+                            item.action?(self.contextSourceNode)
                         }
                     }
                 default:
@@ -280,8 +337,16 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.item = item
         self.theme = presentationData.theme
         
-        self.selectionNode.pressed = item.action
-        
+        if let action = item.action {
+            self.selectionNode.pressed = { [weak self] in
+                if let strongSelf = self {
+                    action(strongSelf.contextSourceNode)
+                }
+            }
+        } else {
+            self.selectionNode.pressed = nil
+        }
+                
         let sideInset: CGFloat = 16.0 + safeInsets.left
         
         self.bottomSeparatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -460,6 +525,25 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
         self.activateArea.accessibilityLabel = item.label
         self.activateArea.accessibilityValue = item.text
         
+        
+        let contentSize = CGSize(width: width, height: height)
+        self.containerNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        self.contextSourceNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        self.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: contentSize)
+        self.containerNode.isGestureEnabled = item.contextAction != nil
+        
+        let nonExtractedRect = CGRect(origin: CGPoint(), size: CGSize(width: contentSize.width, height: contentSize.height))
+        let extractedRect = nonExtractedRect
+        self.extractedRect = extractedRect
+        self.nonExtractedRect = nonExtractedRect
+        
+        if self.contextSourceNode.isExtractedToContextPreview {
+            self.extractedBackgroundImageNode.frame = extractedRect
+        } else {
+            self.extractedBackgroundImageNode.frame = nonExtractedRect
+        }
+        self.contextSourceNode.contentRect = extractedRect
+        
         return height
     }
     
@@ -543,7 +627,7 @@ private final class PeerInfoScreenLabeledValueItemNode: PeerInfoScreenItemNode {
             } else {
                 linkHighlightingNode = LinkHighlightingNode(color: theme.list.itemAccentColor.withAlphaComponent(0.5))
                 self.linkHighlightingNode = linkHighlightingNode
-                self.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
+                self.contextSourceNode.contentNode.insertSubnode(linkHighlightingNode, belowSubnode: textNode)
             }
             linkHighlightingNode.frame = textNode.frame
             linkHighlightingNode.updateRects(rects)

@@ -234,9 +234,24 @@ public class ChatMessageBackground: ASDisplayNode {
                 })
             }
         } else if transition.isAnimated {
-            if let previousContents = self.imageNode.layer.contents, let image = image {
-                if (previousContents as AnyObject) !== image.cgImage {
-                    self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+            if let previousContents = self.imageNode.layer.contents {
+                if let image = image {
+                    if (previousContents as AnyObject) !== image.cgImage {
+                        self.imageNode.layer.animate(from: previousContents as AnyObject, to: image.cgImage! as AnyObject, keyPath: "contents", timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue, duration: 0.42)
+                    }
+                } else {
+                    let tempLayer = CALayer()
+                    tempLayer.contents = self.imageNode.layer.contents
+                    tempLayer.contentsScale = self.imageNode.layer.contentsScale
+                    tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
+                    tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
+                    tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
+                    
+                    tempLayer.frame = self.bounds
+                    self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
+                    transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
+                        tempLayer?.removeFromSuperlayer()
+                    })
                 }
             }
         }

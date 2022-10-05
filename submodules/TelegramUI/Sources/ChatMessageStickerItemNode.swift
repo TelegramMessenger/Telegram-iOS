@@ -277,6 +277,22 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 backgroundNode.update(rect: CGRect(origin: CGPoint(x: rect.minX + self.placeholderNode.frame.minX, y: rect.minY + self.placeholderNode.frame.minY), size: self.placeholderNode.frame.size), within: containerSize, transition: .immediate)
             }
             
+            if let shareButtonNode = self.shareButtonNode {
+                var shareButtonNodeFrame = shareButtonNode.frame
+                shareButtonNodeFrame.origin.x += rect.minX
+                shareButtonNodeFrame.origin.y += rect.minY
+                
+                shareButtonNode.updateAbsoluteRect(shareButtonNodeFrame, within: containerSize)
+            }
+            
+            if let actionButtonsNode = self.actionButtonsNode {
+                var actionButtonsNodeFrame = actionButtonsNode.frame
+                actionButtonsNodeFrame.origin.x += rect.minX
+                actionButtonsNodeFrame.origin.y += rect.minY
+                
+                actionButtonsNode.updateAbsoluteRect(actionButtonsNodeFrame, within: containerSize)
+            }
+            
             if let reactionButtonsNode = self.reactionButtonsNode {
                 var reactionButtonsNodeFrame = reactionButtonsNode.frame
                 reactionButtonsNodeFrame.origin.x += rect.minX
@@ -1236,7 +1252,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                         self.swipeToReplyFeedback?.impact()
                         
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode
                         self.addSubnode(swipeToReplyNode)
                         animateReplyNodeIn = true
@@ -1251,6 +1267,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 
                 if let swipeToReplyNode = self.swipeToReplyNode {
                     swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                    
+                    if let (rect, containerSize) = self.absoluteRect {
+                        let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
+                        swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
+                    }
+                    
                     if animateReplyNodeIn {
                         swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                         swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)

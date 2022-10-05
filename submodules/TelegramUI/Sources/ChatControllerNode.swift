@@ -1385,7 +1385,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         
         if let restrictedNode = self.restrictedNode {
             transition.updateFrame(node: restrictedNode, frame: contentBounds)
-            restrictedNode.updateLayout(size: contentBounds.size, transition: transition)
+            restrictedNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
+            restrictedNode.updateLayout(backgroundNode: self.backgroundNode, size: contentBounds.size, transition: transition)
         }
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
@@ -1515,7 +1516,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         if let emptyNode = self.emptyNode, let emptyType = self.emptyType {
             emptyNode.updateLayout(interfaceState: self.chatPresentationInterfaceState, emptyType: emptyType, loadingNode: nil, backgroundNode: self.backgroundNode, size: contentBounds.size, insets: emptyNodeInsets, transition: transition)
             transition.updateFrame(node: emptyNode, frame: contentBounds)
-            emptyNode.update(rect: contentBounds, within: contentBounds.size)
+            emptyNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
         }
         
         var contentBottomInset: CGFloat = inputPanelsHeight + 4.0

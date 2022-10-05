@@ -24,7 +24,7 @@ public var supportedTranslationLanguages = [
     "bg",
     "ca",
     "ceb",
-    "zh-Hans",
+    "zh",
 //    "zh-Hant",
 //    "zh-CN", "zh"
 //    "zh-TW"
@@ -126,7 +126,7 @@ public var supportedTranslationLanguages = [
 public var popularTranslationLanguages = [
     "en",
     "ar",
-    "zh-Hans",
+    "zh",
 //    "zh-Hant",
     "fr",
     "de",

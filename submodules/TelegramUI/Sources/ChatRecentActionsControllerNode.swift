@@ -659,7 +659,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
-        self.emptyNode.updateLayout(size: emptyFrame.size, transition: transition)
+        self.emptyNode.update(rect: emptyFrame, within: layout.size)
+        self.emptyNode.updateLayout(backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
         
         let contentBottomInset: CGFloat = panelHeight + 4.0
         let listInsets = UIEdgeInsets(top: contentBottomInset, left: layout.safeInsets.right, bottom: insets.top, right: layout.safeInsets.left)

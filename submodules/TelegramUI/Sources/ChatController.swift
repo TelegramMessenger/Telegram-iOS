@@ -1088,6 +1088,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 allReactionsAreAvailable = false
                             }
                             
+                            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                            if premiumConfiguration.isPremiumDisabled {
+                                allReactionsAreAvailable = false
+                            }
+                            
                             if allReactionsAreAvailable {
                                 actions.getEmojiContent = { animationCache, animationRenderer in
                                     guard let strongSelf = self else {

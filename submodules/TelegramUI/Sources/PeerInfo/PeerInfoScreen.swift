@@ -462,7 +462,7 @@ private enum PeerInfoReportType {
 private final class PeerInfoInteraction {
     let openChat: () -> Void
     let openUsername: (String) -> Void
-    let openPhone: (String) -> Void
+    let openPhone: (String, ASDisplayNode, ContextGesture?) -> Void
     let editingOpenNotificationSettings: () -> Void
     let editingOpenSoundSettings: () -> Void
     let editingToggleShowMessageText: (Bool) -> Void
@@ -505,7 +505,7 @@ private final class PeerInfoInteraction {
     
     init(
         openUsername: @escaping (String) -> Void,
-        openPhone: @escaping (String) -> Void,
+        openPhone: @escaping (String, ASDisplayNode, ContextGesture?) -> Void,
         editingOpenNotificationSettings: @escaping () -> Void,
         editingOpenSoundSettings: @escaping () -> Void,
         editingToggleShowMessageText: @escaping (Bool) -> Void,
@@ -942,10 +942,10 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         
         if let phone = user.phone {
             let formattedPhone = formatPhoneNumber(phone)
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: presentationData.strings.ContactInfo_PhoneLabelMobile, text: formattedPhone, textColor: .accent, action: {
-                interaction.openPhone(phone)
-            }, longTapAction: { sourceNode in
-                interaction.openPeerInfoContextMenu(.phone(formattedPhone), sourceNode)
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 2, label: presentationData.strings.ContactInfo_PhoneLabelMobile, text: formattedPhone, textColor: .accent, action: { node in
+                interaction.openPhone(phone, node, nil)
+            }, longTapAction: nil, contextAction: { node, gesture, _ in
+                interaction.openPhone(phone, node, gesture)
             }, requestLayout: {
                 interaction.requestLayout(false)
             }))
@@ -959,7 +959,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     additionalText: nil, //presentationData.strings.Profile_AdditionalUsernames("@username1, @username2, @username3, @username4"),
                     textColor: .accent,
                     icon: .qrCode,
-                    action: {
+                    action: { _ in
                         interaction.openUsername(username)
                     }, longTapAction: { sourceNode in
                         interaction.openPeerInfoContextMenu(.link, sourceNode)
@@ -1076,7 +1076,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
         
         if let username = channel.username {
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemUsername, label: presentationData.strings.Channel_LinkItem, text: "https://t.me/\(username)", textColor: .accent, icon: .qrCode, action: {
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: ItemUsername, label: presentationData.strings.Channel_LinkItem, text: "https://t.me/\(username)", textColor: .accent, icon: .qrCode, action: { _ in
                 interaction.openUsername(username)
             }, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.link, sourceNode)
@@ -1812,8 +1812,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             openUsername: { [weak self] value in
                 self?.openUsername(value: value)
             },
-            openPhone: { [weak self] value in
-                self?.openPhone(value: value)
+            openPhone: { [weak self] value, node, gesture in
+                self?.openPhone(value: value, node: node, gesture: gesture)
             },
             editingOpenNotificationSettings: { [weak self] in
                 self?.editingOpenNotificationSettings()
@@ -3155,7 +3155,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         } else {
             screenData = peerInfoScreenData(context: context, peerId: peerId, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, isSettings: self.isSettings, hintGroupInCommon: hintGroupInCommon, existingRequestsContext: requestsContext)
                        
-            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPackTitle, white in
+            self.headerNode.displayPremiumIntro = { [weak self] sourceView, peerStatus, emojiStatusFileAndPack, white in
                 guard let strongSelf = self else {
                     return
                 }
@@ -3172,11 +3172,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     let source: Signal<PremiumSource, NoError>
                     if let peerStatus = peerStatus {
-                        source = emojiStatusFileAndPackTitle
+                        source = emojiStatusFileAndPack
                         |> take(1)
-                        |> mapToSignal { emojiStatusFileAndPackTitle -> Signal<PremiumSource, NoError> in
-                            if let (file, packTitle) = emojiStatusFileAndPackTitle {
-                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, packTitle))
+                        |> mapToSignal { emojiStatusFileAndPack -> Signal<PremiumSource, NoError> in
+                            if let (file, pack) = emojiStatusFileAndPack {
+                                return .single(.emojiStatus(strongSelf.peerId, peerStatus.fileId, file, pack))
                             } else {
                                 return .complete()
                             }
@@ -3185,7 +3185,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         source = .single(.profile(strongSelf.peerId))
                     }
                     
-                    let _ = source.start(next: { [weak self] source in
+                    let _ = (source
+                    |> deliverOnMainQueue).start(next: { [weak self] source in
                         guard let strongSelf = self else {
                             return
                         }
@@ -3509,9 +3510,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 
                 var mediaReference: AnyMediaReference?
-                for m in message.media {
-                    if let image = m as? TelegramMediaImage {
+                for media in message.media {
+                    if let image = media as? TelegramMediaImage {
                         mediaReference = AnyMediaReference.standalone(media: image)
+                    } else if let file = media as? TelegramMediaFile {
+                        mediaReference = AnyMediaReference.standalone(media: file)
                     }
                 }
                 
@@ -4889,39 +4892,82 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
     
-    private func openPhone(value: String) {
+    private func openPhone(value: String, node: ASDisplayNode, gesture: ContextGesture?) {
+        guard let sourceNode = node as? ContextExtractedContentContainingNode else {
+            return
+        }
+        
         let _ = (getUserPeer(engine: self.context.engine, peerId: self.peerId)
         |> deliverOnMainQueue).start(next: { [weak self] peer in
             guard let strongSelf = self else {
                 return
             }
-            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone, formatPhoneNumber(value) == formatPhoneNumber(peerPhoneNumber) {
-                let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-                let dismissAction: () -> Void = { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
+            let presentationData = strongSelf.presentationData
+            
+            let telegramCallAction: (Bool) -> Void = { [weak self] isVideo in
+                guard let strongSelf = self else {
+                    return
                 }
-                actionSheet.setItemGroups([
-                    ActionSheetItemGroup(items: [
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_TelegramCall, action: {
-                            dismissAction()
-                            self?.requestCall(isVideo: false)
-                        }),
-                        ActionSheetButtonItem(title: strongSelf.presentationData.strings.UserInfo_PhoneCall, action: {
-                            dismissAction()
-                            
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            strongSelf.context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(value).replacingOccurrences(of: " ", with: ""))")
-                        }),
-                    ]),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
-                strongSelf.view.endEditing(true)
-                strongSelf.controller?.present(actionSheet, in: .window(.root))
-            } else {
+                strongSelf.requestCall(isVideo: isVideo)
+            }
+            
+            let phoneCallAction = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
                 strongSelf.context.sharedContext.applicationBindings.openUrl("tel:\(formatPhoneNumber(value).replacingOccurrences(of: " ", with: ""))")
             }
+            
+            let copyAction = { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                UIPasteboard.general.string = formatPhoneNumber(value)
+                
+                strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_PhoneCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            }
+            
+            var items: [ContextMenuItem] = []
+            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone, formatPhoneNumber(value) == formatPhoneNumber(peerPhoneNumber) {
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Call"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss {
+                        telegramCallAction(false)
+                    }
+                })))
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_TelegramVideoCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/VideoCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss {
+                        telegramCallAction(true)
+                    }
+                })))
+                
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss {
+                        phoneCallAction()
+                    }
+                })))
+                items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                    c.dismiss {
+                        copyAction()
+                    }
+                })))
+            } else {
+                items = [
+                    .action(ContextMenuActionItem(text: presentationData.strings.UserInfo_PhoneCall, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/PhoneCall"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss {
+                            phoneCallAction()
+                        }
+                    })),
+                    .action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
+                        c.dismiss {
+                            copyAction()
+                        }
+                    })),
+                ]
+            }
+                        
+            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .extracted(PeerInfoContextExtractedContentSource(sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+//            contextController.useComplexItemsTransitionAnimation = true
+            strongSelf.controller?.present(contextController, in: .window(.root))
         })
     }
     
@@ -8513,7 +8559,7 @@ private final class SettingsTabBarContextExtractedContentSource: ContextExtracte
     let keepInPlace: Bool = true
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
-    let centerActionsHorizontally: Bool = true
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .center
     
     private let controller: ViewController
     private let sourceNode: ContextExtractedContentContainingNode
@@ -8796,6 +8842,28 @@ private final class MessageContextExtractedContentSource: ContextExtractedConten
     let ignoreContentTouches: Bool = true
     let blurBackground: Bool = true
     
+    private let sourceNode: ContextExtractedContentContainingNode
+    
+    init(sourceNode: ContextExtractedContentContainingNode) {
+        self.sourceNode = sourceNode
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        return ContextControllerTakeViewInfo(containingItem: .node(self.sourceNode), contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        return ContextControllerPutBackViewInfo(contentAreaInScreenSpace: UIScreen.main.bounds)
+    }
+}
+
+private final class PeerInfoContextExtractedContentSource: ContextExtractedContentSource {
+    var keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = true
+    let blurBackground: Bool = true
+    
+    let actionsHorizontalAlignment: ContextActionsHorizontalAlignment = .right
+      
     private let sourceNode: ContextExtractedContentContainingNode
     
     init(sourceNode: ContextExtractedContentContainingNode) {

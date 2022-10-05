@@ -1644,7 +1644,7 @@
     
     UIEdgeInsets captionEdgeInsets = screenEdges;
     captionEdgeInsets.bottom = _portraitToolbarView.frame.size.height;
-    [_captionMixin updateLayoutWithFrame:self.bounds edgeInsets:captionEdgeInsets];
+    [_captionMixin updateLayoutWithFrame:self.bounds edgeInsets:captionEdgeInsets animated:false];
     
     switch (orientation)
     {

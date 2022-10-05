@@ -24,13 +24,21 @@ CGSize TGPhotoThumbnailSizeForCurrentScreen()
     
     if ([UIScreen mainScreen].scale >= 2.0f - FLT_EPSILON)
     {
-        if (widescreenWidth >= 926.0f - FLT_EPSILON)
+        if (widescreenWidth >= 932.0f - FLT_EPSILON)
         {
             return CGSizeMake(141.0f + TGScreenPixel, 141.0 + TGScreenPixel);
         }
-        if (widescreenWidth >= 896.0f - FLT_EPSILON)
+        else if (widescreenWidth >= 926.0f - FLT_EPSILON)
+        {
+            return CGSizeMake(141.0f + TGScreenPixel, 141.0 + TGScreenPixel);
+        }
+        else if (widescreenWidth >= 896.0f - FLT_EPSILON)
         {
             return CGSizeMake(137.0f - TGScreenPixel, 137.0f - TGScreenPixel);
+        }
+        else if (widescreenWidth >= 852.0f - FLT_EPSILON)
+        {
+            return CGSizeMake(129.0f - TGScreenPixel, 129.0f - TGScreenPixel);
         }
         else if (widescreenWidth >= 844.0f - FLT_EPSILON)
         {

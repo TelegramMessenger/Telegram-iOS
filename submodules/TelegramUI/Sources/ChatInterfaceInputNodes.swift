@@ -7,7 +7,7 @@ import AccountContext
 import ChatPresentationInterfaceState
 
 func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
-    if !(inputPanelNode is ChatTextInputPanelNode) {
+    if let inputPanelNode = inputPanelNode, !(inputPanelNode is ChatTextInputPanelNode) {
         return nil
     }
     switch chatPresentationInterfaceState.inputMode {

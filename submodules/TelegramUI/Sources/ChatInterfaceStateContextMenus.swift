@@ -1462,6 +1462,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             clearCacheAsDelete = true
         }
+        
+        if isReplyThreadHead {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.SharedMedia_ViewInChat, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                c.dismiss(completion: {
+                    guard let navigationController = controllerInteraction.navigationController() else {
+                        return
+                    }
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: messages[0].id.peerId), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
+                })
+            })))
+        }
 
         if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) {
             var autoremoveDeadline: Int32?

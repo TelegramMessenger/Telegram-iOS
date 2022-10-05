@@ -2023,7 +2023,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
-    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, String)?, NoError>, Bool) -> Void)?
+    var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
@@ -2034,7 +2034,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let animationRenderer: MultiAnimationRenderer
     
     var emojiStatusPackDisposable = MetaDisposable()
-    var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, String)?>()
+    var emojiStatusFileAndPackTitle = Promise<(TelegramMediaFile, LoadedStickerPack)?>()
     
     init(context: AccountContext, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, isMediaOnly: Bool, isSettings: Bool) {
         self.context = context
@@ -2392,9 +2392,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                                             return false
                                         }
                                     }
-                                    |> mapToSignal { result -> Signal<(TelegramMediaFile, String)?, NoError> in
-                                        if case let .result(info, items, _) = result {
-                                            return .single(items.first.flatMap { ($0.file, info.title) })
+                                    |> mapToSignal { result -> Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError> in
+                                        if case let .result(_, items, _) = result {
+                                            return .single(items.first.flatMap { ($0.file, result) })
                                         } else {
                                             return .complete()
                                         }
