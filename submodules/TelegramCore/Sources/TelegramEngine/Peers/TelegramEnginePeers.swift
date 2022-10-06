@@ -802,8 +802,8 @@ public extension TelegramEngine {
             return _internal_setChannelForumMode(account: self.account, peerId: id, isForum: isForum)
         }
         
-        public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
-            return _internal_createForumChannelTopic(account: self.account, peerId: id, title: title, iconFileId: iconFileId)
+        public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
+            return _internal_createForumChannelTopic(account: self.account, peerId: id, title: title, iconColor: iconColor, iconFileId: iconFileId)
         }
     }
 }

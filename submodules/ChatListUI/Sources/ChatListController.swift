@@ -2512,9 +2512,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }, action: { action in
             action.dismissWithResult(.default)
             
-            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: "Topic#\(Int.random(in: 0 ..< 100000)) very long title to fill two lines", iconFileId: nil)
+            let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: "Topic#\(Int.random(in: 0 ..< 100000))", iconColor: 0, iconFileId: nil)
             |> deliverOnMainQueue).start(next: { topicId in
-                let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
+                let _ = topicId
+                //let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [.message(text: "First Message", attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(topicId)), localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])]).start()
             })
         })))
 

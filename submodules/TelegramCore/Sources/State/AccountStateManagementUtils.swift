@@ -1694,17 +1694,26 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
-                                        state.operations.append(.ResetForumTopic(topicId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), data: MessageHistoryThreadData(
-                                            info: EngineMessageHistoryThread.Info(
-                                                title: title,
-                                                icon: iconEmojiId
+                                    case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId):
+                                        state.operations.append(.ResetForumTopic(
+                                            topicId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id),
+                                            data: MessageHistoryThreadData(
+                                                creationDate: date,
+                                                author: fromId.peerId,
+                                                info: EngineMessageHistoryThread.Info(
+                                                    title: title,
+                                                    icon: iconEmojiId == 0 ? nil : iconEmojiId,
+                                                    iconColor: iconColor
+                                                ),
+                                                incomingUnreadCount: unreadCount,
+                                                maxIncomingReadId: readInboxMaxId,
+                                                maxKnownMessageId: topMessage,
+                                                maxOutgoingReadId: readOutboxMaxId,
+                                                unreadMentionCount: unreadMentionsCount,
+                                                unreadReactionCount: unreadReactionsCount
                                             ),
-                                            incomingUnreadCount: unreadCount,
-                                            maxIncomingReadId: readInboxMaxId,
-                                            maxKnownMessageId: topMessage,
-                                            maxOutgoingReadId: readOutboxMaxId
-                                        ), pts: pts))
+                                            pts: pts
+                                        ))
                                     }
                                 }
                             }
@@ -1786,16 +1795,21 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
+                                    case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId):
                                         fetchedChatList.threadInfos[MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)] = MessageHistoryThreadData(
+                                            creationDate: date,
+                                            author: fromId.peerId,
                                             info: EngineMessageHistoryThread.Info(
                                                 title: title,
-                                                icon: iconEmojiId
+                                                icon: iconEmojiId == 0 ? nil : iconEmojiId,
+                                                iconColor: iconColor
                                             ),
                                             incomingUnreadCount: unreadCount,
                                             maxIncomingReadId: readInboxMaxId,
                                             maxKnownMessageId: topMessage,
-                                            maxOutgoingReadId: readOutboxMaxId
+                                            maxOutgoingReadId: readOutboxMaxId,
+                                            unreadMentionCount: unreadMentionsCount,
+                                            unreadReactionCount: unreadReactionsCount
                                         )
                                     }
                                 }
@@ -2864,18 +2878,23 @@ func replayFinalState(
                                 for media in message.media {
                                     if let action = media as? TelegramMediaAction {
                                         switch action.action {
-                                        case let .topicEditTitle(title):
-                                            if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
-                                                data.info = EngineMessageHistoryThread.Info(title: title, icon: data.info.icon)
-                                                if let entry = CodableEntry(data) {
-                                                    transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
+                                        case let .topicEdited(components):
+                                            if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                                                var data = initialData
+                                                
+                                                for component in components {
+                                                    switch component {
+                                                    case let .title(title):
+                                                        data.info = EngineMessageHistoryThread.Info(title: title, icon: data.info.icon, iconColor: data.info.iconColor)
+                                                    case let .iconFileId(fileId):
+                                                        data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
+                                                    }
                                                 }
-                                            }
-                                        case let .topicEditIcon(fileId):
-                                            if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
-                                                data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId)
-                                                if let entry = CodableEntry(data) {
-                                                    transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
+                                                
+                                                if data != initialData {
+                                                    if let entry = CodableEntry(data) {
+                                                        transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
+                                                    }
                                                 }
                                             }
                                         default:

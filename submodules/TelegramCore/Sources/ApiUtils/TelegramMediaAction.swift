@@ -87,12 +87,18 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .webViewData(text))
     case let .messageActionGiftPremium(currency, amount, months):
         return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months))
-    case let .messageActionTopicCreate(_, title, iconEmojiId):
-        return TelegramMediaAction(action: .topicCreated(title: title, iconFileId: iconEmojiId))
-    case let .messageActionTopicEditTitle(title):
-        return TelegramMediaAction(action: .topicEditTitle(title: title))
-    case let .messageActionTopicEditIcon(fileId):
-        return TelegramMediaAction(action: .topicEditIcon(fileId: fileId == 0 ? nil : fileId))
+    case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
+        return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
+    case let .messageActionTopicEdit(_, title, iconEmojiId):
+        var componenents: [TelegramMediaActionType.ForumTopicEditComponent] = []
+        //messageActionTopicEdit#b117a9f5 flags:# title:flags.0?string icon_emoji_id:flags.1?long = MessageAction;
+        if let title {
+            componenents.append(.title(title))
+        }
+        if let iconEmojiId {
+            componenents.append(.iconFileId(iconEmojiId == 0 ? nil : iconEmojiId))
+        }
+        return TelegramMediaAction(action: .topicEdited(components: componenents))
     }
 }
 

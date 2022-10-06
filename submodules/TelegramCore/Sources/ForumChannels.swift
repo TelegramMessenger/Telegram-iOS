@@ -8,29 +8,35 @@ public extension EngineMessageHistoryThread {
         private enum CodingKeys: String, CodingKey {
             case title
             case icon
+            case iconColor
         }
         
         public let title: String
         public let icon: Int64?
+        public let iconColor: Int32
         
         public init(
             title: String,
-            icon: Int64?
+            icon: Int64?,
+            iconColor: Int32
         ) {
             self.title = title
             self.icon = icon
+            self.iconColor = iconColor
         }
         
         public init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             self.title = try container.decode(String.self, forKey: .title)
             self.icon = try container.decodeIfPresent(Int64.self, forKey: .icon)
+            self.iconColor = try container.decodeIfPresent(Int32.self, forKey: .iconColor) ?? 0
         }
         
         public func encode(to encoder: Encoder) throws {
             var container = encoder.container(keyedBy: CodingKeys.self)
             try container.encode(self.title, forKey: .title)
             try container.encodeIfPresent(self.icon, forKey: .icon)
+            try container.encode(self.iconColor, forKey: .iconColor)
         }
         
         public static func ==(lhs: Info, rhs: Info) -> Bool {
@@ -40,24 +46,31 @@ public extension EngineMessageHistoryThread {
             if lhs.icon != rhs.icon {
                 return false
             }
+            if lhs.iconColor != rhs.iconColor {
+                return false
+            }
             return true
         }
     }
 }
 
-public struct MessageHistoryThreadData: Codable {
+public struct MessageHistoryThreadData: Codable, Equatable {
+    public var creationDate: Int32
+    public var author: PeerId
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
     public var maxIncomingReadId: Int32
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
+    public var unreadMentionCount: Int32
+    public var unreadReactionCount: Int32
 }
 
 public enum CreateForumChannelTopicError {
     case generic
 }
 
-func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: String, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
+func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
     }
@@ -70,10 +83,12 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
         if iconFileId != nil {
             flags |= (1 << 3)
         }
+        flags |= (1 << 0)
         return account.network.request(Api.functions.channels.createForumTopic(
             flags: flags,
             channel: inputChannel,
             title: title,
+            iconColor: iconColor,
             iconEmojiId: iconFileId,
             randomId: Int64.random(in: Int64.min ..< Int64.max),
             sendAs: nil
@@ -193,16 +208,21 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, _, title, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, _, _):
+                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId):
                             let data = MessageHistoryThreadData(
+                                creationDate: date,
+                                author: fromId.peerId,
                                 info: EngineMessageHistoryThread.Info(
                                     title: title,
-                                    icon: iconEmojiId
+                                    icon: iconEmojiId == 0 ? nil : iconEmojiId,
+                                    iconColor: iconColor
                                 ),
                                 incomingUnreadCount: unreadCount,
                                 maxIncomingReadId: readInboxMaxId,
                                 maxKnownMessageId: topMessage,
-                                maxOutgoingReadId: readOutboxMaxId
+                                maxOutgoingReadId: readOutboxMaxId,
+                                unreadMentionCount: unreadMentionsCount,
+                                unreadReactionCount: unreadReactionsCount
                             )
                             guard let info = CodableEntry(data) else {
                                 continue
