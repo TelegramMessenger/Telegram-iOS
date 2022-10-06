@@ -955,8 +955,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let username = user.username {
+            let mainUsername = user.usernames.first?.username ?? username
             var additionalUsernames: String?
-            let usernames = user.usernames.filter { !$0.flags.contains(.isEditable) && $0.flags.contains(.isActive) }
+            let usernames = user.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
             if !usernames.isEmpty {
                 additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
             }
@@ -965,7 +966,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 PeerInfoScreenLabeledValueItem(
                     id: 1,
                     label: presentationData.strings.Profile_Username,
-                    text: "@\(username)",
+                    text: "@\(mainUsername)",
                     additionalText: additionalUsernames,
                     textColor: .accent,
                     icon: .qrCode,
@@ -973,6 +974,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openUsername(username)
                     }, longTapAction: { sourceNode in
                         interaction.openPeerInfoContextMenu(.link, sourceNode)
+                    }, linkItemAction: { type, item in
+                        if case .tap = type {
+                            if case let .mention(username) = item {
+                                interaction.openUsername(String(username[username.index(username.startIndex, offsetBy: 1)...]))
+                            }
+                        }
                     }, iconAction: {
                         interaction.openQrCode()
                     }, requestLayout: {
@@ -1087,17 +1094,18 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         
         if let username = channel.username {
             var additionalUsernames: String?
-            let usernames = channel.usernames.filter { !$0.flags.contains(.isEditable) && $0.flags.contains(.isActive) }
+            let mainUsername = channel.usernames.first?.username ?? username
+
+            let usernames = channel.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
             if !usernames.isEmpty {
                 additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
             }
-            
             
             items[.peerInfo]!.append(
                 PeerInfoScreenLabeledValueItem(
                     id: ItemUsername,
                     label: presentationData.strings.Channel_LinkItem,
-                    text: "https://t.me/\(username)",
+                    text: "https://t.me/\(mainUsername)",
                     additionalText: additionalUsernames,
                     textColor: .accent,
                     icon: .qrCode,
@@ -1105,6 +1113,12 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         interaction.openUsername(username)
                     }, longTapAction: { sourceNode in
                         interaction.openPeerInfoContextMenu(.link, sourceNode)
+                    }, linkItemAction: { type, item in
+                        if case .tap = type {
+                            if case let .mention(username) = item {
+                                interaction.openUsername(String(username.suffix(from: username.index(username.startIndex, offsetBy: 1))))
+                            }
+                        }
                     }, iconAction: {
                         interaction.openQrCode()
                     }, requestLayout: {

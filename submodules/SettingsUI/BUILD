@@ -105,6 +105,7 @@ swift_library(
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/HorizontalPeerItem:HorizontalPeerItem",
         "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
+        "//submodules/PersistentStringHash:PersistentStringHash",
     ],
     visibility = [
         "//visibility:public",

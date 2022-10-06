@@ -75,7 +75,7 @@ func chatHistoryEntriesForView(
             associatedMedia: [:]
         )
     }
-        
+            
     var groupBucket: [(Message, Bool, ChatHistoryMessageSelection, ChatMessageEntryAttributes, MessageHistoryEntryLocation?)] = []
     var count = 0
     loop: for entry in view.entries {
@@ -211,6 +211,19 @@ func chatHistoryEntriesForView(
                     
                     let topMessage = messages[0]
                     
+                    var hasTopicCreated = false
+                    inner: for media in topMessage.media {
+                        if let action = media as? TelegramMediaAction {
+                            switch action.action {
+                                case .topicCreated:
+                                    hasTopicCreated = true
+                                    break inner
+                                default:
+                                    break
+                            }
+                        }
+                    }
+                    
                     var adminRank: CachedChannelAdminRank?
                     if let author = topMessage.author {
                         adminRank = adminRanks[author.id]
@@ -235,12 +248,13 @@ func chatHistoryEntriesForView(
                         }
                         entries.insert(.MessageGroupEntry(groupInfo, groupMessages, presentationData), at: 0)
                     } else {
-                        entries.insert(.MessageEntry(messages[0], presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[messages[0].id], isPlaying: false, isCentered: false)), at: 0)
+                        if !hasTopicCreated {
+                            entries.insert(.MessageEntry(messages[0], presentationData, false, nil, selection, ChatMessageEntryAttributes(rank: adminRank, isContact: false, contentTypeHint: contentTypeHint, updatingMedia: updatingMedia[messages[0].id], isPlaying: false, isCentered: false)), at: 0)
+                        }
                     }
                     
                     if !replyThreadMessage.isForumPost {
                         let replyCount = view.entries.isEmpty ? 0 : 1
-                        
                         entries.insert(.ReplyCountEntry(messages[0].index, replyThreadMessage.isChannelPost, replyCount, presentationData), at: 1)
                     }
                 }

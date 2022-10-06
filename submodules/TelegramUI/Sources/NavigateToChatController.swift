@@ -13,6 +13,7 @@ import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
 import ForumTopicListScreen
+import ForumCreateTopicScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -110,6 +111,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             })
         } else {
             let viewControllers = params.navigationController.viewControllers.filter({ controller in
+                if controller is ForumCreateTopicScreen {
+                    return false
+                }
                 if controller is ChatListController {
                     if let parentGroupId = params.parentGroupId {
                         return parentGroupId != .root
@@ -224,7 +228,7 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     return false
 }
 
-public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, navigationController: NavigationController) -> Signal<Never, NoError> {
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, navigationController: NavigationController, activateInput: ChatControllerActivateInput?) -> Signal<Never, NoError> {
     return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
@@ -237,7 +241,12 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
         let subject: ChatControllerSubject?
         subject = nil
         
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: result.isEmpty ? .text : nil, keepStack: .always))
+        var actualActivateInput: ChatControllerActivateInput? = result.isEmpty ? .text : nil
+        if let activateInput = activateInput {
+            actualActivateInput = activateInput
+        }
+        
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: actualActivateInput, keepStack: .never))
     }
     |> ignoreValues
     |> `catch` { _ -> Signal<Never, NoError> in

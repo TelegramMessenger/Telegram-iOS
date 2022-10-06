@@ -104,11 +104,11 @@ private final class TitleFieldComponent: Component {
             self.component = component
             self.state = state
             
-            let titleCredibilityContent: EmojiStatusComponent.Content
+            let iconContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
-                titleCredibilityContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0)
+                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0)
             } else {
-                titleCredibilityContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
+                iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
             }
             
             let iconSize = self.iconView.update(
@@ -117,7 +117,7 @@ private final class TitleFieldComponent: Component {
                     context: component.context,
                     animationCache: component.context.animationCache,
                     animationRenderer: component.context.animationRenderer,
-                    content: titleCredibilityContent,
+                    content: iconContent,
                     isVisibleForAnimations: true,
                     action: nil
                 )),
@@ -314,12 +314,14 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     let peerId: EnginePeer.Id
     let mode: ForumCreateTopicScreen.Mode
     let titleUpdated: (String) -> Void
+    let iconUpdated: (Int64?) -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.titleUpdated = titleUpdated
+        self.iconUpdated = iconUpdated
     }
     
     static func ==(lhs: ForumCreateTopicScreenComponent, rhs: ForumCreateTopicScreenComponent) -> Bool {
@@ -338,6 +340,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     final class State: ComponentState {
         private let context: AccountContext
         private let titleUpdated: (String) -> Void
+        private let iconUpdated: (Int64?) -> Void
         
         var emojiContent: EmojiPagerContentComponent?
         private let emojiContentDisposable = MetaDisposable()
@@ -345,9 +348,10 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         var title: String
         var fileId: Int64
         
-        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void) {
+        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void) {
             self.context = context
             self.titleUpdated = titleUpdated
+            self.iconUpdated = iconUpdated
             
             switch mode {
                 case .create:
@@ -422,6 +426,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             self.fileId = item.itemFile?.fileId.id ?? 0
             self.updated(transition: .immediate)
             
+            self.iconUpdated(self.fileId != 0 ? self.fileId : nil)
+            
             self.emojiContentDisposable.set((
                 EmojiPagerContentComponent.emojiInputData(
                     context: self.context,
@@ -449,7 +455,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         return State(
             context: self.context,
             mode: self.mode,
-            titleUpdated: self.titleUpdated
+            titleUpdated: self.titleUpdated,
+            iconUpdated: self.iconUpdated
         )
     }
     
@@ -666,10 +673,16 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         case edit(topic: ForumChannelTopics.Item)
     }
     
+    private var state: (String, Int64?) = ("", nil)
+    public var completion: (String, Int64?) -> Void = { _, _ in }
+    
     public init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode) {
         var titleUpdatedImpl: ((String) -> Void)?
+        var iconUpdatedImpl: ((Int64?) -> Void)?
         super.init(context: context, component: ForumCreateTopicScreenComponent(context: context, peerId: peerId, mode: mode, titleUpdated: { title in
             titleUpdatedImpl?(title)
+        }, iconUpdated: { fileId in
+            iconUpdatedImpl?(fileId)
         }), navigationBarAppearance: .transparent)
         
         let title: String
@@ -692,7 +705,20 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         self.navigationItem.rightBarButtonItem?.isEnabled = false
         
         titleUpdatedImpl = { [weak self] title in
-            self?.navigationItem.rightBarButtonItem?.isEnabled = !title.isEmpty
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.navigationItem.rightBarButtonItem?.isEnabled = !title.isEmpty
+            
+            strongSelf.state = (title, strongSelf.state.1)
+        }
+        
+        iconUpdatedImpl = { [weak self] fileId in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.state = (strongSelf.state.0, fileId)
         }
     }
     
@@ -705,6 +731,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     }
     
     @objc private func createPressed() {
-        self.dismiss()
+//        self.dismiss()
+        
+        self.completion(self.state.0, self.state.1)
     }
 }
