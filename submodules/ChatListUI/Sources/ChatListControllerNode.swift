@@ -286,6 +286,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private var presentationData: PresentationData
     private let becameEmpty: (ChatListFilter?) -> Void
     private let emptyAction: (ChatListFilter?) -> Void
+    private let secondaryEmptyAction: () -> Void
     
     private var floatingHeaderOffset: CGFloat?
     
@@ -296,13 +297,14 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     
     private var validLayout: (CGSize, UIEdgeInsets, CGFloat)?
     
-    init(context: AccountContext, location: ChatListControllerLocation, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, location: ChatListControllerLocation, filter: ChatListFilter?, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
         self.presentationData = presentationData
         self.becameEmpty = becameEmpty
         self.emptyAction = emptyAction
+        self.secondaryEmptyAction = secondaryEmptyAction
         
         self.listNode = ChatListNode(context: context, location: location, chatListFilter: filter, previewing: previewing, fillPreloadItems: controlsHistoryPreload, mode: .chatList, theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: animationCache, animationRenderer: animationRenderer, disableAnimations: true)
         
@@ -334,8 +336,21 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     if let currentNode = strongSelf.emptyNode {
                         currentNode.updateIsLoading(isLoading)
                     } else {
-                        let emptyNode = ChatListEmptyNode(context: context, isFilter: filter != nil, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
+                        let subject: ChatListEmptyNode.Subject
+                        if filter != nil {
+                            subject = .filter
+                        } else {
+                            if case .forum = location {
+                                subject = .forum
+                            } else {
+                                subject = .chats
+                            }
+                        }
+                        
+                        let emptyNode = ChatListEmptyNode(context: context, subject: subject, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
                             self?.emptyAction(filter)
+                        }, secondaryAction: {
+                            self?.secondaryEmptyAction()
                         })
                         strongSelf.emptyNode = emptyNode
                         strongSelf.addSubnode(emptyNode)
@@ -431,6 +446,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let controlsHistoryPreload: Bool
     private let filterBecameEmpty: (ChatListFilter?) -> Void
     private let filterEmptyAction: (ChatListFilter?) -> Void
+    private let secondaryEmptyAction: () -> Void
     
     fileprivate var onFilterSwitch: (() -> Void)?
     
@@ -591,12 +607,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var didBeginSelectingChats: (() -> Void)?
     var displayFilterLimit: (() -> Void)?
     
-    init(context: AccountContext, location: ChatListControllerLocation, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void) {
+    init(context: AccountContext, location: ChatListControllerLocation, previewing: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, filterBecameEmpty: @escaping (ChatListFilter?) -> Void, filterEmptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
         self.location = location
         self.previewing = previewing
         self.filterBecameEmpty = filterBecameEmpty
         self.filterEmptyAction = filterEmptyAction
+        self.secondaryEmptyAction = secondaryEmptyAction
         self.controlsHistoryPreload = controlsHistoryPreload
         
         self.presentationData = presentationData
@@ -611,6 +628,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self?.filterBecameEmpty(filter)
         }, emptyAction: { [weak self] filter in
             self?.filterEmptyAction(filter)
+        }, secondaryEmptyAction: { [weak self] in
+            self?.secondaryEmptyAction()
         })
         self.itemNodes[.all] = itemNode
         self.addSubnode(itemNode)
@@ -887,6 +906,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     self?.filterBecameEmpty(filter)
                 }, emptyAction: { [weak self] filter in
                     self?.filterEmptyAction(filter)
+                }, secondaryEmptyAction: { [weak self] in
+                    self?.secondaryEmptyAction()
                 })
                 let disposable = MetaDisposable()
                 self.pendingItemNode = (id, itemNode, disposable)
@@ -1015,6 +1036,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         self?.filterBecameEmpty(filter)
                     }, emptyAction: { [weak self] filter in
                         self?.filterEmptyAction(filter)
+                    }, secondaryEmptyAction: { [weak self] in
+                        self?.secondaryEmptyAction()
                     })
                     self.itemNodes[id] = itemNode
                 }
@@ -1118,10 +1141,13 @@ final class ChatListControllerNode: ASDisplayNode {
         
         var filterBecameEmpty: ((ChatListFilter?) -> Void)?
         var filterEmptyAction: ((ChatListFilter?) -> Void)?
+        var secondaryEmptyAction: (() -> Void)?
         self.containerNode = ChatListContainerNode(context: context, location: location, previewing: previewing, controlsHistoryPreload: controlsHistoryPreload, presentationData: presentationData, animationCache: animationCache, animationRenderer: animationRenderer, filterBecameEmpty: { filter in
             filterBecameEmpty?(filter)
         }, filterEmptyAction: { filter in
             filterEmptyAction?(filter)
+        }, secondaryEmptyAction: {
+            secondaryEmptyAction?()
         })
         
         self.inlineTabContainerNode = ChatListFilterTabInlineContainerNode()
@@ -1154,6 +1180,15 @@ final class ChatListControllerNode: ASDisplayNode {
                 return
             }
             strongSelf.emptyListAction?()
+        }
+        
+        secondaryEmptyAction = { [weak self] in
+            guard let strongSelf = self, case let .forum(peerId) = strongSelf.location, let controller = strongSelf.controller else {
+                return
+            }
+            
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
+            (controller.navigationController as? NavigationController)?.replaceController(controller, with: chatController, animated: false)
         }
         
         self.containerNode.onFilterSwitch = { [weak self] in

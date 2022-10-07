@@ -322,6 +322,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var editingUrlPreviewQueryState: (String?, Disposable)?
     private var searchState: ChatSearchState?
     
+    private var shakeFeedback: HapticFeedback?
+    
     private var recordingModeFeedback: HapticFeedback?
     private var recorderFeedback: HapticFeedback?
     private var audioRecorderValue: ManagedAudioRecorder?
@@ -630,6 +632,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             if strongSelf.presentVoiceMessageDiscardAlert(action: action, performAction: false) {
                 return false
             }
+            
+            if strongSelf.presentTopicDiscardAlert(action: action, performAction: false) {
+                return false
+            }
+            
             return true
         }
         
@@ -15671,6 +15678,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if case let .id(messageId) = messageSubject {
                                 strongSelf.navigateToMessage(from: sourceMessageId, to: .id(messageId, timecode))
                             }
+                        } else {
+                            self?.playShakeAnimation()
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {
                         strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId.id), subject: subject, keepStack: .always, peekData: peekData))
@@ -16883,6 +16892,34 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return false
     }
     
+    private func presentTopicDiscardAlert(action: @escaping () -> Void = {}, delay: Bool = false, performAction: Bool = true) -> Bool {
+        if self.chatDisplayNode.emptyType == .topic {
+            Queue.mainQueue().after(delay ? 0.2 : 0.0) {
+                self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: "Delete Topic", text: "Topic isn't created, because you haven't posted a message.\n\nDo you want to discard this topic?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Yes, action: { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    
+                    if case let .replyThread(messagePromise) = strongSelf.chatLocationInfoData {
+                        let _ = (messagePromise.get()
+                        |> deliverOnMainQueue).start(next: { [weak self] message in
+                            if let strongSelf = self, let message = message {
+                                let _ = strongSelf.context.engine.messages.deleteMessagesInteractively(messageIds: [message.id], type: .forEveryone).start()
+                            }
+                        })
+                    }
+                    
+                    action()
+                }), TextAlertAction(type: .defaultAction, title: self.presentationData.strings.Common_No, action: {})]), in: .window(.root))
+            }
+            
+            return true
+        } else if performAction {
+            action()
+        }
+        return false
+    }
+    
     private func presentAutoremoveSetup() {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
@@ -17135,6 +17172,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         } else {
             return false
         }
+    }
+    
+    public func playShakeAnimation() {
+        if self.shakeFeedback == nil {
+            self.shakeFeedback = HapticFeedback()
+        }
+        self.shakeFeedback?.error()
+        
+        self.chatDisplayNode.historyNodeContainer.layer.addShakeAnimation(amplitude: -6.0, decay: true)
     }
 }
 

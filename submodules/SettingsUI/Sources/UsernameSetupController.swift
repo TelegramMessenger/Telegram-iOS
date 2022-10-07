@@ -17,10 +17,15 @@ private final class UsernameSetupControllerArguments {
     let updatePublicLinkText: (String?, String) -> Void
     let shareLink: () -> Void
     
-    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void, shareLink: @escaping () -> Void) {
+    let activateLink: (String) -> Void
+    let deactivateLink: (String) -> Void
+    
+    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void, shareLink: @escaping () -> Void, activateLink: @escaping (String) -> Void, deactivateLink: @escaping (String) -> Void) {
         self.account = account
         self.updatePublicLinkText = updatePublicLinkText
         self.shareLink = shareLink
+        self.activateLink = activateLink
+        self.deactivateLink = deactivateLink
     }
 }
 
@@ -49,7 +54,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     case publicLinkInfo(PresentationTheme, String)
     
     case additionalLinkHeader(PresentationTheme, String)
-    case additionalLink(PresentationTheme, String, Bool, Int32)
+    case additionalLink(PresentationTheme, TelegramPeerUsername, Int32)
     case additionalLinkInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
@@ -73,7 +78,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 return 3
             case .additionalLinkHeader:
                 return 4
-            case let .additionalLink(_, _, _, index):
+            case let .additionalLink(_, _, index):
                 return 5 + index
             case .additionalLinkInfo:
                 return 1000
@@ -112,8 +117,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .additionalLink(lhsTheme, lhsLink, lhsActive, lhsIndex):
-                if case let .additionalLink(rhsTheme, rhsLink, rhsActive, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsLink == rhsLink, lhsActive == rhsActive, lhsIndex == rhsIndex {
+            case let .additionalLink(lhsTheme, lhsAddressName, lhsIndex):
+                if case let .additionalLink(rhsTheme, rhsAddressName, rhsIndex) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsIndex == rhsIndex {
                     return true
                 } else {
                     return false
@@ -167,8 +172,16 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: string, sectionId: self.section)
             case let .additionalLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .additionalLink(_, link, _, _):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(link), sectionId: self.section)
+            case let .additionalLink(_, link, _):
+                return AdditionalLinkItem(presentationData: presentationData, username: link, sectionId: self.section, style: .blocks, tapAction: {
+                    if !link.flags.contains(.isEditable) {
+                        if link.flags.contains(.isActive) {
+                            arguments.deactivateLink(link.username)
+                        } else {
+                            arguments.activateLink(link.username)
+                        }
+                    }
+                })
             case let .additionalLinkInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         }
@@ -219,7 +232,7 @@ private struct UsernameSetupControllerState: Equatable {
     }
 }
 
-private func usernameSetupControllerEntries(presentationData: PresentationData, view: PeerView, state: UsernameSetupControllerState) -> [UsernameSetupEntry] {
+private func usernameSetupControllerEntries(presentationData: PresentationData, view: PeerView, state: UsernameSetupControllerState, temporaryOrder: [String]?) -> [UsernameSetupEntry] {
     var entries: [UsernameSetupEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramUser {
@@ -280,6 +293,27 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         
         if !otherUsernames.isEmpty {
             entries.append(.additionalLinkHeader(presentationData.theme, presentationData.strings.Username_LinksOrder))
+            
+            var usernames = peer.usernames
+            if let temporaryOrder = temporaryOrder {
+                var usernamesMap: [String: TelegramPeerUsername] = [:]
+                for username in usernames {
+                    usernamesMap[username.username] = username
+                }
+                var sortedUsernames: [TelegramPeerUsername] = []
+                for username in temporaryOrder {
+                    if let username = usernamesMap[username] {
+                        sortedUsernames.append(username)
+                    }
+                }
+                usernames = sortedUsernames
+            }
+            var i: Int32 = 0
+            for username in usernames {
+                entries.append(.additionalLink(presentationData.theme, username, i))
+                i += 1
+            }
+            
             entries.append(.additionalLinkInfo(presentationData.theme, presentationData.strings.Username_LinksOrderInfo))
         }
     }
@@ -350,76 +384,198 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
                 presentControllerImpl?(shareController, nil)
             }
         })
+    }, activateLink: { name in
+        dismissInputImpl?()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_ActivateAlertTitle, text: presentationData.strings.Username_ActivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_ActivateAlertShow, action: {
+            let _ = context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: true).start()
+        })]), nil)
+    }, deactivateLink: { name in
+        dismissInputImpl?()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_DeactivateAlertTitle, text: presentationData.strings.Username_DeactivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_DeactivateAlertHide, action: {
+            let _ = context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: false).start()
+        })]), nil)
     })
+    
+    let temporaryOrder = Promise<[String]?>(nil)
     
     let peerView = context.account.viewTracker.peerView(context.account.peerId)
     |> deliverOnMainQueue
     
-    let signal = combineLatest(context.sharedContext.presentationData, statePromise.get() |> deliverOnMainQueue, peerView)
-        |> map { presentationData, state, view -> (ItemListControllerState, (ItemListNodeState, Any)) in
-            let peer = peerViewMainPeer(view)
+    let signal = combineLatest(
+        context.sharedContext.presentationData,
+        statePromise.get() |> deliverOnMainQueue,
+        peerView,
+        temporaryOrder.get()
+    )
+    |> map { presentationData, state, view, temporaryOrder -> (ItemListControllerState, (ItemListNodeState, Any)) in
+        let peer = peerViewMainPeer(view)
+        
+        var rightNavigationButton: ItemListNavigationButton?
+        if let peer = peer as? TelegramUser {
+            var doneEnabled = true
             
-            var rightNavigationButton: ItemListNavigationButton?
-            if let peer = peer as? TelegramUser {
-                var doneEnabled = true
-                
-                if let addressNameValidationStatus = state.addressNameValidationStatus {
-                    switch addressNameValidationStatus {
-                    case .availability(.available):
-                        break
-                    default:
-                        doneEnabled = false
+            if let addressNameValidationStatus = state.addressNameValidationStatus {
+                switch addressNameValidationStatus {
+                case .availability(.available):
+                    break
+                default:
+                    doneEnabled = false
+                }
+            }
+            
+            rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
+                var updatedAddressNameValue: String?
+                updateState { state in
+                    if state.editingPublicLinkText != peer.addressName {
+                        updatedAddressNameValue = state.editingPublicLinkText
+                    }
+                    
+                    if updatedAddressNameValue != nil {
+                        return state.withUpdatedUpdatingAddressName(true)
+                    } else {
+                        return state
                     }
                 }
                 
-                rightNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Done), style: state.updatingAddressName ? .activity : .bold, enabled: doneEnabled, action: {
-                    var updatedAddressNameValue: String?
-                    updateState { state in
-                        if state.editingPublicLinkText != peer.addressName {
-                            updatedAddressNameValue = state.editingPublicLinkText
+                if let updatedAddressNameValue = updatedAddressNameValue {
+                    updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
+                    |> deliverOnMainQueue).start(error: { _ in
+                        updateState { state in
+                            return state.withUpdatedUpdatingAddressName(false)
+                        }
+                    }, completed: {
+                        updateState { state in
+                            return state.withUpdatedUpdatingAddressName(false)
                         }
                         
-                        if updatedAddressNameValue != nil {
-                            return state.withUpdatedUpdatingAddressName(true)
-                        } else {
-                            return state
-                        }
-                    }
-                    
-                    if let updatedAddressNameValue = updatedAddressNameValue {
-                        updateAddressNameDisposable.set((context.engine.peers.updateAddressName(domain: .account, name: updatedAddressNameValue.isEmpty ? nil : updatedAddressNameValue)
-                            |> deliverOnMainQueue).start(error: { _ in
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
-                                }
-                            }, completed: {
-                                updateState { state in
-                                    return state.withUpdatedUpdatingAddressName(false)
-                                }
-                                
-                                dismissImpl?()
-                            }))
-                    } else {
                         dismissImpl?()
-                    }
-                })
-            }
-            
-            let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
-                dismissImpl?()
+                    }))
+                } else {
+                    dismissImpl?()
+                }
             })
+        }
+        
+        let leftNavigationButton = ItemListNavigationButton(content: .text(presentationData.strings.Common_Cancel), style: .regular, enabled: true, action: {
+            dismissImpl?()
+        })
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state, temporaryOrder: temporaryOrder), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: true)
             
-            let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.Username_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: usernameSetupControllerEntries(presentationData: presentationData, view: view, state: state), style: .blocks, focusItemTag: UsernameEntryTag.username, animateChanges: false)
-            
-            return (controllerState, (listState, arguments))
-        } |> afterDisposed {
-            actionsDisposable.dispose()
+        return (controllerState, (listState, arguments))
+    } |> afterDisposed {
+        actionsDisposable.dispose()
     }
     
     let controller = ItemListController(context: context, state: signal)
     controller.navigationPresentation = .modal
     controller.enableInteractiveDismiss = true
+    
+    controller.setReorderEntry({ (fromIndex: Int, toIndex: Int, entries: [UsernameSetupEntry]) -> Signal<Bool, NoError> in
+        let fromEntry = entries[fromIndex]
+        guard case let .additionalLink(_, fromUsername, _) = fromEntry else {
+            return .single(false)
+        }
+        var referenceId: String?
+        var beforeAll = false
+        var afterAll = false
+        if toIndex < entries.count {
+            switch entries[toIndex] {
+                case let .additionalLink(_, toUsername, _):
+                    referenceId = toUsername.username
+                default:
+                    if entries[toIndex] < fromEntry {
+                        beforeAll = true
+                    } else {
+                        afterAll = true
+                    }
+            }
+        } else {
+            afterAll = true
+        }
+
+        var currentUsernames: [String] = []
+        for entry in entries {
+            switch entry {
+            case let .additionalLink(_, link, _):
+                currentUsernames.append(link.username)
+            default:
+                break
+            }
+        }
+
+        var previousIndex: Int?
+        for i in 0 ..< currentUsernames.count {
+            if currentUsernames[i] == fromUsername.username {
+                previousIndex = i
+                currentUsernames.remove(at: i)
+                break
+            }
+        }
+
+        var didReorder = false
+
+        if let referenceId = referenceId {
+            var inserted = false
+            for i in 0 ..< currentUsernames.count {
+                if currentUsernames[i] == referenceId {
+                    if fromIndex < toIndex {
+                        didReorder = previousIndex != i + 1
+                        currentUsernames.insert(fromUsername.username, at: i + 1)
+                    } else {
+                        didReorder = previousIndex != i
+                        currentUsernames.insert(fromUsername.username, at: i)
+                    }
+                    inserted = true
+                    break
+                }
+            }
+            if !inserted {
+                didReorder = previousIndex != currentUsernames.count
+                currentUsernames.append(fromUsername.username)
+            }
+        } else if beforeAll {
+            didReorder = previousIndex != 0
+            currentUsernames.insert(fromUsername.username, at: 0)
+        } else if afterAll {
+            didReorder = previousIndex != currentUsernames.count
+            currentUsernames.append(fromUsername.username)
+        }
+
+        temporaryOrder.set(.single(currentUsernames))
+
+        if didReorder {
+            DispatchQueue.main.async {
+                dismissInputImpl?()
+            }
+        }
+        
+        return .single(didReorder)
+    })
+    
+    controller.setReorderCompleted({ (entries: [UsernameSetupEntry]) -> Void in
+        var currentUsernames: [TelegramPeerUsername] = []
+        for entry in entries {
+            switch entry {
+            case let .additionalLink(_, username, _):
+                currentUsernames.append(username)
+            default:
+                break
+            }
+        }
+        let _ = (context.engine.peers.reorderAddressNames(domain: .account, names: currentUsernames)
+        |> deliverOnMainQueue).start(completed: {
+            temporaryOrder.set(.single(nil))
+        })
+    })
+    
+    controller.beganInteractiveDragging = {
+        dismissInputImpl?()
+    }
+    
     dismissImpl = { [weak controller] in
         controller?.view.endEditing(true)
         controller?.dismiss()

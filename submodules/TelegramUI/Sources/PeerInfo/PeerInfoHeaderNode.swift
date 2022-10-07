@@ -2570,8 +2570,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
-                if let addressName = user.addressName, !addressName.isEmpty {
-                    subtitle = "\(subtitle) • @\(addressName)"
+                let mainUsername = user.usernames.first?.username ?? user.username
+                if let mainUsername = mainUsername, !mainUsername.isEmpty {
+                    subtitle = "\(subtitle) • @\(mainUsername)"
                 }
                 smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)

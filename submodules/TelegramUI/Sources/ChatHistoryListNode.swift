@@ -2527,12 +2527,36 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     } else if action.action == .historyCleared {
                                         emptyType = .clearedHistory
                                         break
+                                    } else if case .topicCreated = action.action {
+                                        emptyType = .topic
+                                        break
                                     }
                                 }
                             }
                             loadState = .empty(emptyType)
                         } else {
-                            loadState = .empty(.generic)
+                            var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
+                            if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation {
+                                loop: for entry in historyView.originalView.additionalData {
+                                    switch entry {
+                                        case let .message(id, messages) where id == replyThreadMessage.effectiveTopId:
+                                            if let message = messages.first {
+                                                for media in message.media {
+                                                    if let action = media as? TelegramMediaAction {
+                                                        if case .topicCreated = action.action {
+                                                            emptyType = .topic
+                                                            break
+                                                        }
+                                                    }
+                                                }
+                                                break loop
+                                            }
+                                        default:
+                                            break
+                                    }
+                                }
+                            }
+                            loadState = .empty(emptyType)
                         }
                     } else {
                         loadState = .messages
