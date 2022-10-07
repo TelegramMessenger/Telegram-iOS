@@ -68,6 +68,7 @@ public final class ChatListNodeInteraction {
     let setItemPinned: (EngineChatList.PinnedItem.Id, Bool) -> Void
     let setPeerMuted: (EnginePeer.Id, Bool) -> Void
     let deletePeer: (EnginePeer.Id, Bool) -> Void
+    let deletePeerThread: (EnginePeer.Id, Int64) -> Void
     let updatePeerGrouping: (EnginePeer.Id, Bool) -> Void
     let togglePeerMarkedUnread: (EnginePeer.Id, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
@@ -98,6 +99,7 @@ public final class ChatListNodeInteraction {
         setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void,
         setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void,
         deletePeer: @escaping (EnginePeer.Id, Bool) -> Void,
+        deletePeerThread: @escaping (EnginePeer.Id, Int64) -> Void,
         updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void,
         togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void,
         toggleArchivedFolderHiddenByDefault: @escaping () -> Void,
@@ -118,6 +120,7 @@ public final class ChatListNodeInteraction {
         self.setItemPinned = setItemPinned
         self.setPeerMuted = setPeerMuted
         self.deletePeer = deletePeer
+        self.deletePeerThread = deletePeerThread
         self.updatePeerGrouping = updatePeerGrouping
         self.togglePeerMarkedUnread = togglePeerMarkedUnread
         self.toggleArchivedFolderHiddenByDefault = toggleArchivedFolderHiddenByDefault
@@ -655,6 +658,7 @@ public final class ChatListNode: ListView {
     public var addContact: ((String) -> Void)?
     public var activateSearch: (() -> Void)?
     public var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?
+    public var deletePeerThread: ((EnginePeer.Id, Int64) -> Void)?
     public var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
@@ -953,6 +957,8 @@ public final class ChatListNode: ListView {
             })
         }, deletePeer: { [weak self] peerId, joined in
             self?.deletePeerChat?(peerId, joined)
+        }, deletePeerThread: { [weak self] peerId, threadId in
+            self?.deletePeerThread?(peerId, threadId)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }, togglePeerMarkedUnread: { [weak self, weak context] peerId, animated in

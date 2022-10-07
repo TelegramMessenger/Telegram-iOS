@@ -1314,6 +1314,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             strongSelf.deletePeerChat(peerId: peerId, joined: joined)
         }
+        self.chatListDisplayNode.containerNode.deletePeerThread = { [weak self] peerId, threadId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.deletePeerThread(peerId: peerId, threadId: threadId)
+        }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
             if let strongSelf = self {
@@ -3416,7 +3422,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }
                                 if value == .commit {
-                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
+                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, threadId: nil, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -3600,6 +3606,40 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ])
                 strongSelf.present(actionSheet, in: .window(.root))
             }
+        })
+    }
+    
+    private func deletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        var items: [ActionSheetItem] = []
+            
+        //TODO:localize
+        items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)
+        }))
+        
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        self.present(actionSheet, in: .window(.root))
+    }
+    
+    private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let _ = self.context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                var state = state
+                state.pendingRemovalPeerIds.remove(peerId)
+                return state
+            })
+            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         })
     }
     

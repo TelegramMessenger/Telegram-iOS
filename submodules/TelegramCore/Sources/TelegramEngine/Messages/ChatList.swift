@@ -388,11 +388,17 @@ extension EngineChatList.Item {
                 forumTopicTitle = forumTopicData.info.title
             }
             
+            var readCounters = readState.flatMap(EnginePeerReadCounters.init)
+            
+            if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                readCounters = nil
+            }
+
             self.init(
                 id: .chatList(index.messageIndex.id.peerId),
                 index: .chatList(index),
                 messages: messages.map(EngineMessage.init),
-                readCounters: readState.flatMap(EnginePeerReadCounters.init),
+                readCounters: readCounters,
                 isMuted: isRemovedFromTotalUnreadCount,
                 draft: draft,
                 threadInfo: nil,

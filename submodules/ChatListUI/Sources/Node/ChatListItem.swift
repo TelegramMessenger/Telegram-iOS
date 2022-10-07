@@ -2562,8 +2562,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        
         var close = true
-        if let item = self.item, case let .chatList(index) = item.index {
+        if case let .chatList(index) = item.index {
             switch option.key {
             case RevealOptionKey.pin.rawValue:
                 switch item.content {
@@ -2633,6 +2637,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
                 }
+            default:
+                break
+            }
+        } else if case let .forum(_, threadId, _, _) = item.index, case let .forum(peerId) = item.chatListLocation {
+            switch option.key {
+            case RevealOptionKey.delete.rawValue:
+                item.interaction.deletePeerThread(peerId, threadId)
             default:
                 break
             }

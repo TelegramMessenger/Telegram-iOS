@@ -310,7 +310,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
         |> then(deleteUser)
         |> then(reportSignal)
         |> then(postbox.transaction { transaction -> Void in
-            _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .all)
+            _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, threadId: nil, namespaces: .all)
         })
     } else if peer.id.namespace == Namespaces.Peer.CloudUser {
         if let inputPeer = apiInputPeer(peer) {
@@ -329,7 +329,7 @@ private func removeChat(transaction: Transaction, postbox: Postbox, network: Net
             return requestClearHistory(postbox: postbox, network: network, stateManager: stateManager, inputPeer: inputPeer, maxId: operation.topMessageId?.id ?? Int32.max - 1, justClear: false, minTimestamp: nil, maxTimestamp: nil, type: operation.deleteGloballyIfPossible ? .forEveryone : .forLocalPeer)
             |> then(reportSignal)
             |> then(postbox.transaction { transaction -> Void in
-                _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, namespaces: .not(Namespaces.Message.allScheduled))
+                _internal_clearHistory(transaction: transaction, mediaBox: postbox.mediaBox, peerId: peer.id, threadId: nil, namespaces: .not(Namespaces.Message.allScheduled))
             })
         } else {
             return .complete()
@@ -395,20 +395,33 @@ private func _internal_clearHistory(transaction: Transaction, postbox: Postbox, 
         if operation.minTimestamp != nil {
             return .complete()
         } else {
-            var flags: Int32 = 0
-            if operation.type == .forEveryone {
-                flags |= 1 << 0
-            }
-            return network.request(Api.functions.channels.deleteHistory(flags: flags, channel: inputChannel, maxId: operation.topMessageId.id))
-            |> map(Optional.init)
-            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
-                return .single(nil)
-            }
-            |> mapToSignal { updates -> Signal<Void, NoError> in
-                if let updates = updates {
-                    stateManager.addUpdates(updates)
+            if let threadId = operation.threadId {
+                return network.request(Api.functions.channels.deleteTopicHistory(channel: inputChannel, topMsgId: Int32(clamping: threadId)))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, NoError> in
+                    return .single(nil)
                 }
-                return .complete()
+                |> mapToSignal { result -> Signal<Void, NoError> in
+                    if let _ = result {
+                    }
+                    return .complete()
+                }
+            } else {
+                var flags: Int32 = 0
+                if operation.type == .forEveryone {
+                    flags |= 1 << 0
+                }
+                return network.request(Api.functions.channels.deleteHistory(flags: flags, channel: inputChannel, maxId: operation.topMessageId.id))
+                |> map(Optional.init)
+                |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                    return .single(nil)
+                }
+                |> mapToSignal { updates -> Signal<Void, NoError> in
+                    if let updates = updates {
+                        stateManager.addUpdates(updates)
+                    }
+                    return .complete()
+                }
             }
         }
     } else {
