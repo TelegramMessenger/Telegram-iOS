@@ -285,8 +285,8 @@ public extension TelegramEngine {
             }
         }
 
-        public func sparseMessageList(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageList {
-            return SparseMessageList(account: self.account, peerId: peerId, messageTag: tag)
+        public func sparseMessageList(peerId: EnginePeer.Id, threadId: Int64?, tag: EngineMessage.Tags) -> SparseMessageList {
+            return SparseMessageList(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
         }
 
         public func sparseMessageCalendar(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageCalendar {

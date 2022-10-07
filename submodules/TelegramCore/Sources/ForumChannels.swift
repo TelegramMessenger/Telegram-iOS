@@ -123,6 +123,55 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
     }
 }
 
+public enum EditForumChannelTopicError {
+    case generic
+}
+
+func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId: Int64, title: String, iconFileId: Int64?) -> Signal<Never, EditForumChannelTopicError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    }
+    |> castError(EditForumChannelTopicError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, EditForumChannelTopicError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 0)
+        flags |= (1 << 1)
+        
+        return account.network.request(Api.functions.channels.editForumTopic(
+            flags: flags,
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            title: title,
+            iconEmojiId: iconFileId ?? 0
+        ))
+        |> mapError { _ -> EditForumChannelTopicError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, EditForumChannelTopicError> in
+            account.stateManager.addUpdates(result)
+            
+            return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.info = EngineMessageHistoryThread.Info(title: title, icon: iconFileId, iconColor: data.info.iconColor)
+                    
+                    if data != initialData {
+                        if let entry = CodableEntry(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues
+        }
+    }
+}
+
 func _internal_setChannelForumMode(account: Account, peerId: PeerId, isForum: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)

@@ -73,7 +73,12 @@ public enum ParsedInternalPeerUrlParameter {
 }
 
 public enum ParsedInternalUrl {
-    case peerName(String, ParsedInternalPeerUrlParameter?)
+    public enum UrlPeerReference {
+        case name(String)
+        case id(PeerId)
+    }
+    
+    case peer(UrlPeerReference, ParsedInternalPeerUrlParameter?)
     case peerId(PeerId)
     case privateMessage(messageId: MessageId, threadId: Int32?, timecode: Double?)
     case stickerPack(name: String, type: StickerPackUrlType)
@@ -193,9 +198,9 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             break
                                         }
                                     }
-                                    return .peerName(peerName, .attachBotStart(value, startAttach))
+                                    return .peer(.name(peerName), .attachBotStart(value, startAttach))
                                 } else if queryItem.name == "start" {
-                                    return .peerName(peerName, .botStart(value))
+                                    return .peer(.name(peerName), .botStart(value))
                                 } else if queryItem.name == "startgroup" {
                                     var botAdminRights: ResolvedBotAdminRights?
                                     for queryItem in queryItems {
@@ -204,11 +209,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                             break
                                         }
                                     }
-                                    return .peerName(peerName, .groupBotStart(value, botAdminRights))
+                                    return .peer(.name(peerName), .groupBotStart(value, botAdminRights))
                                 } else if queryItem.name == "game" {
                                     return nil
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
-                                    return .peerName(peerName, .voiceChat(value))
+                                    return .peer(.name(peerName), .voiceChat(value))
                                 } else if queryItem.name == "startattach" {
                                     var choose: String?
                                     for queryItem in queryItems {
@@ -220,7 +225,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                     return .startAttach(peerName, value, choose)
                                 }
                             } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name)  {
-                                return .peerName(peerName, .voiceChat(nil))
+                                return .peer(.name(peerName), .voiceChat(nil))
                             } else if queryItem.name == "startattach" {
                                 var choose: String?
                                 for queryItem in queryItems {
@@ -238,7 +243,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                                         break
                                     }
                                 }
-                                return .peerName(peerName, .groupBotStart("", botAdminRights))
+                                return .peer(.name(peerName), .groupBotStart("", botAdminRights))
                             }
                         }
                     }
@@ -269,7 +274,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     let component = pathComponents[0].replacingOccurrences(of: "%24", with: "$")
                     return .invoice(component)
                 }
-                return .peerName(peerName, nil)
+                return .peer(.name(peerName), nil)
             } else if pathComponents.count == 2 || pathComponents.count == 3 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(name: pathComponents[1], type: .stickers)
@@ -408,7 +413,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
-                                    if queryItem.name == "thread" {
+                                    if queryItem.name == "thread" || queryItem.name == "topic" {
                                         if let intValue = Int32(value) {
                                             threadId = intValue
                                         }
@@ -424,6 +429,29 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
+                } else if pathComponents.count == 2 && pathComponents[0] == "c" {
+                    if let channelId = Int64(pathComponents[1]) {
+                        var threadId: Int32?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "thread" || queryItem.name == "topic" {
+                                        if let intValue = Int32(value) {
+                                            threadId = intValue
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        if let threadId = threadId {
+                            return .peer(.id(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))), .replyThread(threadId, threadId))
+                        } else {
+                            return nil
+                        }
+                    } else {
+                        return nil
+                    }
                 } else if let value = Int32(pathComponents[1]) {
                     var threadId: Int32?
                     var commentId: Int32?
@@ -431,7 +459,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if let queryItems = components.queryItems {
                         for queryItem in queryItems {
                             if let value = queryItem.value {
-                                if queryItem.name == "thread" {
+                                if queryItem.name == "thread" || queryItem.name == "topic" {
                                     if let intValue = Int32(value) {
                                         threadId = intValue
                                     }
@@ -448,11 +476,11 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         }
                     }
                     if let threadId = threadId {
-                        return .peerName(peerName, .replyThread(threadId, value))
+                        return .peer(.name(peerName), .replyThread(threadId, value))
                     } else if let commentId = commentId {
-                        return .peerName(peerName, .replyThread(value, commentId))
+                        return .peer(.name(peerName), .replyThread(value, commentId))
                     } else {
-                        return .peerName(peerName, .channelMessage(value, timecode))
+                        return .peer(.name(peerName), .channelMessage(value, timecode))
                     }
                 } else {
                     return nil
@@ -489,12 +517,36 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     return .single(.peer(nil, .info))
                 }
             }
-        case let .peerName(name, parameter):
-            return context.engine.peers.resolvePeerByName(name: name)
-            |> take(1)
-            |> mapToSignal { peer -> Signal<Peer?, NoError> in
-                return .single(peer?._asPeer())
+        case let .peer(reference, parameter):
+            let resolvedPeer: Signal<Peer?, NoError>
+            switch reference {
+            case let .name(name):
+                resolvedPeer = context.engine.peers.resolvePeerByName(name: name)
+                |> take(1)
+                |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                    return .single(peer?._asPeer())
+                }
+            case let .id(id):
+                if id.namespace == Namespaces.Peer.CloudChannel {
+                    resolvedPeer = context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
+                    |> mapToSignal { peer -> Signal<Peer?, NoError> in
+                        let foundPeer: Signal<Peer?, NoError>
+                        if let peer = peer {
+                            foundPeer = .single(peer._asPeer())
+                        } else {
+                            foundPeer = TelegramEngine(account: context.account).peers.findChannelById(channelId: id.id._internalGetInt64Value())
+                            |> map { peer -> Peer? in
+                                return peer?._asPeer()
+                            }
+                        }
+                        return foundPeer
+                    }
+                } else {
+                    resolvedPeer = .single(nil)
+                }
             }
+        
+            return resolvedPeer
             |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
                 if let peer = peer {
                     if let parameter = parameter {

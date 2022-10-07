@@ -805,6 +805,10 @@ public extension TelegramEngine {
         public func createForumChannelTopic(id: EnginePeer.Id, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
             return _internal_createForumChannelTopic(account: self.account, peerId: id, title: title, iconColor: iconColor, iconFileId: iconFileId)
         }
+        
+        public func editForumChannelTopic(id: EnginePeer.Id, threadId: Int64, title: String, iconFileId: Int64?) -> Signal<Never, EditForumChannelTopicError> {
+            return _internal_editForumChannelTopic(account: self.account, peerId: id, threadId: threadId, title: title, iconFileId: iconFileId)
+        }
     }
 }
 

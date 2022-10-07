@@ -1543,8 +1543,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let context = strongSelf.context
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
+                    
                     controller.completion = { title, fileId in
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
+                        let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+                        
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
                         })
@@ -2528,7 +2531,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
             controller.navigationPresentation = .modal
             controller.completion = { title, fileId in
-                let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
+                let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+                
+                let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
                 |> deliverOnMainQueue).start(next: { topicId in
                     if let navigationController = (sourceController.navigationController as? NavigationController) {
                         let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
