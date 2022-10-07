@@ -115,7 +115,11 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             }
             
             if let topicId = topicId {
-                return .single(topicId)
+                return resolveForumThreads(postbox: account.postbox, network: account.network, ids: [])
+                |> castError(CreateForumChannelTopicError.self)
+                |> map { _ -> Int64 in
+                    return topicId
+                }
             } else {
                 return .fail(.generic)
             }

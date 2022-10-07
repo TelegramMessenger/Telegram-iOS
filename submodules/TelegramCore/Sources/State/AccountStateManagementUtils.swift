@@ -1730,6 +1730,111 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
     }
 }
 
+func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -> Signal<Void, NoError> {
+    let forumThreadIds = Set(ids)
+    
+    if forumThreadIds.isEmpty {
+        return .single(Void())
+    } else {
+        return postbox.transaction { transaction -> Signal<Void, NoError> in
+            var missingForumThreadIds: [PeerId: [Int32]] = [:]
+            for threadId in forumThreadIds {
+                if let _ = transaction.getMessageHistoryThreadInfo(peerId: threadId.peerId, threadId: Int64(threadId.id)) {
+                } else {
+                    missingForumThreadIds[threadId.peerId, default: []].append(threadId.id)
+                }
+            }
+            
+            if missingForumThreadIds.isEmpty {
+                return .single(Void())
+            } else {
+                var signals: [Signal<(PeerId, Api.messages.ForumTopics)?, NoError>] = []
+                for (peerId, threadIds) in missingForumThreadIds {
+                    guard let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel) else {
+                        Logger.shared.log("State", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
+                        continue
+                    }
+                    let signal = network.request(Api.functions.channels.getForumTopicsByID(channel: inputChannel, topics: threadIds))
+                    |> map { result -> (PeerId, Api.messages.ForumTopics)? in
+                        return (peerId, result)
+                    }
+                    |> `catch` { _ -> Signal<(PeerId, Api.messages.ForumTopics)?, NoError> in
+                        return .single(nil)
+                    }
+                    signals.append(signal)
+                }
+                
+                return combineLatest(signals)
+                |> mapToSignal { results -> Signal<Void, NoError> in
+                    return postbox.transaction { transaction in
+                        var chats: [Api.Chat] = []
+                        var users: [Api.User] = []
+                        var storeMessages: [StoreMessage] = []
+                        
+                        for maybeResult in results {
+                            if let (peerId, result) = maybeResult {
+                                switch result {
+                                case let .forumTopics(_, _, topics, messages, apiChats, apiUsers, _):
+                                    chats.append(contentsOf: apiChats)
+                                    users.append(contentsOf: apiUsers)
+                                    
+                                    for message in messages {
+                                        if let message = StoreMessage(apiMessage: message) {
+                                            storeMessages.append(message)
+                                        }
+                                    }
+                                    
+                                    for topic in topics {
+                                        switch topic {
+                                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId):
+                                            let data = MessageHistoryThreadData(
+                                                creationDate: date,
+                                                author: fromId.peerId,
+                                                info: EngineMessageHistoryThread.Info(
+                                                    title: title,
+                                                    icon: iconEmojiId == 0 ? nil : iconEmojiId,
+                                                    iconColor: iconColor
+                                                ),
+                                                incomingUnreadCount: unreadCount,
+                                                maxIncomingReadId: readInboxMaxId,
+                                                maxKnownMessageId: topMessage,
+                                                maxOutgoingReadId: readOutboxMaxId,
+                                                unreadMentionCount: unreadMentionsCount,
+                                                unreadReactionCount: unreadReactionsCount
+                                            )
+                                            if let entry = CodableEntry(data) {
+                                                transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        
+                        var peers: [Peer] = []
+                        for user in users {
+                            if let telegramUser = TelegramUser.merge(transaction.getPeer(user.peerId) as? TelegramUser, rhs: user) {
+                                peers.append(telegramUser)
+                            }
+                        }
+                        for chat in chats {
+                            if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
+                                peers.append(groupOrChannel)
+                            }
+                        }
+                        updatePeers(transaction: transaction, peers: peers, update: { _, updated in
+                            return updated
+                        })
+                        
+                        let _ = transaction.addMessages(storeMessages, location: .Random)
+                    }
+                }
+            }
+        }
+        |> switchToLatest
+    }
+}
+
 func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: FetchedChatList) -> Signal<FetchedChatList, NoError> {
     var forumThreadIds = Set<MessageId>()
     
