@@ -226,6 +226,8 @@ private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_ar
 private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.642, offset: -9.0, replaceColors: [0xa9a9ad], flip: false)
 private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: 2.0, replaceColors: [0xbdbdc2], flip: false)
 private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: -20.0, replaceColors: [0xbdbdc2], flip: true)
+private let startIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
+private let closeIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -241,6 +243,8 @@ private enum RevealOptionKey: Int32 {
     case hide
     case unhide
     case hidePsa
+    case open
+    case close
 }
 
 private func canArchivePeer(id: EnginePeer.Id, accountPeerId: EnginePeer.Id) -> Bool {
@@ -264,8 +268,7 @@ public struct ChatListItemFilterData: Equatable {
 private func revealOptions(strings: PresentationStrings, theme: PresentationTheme, isPinned: Bool, isMuted: Bool?, location: ChatListControllerLocation, peerId: EnginePeer.Id, accountPeerId: EnginePeer.Id, canDelete: Bool, isEditing: Bool, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if case .forum = location {
-        } else if case .chatList(.archive) = location {
+        if case .chatList(.archive) = location {
             if isPinned {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             } else {
@@ -319,6 +322,26 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
         } else {
             options.append(ItemListRevealOption(key: RevealOptionKey.hide.rawValue, title: strings.ChatList_HideAction, icon: hideIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
         }
+    }
+    return options
+}
+
+private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isEditing: Bool, canDelete: Bool) -> [ItemListRevealOption] {
+    var options: [ItemListRevealOption] = []
+    if !isEditing {
+        if let isMuted = isMuted {
+            if isMuted {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.ChatList_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            }
+        }
+    }
+    if canDelete {
+        options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
+    }
+    if !isEditing {
+        options.append(ItemListRevealOption(key: RevealOptionKey.close.rawValue, title: strings.ChatList_CloseAction, icon: closeIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
     }
     return options
 }
@@ -1150,7 +1173,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let avatarLeftInset: CGFloat
             if case .forum = item.index {
-                avatarLeftInset = 56.0
+                avatarLeftInset = 50.0
             } else {
                 avatarLeftInset = 18.0 + avatarDiameter
             }
@@ -1518,10 +1541,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if hasFailedMessages {
                         statusState = .failed(item.presentationData.theme.chatList.failedFillColor, item.presentationData.theme.chatList.failedForegroundColor)
                     } else {
-                        if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
-                            statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
-                        } else {
-                            statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                        if case .chatList = item.chatListLocation {
+                            if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                                statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                            } else {
+                                statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                            }
                         }
                     }
                 }
@@ -1764,7 +1789,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     if item.enableContextActions {
-                        if case .psa = promoInfo {
+                        if case .forum = item.chatListLocation {
+                            peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isEditing: item.editing, canDelete: true)
+                            peerLeftRevealOptions = []
+                        } else if case .psa = promoInfo {
                             peerRevealOptions = [
                                 ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
                             ]
@@ -1929,9 +1957,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let avatarIconContent: EmojiStatusComponent.Content
                         if let fileId = threadInfo.info.icon {
-                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 40.0, height: 40.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
+                            avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                         } else {
-                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)))
+                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)), size: CGSize(width: 32.0, height: 32.0))
                         }
                         
                         let avatarIconComponent = EmojiStatusComponent(
@@ -1948,9 +1976,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition: .immediate,
                             component: AnyComponent(avatarIconComponent),
                             environment: {},
-                            containerSize: CGSize(width: 40.0, height: 40.0)
+                            containerSize: CGSize(width: 32.0, height: 32.0)
                         )
-                        transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0), y: contentRect.origin.y + 2.0), size: iconSize))
+                        transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0) + revealOffset, y: contentRect.origin.y + 2.0), size: iconSize))
                     } else if let avatarIconView = strongSelf.avatarIconView {
                         strongSelf.avatarIconView = nil
                         avatarIconView.removeFromSuperview()
@@ -2429,7 +2457,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let avatarDiameter = min(60.0, floor(item.presentationData.fontSize.baseDisplaySize * 60.0 / 17.0))
-            let avatarLeftInset = 18.0 + avatarDiameter
+            
+            let avatarLeftInset: CGFloat
+            if case .forum = item.index {
+                avatarLeftInset = 50.0
+            } else {
+                avatarLeftInset = 18.0 + avatarDiameter
+            }
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
@@ -2443,6 +2477,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.avatarNode, frame: avatarFrame)
             if let videoNode = self.videoNode {
                 transition.updateFrame(node: videoNode, frame: CGRect(origin: .zero, size: avatarFrame.size))
+            }
+            
+            if let avatarIconView = self.avatarIconView {
+                var avatarIconFrame = avatarIconView.frame
+                avatarIconFrame.origin.x = params.leftInset + floor((leftInset - params.leftInset - avatarIconFrame.width) / 2.0) + offset
+                transition.updateFrame(view: avatarIconView, frame: avatarIconFrame)
             }
             
             var onlineFrame = self.onlineNode.frame
@@ -2633,6 +2673,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
                 }
+            case RevealOptionKey.open.rawValue:
+                break
+            case RevealOptionKey.close.rawValue:
+                break
             default:
                 break
             }

@@ -826,7 +826,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         
         if !previewing {
-            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact, activate: { [weak self] in
+            let placeholder: String
+            let compactPlaceholder: String
+            if case .forum = location {
+                placeholder = self.presentationData.strings.Common_Search
+                compactPlaceholder = self.presentationData.strings.Common_Search
+            } else {
+                placeholder = self.presentationData.strings.DialogList_SearchLabel
+                compactPlaceholder = self.presentationData.strings.DialogList_SearchLabelCompact
+            }
+            
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: placeholder, compactPlaceholder: compactPlaceholder, activate: { [weak self] in
                 self?.activateSearch()
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
@@ -2436,6 +2446,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public static func openMoreMenu(context: AccountContext, peerId: EnginePeer.Id, sourceController: ViewController, isViewingAsTopics: Bool, sourceView: UIView, gesture: ContextGesture?) {
+        let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+        
         var items: [ContextMenuItem] = []
         
         items.append(.action(ContextMenuActionItem(text: "View as Topics", icon: { theme in
@@ -2506,24 +2518,34 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         items.append(.separator)
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-        }, action: { action in
-            action.dismissWithResult(.default)
-            
-            let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
-            controller.navigationPresentation = .modal
-            controller.completion = { title, fileId in
-                let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
-                |> deliverOnMainQueue).start(next: { topicId in
-                    if let navigationController = (sourceController.navigationController as? NavigationController) {
-                        let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
-                    }
-                })
-            }
-            sourceController.push(controller)
-        })))
+        if let sourceController = sourceController as? ChatController {
+            items.append(.action(ContextMenuActionItem(text: strings.Conversation_Search, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak sourceController] action in
+                action.dismissWithResult(.default)
+                
+                sourceController?.beginMessageSearch("")
+            })))
+        } else {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+            }, action: { action in
+                action.dismissWithResult(.default)
+                
+                let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
+                controller.navigationPresentation = .modal
+                controller.completion = { title, fileId in
+                    let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
+                             |> deliverOnMainQueue).start(next: { topicId in
+                        if let navigationController = (sourceController.navigationController as? NavigationController) {
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
+                        }
+                    })
+                }
+                sourceController.push(controller)
+            })))
+        }
 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)

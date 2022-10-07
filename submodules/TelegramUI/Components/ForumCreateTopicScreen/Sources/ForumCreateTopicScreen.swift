@@ -106,9 +106,9 @@ private final class TitleFieldComponent: Component {
             
             let iconContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
-                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0)
+                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0, size: CGSize(width: 32.0, height: 32.0))
             } else {
-                iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
+                iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
             }
             
             let iconSize = self.iconView.update(

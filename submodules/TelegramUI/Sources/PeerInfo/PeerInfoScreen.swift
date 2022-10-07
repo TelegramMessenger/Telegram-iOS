@@ -4427,6 +4427,75 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         })))
                     }
                     
+                    if canSetupAutoremoveTimeout {
+                        let strings = strongSelf.presentationData.strings
+                        items.append(.action(ContextMenuActionItem(text: currentAutoremoveTimeout == nil ? strongSelf.presentationData.strings.PeerInfo_EnableAutoDelete : strongSelf.presentationData.strings.PeerInfo_AdjustAutoDelete, icon: { theme in
+                            if let currentAutoremoveTimeout = currentAutoremoveTimeout {
+                                let text = NSAttributedString(string: shortTimeIntervalString(strings: strings, value: currentAutoremoveTimeout), font: Font.regular(14.0), textColor: theme.contextMenu.primaryColor)
+                                let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                                return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                                    context.clear(CGRect(origin: CGPoint(), size: size))
+                                    UIGraphicsPushContext(context)
+                                    text.draw(in: bounds)
+                                    UIGraphicsPopContext()
+                                })
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] c, _ in
+                            var subItems: [ContextMenuItem] = []
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                            }, action: { c, _ in
+                                c.popItems()
+                            })))
+                            subItems.append(.separator)
+                            
+                            let presetValues: [Int32] = [
+                                1 * 24 * 60 * 60,
+                                7 * 24 * 60 * 60,
+                                31 * 24 * 60 * 60
+                            ]
+                            
+                            for value in presetValues {
+                                subItems.append(.action(ContextMenuActionItem(text: timeIntervalString(strings: strings, value: value), icon: { _ in
+                                    return nil
+                                }, action: { _, f in
+                                    f(.default)
+                                    
+                                    self?.setAutoremove(timeInterval: value)
+                                })))
+                            }
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteSettingOther, icon: { _ in
+                                return nil
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                self?.openAutoremove(currentValue: currentAutoremoveTimeout)
+                            })))
+                            
+                            if let _ = currentAutoremoveTimeout {
+                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteDisable, textColor: .destructive, icon: { _ in
+                                    return nil
+                                }, action: { _, f in
+                                    f(.default)
+                                    
+                                    self?.setAutoremove(timeInterval: nil)
+                                })))
+                            }
+                            
+                            subItems.append(.separator)
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
+                                return nil
+                            }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                            
+                            c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                        })))
+                    }
+                    
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: channel, chatPeer: channel, cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
@@ -4474,6 +4543,75 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
                 } else if let group = peer as? TelegramGroup {
+                    if canSetupAutoremoveTimeout {
+                        let strings = strongSelf.presentationData.strings
+                        items.append(.action(ContextMenuActionItem(text: currentAutoremoveTimeout == nil ? strongSelf.presentationData.strings.PeerInfo_EnableAutoDelete : strongSelf.presentationData.strings.PeerInfo_AdjustAutoDelete, icon: { theme in
+                            if let currentAutoremoveTimeout = currentAutoremoveTimeout {
+                                let text = NSAttributedString(string: shortTimeIntervalString(strings: strings, value: currentAutoremoveTimeout), font: Font.regular(14.0), textColor: theme.contextMenu.primaryColor)
+                                let bounds = text.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                                return generateImage(bounds.size.integralFloor, rotatedContext: { size, context in
+                                    context.clear(CGRect(origin: CGPoint(), size: size))
+                                    UIGraphicsPushContext(context)
+                                    text.draw(in: bounds)
+                                    UIGraphicsPopContext()
+                                })
+                            } else {
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Timer"), color: theme.contextMenu.primaryColor)
+                            }
+                        }, action: { [weak self] c, _ in
+                            var subItems: [ContextMenuItem] = []
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strings.Common_Back, icon: { theme in
+                                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+                            }, action: { c, _ in
+                                c.popItems()
+                            })))
+                            subItems.append(.separator)
+                            
+                            let presetValues: [Int32] = [
+                                1 * 24 * 60 * 60,
+                                7 * 24 * 60 * 60,
+                                31 * 24 * 60 * 60
+                            ]
+                            
+                            for value in presetValues {
+                                subItems.append(.action(ContextMenuActionItem(text: timeIntervalString(strings: strings, value: value), icon: { _ in
+                                    return nil
+                                }, action: { _, f in
+                                    f(.default)
+                                    
+                                    self?.setAutoremove(timeInterval: value)
+                                })))
+                            }
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteSettingOther, icon: { _ in
+                                return nil
+                            }, action: { _, f in
+                                f(.default)
+                                
+                                self?.openAutoremove(currentValue: currentAutoremoveTimeout)
+                            })))
+                            
+                            if let _ = currentAutoremoveTimeout {
+                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteDisable, textColor: .destructive, icon: { _ in
+                                    return nil
+                                }, action: { _, f in
+                                    f(.default)
+                                    
+                                    self?.setAutoremove(timeInterval: nil)
+                                })))
+                            }
+                            
+                            subItems.append(.separator)
+                            
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
+                                return nil
+                            }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                            
+                            c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
+                        })))
+                    }
+
                     let clearPeerHistory = ClearPeerHistory(context: strongSelf.context, peer: group, chatPeer: group, cachedData: strongSelf.data?.cachedData)
                     if clearPeerHistory.canClearForMyself != nil || clearPeerHistory.canClearForEveryone != nil {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_ClearMessages, icon: { theme in
