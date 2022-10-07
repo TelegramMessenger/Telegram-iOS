@@ -357,9 +357,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 case .create:
                     self.title = ""
                     self.fileId = 0
-                case let .edit(topic):
-                    self.title = topic.info.title
-                    self.fileId = topic.info.icon ?? 0
+                case let .edit(info):
+                    self.title = info.title
+                    self.fileId = info.icon ?? 0
             }
             
             super.init()
@@ -670,7 +670,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
 public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     public enum Mode: Equatable {
         case create
-        case edit(topic: ForumChannelTopics.Item)
+        case edit(topic: EngineMessageHistoryThread.Info)
     }
     
     private var state: (String, Int64?) = ("", nil)
@@ -685,6 +685,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             iconUpdatedImpl?(fileId)
         }), navigationBarAppearance: .transparent)
         
+        //TODO:localize
         let title: String
         let doneTitle: String
         switch mode {
@@ -703,6 +704,10 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: doneTitle, style: .done, target: self, action: #selector(self.createPressed))
         self.navigationItem.rightBarButtonItem?.isEnabled = false
+        
+        if case .edit = mode {
+            self.navigationItem.rightBarButtonItem?.isEnabled = true
+        }
         
         titleUpdatedImpl = { [weak self] title in
             guard let strongSelf = self else {

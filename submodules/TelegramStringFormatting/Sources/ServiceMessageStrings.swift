@@ -682,13 +682,29 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
             case .topicCreated:
                 //TODO:localize
                 attributedString = NSAttributedString(string: "Topic created", font: titleFont, textColor: primaryTextColor)
-            case let .topicEditTitle(title):
+            case let .topicEdited(components):
                 //TODO:localize
-                attributedString = NSAttributedString(string: "Topic renamed to \"\(title)\"", font: titleFont, textColor: primaryTextColor)
-            case let .topicEditIcon(fileId):
-                let _ = fileId
-                //TODO:localize
-                attributedString = NSAttributedString(string: "Topic icon changed", font: titleFont, textColor: primaryTextColor)
+                if let title = components.compactMap({ item -> String? in
+                    switch item {
+                    case let .title(title):
+                        return title
+                    default:
+                        return nil
+                    }
+                }).first {
+                    attributedString = NSAttributedString(string: "Topic renamed to \"\(title)\"", font: titleFont, textColor: primaryTextColor)
+                } else if let maybeFileId = components.compactMap({ item -> Int64? in
+                    switch item {
+                    case let .iconFileId(id):
+                        return id ?? 0
+                    default:
+                        return nil
+                    }
+                }).first {
+                    let _ = maybeFileId
+                    //TODO:localize
+                    attributedString = NSAttributedString(string: "Topic icon changed", font: titleFont, textColor: primaryTextColor)
+                }
             case .unknown:
                 attributedString = nil
             }

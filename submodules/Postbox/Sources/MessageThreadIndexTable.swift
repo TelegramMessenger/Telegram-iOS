@@ -64,11 +64,15 @@ class MessageHistoryThreadIndexTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
+    private struct UpdatedEntry {
+        var value: CodableEntry?
+    }
+    
     private let reverseIndexTable: MessageHistoryThreadReverseIndexTable
     
     private let sharedKey = ValueBoxKey(length: 8 + 4 + 8 + 4 + 4)
     
-    private var updatedInfoItems: [MessageHistoryThreadsTable.ItemId: CodableEntry] = [:]
+    private var updatedInfoItems: [MessageHistoryThreadsTable.ItemId: UpdatedEntry] = [:]
     
     init(valueBox: ValueBox, table: ValueBoxTable, reverseIndexTable: MessageHistoryThreadReverseIndexTable, useCaches: Bool) {
         self.reverseIndexTable = reverseIndexTable
@@ -112,7 +116,7 @@ class MessageHistoryThreadIndexTable: Table {
     
     func get(peerId: PeerId, threadId: Int64) -> CodableEntry? {
         if let updated = self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] {
-            return updated
+            return updated.value
         } else {
             if let itemIndex = self.reverseIndexTable.get(peerId: peerId, threadId: threadId) {
                 if let value = self.valueBox.get(self.table, key: self.key(peerId: itemIndex.id.peerId, timestamp: itemIndex.timestamp, threadId: threadId, namespace: itemIndex.id.namespace, id: itemIndex.id.id, key: self.sharedKey)) {
@@ -130,8 +134,8 @@ class MessageHistoryThreadIndexTable: Table {
         }
     }
     
-    func set(peerId: PeerId, threadId: Int64, info: CodableEntry) {
-        self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] = info
+    func set(peerId: PeerId, threadId: Int64, info: CodableEntry?) {
+        self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] = UpdatedEntry(value: info)
     }
     
     func replay(threadsTable: MessageHistoryThreadsTable, namespaces: Set<MessageId.Namespace>, updatedIds: Set<MessageHistoryThreadsTable.ItemId>) -> Set<PeerId> {
@@ -155,7 +159,11 @@ class MessageHistoryThreadIndexTable: Table {
                     self.valueBox.remove(self.table, key: previousKey, secure: true)
                 }
                 if let updatedInfo = self.updatedInfoItems[itemId] {
-                    info = ReadBuffer(data: updatedInfo.data)
+                    if let value = updatedInfo.value {
+                        info = ReadBuffer(data: value.data)
+                    } else {
+                        info = nil
+                    }
                 }
                 
                 if let topIndex = topIndex, let info = info {

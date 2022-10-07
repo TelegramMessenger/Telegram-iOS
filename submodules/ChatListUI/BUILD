@@ -81,6 +81,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ForumCreateTopicScreen:ForumCreateTopicScreen",
         "//submodules/TelegramUI/Components/ChatTitleView",
         "//submodules/AnimationUI:AnimationUI",
+        "//submodules/PeerInfoUI",
     ],
     visibility = [
         "//visibility:public",

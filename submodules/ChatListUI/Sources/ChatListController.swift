@@ -39,6 +39,7 @@ import TelegramStringFormatting
 import ForumCreateTopicScreen
 import AnimationUI
 import ChatTitleView
+import PeerInfoUI
 
 private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBarSearchContentNode) -> Bool {
     if listNode.scroller.isDragging {
@@ -342,6 +343,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
+    private let joinForumDisposable = MetaDisposable()
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -497,6 +499,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                             navigationController.replaceController(strongSelf, with: chatController, animated: true)
+                        }
+                    }
+                    
+                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                        switch channel.participationStatus {
+                        case .member:
+                            strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
+                        default:
+                            //TODO:localize
+                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: "Join", isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }
                     }
                 })
@@ -1158,6 +1170,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.activeDownloadsDisposable?.dispose()
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
+        self.joinForumDisposable.dispose()
     }
     
     private func openStatusSetup(sourceView: UIView) {
@@ -1310,6 +1323,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             strongSelf.deletePeerChat(peerId: peerId, joined: joined)
+        }
+        self.chatListDisplayNode.containerNode.deletePeerThread = { [weak self] peerId, threadId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.deletePeerThread(peerId: peerId, threadId: threadId)
         }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
@@ -1540,8 +1559,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let context = strongSelf.context
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
+                    
                     controller.completion = { title, fileId in
-                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
+                        let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+                        
+                        let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
                         })
@@ -2536,8 +2558,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                 controller.navigationPresentation = .modal
                 controller.completion = { title, fileId in
-                    let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconFileId: fileId)
-                             |> deliverOnMainQueue).start(next: { topicId in
+                    let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+                    
+                    let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
+                    |> deliverOnMainQueue).start(next: { topicId in
                         if let navigationController = (sourceController.navigationController as? NavigationController) {
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
                         }
@@ -3150,22 +3174,74 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ])
             ])
             self.present(actionSheet, in: .window(.root))
-        } else if case .middle = action, !peerIds.isEmpty {
-            if case .chatList(.root) = self.location {
-                self.donePressed()
-                self.archiveChats(peerIds: Array(peerIds))
-            } else {
+        } else if case .middle = action {
+            switch self.location {
+            case let .chatList(groupId):
                 if !peerIds.isEmpty {
-                    self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
-                    let _ = (self.context.engine.peers.updatePeersGroupIdInteractively(peerIds: Array(peerIds), groupId: .root)
-                    |> deliverOnMainQueue).start(completed: { [weak self] in
-                        guard let strongSelf = self else {
+                    if groupId == .root {
+                        self.donePressed()
+                        self.archiveChats(peerIds: Array(peerIds))
+                    } else {
+                        if !peerIds.isEmpty {
+                            self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                            let _ = (self.context.engine.peers.updatePeersGroupIdInteractively(peerIds: Array(peerIds), groupId: .root)
+                                     |> deliverOnMainQueue).start(completed: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                                strongSelf.donePressed()
+                            })
+                        }
+                    }
+                }
+            case let .forum(peerId):
+                self.joinForumDisposable.set((self.context.peerChannelMemberCategoriesContextsManager.join(engine: context.engine, peerId: peerId, hash: nil)
+                |> afterDisposed { [weak self] in
+                    Queue.mainQueue().async {
+                        if let strongSelf = self {
+                            let _ = strongSelf
+                            /*strongSelf.activityIndicator.isHidden = true
+                            strongSelf.activityIndicator.stopAnimating()
+                            strongSelf.isJoining = false*/
+                        }
+                    }
+                }).start(error: { [weak self] error in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let strongSelf = self, let peer = peer else {
                             return
                         }
-                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
-                        strongSelf.donePressed()
+                        
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        
+                        let text: String
+                        switch error {
+                        case .inviteRequestSent:
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .inviteRequestSent(title: presentationData.strings.Group_RequestToJoinSent, text: presentationData.strings.Group_RequestToJoinSentDescriptionGroup ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
+                            return
+                        case .tooMuchJoined:
+                            (strongSelf.navigationController as? NavigationController)?.pushViewController(oldChannelsController(context: strongSelf.context, intent: .join, completed: { value in
+                                if value {
+                                    self?.toolbarActionSelected(action: .middle)
+                                }
+                            }))
+                            return
+                        case .tooMuchUsers:
+                            text = presentationData.strings.Conversation_UsersTooMuchError
+                        case .generic:
+                            if case let .channel(channel) = peer, case .broadcast = channel.info {
+                                text = presentationData.strings.Channel_ErrorAccessDenied
+                            } else {
+                                text = presentationData.strings.Group_ErrorAccessDenied
+                            }
+                        }
+                        strongSelf.present(textAlertController(context: strongSelf.context, title: nil, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                     })
-                }
+                }))
             }
         }
     }
@@ -3368,7 +3444,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }
                                 if value == .commit {
-                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
+                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, threadId: nil, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -3552,6 +3628,40 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ])
                 strongSelf.present(actionSheet, in: .window(.root))
             }
+        })
+    }
+    
+    private func deletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        var items: [ActionSheetItem] = []
+            
+        //TODO:localize
+        items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)
+        }))
+        
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        self.present(actionSheet, in: .window(.root))
+    }
+    
+    private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let _ = self.context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                var state = state
+                state.pendingRemovalPeerIds.remove(peerId)
+                return state
+            })
+            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         })
     }
     

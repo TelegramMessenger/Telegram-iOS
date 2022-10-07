@@ -1956,7 +1956,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         let avatarIconContent: EmojiStatusComponent.Content
-                        if let fileId = threadInfo.info.icon {
+                        if let fileId = threadInfo.info.icon, fileId != 0 {
                             avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                         } else {
                             avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)), size: CGSize(width: 32.0, height: 32.0))
@@ -2602,8 +2602,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     }
     
     override func revealOptionSelected(_ option: ItemListRevealOption, animated: Bool) {
+        guard let item = self.item else {
+            return
+        }
+        
         var close = true
-        if let item = self.item, case let .chatList(index) = item.index {
+        if case let .chatList(index) = item.index {
             switch option.key {
             case RevealOptionKey.pin.rawValue:
                 switch item.content {
@@ -2677,6 +2681,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 break
             case RevealOptionKey.close.rawValue:
                 break
+            default:
+                break
+            }
+        } else if case let .forum(_, threadId, _, _) = item.index, case let .forum(peerId) = item.chatListLocation {
+            switch option.key {
+            case RevealOptionKey.delete.rawValue:
+                item.interaction.deletePeerThread(peerId, threadId)
             default:
                 break
             }

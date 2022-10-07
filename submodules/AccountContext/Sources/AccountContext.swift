@@ -471,6 +471,7 @@ public enum PeerInfoControllerMode {
     case nearbyPeer(distance: Int32)
     case group(PeerId)
     case reaction(MessageId)
+    case forumTopic(thread: ChatReplyThreadMessage)
 }
 
 public enum ContactListActionItemInlineIconPosition {
@@ -749,7 +750,7 @@ public protocol SharedAccountContext: AnyObject {
     
     func makeRecentSessionsController(context: AccountContext, activeSessionsContext: ActiveSessionsContext) -> ViewController & RecentSessionsController
     
-    func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController
+    func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
     

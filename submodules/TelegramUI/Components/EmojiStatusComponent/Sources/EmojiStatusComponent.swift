@@ -227,7 +227,7 @@ public final class EmojiStatusComponent: Component {
                     func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor]) -> UIImage? {
                         return generateImage(size, rotatedContext: { size, context in
                             context.clear(CGRect(origin: .zero, size: size))
-                                                        
+
                             context.saveGState()
                             
                             let scale: CGFloat = size.width / 32.0

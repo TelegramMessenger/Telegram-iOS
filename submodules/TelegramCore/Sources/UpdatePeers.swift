@@ -73,7 +73,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 if let channel = updated as? TelegramChannel {
                     switch channel.participationStatus {
                         case .member:
-                            updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: channel.creationDate, forceRootGroupIfNotExists: false)
+                            updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: channel.creationDate, forceRootGroupIfNotExists: true)
                         case .left:
                             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                         case .kicked where channel.creationDate == 0:
