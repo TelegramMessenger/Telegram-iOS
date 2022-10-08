@@ -8102,7 +8102,7 @@ Sorry for the inconvenience.";
 "Username.ActivateAlertShow" = "Show";
 
 "Username.DeactivateAlertTitle" = "Deativate Username";
-"Username.DeactivateAlertText" = "Do you want to hode this link from your info page?";
+"Username.DeactivateAlertText" = "Do you want to hide this link from your info page?";
 "Username.DeactivateAlertHide" = "Hide";
 
 "Profile.AdditionalUsernames" = "also %@";
@@ -8111,3 +8111,6 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
 "EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
 "EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";
+
+"ChatList.StartAction" = "Start";
+"ChatList.CloseAction" = "Close";
