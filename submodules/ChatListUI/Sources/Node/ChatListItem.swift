@@ -1928,10 +1928,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         
                         let avatarIconContent: EmojiStatusComponent.Content
-                        if let fileId = threadInfo.info.icon {
+                        if let fileId = threadInfo.info.icon, fileId != 0 {
                             avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 40.0, height: 40.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                         } else {
-                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)))
+                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(abs(threadInfo.info.iconColor)))
                         }
                         
                         let avatarIconComponent = EmojiStatusComponent(

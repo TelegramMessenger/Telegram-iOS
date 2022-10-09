@@ -1019,9 +1019,8 @@ public extension Api {
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetMessagesTTL(period: Int32)
-        case messageActionTopicCreate(flags: Int32, title: String, iconEmojiId: Int64?)
-        case messageActionTopicEditIcon(emojiDocumentId: Int64)
-        case messageActionTopicEditTitle(title: String)
+        case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
+        case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?)
         case messageActionWebViewDataSent(text: String)
         case messageActionWebViewDataSentMe(text: String, data: String)
     
@@ -1257,25 +1256,22 @@ public extension Api {
                     }
                     serializeInt32(period, buffer: buffer, boxed: false)
                     break
-                case .messageActionTopicCreate(let flags, let title, let iconEmojiId):
+                case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                     if boxed {
-                        buffer.appendInt32(1873254060)
+                        buffer.appendInt32(228168278)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt32(iconColor, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionTopicEditIcon(let emojiDocumentId):
+                case .messageActionTopicEdit(let flags, let title, let iconEmojiId):
                     if boxed {
-                        buffer.appendInt32(-2113245653)
+                        buffer.appendInt32(-1323849227)
                     }
-                    serializeInt64(emojiDocumentId, buffer: buffer, boxed: false)
-                    break
-                case .messageActionTopicEditTitle(let title):
-                    if boxed {
-                        buffer.appendInt32(-838130739)
-                    }
-                    serializeString(title, buffer: buffer, boxed: false)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 1) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionWebViewDataSent(let text):
                     if boxed {
@@ -1357,12 +1353,10 @@ public extension Api {
                 return ("messageActionSetChatTheme", [("emoticon", String(describing: emoticon))])
                 case .messageActionSetMessagesTTL(let period):
                 return ("messageActionSetMessagesTTL", [("period", String(describing: period))])
-                case .messageActionTopicCreate(let flags, let title, let iconEmojiId):
-                return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId))])
-                case .messageActionTopicEditIcon(let emojiDocumentId):
-                return ("messageActionTopicEditIcon", [("emojiDocumentId", String(describing: emojiDocumentId))])
-                case .messageActionTopicEditTitle(let title):
-                return ("messageActionTopicEditTitle", [("title", String(describing: title))])
+                case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
+                return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId))])
+                case .messageActionTopicEdit(let flags, let title, let iconEmojiId):
+                return ("messageActionTopicEdit", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId))])
                 case .messageActionWebViewDataSent(let text):
                 return ("messageActionWebViewDataSent", [("text", String(describing: text))])
                 case .messageActionWebViewDataSentMe(let text, let data):
@@ -1762,35 +1756,33 @@ public extension Api {
             _1 = reader.readInt32()
             var _2: String?
             _2 = parseString(reader)
-            var _3: Int64?
-            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt64() }
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_4 = reader.readInt64() }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
-            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            let _c3 = _3 != nil
+            let _c4 = (Int(_1!) & Int(1 << 0) == 0) || _4 != nil
+            if _c1 && _c2 && _c3 && _c4 {
+                return Api.MessageAction.messageActionTopicCreate(flags: _1!, title: _2!, iconColor: _3!, iconEmojiId: _4)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionTopicEdit(_ reader: BufferReader) -> MessageAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: String?
+            if Int(_1!) & Int(1 << 0) != 0 {_2 = parseString(reader) }
+            var _3: Int64?
+            if Int(_1!) & Int(1 << 1) != 0 {_3 = reader.readInt64() }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
-                return Api.MessageAction.messageActionTopicCreate(flags: _1!, title: _2!, iconEmojiId: _3)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_messageActionTopicEditIcon(_ reader: BufferReader) -> MessageAction? {
-            var _1: Int64?
-            _1 = reader.readInt64()
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionTopicEditIcon(emojiDocumentId: _1!)
-            }
-            else {
-                return nil
-            }
-        }
-        public static func parse_messageActionTopicEditTitle(_ reader: BufferReader) -> MessageAction? {
-            var _1: String?
-            _1 = parseString(reader)
-            let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionTopicEditTitle(title: _1!)
+                return Api.MessageAction.messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3)
             }
             else {
                 return nil

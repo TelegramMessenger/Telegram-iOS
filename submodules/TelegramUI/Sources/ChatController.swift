@@ -4809,14 +4809,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         
-                        if let threadInfo = messageAndTopic.threadInfo, let message = message {
+                        if let threadInfo = messageAndTopic.threadInfo {
                             strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false)
                             
                             let avatarContent: EmojiStatusComponent.Content
                             if let fileId = threadInfo.icon {
                                 avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .count(2))
                             } else {
-                                avatarContent = .topic(title: String(threadInfo.title.prefix(1)), colorIndex: Int(message.id.id))
+                                avatarContent = .topic(title: String(threadInfo.title.prefix(1)), colorIndex: Int(threadInfo.iconColor))
                             }
                             (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setStatus(context: strongSelf.context, content: avatarContent)
                         } else {
@@ -9979,7 +9979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             if case let .peer(peerId) = self.chatLocation {
                 let context = self.context
-                self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: context, peerId: peerId).start())
+                self.keepPeerInfoScreenDataHotDisposable.set(keepPeerInfoScreenDataHot(context: context, peerId: peerId, chatLocation: self.chatLocation, chatLocationContextHolder: self.chatLocationContextHolder).start())
                 
                 if peerId.namespace == Namespaces.Peer.CloudUser {
                     self.preloadAvatarDisposable.set((peerInfoProfilePhotosWithCache(context: context, peerId: peerId)
@@ -11140,7 +11140,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }))
                 case .replyThread:
-                    break
+                    if let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum), case let .replyThread(message) = self.chatLocation {
+                        if let infoController = self.context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: channel, mode: .forumTopic(thread: message), avatarInitiallyExpanded: false, fromChat: true, requestsContext: self.inviteRequestsContext) {
+                            self.effectiveNavigationController?.pushViewController(infoController)
+                        }
+                    }
                 case .feed:
                     break
                 }
@@ -15682,7 +15686,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             self?.playShakeAnimation()
                         }
                     } else if let navigationController = strongSelf.effectiveNavigationController {
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId.id), subject: subject, keepStack: .always, peekData: peekData))
+                        if case let .channel(channel) = peerId, channel.flags.contains(.isForum) {
+                            strongSelf.context.sharedContext.navigateToForumChannel(context: strongSelf.context, peerId: peerId.id, navigationController: navigationController)
+                        } else {
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId.id), subject: subject, keepStack: .always, peekData: peekData))
+                        }
                     }
                 case .info:
                     strongSelf.navigationActionDisposable.set((strongSelf.context.account.postbox.loadedPeerWithId(peerId.id)

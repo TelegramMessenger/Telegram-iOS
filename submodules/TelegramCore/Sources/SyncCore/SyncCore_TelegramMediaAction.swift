@@ -24,6 +24,38 @@ public enum SentSecureValueType: Int32 {
 }
 
 public enum TelegramMediaActionType: PostboxCoding, Equatable {
+    public enum ForumTopicEditComponent: PostboxCoding, Equatable {
+        case title(String)
+        case iconFileId(Int64?)
+        
+        public init(decoder: PostboxDecoder) {
+            switch decoder.decodeInt32ForKey("_t", orElse: 0) {
+            case 0:
+                self = .title(decoder.decodeStringForKey("title", orElse: ""))
+            case 1:
+                self = .iconFileId(decoder.decodeOptionalInt64ForKey("fileId"))
+            default:
+                assertionFailure()
+                self = .title("")
+            }
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            switch self {
+            case let .title(title):
+                encoder.encodeInt32(0, forKey: "_t")
+                encoder.encodeString(title, forKey: "title")
+            case let .iconFileId(fileId):
+                encoder.encodeInt32(1, forKey: "_t")
+                if let fileId = fileId {
+                    encoder.encodeInt64(fileId, forKey: "fileId")
+                } else {
+                    encoder.encodeNil(forKey: "fileId")
+                }
+            }
+        }
+    }
+    
     case unknown
     case groupCreated(title: String)
     case addedMembers(peerIds: [PeerId])
@@ -52,9 +84,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case joinedByRequest
     case webViewData(String)
     case giftPremium(currency: String, amount: Int64, months: Int32)
-    case topicCreated(title: String, iconFileId: Int64?)
-    case topicEditTitle(title: String)
-    case topicEditIcon(fileId: Int64?)
+    case topicCreated(title: String, iconColor: Int32, iconFileId: Int64?)
+    case topicEdited(components: [ForumTopicEditComponent])
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -126,11 +157,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 27:
             self = .giftPremium(currency: decoder.decodeStringForKey("currency", orElse: ""), amount: decoder.decodeInt64ForKey("amount", orElse: 0), months: decoder.decodeInt32ForKey("months", orElse: 0))
         case 28:
-            self = .topicCreated(title: decoder.decodeStringForKey("t", orElse: ""), iconFileId: decoder.decodeOptionalInt64ForKey("fid"))
+            self = .topicCreated(title: decoder.decodeStringForKey("title", orElse: ""), iconColor: decoder.decodeInt32ForKey("iconColor", orElse: 0), iconFileId: decoder.decodeOptionalInt64ForKey("iconFileId"))
         case 29:
-            self = .topicEditTitle(title: decoder.decodeStringForKey("t", orElse: ""))
-        case 30:
-            self = .topicEditIcon(fileId: decoder.decodeOptionalInt64ForKey("fid"))
+            self = .topicEdited(components: decoder.decodeObjectArrayWithDecoderForKey("components"))
         default:
             self = .unknown
         }
@@ -260,24 +289,18 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeString(currency, forKey: "currency")
             encoder.encodeInt64(amount, forKey: "amount")
             encoder.encodeInt32(months, forKey: "months")
-        case let .topicCreated(title, iconFileId):
+        case let .topicCreated(title, iconColor, iconFileId):
             encoder.encodeInt32(28, forKey: "_rawValue")
-            encoder.encodeString(title, forKey: "t")
-            if let fileId = iconFileId {
-                encoder.encodeInt64(fileId, forKey: "fid")
+            encoder.encodeString(title, forKey: "title")
+            encoder.encodeInt32(iconColor, forKey: "iconColor")
+            if let iconFileId = iconFileId {
+                encoder.encodeInt64(iconFileId, forKey: "iconFileId")
             } else {
-                encoder.encodeNil(forKey: "fid")
+                encoder.encodeNil(forKey: "iconFileId")
             }
-        case let .topicEditTitle(title):
+        case let .topicEdited(components):
             encoder.encodeInt32(29, forKey: "_rawValue")
-            encoder.encodeString(title, forKey: "t")
-        case let .topicEditIcon(fileId):
-            encoder.encodeInt32(30, forKey: "_rawValue")
-            if let fileId = fileId {
-                encoder.encodeInt64(fileId, forKey: "fid")
-            } else {
-                encoder.encodeNil(forKey: "fid")
-            }
+            encoder.encodeObjectArray(components, forKey: "components")
         }
     }
     

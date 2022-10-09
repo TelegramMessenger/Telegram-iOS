@@ -1468,8 +1468,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: context.engine.privacy.webSessions(), websitesOnly: false)
     }
     
-    public func makeChatQrCodeScreen(context: AccountContext, peer: Peer) -> ViewController {
-        return ChatQrCodeScreen(context: context, subject: .peer(peer))
+    public func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController {
+        return ChatQrCodeScreen(context: context, subject: .peer(peer: peer, threadId: threadId))
     }
     
     public func makePrivacyAndSecurityController(context: AccountContext) -> ViewController {
@@ -1532,7 +1532,14 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
     if let _ = peer as? TelegramGroup {
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     } else if let _ = peer as? TelegramChannel {
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
+        var forumTopicThread: ChatReplyThreadMessage?
+        switch mode {
+        case let .forumTopic(thread):
+            forumTopicThread = thread
+        default:
+            break
+        }
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [], forumTopicThread: forumTopicThread)
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
         var reactionSourceMessageId: MessageId?
@@ -1549,6 +1556,8 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             hintGroupInCommon = id
         case let .reaction(messageId):
             reactionSourceMessageId = messageId
+        case .forumTopic:
+            break
         }
         return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
     } else if peer is TelegramSecretChat {
