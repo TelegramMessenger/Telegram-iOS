@@ -8,7 +8,7 @@ func cloudChatAddRemoveChatOperation(transaction: Transaction, peerId: PeerId, r
     transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatRemoveChatOperation(peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible, topMessageId: transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)))
 }
 
-func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, explicitTopMessageId: MessageId?, minTimestamp: Int32?, maxTimestamp: Int32?, type: CloudChatClearHistoryType) {
+func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId, threadId: Int64?, explicitTopMessageId: MessageId?, minTimestamp: Int32?, maxTimestamp: Int32?, type: CloudChatClearHistoryType) {
     if type == .scheduledMessages {
         var messageIds: [MessageId] = []
         transaction.withAllMessages(peerId: peerId, namespace: Namespaces.Message.ScheduledCloud) { message -> Bool in
@@ -24,7 +24,9 @@ func cloudChatAddClearHistoryOperation(transaction: Transaction, peerId: PeerId,
             topMessageId = transaction.getTopPeerMessageId(peerId: peerId, namespace: Namespaces.Message.Cloud)
         }
         if let topMessageId = topMessageId {
-            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
+            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: topMessageId, threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
+        } else if case .forEveryone = type {
+            transaction.operationLogAddEntry(peerId: peerId, tag: OperationLogTags.CloudChatRemoveMessages, tagLocalIndex: .automatic, tagMergedIndex: .automatic, contents: CloudChatClearHistoryOperation(peerId: peerId, topMessageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: .max), threadId: threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type))
         }
     }
 }

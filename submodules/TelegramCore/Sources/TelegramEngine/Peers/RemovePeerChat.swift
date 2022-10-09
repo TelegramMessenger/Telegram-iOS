@@ -58,17 +58,17 @@ func _internal_removePeerChat(account: Account, transaction: Transaction, mediaB
                 }
             }
         }
-        _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+        _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, threadId: nil, namespaces: .all)
         transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
         transaction.removeOrderedItemListItem(collectionId: Namespaces.OrderedItemList.RecentlySearchedPeerIds, itemId: RecentPeerItemId(peerId).rawValue)
     } else {
         cloudChatAddRemoveChatOperation(transaction: transaction, peerId: peerId, reportChatSpam: reportChatSpam, deleteGloballyIfPossible: deleteGloballyIfPossible)
         if peerId.namespace == Namespaces.Peer.CloudUser  {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
-            _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+            _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, threadId: nil, namespaces: .all)
         } else if peerId.namespace == Namespaces.Peer.CloudGroup {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
-            _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+            _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, threadId: nil, namespaces: .all)
         } else {
             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
         }

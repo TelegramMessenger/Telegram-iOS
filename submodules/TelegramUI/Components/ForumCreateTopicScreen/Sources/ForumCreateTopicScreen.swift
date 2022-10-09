@@ -106,9 +106,9 @@ private final class TitleFieldComponent: Component {
             
             let iconContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
-                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0)
+                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0, size: CGSize(width: 32.0, height: 32.0))
             } else {
-                iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
+                iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
             }
             
             let iconSize = self.iconView.update(
@@ -685,6 +685,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             iconUpdatedImpl?(fileId)
         }), navigationBarAppearance: .transparent)
         
+        //TODO:localize
         let title: String
         let doneTitle: String
         switch mode {
@@ -703,6 +704,10 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         
         self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: doneTitle, style: .done, target: self, action: #selector(self.createPressed))
         self.navigationItem.rightBarButtonItem?.isEnabled = false
+        
+        if case .edit = mode {
+            self.navigationItem.rightBarButtonItem?.isEnabled = true
+        }
         
         titleUpdatedImpl = { [weak self] title in
             guard let strongSelf = self else {

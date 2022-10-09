@@ -838,7 +838,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         })
         
         if !previewing {
-            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact, activate: { [weak self] in
+            let placeholder: String
+            let compactPlaceholder: String
+            if case .forum = location {
+                placeholder = self.presentationData.strings.Common_Search
+                compactPlaceholder = self.presentationData.strings.Common_Search
+            } else {
+                placeholder = self.presentationData.strings.DialogList_SearchLabel
+                compactPlaceholder = self.presentationData.strings.DialogList_SearchLabelCompact
+            }
+            
+            self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: placeholder, compactPlaceholder: compactPlaceholder, activate: { [weak self] in
                 self?.activateSearch()
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
@@ -1313,6 +1323,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             strongSelf.deletePeerChat(peerId: peerId, joined: joined)
+        }
+        self.chatListDisplayNode.containerNode.deletePeerThread = { [weak self] peerId, threadId in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.deletePeerThread(peerId: peerId, threadId: threadId)
         }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
@@ -2452,6 +2468,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     public static func openMoreMenu(context: AccountContext, peerId: EnginePeer.Id, sourceController: ViewController, isViewingAsTopics: Bool, sourceView: UIView, gesture: ContextGesture?) {
+        let strings = context.sharedContext.currentPresentationData.with { $0 }.strings
+        
         var items: [ContextMenuItem] = []
         
         items.append(.action(ContextMenuActionItem(text: "View as Topics", icon: { theme in
@@ -2522,26 +2540,36 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         
         items.append(.separator)
         
-        //TODO:localize
-        items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
-            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
-        }, action: { action in
-            action.dismissWithResult(.default)
-            
-            let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
-            controller.navigationPresentation = .modal
-            controller.completion = { title, fileId in
-                let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+        if let sourceController = sourceController as? ChatController {
+            items.append(.action(ContextMenuActionItem(text: strings.Conversation_Search, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Search"), color: theme.contextMenu.primaryColor)
+            }, action: { [weak sourceController] action in
+                action.dismissWithResult(.default)
                 
-                let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
-                |> deliverOnMainQueue).start(next: { topicId in
-                    if let navigationController = (sourceController.navigationController as? NavigationController) {
-                        let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
-                    }
-                })
-            }
-            sourceController.push(controller)
-        })))
+                sourceController?.beginMessageSearch("")
+            })))
+        } else {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
+            }, action: { action in
+                action.dismissWithResult(.default)
+                
+                let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
+                controller.navigationPresentation = .modal
+                controller.completion = { title, fileId in
+                    let availableColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+                    
+                    let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: availableColors.randomElement()!, iconFileId: fileId)
+                    |> deliverOnMainQueue).start(next: { topicId in
+                        if let navigationController = (sourceController.navigationController as? NavigationController) {
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, navigationController: navigationController, activateInput: .text).start()
+                        }
+                    })
+                }
+                sourceController.push(controller)
+            })))
+        }
 
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(HeaderContextReferenceContentSource(controller: sourceController, sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
@@ -3416,7 +3444,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                     return false
                                 }
                                 if value == .commit {
-                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, type: type).start(completed: {
+                                    let _ = strongSelf.context.engine.messages.clearHistoryInteractively(peerId: peerId, threadId: nil, type: type).start(completed: {
                                         guard let strongSelf = self else {
                                             return
                                         }
@@ -3600,6 +3628,40 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ])
                 strongSelf.present(actionSheet, in: .window(.root))
             }
+        })
+    }
+    
+    private func deletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let actionSheet = ActionSheetController(presentationData: self.presentationData)
+        var items: [ActionSheetItem] = []
+            
+        //TODO:localize
+        items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
+            actionSheet?.dismissAnimated()
+            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)
+        }))
+        
+        actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                })
+            ])
+        ])
+        self.present(actionSheet, in: .window(.root))
+    }
+    
+    private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        let _ = self.context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).start(completed: { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
+                var state = state
+                state.pendingRemovalPeerIds.remove(peerId)
+                return state
+            })
+            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         })
     }
     

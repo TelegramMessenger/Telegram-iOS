@@ -66,10 +66,6 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
                 self.borderColorValue = borderColor
                 
                 let previousColor = self.backgroundView.layer.borderColor
-                self.backgroundView.layer.cornerRadius = 15.0
-                if #available(iOS 13.0, *) {
-                    self.backgroundView.layer.cornerCurve = .continuous
-                }
                 self.backgroundView.layer.borderColor = UIColor(argb: borderColor).cgColor
                 self.backgroundView.layer.borderWidth = 1.0 + UIScreenPixel
                 if let previousColor = previousColor {
@@ -96,6 +92,11 @@ public final class CodeInputView: ASDisplayNode, UITextFieldDelegate {
                         copyView.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: size.height / 2.0), duration: 0.2, delay: delay ?? 0.0, removeOnCompletion: false, additive: true)
                     }
                 }
+            }
+            
+            self.backgroundView.layer.cornerRadius = size.height == 28.0 ? 12.0 : 15.0
+            if #available(iOS 13.0, *) {
+                self.backgroundView.layer.cornerCurve = .continuous
             }
             
             if #available(iOS 13.0, *) {
