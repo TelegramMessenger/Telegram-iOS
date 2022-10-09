@@ -746,9 +746,11 @@ public final class ShareController: ViewController {
                     case let .messages(messages):
 //                        messagesToShare = messages
                         for message in messages {
+                            let message_ = strongSelf.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: message) : message
+                            
                             var url: String?
                             var selectedMedia: Media?
-                            loop: for media in message.media {
+                            loop: for media in message_.media {
                                 switch media {
                                     case _ as TelegramMediaImage, _ as TelegramMediaFile:
                                         selectedMedia = media
@@ -796,8 +798,7 @@ public final class ShareController: ViewController {
                             if let restrictedText = restrictedText {
                                 collectableItems.append(CollectableExternalShareItem(url: url, text: restrictedText, author: authorPeerId, timestamp: message.timestamp, mediaReference: nil))
                             } else {
-                                let text_ = strongSelf.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(text: message.text, media: message.media) : message.text
-                                collectableItems.append(CollectableExternalShareItem(url: url, text: text_, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message), media: $0) })))
+                                collectableItems.append(CollectableExternalShareItem(url: url, text: message_.text, author: authorPeerId, timestamp: message.timestamp, mediaReference: selectedMedia.flatMap({ AnyMediaReference.message(message: MessageReference(message_), media: $0) })))
                             }
                         }
                     case .fromExternal:

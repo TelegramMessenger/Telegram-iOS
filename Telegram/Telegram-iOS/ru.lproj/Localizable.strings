@@ -89,3 +89,5 @@
 "Profile.Id" = "id";
 "Conversation.IdCopied" = "ID скопирован.";
 "Settings.CopyId" = "Копировать ID";
+
+"SiriAndDictationAreDisabledAlert" = "Для расшифровки голосовых сообщений требуется включить Диктовку (Настройки системы > Основные > Клавиатура) или Siri (Настройки системы > Siri и Поиск).";

@@ -19,6 +19,8 @@ import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
 
+import PtgForeignAgentNoticeRemoval
+
 func textStringForForwardedMessage(_ message: Message, strings: PresentationStrings) -> (text: String, entities: [MessageTextEntity], isMedia: Bool) {
     for media in message.media {
         switch media {
@@ -192,7 +194,8 @@ final class ForwardAccessoryPanelNode: AccessoryPanelNode {
                     
                     if messages.count == 1 {
                         title = strongSelf.strings.Conversation_ForwardOptions_ForwardTitleSingle
-                        let (string, entities, _) = textStringForForwardedMessage(messages[0], strings: strings)
+                        let message_ = context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? removeForeignAgentNotice(message: messages[0]) : messages[0]
+                        let (string, entities, _) = textStringForForwardedMessage(message_, strings: strings)
                         
                         text = NSMutableAttributedString(attributedString: NSAttributedString(string: "\(authors): ", font: Font.regular(15.0), textColor: strongSelf.theme.chat.inputPanel.secondaryTextColor))
                         

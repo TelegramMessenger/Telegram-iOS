@@ -26,6 +26,8 @@ import ConvertOpusToAAC
 import LocalAudioTranscription
 import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
+import PresentationDataUtils
+import NaturalLanguage
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -52,6 +54,14 @@ private func transcribedText(message: Message) -> TranscribedText? {
         }
     }
     return nil
+}
+
+private func messageHasCompleteTransription(_ message: Message) -> Bool {
+    if let result = transcribedText(message: message), case let .success(_, isPending) = result, !isPending {
+        return true
+    } else {
+        return false
+    }
 }
 
 final class ChatMessageInteractiveFileNode: ASDisplayNode {
@@ -344,6 +354,81 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         }
     }
     
+    private func detectLanguage() -> Signal<String?, NoError> {
+        guard let context = self.context, let message = self.message else {
+            return .single(nil)
+        }
+        
+        // checking previous text messages to detect language
+        // prefer to analyze messages of the same author, fallback to others
+        // if message is forwarded, messages analyzed in source chat
+        
+        let messageId: MessageId
+        let author: PeerId?
+        
+        if let source = message.attributes.first(where: { $0 is SourceReferenceMessageAttribute }) as? SourceReferenceMessageAttribute {
+            messageId = source.messageId
+            author = message.forwardInfo?.author?.id
+        } else {
+            messageId = message.id
+            author = message.author?.id
+        }
+        
+        return context.account.postbox.transaction { transaction -> String? in
+            if #available(iOS 12.0, *) {
+                let recognizer = NLLanguageRecognizer()
+                var authorProcessedTextLength = 0
+                var nonAuthorStrings: [String] = []
+                var nonAuthorTextLength = 0
+                
+                transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, limit: 50) { message in
+                    if !message.text.isEmpty {
+                        if let voiceAuthor = author, let msgAuthor = message.forwardInfo?.author?.id ?? message.author?.id, voiceAuthor == msgAuthor {
+                            if authorProcessedTextLength < 200 {
+                                recognizer.processString(message.text)
+                                authorProcessedTextLength += message.text.count
+                                let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+                                if let dominant = hypotheses.first, dominant.value >= 0.9 {
+                                    return false
+                                }
+                            }
+                        } else if message.forwardInfo == nil { // ignore forwarded messages
+                            if nonAuthorTextLength < 200 {
+                                nonAuthorStrings.append(message.text)
+                                nonAuthorTextLength += message.text.count
+                            }
+                        }
+                        if authorProcessedTextLength >= 200 && nonAuthorTextLength >= 200 {
+                            return false
+                        }
+                    }
+                    return true
+                }
+                
+                var hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+                if let dominant = hypotheses.first, dominant.value >= 0.6 {
+                    return dominant.key.rawValue
+                }
+                
+                recognizer.reset()
+                for string in nonAuthorStrings {
+                    recognizer.processString(string)
+                    let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+                    if let dominant = hypotheses.first, dominant.value >= 0.9 {
+                        return dominant.key.rawValue
+                    }
+                }
+                
+                hypotheses = recognizer.languageHypotheses(withMaximum: 1)
+                if let dominant = hypotheses.first, dominant.value >= 0.6 {
+                    return dominant.key.rawValue
+                }
+            }
+            
+            return nil
+        }
+    }
+    
     private func transcribe() {
         guard let context = self.context, let message = self.message, let presentationData = self.presentationData else {
             return
@@ -393,19 +478,33 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             return .single(data.path)
                         }
                     }
-                    |> mapToSignal { result -> Signal<String?, NoError> in
-                        guard let result = result else {
-                            return .single(nil)
+                    |> mapToSignal { [weak self] result -> Signal<(String?, String?), NoError> in
+                        guard let result = result, let strongSelf = self else {
+                            return .single((nil, nil))
                         }
-                        return convertOpusToAAC(sourcePath: result, allocateTempFile: {
+                        return combineLatest(convertOpusToAAC(sourcePath: result, allocateTempFile: {
                             return TempBox.shared.tempFile(fileName: "audio.m4a").path
-                        })
+                        }), strongSelf.detectLanguage())
                     }
-                    |> mapToSignal { result -> Signal<LocallyTranscribedAudio?, NoError> in
+                    |> mapToSignal { result, detectedLanguage -> Signal<LocallyTranscribedAudio?, NoError> in
                         guard let result = result else {
                             return .single(nil)
                         }
-                        return transcribeAudio(path: result, appLocale: appLocale)
+                        let locale: String
+                        if let lang = detectedLanguage, speechRecognitionSupported(languageCode: lang) {
+                            locale = lang
+                        } else {
+                            locale = appLocale
+                        }
+                        return transcribeAudio(path: result, locale: locale)
+                        |> `catch` { [weak self] error in
+                            let error = error as NSError
+                            if error.domain == "kLSRErrorDomain" && error.code == 201 {
+                                // Siri and Dictation are disabled
+                                self?.arguments?.controllerInteraction.presentController(textAlertController(context: context, title: nil, text: presentationData.strings.SiriAndDictationAreDisabledAlert, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                            }
+                            return .single(nil)
+                        }
                     }
                     
                     self.transcribeDisposable = (signal
@@ -544,8 +643,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var audioWaveform: AudioWaveform?
                 var isVoice = false
                 var audioDuration: Int32 = 0
-                
-                let canTranscribe = /*arguments.associatedData.isPremium &&*/ arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
+
+                let canTranscribe = (arguments.associatedData.isPremium || arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription) && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
@@ -868,7 +967,22 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         streamingCacheStatusFrame = CGRect()
                     }
                     
-                    return (fittedLayoutSize, { [weak self] synchronousLoads, animation, info in
+                    // need to get file status first time (before self.resourceStatus is set), to know whether to show transcribe button; don't show button if local transcription to be used but file is not downloaded.
+                    let maybeFetchVoiceStatus: (@escaping (Bool, ListViewItemUpdateAnimation, ListViewItemApply?, MediaResourceStatus?) -> Void) -> ((Bool, ListViewItemUpdateAnimation, ListViewItemApply?) -> Void) = { f in
+                        return { [weak self] synchronousLoads, animation, info in
+                            if isVoice && !arguments.associatedData.isPremium && arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && !messageHasCompleteTransription(arguments.message) && self?.resourceStatus == nil && arguments.forcedResourceStatus == nil && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                                let _ = (messageMediaFileStatus(context: arguments.context, messageId: arguments.message.id, file: arguments.file)
+                                |> take(1)
+                                |> deliverOnMainQueue).start(next: { fetchStatus in
+                                    f(synchronousLoads, animation, info, fetchStatus)
+                                })
+                            } else {
+                                f(synchronousLoads, animation, info, arguments.forcedResourceStatus?.fetchStatus)
+                            }
+                        }
+                    }
+
+                    return (fittedLayoutSize, maybeFetchVoiceStatus({ [weak self] synchronousLoads, animation, info, voiceFetchStatusFirstTime in
                         if let strongSelf = self {
                             strongSelf.context = arguments.context
                             strongSelf.presentationData = arguments.presentationData
@@ -1076,6 +1190,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             if isVoice {
                                 var scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 18.0))
+                                
+                                let canTranscribe = (arguments.associatedData.isPremium || (arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && (messageHasCompleteTransription(arguments.message) || strongSelf.resourceStatus?.fetchStatus ?? voiceFetchStatusFirstTime == .Local))) && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
                                 if canTranscribe {
                                     scrubbingFrame.size.width -= 30.0 + 4.0
                                 }
@@ -1210,6 +1326,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                             strongSelf.resourceStatus = status
                                             strongSelf.actualFetchStatus = actualFetchStatus
                                             strongSelf.updateStatus(animated: !synchronousLoads || !firstTime)
+                                            // update layout to show transcribe button after voice message was downloaded
+                                            if !firstTime && isVoice && !arguments.associatedData.isPremium && arguments.context.sharedContext.immediateExperimentalUISettings.localTranscription && !messageHasCompleteTransription(arguments.message) && status.fetchStatus == .Local && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                                                strongSelf.requestUpdateLayout(true)
+                                            }
                                         }
                                     }
                                 }))
@@ -1317,7 +1437,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 strongSelf.dateAndStatusNode.pressed = nil
                             }
                         }
-                    })
+                    }))
                 })
             })
         }

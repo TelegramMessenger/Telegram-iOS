@@ -1274,9 +1274,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }*/
         
+        #if canImport(AppCenter)
         self.maybeCheckForUpdates()
 
-        #if canImport(AppCenter)
         if !buildConfig.isAppStoreBuild, let appCenterId = buildConfig.appCenterId, !appCenterId.isEmpty {
             AppCenter.start(withAppSecret: buildConfig.appCenterId, services: [
                 Crashes.self
@@ -1391,7 +1391,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         self.resetBadge()
         
+        #if canImport(AppCenter)
         self.maybeCheckForUpdates()
+        #endif
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
@@ -2210,6 +2212,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private var lastCheckForUpdatesTimestamp: Double?
     private let currentCheckForUpdatesDisposable = MetaDisposable()
     
+    #if canImport(AppCenter)
     private func maybeCheckForUpdates() {
         #if targetEnvironment(simulator)
         #else
@@ -2259,6 +2262,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         #endif
     }
+    #endif
     
     override var next: UIResponder? {
         if let context = self.contextValue, let controller = context.context.keyShortcutsController {

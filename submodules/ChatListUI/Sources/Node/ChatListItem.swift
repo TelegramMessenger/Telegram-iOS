@@ -558,7 +558,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage())) } : messages
+                        let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage(), inAssociatedPinnedMessageToo: true)) } : messages
                         let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages_, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
@@ -593,7 +593,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage())) } : messages
+                        let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage(), inAssociatedPinnedMessageToo: true)) } : messages
                         let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages_, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
@@ -1115,7 +1115,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var hideAuthor = false
             switch contentPeer {
                 case let .chat(itemPeer):
-                    let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage())) } : messages
+                    let messages_ = item.context.sharedContext.currentPtgSettings.with { $0.suppressForeignAgentNotice } ? messages.map { EngineMessage(removeForeignAgentNotice(message: $0._asMessage(), inAssociatedPinnedMessageToo: true)) } : messages
                     var (peer, initialHideAuthor, messageText, spoilers, customEmojiRanges) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, messages: messages_, chatPeer: itemPeer, accountPeerId: item.context.account.peerId, enableMediaEmoji: !enableChatListPhotos, isPeerGroup: isPeerGroup)
                     
                     if case let .psa(_, maybePsaText) = promoInfo, let psaText = maybePsaText {

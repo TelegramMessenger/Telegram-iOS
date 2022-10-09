@@ -1043,6 +1043,11 @@ public final class Transaction {
         self.postbox?.scanTopMessages(peerId: peerId, namespace: namespace, limit: limit, f)
     }
     
+    public func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, limit: Int, _ f: (Message) -> Bool) {
+        assert(!self.disposed)
+        self.postbox?.scanMessages(peerId: peerId, namespace: namespace, fromId: fromId, limit: limit, f)
+    }
+
     public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
         self.postbox?.scanMessageAttributes(peerId: peerId, namespace: namespace, limit: limit, f)
     }
@@ -3512,6 +3517,29 @@ final class PostboxImpl {
         }
     }
     
+    fileprivate func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, limit: Int, _ f: (Message) -> Bool) {
+        guard let fromIndex = self.messageHistoryIndexTable.getIndex(fromId) else {
+            return
+        }
+        let lowerBound = MessageIndex.lowerBound(peerId: peerId, namespace: namespace)
+        var index = fromIndex
+        var remainingLimit = limit
+        while remainingLimit > 0 {
+            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: nil, from: index, includeFrom: false, to: lowerBound, ignoreMessagesInTimestampRange: nil, limit: min(10, remainingLimit))
+            for message in messages {
+                if !f(self.renderIntermediateMessage(message)) {
+                    return
+                }
+            }
+            remainingLimit -= messages.count
+            if let last = messages.last {
+                index = last.index
+            } else {
+                break
+            }
+        }
+    }
+
     fileprivate func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
         var remainingLimit = limit
         var index = MessageIndex.upperBound(peerId: peerId, namespace: namespace)

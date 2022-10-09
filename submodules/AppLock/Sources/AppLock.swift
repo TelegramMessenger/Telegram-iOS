@@ -66,20 +66,6 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     }).flatMap(applyScreenshotEffectToImage)
 }
 
-private func getCoveringViewSnaphot(containerView: UIView) -> UIImage? {
-    let scale: CGFloat = 0.5
-    let unscaledSize = containerView.frame.size
-    return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
-        context.clear(CGRect(origin: CGPoint(), size: size))
-        context.scaleBy(x: scale, y: scale)
-        UIGraphicsPushContext(context)
-
-        containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
-        
-        UIGraphicsPopContext()
-    }).flatMap(applyScreenshotEffectToImage)
-}
-
 public final class AppLockContextImpl: AppLockContext {
     private let rootPath: String
     private let syncQueue = Queue()
@@ -90,7 +76,7 @@ public final class AppLockContextImpl: AppLockContext {
     private let window: Window1?
     private let rootController: UIViewController?
     
-    private var coveringView: LockedWindowCoveringView?
+    private var coveringView: UIView?
     private var passcodeController: PasscodeEntryController?
     
     private var timestampRenewTimer: SwiftSignalKit.Timer?
@@ -220,7 +206,7 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
-                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: true, lockIconInitialFrame: {
+                        let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: strongSelf.rootController?.presentedViewController == nil, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
@@ -252,7 +238,8 @@ public final class AppLockContextImpl: AppLockContext {
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
-                    if !shouldDisplayCoveringView && strongSelf.savedNativeViewController != nil {
+                    shouldDisplayCoveringView = false
+                    if strongSelf.savedNativeViewController != nil {
                         passcodeControllerToDismissAfterSavedNativeControllerPresented = passcodeController
                     } else {
                         passcodeController.dismiss()
@@ -265,40 +252,46 @@ public final class AppLockContextImpl: AppLockContext {
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window, strongSelf.passcodeController == nil {
-                    let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
                     if let controller = strongSelf.rootController?.presentedViewController {
-                        coveringView.updateSnapshot(getCoveringViewSnaphot(containerView: controller.view))
-                    } else {
-                        coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
-                    }
-                    strongSelf.coveringView = coveringView
-                    window.coveringView = coveringView
-                    
-                    if let rootViewController = strongSelf.rootController {
-                        if let _ = rootViewController.presentedViewController as? UIActivityViewController {
-                        } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
+                        let blurStyle: UIBlurEffect.Style
+                        if #available(iOS 13.0, *) {
+                            blurStyle = .systemUltraThinMaterial
+                        } else if #available(iOS 10.0, *) {
+                            blurStyle = .regular
                         } else {
-                            if let controller = rootViewController.presentedViewController {
-                                strongSelf.savedNativeViewController = controller
-                            }
-                            rootViewController.dismiss(animated: false, completion: nil)
+                            blurStyle = .dark
                         }
+                        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: blurStyle))
+                        blurView.frame = controller.view.bounds
+                        blurView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+                        controller.view.addSubview(blurView)
+                        strongSelf.coveringView = blurView
+                    } else {
+                        let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
+                        coveringView.updateSnapshot(getCoveringViewSnaphot(window: window))
+                        strongSelf.coveringView = coveringView
+                        window.coveringView = coveringView
                     }
                 }
             } else if strongSelf.passcodeController == nil {
                 if let controller = strongSelf.savedNativeViewController {
-                    weak var dismissingCoveringView = strongSelf.coveringView
-                    strongSelf.coveringView = nil
-                    strongSelf.rootController?.present(controller, animated: false, completion: { [weak self] in
-                        passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss()
-                        if let dismissingCoveringView = dismissingCoveringView, let window = self?.window, dismissingCoveringView == window.coveringView {
-                            window.coveringView = nil
-                        }
+                    if let coveringView = strongSelf.coveringView {
+                        strongSelf.coveringView = nil
+                        coveringView.removeFromSuperview()
+                    }
+                    strongSelf.rootController?.present(controller, animated: false, completion: {
+                        passcodeControllerToDismissAfterSavedNativeControllerPresented?.dismiss(animated: false)
                     })
                     strongSelf.savedNativeViewController = nil
-                } else if let _ = strongSelf.coveringView {
+                } else if let coveringView = strongSelf.coveringView {
                     strongSelf.coveringView = nil
-                    strongSelf.window?.coveringView = nil
+                    if let _ = strongSelf.rootController?.presentedViewController {
+                        coveringView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak coveringView] _ in
+                            coveringView?.removeFromSuperview()
+                        })
+                    } else {
+                        strongSelf.window?.coveringView = nil
+                    }
                 }
             }
         })

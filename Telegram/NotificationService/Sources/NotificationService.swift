@@ -513,6 +513,9 @@ private struct NotificationContent: CustomStringConvertible {
         if let body = self.body {
             if self.suppressForeignAgentNotice && !body.isEmpty {
                 content.body = removeForeignAgentNotice(text: body, mayRemoveWholeText: self.messageType != nil)
+                if content.body == body {
+                    content.body = removeForeignAgentNoticePartialMatchAtEnd(text: body, mayRemoveWholeText: self.messageType != nil)
+                }
                 if content.body.isEmpty, let messageType = self.messageType {
                     content.body = messageType
                 }
