@@ -488,7 +488,7 @@ private final class PeerInfoInteraction {
     let editingOpenSetupLocation: () -> Void
     let openPeerInfo: (Peer, Bool) -> Void
     let performMemberAction: (PeerInfoMember, PeerInfoMemberAction) -> Void
-    let openPeerInfoContextMenu: (PeerInfoContextSubject, ASDisplayNode) -> Void
+    let openPeerInfoContextMenu: (PeerInfoContextSubject, ASDisplayNode, CGRect?) -> Void
     let performBioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void
     let requestLayout: (Bool) -> Void
     let openEncryptionKey: () -> Void
@@ -533,7 +533,7 @@ private final class PeerInfoInteraction {
         editingOpenSetupLocation: @escaping () -> Void,
         openPeerInfo: @escaping (Peer, Bool) -> Void,
         performMemberAction: @escaping (PeerInfoMember, PeerInfoMemberAction) -> Void,
-        openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode) -> Void,
+        openPeerInfoContextMenu: @escaping (PeerInfoContextSubject, ASDisplayNode, CGRect?) -> Void,
         performBioLinkAction: @escaping (TextLinkItemActionType, TextLinkItem) -> Void,
         requestLayout: @escaping (Bool) -> Void,
         openEncryptionKey: @escaping () -> Void,
@@ -934,9 +934,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     }
     
     let bioContextAction: (ASDisplayNode) -> Void = { sourceNode in
-        interaction.openPeerInfoContextMenu(.bio, sourceNode)
+        interaction.openPeerInfoContextMenu(.bio, sourceNode, nil)
     }
-    let bioLinkAction: (TextLinkItemActionType, TextLinkItem) -> Void = { action, item in
+    let bioLinkAction: (TextLinkItemActionType, TextLinkItem, ASDisplayNode, CGRect?) -> Void = { action, item, _, _ in
         interaction.performBioLinkAction(action, item)
     }
     
@@ -974,8 +974,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     action: { _ in
                         interaction.openUsername(username)
                     }, longTapAction: { sourceNode in
-                        interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode)
-                    }, linkItemAction: { type, item in
+                        interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode, nil)
+                    }, linkItemAction: { type, item, _, _ in
                         if case .tap = type {
                             if case let .mention(username) = item {
                                 interaction.openUsername(String(username[username.index(username.startIndex, offsetBy: 1)...]))
@@ -1103,8 +1103,8 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     action: { _ in
                         interaction.openUsername(linkText)
                     }, longTapAction: { sourceNode in
-                        interaction.openPeerInfoContextMenu(.link(customLink: linkText), sourceNode)
-                    }, linkItemAction: { type, item in
+                        interaction.openPeerInfoContextMenu(.link(customLink: linkText), sourceNode, nil)
+                    }, linkItemAction: { type, item, _, _ in
                         if case .tap = type {
                             if case let .mention(username) = item {
                                 interaction.openUsername(String(username.suffix(from: username.index(username.startIndex, offsetBy: 1))))
@@ -1153,11 +1153,15 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         action: { _ in
                             interaction.openUsername(username)
                         }, longTapAction: { sourceNode in
-                            interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode)
-                        }, linkItemAction: { type, item in
+                            interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode, nil)
+                        }, linkItemAction: { type, item, sourceNode, sourceRect in
                             if case .tap = type {
                                 if case let .mention(username) = item {
                                     interaction.openUsername(String(username.suffix(from: username.index(username.startIndex, offsetBy: 1))))
+                                }
+                            } else if case .longTap = type {
+                                if case let .mention(username) = item {
+                                    interaction.openPeerInfoContextMenu(.link(customLink: username), sourceNode, sourceRect)
                                 }
                             }
                         }, iconAction: {
@@ -1987,8 +1991,8 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             performMemberAction: { [weak self] member, action in
                 self?.performMemberAction(member: member, action: action)
             },
-            openPeerInfoContextMenu: { [weak self] subject, sourceNode in
-                self?.openPeerInfoContextMenu(subject: subject, sourceNode: sourceNode)
+            openPeerInfoContextMenu: { [weak self] subject, sourceNode, sourceRect in
+                self?.openPeerInfoContextMenu(subject: subject, sourceNode: sourceNode, sourceRect: sourceRect)
             },
             performBioLinkAction: { [weak self] action, item in
                 self?.performBioLinkAction(action: action, item: item)
@@ -6092,7 +6096,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
     
-    private func openPeerInfoContextMenu(subject: PeerInfoContextSubject, sourceNode: ASDisplayNode) {
+    private func openPeerInfoContextMenu(subject: PeerInfoContextSubject, sourceNode: ASDisplayNode, sourceRect: CGRect?) {
         guard let data = self.data, let peer = data.peer, let controller = self.controller else {
             return
         }
@@ -6144,7 +6148,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     let contextMenuController = ContextMenuController(actions: actions)
                     controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                         if let controller = self?.controller, let sourceNode = sourceNode {
-                            return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0), controller.displayNode, controller.view.bounds)
+                            var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                            if let sourceRect = sourceRect {
+                                rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                            }
+                            return (sourceNode, rect, controller.displayNode, controller.view.bounds)
                         } else {
                             return nil
                         }
@@ -6160,7 +6168,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })])
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
-                    return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0), controller.displayNode, controller.view.bounds)
+                    var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                    if let sourceRect = sourceRect {
+                        rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                    }
+                    return (sourceNode, rect, controller.displayNode, controller.view.bounds)
                 } else {
                     return nil
                 }
@@ -6192,7 +6204,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })])
             controller.present(contextMenuController, in: .window(.root), with: ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak sourceNode] in
                 if let controller = self?.controller, let sourceNode = sourceNode {
-                    return (sourceNode, sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0), controller.displayNode, controller.view.bounds)
+                    var rect = sourceNode.bounds.insetBy(dx: 0.0, dy: 2.0)
+                    if let sourceRect = sourceRect {
+                        rect = sourceRect.insetBy(dx: 0.0, dy: 2.0)
+                    }
+                    return (sourceNode, rect, controller.displayNode, controller.view.bounds)
                 } else {
                     return nil
                 }

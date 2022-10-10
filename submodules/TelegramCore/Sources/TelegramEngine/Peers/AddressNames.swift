@@ -190,14 +190,40 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
                             var updatedNames = peer.usernames
                             if let index = updatedNames.firstIndex(where: { $0.username == name }) {
                                 var updatedFlags = updatedNames[index].flags
+                                var updateOrder = true
+                                var updatedIndex = index
                                 if active {
+                                    if updatedFlags.contains(.isActive) {
+                                        updateOrder = false
+                                    }
                                     updatedFlags.insert(.isActive)
                                 } else {
+                                    if !updatedFlags.contains(.isActive) {
+                                        updateOrder = false
+                                    }
                                     updatedFlags.remove(.isActive)
                                 }
                                 let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
                                 updatedNames.remove(at: index)
-                                updatedNames.insert(updatedName, at: index)
+                                if updateOrder {
+                                    if active {
+                                        updatedIndex = 0
+                                    } else {
+                                        updatedIndex = updatedNames.count
+                                    }
+                                    var i = 0
+                                    for name in updatedNames {
+                                        if active && !name.flags.contains(.isActive) {
+                                            updatedIndex = i
+                                            break
+                                        } else if !active && !name.flags.contains(.isActive) {
+                                            updatedIndex = i
+                                            break
+                                        }
+                                        i += 1
+                                    }
+                                }
+                                updatedNames.insert(updatedName, at: updatedIndex)
                             }
                             let updatedUser = peer.withUpdatedUsernames(updatedNames)
                             updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
@@ -218,14 +244,40 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
                                     var updatedNames = peer.usernames
                                     if let index = updatedNames.firstIndex(where: { $0.username == name }) {
                                         var updatedFlags = updatedNames[index].flags
+                                        var updateOrder = true
+                                        var updatedIndex = index
                                         if active {
+                                            if updatedFlags.contains(.isActive) {
+                                                updateOrder = false
+                                            }
                                             updatedFlags.insert(.isActive)
                                         } else {
+                                            if !updatedFlags.contains(.isActive) {
+                                                updateOrder = false
+                                            }
                                             updatedFlags.remove(.isActive)
                                         }
                                         let updatedName = TelegramPeerUsername(flags: updatedFlags, username: name)
                                         updatedNames.remove(at: index)
-                                        updatedNames.insert(updatedName, at: index)
+                                        if updateOrder {
+                                            if active {
+                                                updatedIndex = 0
+                                            } else {
+                                                updatedIndex = updatedNames.count
+                                            }
+                                            var i = 0
+                                            for name in updatedNames {
+                                                if active && !name.flags.contains(.isActive) {
+                                                    updatedIndex = i
+                                                    break
+                                                } else if !active && !name.flags.contains(.isActive) {
+                                                    updatedIndex = i
+                                                    break
+                                                }
+                                                i += 1
+                                            }
+                                        }
+                                        updatedNames.insert(updatedName, at: updatedIndex)
                                     }
                                     let updatedPeer = peer.withUpdatedAddressNames(updatedNames)
                                     updatePeers(transaction: transaction, peers: [updatedPeer], update: { _, updated in
@@ -251,7 +303,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
     return account.postbox.transaction { transaction -> Signal<Void, ReorderAddressNamesError> in
         switch domain {
             case .account:
-                return account.network.request(Api.functions.account.reorderUsernames(order: names.map { $0.username }), automaticFloodWait: false)
+                return account.network.request(Api.functions.account.reorderUsernames(order: names.filter { $0.flags.contains(.isActive) }.map { $0.username }), automaticFloodWait: false)
                 |> mapError { _ -> ReorderAddressNamesError in
                     return .generic
                 }
@@ -267,7 +319,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
                 }
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.map { $0.username }), automaticFloodWait: false)
+                    return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.filter { $0.flags.contains(.isActive) }.map { $0.username }), automaticFloodWait: false)
                     |> mapError { _ -> ReorderAddressNamesError in
                         return .generic
                     }
