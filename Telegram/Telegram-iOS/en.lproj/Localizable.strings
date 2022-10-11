@@ -8089,9 +8089,25 @@ Sorry for the inconvenience.";
 "Group.Setup.LinkActive" = "active";
 "Group.Setup.LinkInactive" = "inactive";
 
+"Group.Setup.ActivateAlertTitle" = "Activate Link";
+"Group.Setup.ActivateAlertText" = "Do you want to show this link on the group info page?";
+"Group.Setup.ActivateAlertShow" = "Show";
+
+"Group.Setup.DeactivateAlertTitle" = "Deactivate Link";
+"Group.Setup.DeactivateAlertText" = "Do you want to hide this link from the group info page?";
+"Group.Setup.DeactivateAlertHide" = "Hide";
+
 "Channel.Setup.PublicLink" = "PUBLIC LINK";
 "Channel.Setup.LinksOrder" = "LINKS ORDER";
 "Channel.Setup.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the channel info page.";
+
+"Channel.Setup.ActivateAlertTitle" = "Activate Link";
+"Channel.Setup.ActivateAlertText" = "Do you want to show this link on the channel info page?";
+"Channel.Setup.ActivateAlertShow" = "Show";
+
+"Channel.Setup.DeactivateAlertTitle" = "Deactivate Link";
+"Channel.Setup.DeactivateAlertText" = "Do you want to hide this link from the channel info page?";
+"Channel.Setup.DeactivateAlertHide" = "Hide";
 
 "Username.Username" = "USERNAME";
 "Username.LinksOrder" = "USERNAMES ORDER";
@@ -8101,7 +8117,7 @@ Sorry for the inconvenience.";
 "Username.ActivateAlertText" = "Do you want to show this link on your info page?";
 "Username.ActivateAlertShow" = "Show";
 
-"Username.DeactivateAlertTitle" = "Deativate Username";
+"Username.DeactivateAlertTitle" = "Deactivate Username";
 "Username.DeactivateAlertText" = "Do you want to hide this link from your info page?";
 "Username.DeactivateAlertHide" = "Hide";
 

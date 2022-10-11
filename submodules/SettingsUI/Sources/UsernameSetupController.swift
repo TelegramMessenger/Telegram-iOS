@@ -10,6 +10,7 @@ import PresentationDataUtils
 import AccountContext
 import ShareController
 import UndoUI
+import InviteLinksUI
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -46,6 +47,10 @@ public enum UsernameEntryTag: ItemListItemTag {
     }
 }
 
+private enum UsernameSetupEntryId: Hashable {
+    case index(Int32)
+    case username(String)
+}
 
 private enum UsernameSetupEntry: ItemListNodeEntry {
     case publicLinkHeader(PresentationTheme, String)
@@ -66,22 +71,22 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
         }
     }
     
-    var stableId: Int32 {
+    var stableId: UsernameSetupEntryId {
         switch self {
             case .publicLinkHeader:
-                return 0
+                return .index(0)
             case .editablePublicLink:
-                return 1
+                return .index(1)
             case .publicLinkStatus:
-                return 2
+                return .index(2)
             case .publicLinkInfo:
-                return 3
+                return .index(3)
             case .additionalLinkHeader:
-                return 4
-            case let .additionalLink(_, _, index):
-                return 5 + index
+                return .index(4)
+            case let .additionalLink(_, username, _):
+                return .username(username.username)
             case .additionalLinkInfo:
-                return 1000
+                return .index(5)
         }
     }
     
@@ -133,7 +138,57 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
     }
     
     static func <(lhs: UsernameSetupEntry, rhs: UsernameSetupEntry) -> Bool {
-        return lhs.stableId < rhs.stableId
+        switch lhs {
+        case .publicLinkHeader:
+            switch rhs {
+            case  .publicLinkHeader:
+                return false
+            default:
+                return true
+            }
+        case .editablePublicLink:
+            switch rhs {
+            case .publicLinkHeader, .editablePublicLink:
+                return false
+            default:
+                return true
+            }
+        case .publicLinkStatus:
+            switch rhs {
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus:
+                return false
+            default:
+                return true
+            }
+        case .publicLinkInfo:
+            switch rhs {
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus, .publicLinkInfo:
+                return false
+            default:
+                return true
+            }
+        case .additionalLinkHeader:
+            switch rhs {
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus, .publicLinkInfo, .additionalLinkHeader:
+                return false
+            default:
+                return true
+            }
+        case let .additionalLink(_, _, lhsIndex):
+            switch rhs {
+            case let .additionalLink(_, _, rhsIndex):
+                return lhsIndex < rhsIndex
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus, .publicLinkInfo, .additionalLinkHeader:
+                return false
+            default:
+                return true
+            }
+        case .additionalLinkInfo:
+            switch rhs {
+            case .publicLinkHeader, .editablePublicLink, .publicLinkStatus, .publicLinkInfo, .additionalLinkHeader, .additionalLink, .additionalLinkInfo:
+                return false
+            }
+        }
     }
     
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
@@ -482,10 +537,32 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         var referenceId: String?
         var beforeAll = false
         var afterAll = false
+        
+        var maxIndex: Int?
+        
+        var currentUsernames: [String] = []
+        var i = 0
+        for entry in entries {
+            switch entry {
+            case let .additionalLink(_, link, _):
+                currentUsernames.append(link.username)
+                if !link.flags.contains(.isActive) && maxIndex == nil {
+                    maxIndex = max(0, i - 1)
+                }
+                i += 1
+            default:
+                break
+            }
+        }
+        
         if toIndex < entries.count {
             switch entries[toIndex] {
                 case let .additionalLink(_, toUsername, _):
-                    referenceId = toUsername.username
+                    if toUsername.flags.contains(.isActive) {
+                        referenceId = toUsername.username
+                    } else {
+                        afterAll = true
+                    }
                 default:
                     if entries[toIndex] < fromEntry {
                         beforeAll = true
@@ -495,16 +572,6 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             }
         } else {
             afterAll = true
-        }
-
-        var currentUsernames: [String] = []
-        for entry in entries {
-            switch entry {
-            case let .additionalLink(_, link, _):
-                currentUsernames.append(link.username)
-            default:
-                break
-            }
         }
 
         var previousIndex: Int?
@@ -517,7 +584,6 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         }
 
         var didReorder = false
-
         if let referenceId = referenceId {
             var inserted = false
             for i in 0 ..< currentUsernames.count {
@@ -535,18 +601,26 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             }
             if !inserted {
                 didReorder = previousIndex != currentUsernames.count
-                currentUsernames.append(fromUsername.username)
+                if let maxIndex = maxIndex {
+                    currentUsernames.insert(fromUsername.username, at: maxIndex)
+                } else {
+                    currentUsernames.append(fromUsername.username)
+                }
             }
         } else if beforeAll {
             didReorder = previousIndex != 0
             currentUsernames.insert(fromUsername.username, at: 0)
         } else if afterAll {
             didReorder = previousIndex != currentUsernames.count
-            currentUsernames.append(fromUsername.username)
+            if let maxIndex = maxIndex {
+                currentUsernames.insert(fromUsername.username, at: maxIndex)
+            } else {
+                currentUsernames.append(fromUsername.username)
+            }
         }
 
         temporaryOrder.set(.single(currentUsernames))
-
+        
         if didReorder {
             DispatchQueue.main.async {
                 dismissInputImpl?()
