@@ -44,7 +44,7 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
                     last = true
                 }
             }
-            let node = ItemListInviteLinkItemNode()
+            let node = AdditionalLinkItemNode()
             let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), firstWithHeader, last)
             
             node.contentSize = layout.contentSize
@@ -60,7 +60,7 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
     
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
-            if let nodeValue = node() as? ItemListInviteLinkItemNode {
+            if let nodeValue = node() as? AdditionalLinkItemNode {
                 let makeLayout = nodeValue.asyncLayout()
                 
                 async {
@@ -94,7 +94,7 @@ public class AdditionalLinkItem: ListViewItem, ItemListItem {
     }
 }
 
-public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
+public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
     private let backgroundNode: ASDisplayNode
     private let topStripeNode: ASDisplayNode
     private let bottomStripeNode: ASDisplayNode
@@ -384,13 +384,19 @@ public class ItemListInviteLinkItemNode: ListViewItemNode, ItemListItemNode {
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     
-                    if strongSelf.reorderControlNode == nil {
+                    if strongSelf.reorderControlNode == nil && item.username?.flags.contains(.isActive) == true {
                         let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
                         strongSelf.reorderControlNode = reorderControlNode
                         strongSelf.addSubnode(reorderControlNode)
                         reorderControlNode.alpha = 0.0
                         transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
+                    } else if let reorderControlNode = strongSelf.reorderControlNode, item.username?.flags.contains(.isActive) == false {
+                        strongSelf.reorderControlNode = nil
+                        reorderControlNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reorderControlNode] _ in
+                            reorderControlNode?.removeFromSupernode()
+                        })
                     }
+                                
                     let reorderControlFrame = CGRect(origin: CGPoint(x: params.width - params.rightInset - reorderControlSizeAndApply.0, y: 0.0), size: CGSize(width: reorderControlSizeAndApply.0, height: layout.contentSize.height))
                     strongSelf.reorderControlNode?.frame = reorderControlFrame
                     

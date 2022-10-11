@@ -1250,7 +1250,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 var animateReplyNodeIn = false
                 if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
                     if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
-                        self.swipeToReplyFeedback?.impact()
+                        self.swipeToReplyFeedback?.impact(.heavy)
                         
                         let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                         self.swipeToReplyNode = swipeToReplyNode

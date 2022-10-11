@@ -2677,10 +2677,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
                 }
-            case RevealOptionKey.open.rawValue:
-                break
-            case RevealOptionKey.close.rawValue:
-                break
             default:
                 break
             }
@@ -2688,6 +2684,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch option.key {
             case RevealOptionKey.delete.rawValue:
                 item.interaction.deletePeerThread(peerId, threadId)
+            case RevealOptionKey.open.rawValue:
+                break
+            case RevealOptionKey.close.rawValue:
+                break
             default:
                 break
             }

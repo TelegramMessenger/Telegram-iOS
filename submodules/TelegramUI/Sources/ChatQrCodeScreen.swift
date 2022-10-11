@@ -578,7 +578,7 @@ final class ChatQrCodeScreen: ViewController {
                 } else {
                     result = "t_me-\(Int32.random(in: 0 ..< Int32.max))"
                 }
-                if let threadId = threadId {
+                if let threadId = threadId, threadId != 0 {
                     result.append("-\(threadId)")
                 }
                 return result
@@ -1519,7 +1519,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         } else {
             codeText = peer.debugDisplayTitle.uppercased()
         }
-        if let threadId = self.threadId {
+        if let threadId = self.threadId, threadId != 0 {
             codeText += "/\(threadId)"
         }
         
