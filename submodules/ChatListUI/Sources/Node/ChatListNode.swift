@@ -67,6 +67,7 @@ public final class ChatListNodeInteraction {
     let setPeerIdWithRevealedOptions: (EnginePeer.Id?, EnginePeer.Id?) -> Void
     let setItemPinned: (EngineChatList.PinnedItem.Id, Bool) -> Void
     let setPeerMuted: (EnginePeer.Id, Bool) -> Void
+    let setPeerThreadMuted: (EnginePeer.Id, Int64?, Bool) -> Void
     let deletePeer: (EnginePeer.Id, Bool) -> Void
     let deletePeerThread: (EnginePeer.Id, Int64) -> Void
     let updatePeerGrouping: (EnginePeer.Id, Bool) -> Void
@@ -98,6 +99,7 @@ public final class ChatListNodeInteraction {
         setPeerIdWithRevealedOptions: @escaping (EnginePeer.Id?, EnginePeer.Id?) -> Void,
         setItemPinned: @escaping (EngineChatList.PinnedItem.Id, Bool) -> Void,
         setPeerMuted: @escaping (EnginePeer.Id, Bool) -> Void,
+        setPeerThreadMuted: @escaping (EnginePeer.Id, Int64?, Bool) -> Void,
         deletePeer: @escaping (EnginePeer.Id, Bool) -> Void,
         deletePeerThread: @escaping (EnginePeer.Id, Int64) -> Void,
         updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void,
@@ -119,6 +121,7 @@ public final class ChatListNodeInteraction {
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.setItemPinned = setItemPinned
         self.setPeerMuted = setPeerMuted
+        self.setPeerThreadMuted = setPeerThreadMuted
         self.deletePeer = deletePeer
         self.deletePeerThread = deletePeerThread
         self.updatePeerGrouping = updatePeerGrouping
@@ -946,7 +949,7 @@ public final class ChatListNode: ListView {
                 return
             }
             strongSelf.setCurrentRemovingPeerId(peerId)
-            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId)
+            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state
@@ -954,6 +957,17 @@ public final class ChatListNode: ListView {
                     return state
                 }
                 self?.setCurrentRemovingPeerId(nil)
+            })
+        }, setPeerThreadMuted: { [weak self] peerId, threadId, _ in
+            //self?.setCurrentRemovingPeerId(peerId)
+            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: threadId)
+            |> deliverOnMainQueue).start(completed: {
+                self?.updateState { state in
+                    var state = state
+                    state.peerIdWithRevealedOptions = nil
+                    return state
+                }
+                //self?.setCurrentRemovingPeerId(nil)
             })
         }, deletePeer: { [weak self] peerId, joined in
             self?.deletePeerChat?(peerId, joined)
@@ -1799,8 +1813,11 @@ public final class ChatListNode: ListView {
                                         if let combinedReadState = combinedReadState {
                                             hasUnread = combinedReadState.count > 0
                                         }
-                                        if case let .chatList(index) = index {
-                                            preloadItems.append(ChatHistoryPreloadItem(index: index, isMuted: isMuted, hasUnread: hasUnread))
+                                        switch index {
+                                        case let .chatList(index):
+                                            preloadItems.append(ChatHistoryPreloadItem(index: index, threadId: nil, isMuted: isMuted, hasUnread: hasUnread))
+                                        case .forum:
+                                            break
                                         }
                                     }
                                 default:

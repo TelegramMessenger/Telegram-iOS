@@ -31,7 +31,7 @@ public enum ChatTitleContent {
         case replies
     }
     
-    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool)
+    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
 }
@@ -123,7 +123,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
                 var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, customTitle, _, isScheduledMessages):
+                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted):
                         if peerView.peerId.isReplies {
                             let typeText: String = self.strings.DialogList_Replies
                             segments = [.text(0, NSAttributedString(string: typeText, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -166,10 +166,16 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                             if peerView.peerId.namespace == Namespaces.Peer.SecretChat {
                                 titleLeftIcon = .lock
                             }
-                            if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
-                                if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
-                                    if titleCredibilityIcon != .verified {
-                                        titleRightIcon = .mute
+                            if let isMuted {
+                                if isMuted {
+                                    titleRightIcon = .mute
+                                }
+                            } else {
+                                if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
+                                    if case let .muted(until) = notificationSettings.muteState, until >= Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970) {
+                                        if titleCredibilityIcon != .verified {
+                                            titleRightIcon = .mute
+                                        }
                                     }
                                 }
                             }
@@ -313,7 +319,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, _, isScheduledMessages):
+            case let .peer(peerView, _, _, isScheduledMessages, _):
                 if let peer = peerViewMainPeer(peerView) {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
@@ -414,7 +420,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, _, onlineMemberCount, isScheduledMessages):
+                        case let .peer(peerView, _, onlineMemberCount, isScheduledMessages, _):
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {

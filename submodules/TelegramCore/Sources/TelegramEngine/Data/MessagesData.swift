@@ -275,23 +275,26 @@ public extension TelegramEngine.EngineData.Item {
             public struct ItemKey: Hashable {
                 public var peerId: EnginePeer.Id
                 public var tag: MessageTags
+                public var threadId: Int64?
             }
             
             public typealias Result = Int?
             
             fileprivate var peerId: EnginePeer.Id
             fileprivate var tag: MessageTags
+            fileprivate var threadId: Int64?
             public var mapKey: ItemKey {
-                return ItemKey(peerId: self.peerId, tag: self.tag)
+                return ItemKey(peerId: self.peerId, tag: self.tag, threadId: self.threadId)
             }
             
-            public init(peerId: EnginePeer.Id, tag: MessageTags) {
+            public init(peerId: EnginePeer.Id, threadId: Int64?, tag: MessageTags) {
                 self.peerId = peerId
+                self.threadId = threadId
                 self.tag = tag
             }
 
             var key: PostboxViewKey {
-                return .historyTagSummaryView(tag: tag, peerId: peerId, namespace: Namespaces.Message.Cloud)
+                return .historyTagSummaryView(tag: self.tag, peerId: self.peerId, threadId: self.threadId, namespace: Namespaces.Message.Cloud)
             }
 
             func extract(view: PostboxView) -> Result {

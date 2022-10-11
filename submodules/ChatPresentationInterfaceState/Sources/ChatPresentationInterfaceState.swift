@@ -18,6 +18,17 @@ public extension ChatLocation {
             return nil
         }
     }
+    
+    var threadId: Int64? {
+        switch self {
+        case .peer:
+            return nil
+        case let .replyThread(replyThreadMessage):
+            return Int64(replyThreadMessage.messageId.id)
+        case .feed:
+            return nil
+        }
+    }
 }
 
 public enum ChatPresentationInputQueryKind: Int32 {

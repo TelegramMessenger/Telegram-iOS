@@ -880,7 +880,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
         animationTimer.start()
 
         self.statusPromise.set(context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: tagMaskForType(self.contentType))
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: tagMaskForType(self.contentType))
         )
         |> map { count -> PeerInfoStatusData? in
             let count: Int = count ?? 0
@@ -925,7 +925,7 @@ final class PeerInfoGifPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScrollViewDe
             return
         }
         self.isRequestingView = true
-        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: self.peerId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
+        self.listDisposable.set((self.context.account.viewTracker.aroundMessageHistoryViewForLocation(.peer(peerId: self.peerId, threadId: self.chatLocation.threadId), index: .upperBound, anchorIndex: .upperBound, count: self.numberOfItemsToRequest, fixedCombinedReadStates: nil, tagMask: tagMaskForType(self.contentType))
         |> deliverOnMainQueue).start(next: { [weak self] (view, updateType, _) in
             guard let strongSelf = self else {
                 return

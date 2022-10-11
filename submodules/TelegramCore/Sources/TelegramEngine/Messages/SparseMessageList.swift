@@ -189,12 +189,7 @@ public final class SparseMessageList {
             let count: Int
             count = 200
             
-            let location: ChatLocationInput
-            if let threadId = self.threadId {
-                location = .thread(peerId: self.peerId, threadId: threadId, data: .single(MessageHistoryViewExternalInput(content: .thread(peerId: self.peerId, id: threadId, holes: [:]), maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil)))
-            } else {
-                location = .peer(peerId: self.peerId)
-            }
+            let location: ChatLocationInput = .peer(peerId: self.peerId, threadId: self.threadId)
             
             self.topItemsDisposable.set((self.account.postbox.aroundMessageHistoryViewForLocation(location, anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: count, fixedCombinedReadStates: nil, topTaggedMessageIdNamespaces: Set(), tagMask: self.messageTag, appendMessagesFromTheSameGroup: false, namespaces: .not(Set(Namespaces.Message.allScheduled)), orderStatistics: [])
             |> deliverOn(self.queue)).start(next: { [weak self] view, updateType, _ in

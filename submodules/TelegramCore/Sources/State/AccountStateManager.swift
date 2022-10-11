@@ -1358,7 +1358,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
         notificationPeerId = author.id
     }
     
-    if let notificationSettings = transaction.getPeerNotificationSettings(notificationPeerId) as? TelegramPeerNotificationSettings {
+    if let notificationSettings = transaction.getPeerNotificationSettings(id: notificationPeerId) as? TelegramPeerNotificationSettings {
         var defaultSound: PeerMessageSound = defaultCloudPeerNotificationSound
         var defaultNotify: Bool = true
         if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) {

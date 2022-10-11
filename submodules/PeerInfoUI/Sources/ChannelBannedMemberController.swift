@@ -293,7 +293,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         var index = 0
         for (right, _) in allGroupPermissionList {
             let defaultEnabled = !defaultBannedRights.flags.contains(right) && channel.hasPermission(.banMembers)
-            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
+            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right, isForum: channel.flags.contains(.isForum)), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
             index += 1
         }
         
@@ -339,7 +339,7 @@ private func channelBannedMemberControllerEntries(presentationData: Presentation
         var index = 0
         for (right, _) in allGroupPermissionList {
             let defaultEnabled = !defaultBannedRightsFlags.contains(right)
-            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
+            entries.append(.rightItem(presentationData.theme, index, stringForGroupPermission(strings: presentationData.strings, right: right, isForum: false), right, defaultEnabled && !currentRightsFlags.contains(right), defaultEnabled && !state.updating))
             index += 1
         }
         

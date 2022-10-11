@@ -269,9 +269,9 @@ final class ViewTracker {
             
             var updateType: ViewUpdateType = .Generic
             switch mutableView.peerIds {
-                case let .single(peerId):
+                case let .single(peerId, threadId):
                     for key in transaction.currentPeerHoleOperations.keys {
-                        if key.peerId == peerId {
+                        if key.peerId == peerId && key.threadId == threadId {
                             updateType = .FillHole
                             break
                         }

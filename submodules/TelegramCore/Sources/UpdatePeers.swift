@@ -71,7 +71,8 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                 }
             case Namespaces.Peer.CloudChannel:
                 if let channel = updated as? TelegramChannel {
-                    switch channel.participationStatus {
+                    if case .personal = channel.accessHash {
+                        switch channel.participationStatus {
                         case .member:
                             updatePeerChatInclusionWithMinTimestamp(transaction: transaction, id: peerId, minTimestamp: channel.creationDate, forceRootGroupIfNotExists: true)
                         case .left:
@@ -80,6 +81,7 @@ public func updatePeers(transaction: Transaction, peers: [Peer], update: (Peer?,
                             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
                         default:
                             transaction.updatePeerChatListInclusion(peerId, inclusion: .notIncluded)
+                        }
                     }
                 } else {
                     assertionFailure()
