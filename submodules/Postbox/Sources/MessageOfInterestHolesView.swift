@@ -25,7 +25,7 @@ public struct MessageOfInterestHole: Hashable, Equatable, CustomStringConvertibl
 }
 
 public enum MessageOfInterestViewLocation: Hashable {
-    case peer(PeerId)
+    case peer(peerId: PeerId, threadId: Int64?)
 }
 
 final class MutableMessageOfInterestHolesView: MutablePostboxView {
@@ -45,9 +45,9 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
         let mainPeerId: PeerId
         let peerIds: MessageHistoryViewInput
         switch self.location {
-        case let .peer(id):
+        case let .peer(id, threadId):
             mainPeerId = id
-            peerIds = postbox.peerIdsForLocation(.peer(id), ignoreRelatedChats: false)
+            peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
         }
         self.peerIds = peerIds
         var anchor: HistoryViewInputAnchor = .upperBound
@@ -107,12 +107,14 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var peerId: PeerId
+        var threadId: Int64?
         switch self.location {
-            case let .peer(id):
-                peerId = id
+        case let .peer(id, threadIdValue):
+            peerId = id
+            threadId = threadIdValue
         }
         var anchor: HistoryViewInputAnchor = self.anchor
-        if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
+        if threadId == nil, transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
             let updatedAnchor: HistoryViewInputAnchor = .upperBound
             if let combinedState = postbox.readStateTable.getCombinedState(peerId), let state = combinedState.states.first, state.1.count != 0 {
                 switch state.1 {
@@ -129,8 +131,8 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             self.anchor = anchor
             let peerIds: MessageHistoryViewInput
             switch self.location {
-            case let .peer(id):
-                peerIds = postbox.peerIdsForLocation(.peer(id), ignoreRelatedChats: false)
+            case let .peer(id, threadId):
+                peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
             }
             self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [], getMessageCountInRange: { _, _ in return 0})
             return self.updateFromView()
@@ -138,9 +140,11 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             var reloadView = false
             if !transaction.currentPeerHoleOperations.isEmpty {
                 var allPeerIds: [PeerId]
+                var threadId: Int64?
                 switch peerIds {
-                case let .single(peerId):
+                case let .single(peerId, threadIdValue):
                     allPeerIds = [peerId]
+                    threadId = threadIdValue
                 case let .associated(peerId, attachedMessageId):
                     allPeerIds = [peerId]
                     if let attachedMessageId = attachedMessageId {
@@ -151,7 +155,7 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
                     break
                 }
                 for (key, _) in transaction.currentPeerHoleOperations {
-                    if allPeerIds.contains(key.peerId) {
+                    if allPeerIds.contains(key.peerId) && key.threadId == threadId {
                         reloadView = true
                         break
                     }
@@ -160,8 +164,8 @@ final class MutableMessageOfInterestHolesView: MutablePostboxView {
             if reloadView {
                 let peerIds: MessageHistoryViewInput
                 switch self.location {
-                case let .peer(id):
-                    peerIds = postbox.peerIdsForLocation(.peer(id), ignoreRelatedChats: false)
+                case let .peer(id, threadId):
+                    peerIds = postbox.peerIdsForLocation(.peer(peerId: id, threadId: threadId), ignoreRelatedChats: false)
                 }
                 self.wrappedView = MutableMessageHistoryView(postbox: postbox, orderStatistics: [], clipHoles: true, peerIds: peerIds, ignoreMessagesInTimestampRange: nil, anchor: self.anchor, combinedReadStates: nil, transientReadStates: nil, tag: nil, appendMessagesFromTheSameGroup: false, namespaces: .all, count: self.count, topTaggedMessages: [:], additionalDatas: [], getMessageCountInRange: { _, _ in return 0})
             }

@@ -86,6 +86,14 @@ func chatHistoryEntriesForView(
             continue
         }
         
+        if case let .replyThread(replyThreadMessage) = location, replyThreadMessage.isForumPost {
+            for media in message.media {
+                if let action = media as? TelegramMediaAction, case .topicCreated = action.action {
+                    continue loop
+                }
+            }
+        }
+        
         if let maybeJoinMessage = joinMessage {
             if message.timestamp > maybeJoinMessage.timestamp, (!view.holeEarlier || count > 0) {
                 entries.append(.MessageEntry(maybeJoinMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

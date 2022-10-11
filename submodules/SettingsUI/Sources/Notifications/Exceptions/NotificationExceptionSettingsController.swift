@@ -365,7 +365,7 @@ private struct NotificationExceptionPeerState : Equatable {
     }
 }
 
-public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, mode: NotificationExceptionMode, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, threadId: Int64?, mode: NotificationExceptionMode, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -420,10 +420,13 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     
     statePromise.set(context.engine.data.get(
         TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peer.id),
+        EngineDataOptional(threadId.flatMap { TelegramEngine.EngineData.Item.Peer.ThreadNotificationSettings(id: peer.id, threadId: $0) }),
         TelegramEngine.EngineData.Item.NotificationSettings.Global()
     )
-    |> map { notificationSettings, globalNotificationSettings -> NotificationExceptionPeerState in
-        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: notificationSettings._asNotificationSettings())
+    |> map { peerNotificationSettings, threadNotificationSettings, globalNotificationSettings -> NotificationExceptionPeerState in
+        let effectiveSettings = threadNotificationSettings ?? peerNotificationSettings
+        
+        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: effectiveSettings._asNotificationSettings())
         let globalSettings = globalNotificationSettings
         switch mode {
         case .channels:

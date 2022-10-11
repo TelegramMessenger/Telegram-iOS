@@ -127,7 +127,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
         return true
     }
     
-    init(context: AccountContext, peerId: PeerId, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
+    init(context: AccountContext, peerId: PeerId, threadId: Int64?, tagMask: MessageTags, interfaceInteraction: ChatControllerInteraction) {
         self.context = context
         
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
@@ -174,7 +174,7 @@ final class ChatHistorySearchContainerNode: SearchDisplayControllerContentNode {
             if let strongSelf = self {
                 let signal: Signal<([ChatHistorySearchEntry], [MessageId: Message])?, NoError>
                 if let query = query, !query.isEmpty {
-                    let foundRemoteMessages: Signal<[Message], NoError> = context.engine.messages.searchMessages(location: .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: nil, maxDate: nil), query: query, state: nil)
+                    let foundRemoteMessages: Signal<[Message], NoError> = context.engine.messages.searchMessages(location: .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: threadId.flatMap { makeThreadIdMessageId(peerId: peerId, threadId: $0) }, minDate: nil, maxDate: nil), query: query, state: nil)
                     |> map { $0.0.messages }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     

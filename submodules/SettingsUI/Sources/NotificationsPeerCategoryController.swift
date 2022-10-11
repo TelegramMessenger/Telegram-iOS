@@ -438,16 +438,16 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
     }
     
     let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-        return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, sound: sound) |> deliverOnMainQueue
+        return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: nil, sound: sound) |> deliverOnMainQueue
     }
 
     let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-        return context.engine.peers.updatePeerMuteSetting(peerId: peerId, muteInterval: muteInterval) |> deliverOnMainQueue
+        return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: nil, muteInterval: muteInterval) |> deliverOnMainQueue
     }
 
     let updatePeerDisplayPreviews:(PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
         peerId, displayPreviews in
-        return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+        return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
     }
     
     var peerIds: Set<PeerId> = Set(mode.peerIds)
@@ -502,7 +502,7 @@ public func notificationsPeerCategoryController(context: AccountContext, categor
             }
             
             let mode = stateValue.with { $0.mode }
-            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), mode: mode, updatePeerSound: { peerId, sound in
+            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), threadId: nil, mode: mode, updatePeerSound: { peerId, sound in
                 _ = updatePeerSound(peer.id, sound).start(next: { _ in
                     updateNotificationsDisposable.set(nil)
                     _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in

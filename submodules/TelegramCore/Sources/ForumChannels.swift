@@ -62,8 +62,14 @@ public struct MessageHistoryThreadData: Codable, Equatable {
     public var maxIncomingReadId: Int32
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
-    public var unreadMentionCount: Int32
-    public var unreadReactionCount: Int32
+    public var notificationSettings: TelegramPeerNotificationSettings
+}
+
+struct StoreMessageHistoryThreadData {
+    var data: MessageHistoryThreadData
+    var topMessageId: Int32
+    var unreadMentionCount: Int32
+    var unreadReactionCount: Int32
 }
 
 public enum CreateForumChannelTopicError {
@@ -247,7 +253,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                     
-                    let _ = transaction.addMessages(messages.compactMap { message -> StoreMessage? in
+                    let _ = InternalAccountState.addMessages(transaction: transaction, messages: messages.compactMap { message -> StoreMessage? in
                         return StoreMessage(apiMessage: message)
                     }, location: .Random)
                     
@@ -261,7 +267,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId):
+                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
                             let data = MessageHistoryThreadData(
                                 creationDate: date,
                                 author: fromId.peerId,
@@ -274,13 +280,15 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                                 maxIncomingReadId: readInboxMaxId,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: readOutboxMaxId,
-                                unreadMentionCount: unreadMentionsCount,
-                                unreadReactionCount: unreadReactionsCount
+                                notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                             )
                             guard let info = CodableEntry(data) else {
                                 continue
                             }
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: info)
+                            
+                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
+                            transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
                         }
                     }
                 }
@@ -315,25 +323,6 @@ public final class ForumChannelTopics {
             self.peerId = peerId
             
             let _ = _internal_loadMessageHistoryThreads(account: self.account, peerId: peerId).start()
-            
-            let viewKey: PostboxViewKey = .messageHistoryThreadIndex(id: self.peerId)
-            self.statePromise.set(self.account.postbox.combinedView(keys: [viewKey])
-            |> map { views -> State in
-                guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
-                    preconditionFailure()
-                }
-                return State(items: view.items.compactMap { item -> ForumChannelTopics.Item? in
-                    guard let data = item.info.get(MessageHistoryThreadData.self) else {
-                        return nil
-                    }
-                    return ForumChannelTopics.Item(
-                        id: item.id,
-                        info: data.info,
-                        index: item.index,
-                        topMessage: item.topMessage.flatMap(EngineMessage.init)
-                    )
-                })
-            })
             
             self.updateDisposable.set(account.viewTracker.polledChannel(peerId: peerId).start())
         }

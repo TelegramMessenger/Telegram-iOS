@@ -76,6 +76,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, setPeerIdWithRevealedOptions: { _, _ in
         }, setItemPinned: { _, _ in
         }, setPeerMuted: { _, _ in
+        }, setPeerThreadMuted: { _, _, _ in
         }, deletePeer: { _, _ in
         }, deletePeerThread: { _, _ in
         }, updatePeerGrouping: { _, _ in

@@ -147,7 +147,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
         
         self.statusPromise.set(context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: tagMask)
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: tagMask)
         )
         |> map { count -> PeerInfoStatusData? in
             let count: Int = count ?? 0

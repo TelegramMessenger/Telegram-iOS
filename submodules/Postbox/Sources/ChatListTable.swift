@@ -260,7 +260,7 @@ final class ChatListTable: Table {
                         
                         let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(messageIndex.id.peerId))
                         
-                        let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: filterPredicate.messageTagSummary)
+                        let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                         
                         if filterPredicate.pinnedPeerIds.contains(peer.id) {
                             passFilter = true
@@ -895,7 +895,7 @@ final class ChatListTable: Table {
                     }
                     var tagSummary: MessageHistoryTagNamespaceSummary?
                     if let summaryTag = summaryTag {
-                        tagSummary = summaryTable.get(MessageHistoryTagsSummaryKey(tag: summaryTag, peerId: peerIndex.messageIndex.id.peerId, namespace: namespace))
+                        tagSummary = summaryTable.get(MessageHistoryTagsSummaryKey(tag: summaryTag, peerId: peerIndex.messageIndex.id.peerId, threadId: nil, namespace: namespace))
                     }
                     var topMessageAttributes: [MessageAttribute] = []
                     if let topMessage = topMessage {

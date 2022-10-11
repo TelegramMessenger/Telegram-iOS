@@ -336,7 +336,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var modifiedSlowmodeTimeout: Int32?
 }
 
-func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags) -> String {
+func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
     if right.contains(.banSendMessages) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
@@ -352,7 +352,11 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
     } else if right.contains(.banAddMembers) {
         return strings.Channel_BanUser_PermissionAddMembers
     } else if right.contains(.banPinMessages) {
-        return strings.Channel_EditAdmin_PermissionPinMessages
+        if isForum {
+            return strings.Channel_EditAdmin_PermissionCreateTopics
+        } else {
+            return strings.Channel_EditAdmin_PermissionPinMessages
+        }
     } else {
         return ""
     }
@@ -442,7 +446,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             if !channel.hasPermission(correspondingAdminRight) {
                 enabled = false
             }
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.flags.contains(.isForum)), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
         }
         
@@ -479,7 +483,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
         for (rights, _) in allGroupPermissionList {
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, true))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), !effectiveRightsFlags.contains(rights), rights, true))
             rightIndex += 1
         }
         

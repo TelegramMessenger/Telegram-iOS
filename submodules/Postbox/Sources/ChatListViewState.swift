@@ -63,7 +63,7 @@ private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransact
                 let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
                 let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
                 let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId))
-                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: predicate.messageTagSummary)
+                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: predicate.messageTagSummary)
                 
                 if predicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
                     return true
@@ -402,7 +402,7 @@ private final class ChatListViewSpaceState {
                                 
                                 let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId))
                                 
-                                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: filterPredicate.messageTagSummary)
+                                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                                 
                                 if !filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false, isContact: postbox.contactsTable.isContact(peerId: notificationsPeerId), messageTagSummaryResult: messageTagSummaryResult) {
                                     continue inner
@@ -498,7 +498,7 @@ private final class ChatListViewSpaceState {
         
         if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
-            let _ = self.orderedEntries.mutableScan { entry in
+            let _ = self.orderedEntries.mutableScan { entry -> MutableChatListEntry? in
                 let entryPeer: Peer
                 let entryNotificationsPeerId: PeerId
                 switch entry {
@@ -532,7 +532,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: entryPeer, peerSettings: settingsChange.1)
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: entryPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: entryNotificationsPeerId), messageTagSummaryResult: messageTagSummaryResult)
                     if !isIncluded {
@@ -570,7 +570,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: mainPeer, peerSettings: settingsChange.1)
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: mainPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: peerId), messageTagSummaryResult: messageTagSummaryResult)
                     if isIncluded && self.orderedEntries.indicesForPeerId(mainPeer.id) == nil {
@@ -730,7 +730,7 @@ private final class ChatListViewSpaceState {
         
         if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate, let filterMessageTagSummary = filterPredicate.messageTagSummary {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
-            let _ = self.orderedEntries.mutableScan { entry in
+            let _ = self.orderedEntries.mutableScan { entry -> MutableChatListEntry? in
                 let entryPeer: Peer
                 let entryNotificationsPeerId: PeerId
                 switch entry {
@@ -752,7 +752,7 @@ private final class ChatListViewSpaceState {
                     return nil
                 }
                 
-                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, namespace: filterMessageTagSummary.addCount.namespace)]
+                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, threadId: nil, namespace: filterMessageTagSummary.addCount.namespace)]
                 let updatedActionsSummary = transaction.currentUpdatedMessageActionsSummaries[PendingMessageActionsSummaryKey(type: filterMessageTagSummary.subtractCount.type, peerId: entryPeer.id, namespace: filterMessageTagSummary.subtractCount.namespace)]
                 
                 if updatedMessageSummary != nil || updatedActionsSummary != nil {
@@ -768,7 +768,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: entryPeer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(entryPeer.id))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: entryPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: entryNotificationsPeerId), messageTagSummaryResult: messageTagSummaryResult)
                     if !isIncluded {
@@ -813,7 +813,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: mainPeer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(mainPeer.id))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: mainPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: peerId), messageTagSummaryResult: messageTagSummaryResult)
                     if isIncluded && self.orderedEntries.indicesForPeerId(mainPeer.id) == nil {
@@ -852,7 +852,7 @@ private final class ChatListViewSpaceState {
                     for (key, component) in self.summaryComponents.components {
                         var updatedTagSummaryCount: Int32?
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
                             if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
                                 updatedTagSummaryCount = summary.count
                             }
@@ -1428,7 +1428,7 @@ struct ChatListViewState {
                         var actionsSummaryCount: Int32?
                         
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
                             if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
                                 tagSummaryCount = summary.count
                             }

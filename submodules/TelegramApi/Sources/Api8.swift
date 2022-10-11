@@ -860,6 +860,7 @@ public extension Api {
     indirect enum InputNotifyPeer: TypeConstructorDescription {
         case inputNotifyBroadcasts
         case inputNotifyChats
+        case inputNotifyForumTopic(peer: Api.InputPeer, topMsgId: Int32)
         case inputNotifyPeer(peer: Api.InputPeer)
         case inputNotifyUsers
     
@@ -876,6 +877,13 @@ public extension Api {
                         buffer.appendInt32(1251338318)
                     }
                     
+                    break
+                case .inputNotifyForumTopic(let peer, let topMsgId):
+                    if boxed {
+                        buffer.appendInt32(1548122514)
+                    }
+                    peer.serialize(buffer, true)
+                    serializeInt32(topMsgId, buffer: buffer, boxed: false)
                     break
                 case .inputNotifyPeer(let peer):
                     if boxed {
@@ -898,6 +906,8 @@ public extension Api {
                 return ("inputNotifyBroadcasts", [])
                 case .inputNotifyChats:
                 return ("inputNotifyChats", [])
+                case .inputNotifyForumTopic(let peer, let topMsgId):
+                return ("inputNotifyForumTopic", [("peer", String(describing: peer)), ("topMsgId", String(describing: topMsgId))])
                 case .inputNotifyPeer(let peer):
                 return ("inputNotifyPeer", [("peer", String(describing: peer))])
                 case .inputNotifyUsers:
@@ -910,6 +920,22 @@ public extension Api {
         }
         public static func parse_inputNotifyChats(_ reader: BufferReader) -> InputNotifyPeer? {
             return Api.InputNotifyPeer.inputNotifyChats
+        }
+        public static func parse_inputNotifyForumTopic(_ reader: BufferReader) -> InputNotifyPeer? {
+            var _1: Api.InputPeer?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.InputPeer
+            }
+            var _2: Int32?
+            _2 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.InputNotifyPeer.inputNotifyForumTopic(peer: _1!, topMsgId: _2!)
+            }
+            else {
+                return nil
+            }
         }
         public static func parse_inputNotifyPeer(_ reader: BufferReader) -> InputNotifyPeer? {
             var _1: Api.InputPeer?

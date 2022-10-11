@@ -183,28 +183,28 @@ public extension TelegramEngine {
             return _internal_reportRepliesMessage(account: self.account, messageId: messageId, deleteMessage: deleteMessage, deleteHistory: deleteHistory, reportSpam: reportSpam)
         }
 
-        public func togglePeerMuted(peerId: PeerId) -> Signal<Void, NoError> {
-            return _internal_togglePeerMuted(account: self.account, peerId: peerId)
+        public func togglePeerMuted(peerId: PeerId, threadId: Int64?) -> Signal<Void, NoError> {
+            return _internal_togglePeerMuted(account: self.account, peerId: peerId, threadId: threadId)
         }
 
-        public func updatePeerMuteSetting(peerId: PeerId, muteInterval: Int32?) -> Signal<Void, NoError> {
-            return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, muteInterval: muteInterval)
+        public func updatePeerMuteSetting(peerId: PeerId, threadId: Int64?, muteInterval: Int32?) -> Signal<Void, NoError> {
+            return _internal_updatePeerMuteSetting(account: self.account, peerId: peerId, threadId: threadId, muteInterval: muteInterval)
         }
 
-        public func updatePeerDisplayPreviewsSetting(peerId: PeerId, displayPreviews: PeerNotificationDisplayPreviews) -> Signal<Void, NoError> {
-            return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, displayPreviews: displayPreviews)
+        public func updatePeerDisplayPreviewsSetting(peerId: PeerId, threadId: Int64?, displayPreviews: PeerNotificationDisplayPreviews) -> Signal<Void, NoError> {
+            return _internal_updatePeerDisplayPreviewsSetting(account: self.account, peerId: peerId, threadId: threadId, displayPreviews: displayPreviews)
         }
 
-        public func updatePeerNotificationSoundInteractive(peerId: PeerId, sound: PeerMessageSound) -> Signal<Void, NoError> {
-            return _internal_updatePeerNotificationSoundInteractive(account: self.account, peerId: peerId, sound: sound)
+        public func updatePeerNotificationSoundInteractive(peerId: PeerId, threadId: Int64?, sound: PeerMessageSound) -> Signal<Void, NoError> {
+            return _internal_updatePeerNotificationSoundInteractive(account: self.account, peerId: peerId, threadId: threadId, sound: sound)
         }
 
         public func removeCustomNotificationSettings(peerIds: [PeerId]) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 for peerId in peerIds {
-                    TelegramCore.updatePeerNotificationSoundInteractive(transaction: transaction, peerId: peerId, sound: .default)
-                    TelegramCore.updatePeerMuteSetting(transaction: transaction, peerId: peerId, muteInterval: nil)
-                    TelegramCore.updatePeerDisplayPreviewsSetting(transaction: transaction, peerId: peerId, displayPreviews: .default)
+                    _internal_updatePeerNotificationSoundInteractive(account: self.account, transaction: transaction, peerId: peerId, threadId: nil, sound: .default)
+                    _internal_updatePeerMuteSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: nil, muteInterval: nil)
+                    _internal_updatePeerDisplayPreviewsSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: nil, displayPreviews: .default)
                 }
             }
             |> ignoreValues

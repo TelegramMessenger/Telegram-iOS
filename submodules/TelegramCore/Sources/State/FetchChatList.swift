@@ -203,7 +203,7 @@ struct FetchedChatList {
     var pinnedItemIds: [PeerId]?
     var folderSummaries: [PeerGroupId: PeerGroupUnreadCountersSummary]
     var peerGroupIds: [PeerId: PeerGroupId]
-    var threadInfos: [MessageId: MessageHistoryThreadData]
+    var threadInfos: [MessageId: StoreMessageHistoryThreadData]
 }
 
 func fetchChatList(postbox: Postbox, network: Network, location: FetchChatListLocation, upperBound: MessageIndex, hash: Int64, limit: Int32) -> Signal<FetchedChatList?, NoError> {

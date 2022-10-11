@@ -117,7 +117,7 @@ enum AccountStateMutationOperation {
     case UpdateAudioTranscription(messageId: MessageId, id: Int64, isPending: Bool, text: String)
     case UpdateConfig
     case UpdateExtendedMedia(MessageId, Api.MessageExtendedMedia)
-    case ResetForumTopic(topicId: MessageId, data: MessageHistoryThreadData, pts: Int32)
+    case ResetForumTopic(topicId: MessageId, data: StoreMessageHistoryThreadData, pts: Int32)
 }
 
 struct HoleFromPreviousState {

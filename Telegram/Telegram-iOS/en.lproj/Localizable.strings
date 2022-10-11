@@ -8114,3 +8114,5 @@ Sorry for the inconvenience.";
 
 "ChatList.StartAction" = "Start";
 "ChatList.CloseAction" = "Close";
+
+"Channel.EditAdmin.PermissionCreateTopics" = "Create Topics";

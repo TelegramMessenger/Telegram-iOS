@@ -325,10 +325,6 @@ private class ReplyThreadHistoryContextImpl {
             return
         }
 
-        guard let _ = self.stateValue else {
-            return
-        }
-
         let fromIdExclusive: Int32?
         let toIndex = messageIndex
         if let maxReadIncomingMessageId = self.maxReadIncomingMessageIdValue {
@@ -345,6 +341,7 @@ private class ReplyThreadHistoryContextImpl {
                 if messageIndex.id.id >= data.maxIncomingReadId {
                     if let count = transaction.getThreadMessageCount(peerId: messageId.peerId, threadId: Int64(messageId.id), namespace: messageId.namespace, fromIdExclusive: data.maxIncomingReadId, toIndex: messageIndex) {
                         data.incomingUnreadCount = max(0, data.incomingUnreadCount - Int32(count))
+                        data.maxIncomingReadId = messageIndex.id.id
                     }
                     
                     data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
@@ -937,7 +934,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
             return account.postbox.transaction { transaction -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> in
                 if let initialFilledHoles = initialFilledHoles {
                     for range in initialFilledHoles.strictRemovedIndices.rangeView {
-                        transaction.removeThreadIndexHole(peerId: discussionMessage.messageId.peerId, threadId: makeMessageThreadId(discussionMessage.messageId), namespace: Namespaces.Message.Cloud, space: .everywhere, range: Int32(range.lowerBound) ... Int32(range.upperBound))
+                        transaction.removeHole(peerId: discussionMessage.messageId.peerId, threadId: makeMessageThreadId(discussionMessage.messageId), namespace: Namespaces.Message.Cloud, space: .everywhere, range: Int32(range.lowerBound) ... Int32(range.upperBound))
                     }
                 }
                 

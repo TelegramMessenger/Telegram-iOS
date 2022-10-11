@@ -166,7 +166,27 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
             }
         }
     case let .forum(peerId):
-        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(id: peerId)
+        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
+            id: peerId,
+            summaryComponents: ChatListEntrySummaryComponents(
+                components: [
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenPersonalMessage,
+                        actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    ),
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenReaction,
+                        actionType: PendingMessageActionType.readReaction
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    )
+                ]
+            )
+        )
         var isFirst = false
         return account.postbox.combinedView(keys: [viewKey])
         |> map { views -> ChatListNodeViewUpdate in
@@ -182,18 +202,41 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 guard let data = item.info.get(MessageHistoryThreadData.self) else {
                     continue
                 }
+                
+                var hasUnseenMentions = false
+                
+                var isMuted = false
+                if case .muted = data.notificationSettings.muteState {
+                    isMuted = true
+                }
+                
+                if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                    tag: .unseenPersonalMessage,
+                    actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                )] {
+                    hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
+                }
+                
+                var hasUnseenReactions = false
+                if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                    tag: .unseenReaction,
+                    actionType: PendingMessageActionType.readReaction
+                )] {
+                    hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+                }
+                
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
                     index: .forum(timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                     messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
                     readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
-                    isMuted: false,
+                    isMuted: isMuted,
                     draft: nil,
                     threadInfo: data.info,
                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
                     presence: nil,
-                    hasUnseenMentions: false,
-                    hasUnseenReactions: false,
+                    hasUnseenMentions: hasUnseenMentions,
+                    hasUnseenReactions: hasUnseenReactions,
                     forumTopicTitle: nil,
                     hasFailed: false,
                     isContact: false
