@@ -3003,6 +3003,8 @@ func replayFinalState(
                                                         data.info = EngineMessageHistoryThread.Info(title: title, icon: data.info.icon, iconColor: data.info.iconColor)
                                                     case let .iconFileId(fileId):
                                                         data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
+                                                    case let .isClosed(isClosed):
+                                                        let _ = isClosed
                                                     }
                                                 }
                                                 

@@ -2011,15 +2011,16 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func editForumTopic(flags: Int32, channel: Api.InputChannel, topicId: Int32, title: String?, iconEmojiId: Int64?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func editForumTopic(flags: Int32, channel: Api.InputChannel, topicId: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1971370421)
+                    buffer.appendInt32(1820868141)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     channel.serialize(buffer, true)
                     serializeInt32(topicId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "channels.editForumTopic", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("topicId", String(describing: topicId)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 2) != 0 {closed!.serialize(buffer, true)}
+                    return (FunctionDescription(name: "channels.editForumTopic", parameters: [("flags", String(describing: flags)), ("channel", String(describing: channel)), ("topicId", String(describing: topicId)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId)), ("closed", String(describing: closed))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -2608,6 +2609,23 @@ public extension Api.functions.channels {
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Bool
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
+                static func updatePinnedForumTopic(channel: Api.InputChannel, topicId: Int32, pinned: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1814925350)
+                    channel.serialize(buffer, true)
+                    serializeInt32(topicId, buffer: buffer, boxed: false)
+                    pinned.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.updatePinnedForumTopic", parameters: [("channel", String(describing: channel)), ("topicId", String(describing: topicId)), ("pinned", String(describing: pinned))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
                         }
                         return result
                     })

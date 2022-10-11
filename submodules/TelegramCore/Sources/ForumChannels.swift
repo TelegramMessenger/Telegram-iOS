@@ -155,7 +155,8 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
             channel: inputChannel,
             topicId: Int32(clamping: threadId),
             title: title,
-            iconEmojiId: iconFileId ?? 0
+            iconEmojiId: iconFileId ?? 0,
+            closed: nil
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic
