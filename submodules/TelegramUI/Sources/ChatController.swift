@@ -4725,10 +4725,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.reportIrrelvantGeoNoticePromise.set(.single(nil))
                 
                 let replyThreadType: ChatTitleContent.ReplyThreadType
+                var replyThreadId: Int64?
                 switch chatLocation {
                 case .peer:
                     replyThreadType = .replies
                 case let .replyThread(replyThreadMessage):
+                    replyThreadId = Int64(replyThreadMessage.messageId.id)
                     if replyThreadMessage.isChannelPost {
                         replyThreadType = .comments
                     } else {
@@ -4742,11 +4744,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 
                 let messageAndTopic = messagePromise.get()
                 |> mapToSignal { message -> Signal<(message: Message?, threadData: MessageHistoryThreadData?), NoError> in
-                    guard let message = message else {
-                        return .single((nil, nil))
+                    guard let replyThreadId = replyThreadId else {
+                        return .single((message, nil))
                     }
-                    
-                    let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: Int64(message.id.id))
+                    let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: replyThreadId)
                     return context.account.postbox.combinedView(keys: [viewKey])
                     |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?) in
                         guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
