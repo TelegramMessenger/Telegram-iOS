@@ -271,7 +271,7 @@ public final class CallController: ViewController {
         
         self.controllerNode.callEnded = { [weak self] didPresentRating in
             if let strongSelf = self, !didPresentRating {
-                let _ = (combineLatest(strongSelf.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings]), ApplicationSpecificNotice.getCallsTabTip(accountManager: strongSelf.sharedContext.accountManager))
+                let _ = (combineLatest(strongSelf.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.callListSettings]) |> take(1), ApplicationSpecificNotice.getCallsTabTip(accountManager: strongSelf.sharedContext.accountManager))
                 |> map { sharedData, callsTabTip -> Int32 in
                     var value = false
                     if let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.callListSettings]?.get(CallListSettings.self) {
