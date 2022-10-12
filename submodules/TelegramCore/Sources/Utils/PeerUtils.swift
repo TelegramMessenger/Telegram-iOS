@@ -54,6 +54,18 @@ public extension Peer {
             return nil
         }
     }
+    var usernames: [TelegramPeerUsername] {
+        switch self {
+        case let user as TelegramUser:
+            return user.usernames
+        case _ as TelegramGroup:
+            return []
+        case let channel as TelegramChannel:
+            return channel.usernames
+        default:
+            return []
+        }
+    }
     
     var displayLetters: [String] {
         switch self {
