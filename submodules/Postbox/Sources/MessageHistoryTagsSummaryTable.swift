@@ -96,7 +96,7 @@ class MessageHistoryTagsSummaryTable: Table {
             self.sharedThreadKey.setInt64(4, value: key.peerId.toInt64())
             self.sharedThreadKey.setInt32(4 + 8, value: key.namespace)
             self.sharedThreadKey.setInt64(4 + 8 + 4, value: threadId)
-            return self.sharedSimpleKey
+            return self.sharedThreadKey
         } else {
             self.sharedSimpleKey.setUInt32(0, value: key.tag.rawValue)
             self.sharedSimpleKey.setInt64(4, value: key.peerId.toInt64())

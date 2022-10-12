@@ -582,7 +582,7 @@ final class MutableMessageHistoryView {
                         
                         var matches = false
                         if matchesTag {
-                            if !isExternal || message.threadId == externalThreadId {
+                            if (!isExternal && externalThreadId == nil) || message.threadId == externalThreadId {
                                 if self.namespaces.contains(message.id.namespace) {
                                     matches = true
                                     if loadedState.add(entry: .IntermediateMessageEntry(message, nil, nil)) {
