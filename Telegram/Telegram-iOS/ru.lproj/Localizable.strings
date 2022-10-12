@@ -60,7 +60,7 @@
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanion" = "Удалить у собеседника";
 "FakePasscodes.AccountActions.ChatsToRemove.DeleteFromCompanionInfo" = "Удалить диалоги у собеседников. Эта опция применяется только для диалогов с пользователями.";
 "FakePasscodes.AccountActions.SessionsToHide" = "Сеансы для скрытия";
-"FakePasscodes.AccountActions.SessionsToTerminate" = "Сеанси для завершення";
+"FakePasscodes.AccountActions.SessionsToTerminate" = "Сеансы для завершения";
 "FakePasscodes.AccountActions.All" = "Все";
 "FakePasscodes.AccountActions.AllExceptCount" = "Все (-%1$@)";
 "FakePasscodes.AccountActions.SessionsSettingsInfo" = "Выберите сеансы, которые будут видны в настройках и/или завершены после активации ложного код-пароля.";
