@@ -73,7 +73,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
     public var author: PeerId
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
-    public var maxIncomingReadId: Int32
+    public var maxIncomingReadId: Int32 
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
     public var isClosed: Bool

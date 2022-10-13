@@ -1527,7 +1527,7 @@ public final class AccountViewTracker {
                         if let current = current {
                             return current
                         } else {
-                            return /*view.0.fixedReadStates ?? */.peer([peerId: readState])
+                            return .peer([peerId: readState])
                         }
                     }
                     
