@@ -744,7 +744,7 @@ public final class AccountStateManager {
                         for attr in first.attributes {
                             if let attribute = attr as? ReplyMessageAttribute {
                                 if let threadId = attribute.threadMessageId {
-                                    threadData = transaction.getMessageHistoryThreadInfo(peerId: first.id.peerId, threadId: makeMessageThreadId(threadId))?.get(MessageHistoryThreadData.self)
+                                    threadData = transaction.getMessageHistoryThreadInfo(peerId: first.id.peerId, threadId: makeMessageThreadId(threadId))?.data.get(MessageHistoryThreadData.self)
                                 }
                             }
                         }
@@ -1348,7 +1348,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
         }
         if let attribute = attribute as? ReplyMessageAttribute {
             if let threadId = attribute.threadMessageId {
-                threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: makeMessageThreadId(threadId))?.get(MessageHistoryThreadData.self)
+                threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: makeMessageThreadId(threadId))?.data.get(MessageHistoryThreadData.self)
             }
         }
     }

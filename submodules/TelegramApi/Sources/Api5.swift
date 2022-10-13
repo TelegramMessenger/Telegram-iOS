@@ -1095,6 +1095,7 @@ public extension Api {
 public extension Api {
     enum ForumTopic: TypeConstructorDescription {
         case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings)
+        case forumTopicDeleted(id: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
@@ -1117,6 +1118,12 @@ public extension Api {
                     fromId.serialize(buffer, true)
                     notifySettings.serialize(buffer, true)
                     break
+                case .forumTopicDeleted(let id):
+                    if boxed {
+                        buffer.appendInt32(37687451)
+                    }
+                    serializeInt32(id, buffer: buffer, boxed: false)
+                    break
     }
     }
     
@@ -1124,6 +1131,8 @@ public extension Api {
         switch self {
                 case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings):
                 return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("fromId", String(describing: fromId)), ("notifySettings", String(describing: notifySettings))])
+                case .forumTopicDeleted(let id):
+                return ("forumTopicDeleted", [("id", String(describing: id))])
     }
     }
     
@@ -1176,6 +1185,17 @@ public extension Api {
             let _c14 = _14 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
                 return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, title: _4!, iconColor: _5!, iconEmojiId: _6, topMessage: _7!, readInboxMaxId: _8!, readOutboxMaxId: _9!, unreadCount: _10!, unreadMentionsCount: _11!, unreadReactionsCount: _12!, fromId: _13!, notifySettings: _14!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_forumTopicDeleted(_ reader: BufferReader) -> ForumTopic? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ForumTopic.forumTopicDeleted(id: _1!)
             }
             else {
                 return nil

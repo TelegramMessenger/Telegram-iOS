@@ -380,6 +380,8 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                             
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
+                        case .forumTopicDeleted:
+                            break
                         }
                     }
                 }

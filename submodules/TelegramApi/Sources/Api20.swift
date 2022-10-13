@@ -671,6 +671,7 @@ public extension Api {
         case updateChannelMessageForwards(channelId: Int64, id: Int32, forwards: Int32)
         case updateChannelMessageViews(channelId: Int64, id: Int32, views: Int32)
         case updateChannelParticipant(flags: Int32, channelId: Int64, date: Int32, actorId: Int64, userId: Int64, prevParticipant: Api.ChannelParticipant?, newParticipant: Api.ChannelParticipant?, invite: Api.ExportedChatInvite?, qts: Int32)
+        case updateChannelPinnedTopic(flags: Int32, channelId: Int64, topicId: Int32?)
         case updateChannelReadMessagesContents(flags: Int32, channelId: Int64, topMsgId: Int32?, messages: [Int32])
         case updateChannelTooLong(flags: Int32, channelId: Int64, pts: Int32?)
         case updateChannelUserTyping(flags: Int32, channelId: Int64, topMsgId: Int32?, fromId: Api.Peer, action: Api.SendMessageAction)
@@ -923,6 +924,14 @@ public extension Api {
                     if Int(flags) & Int(1 << 1) != 0 {newParticipant!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {invite!.serialize(buffer, true)}
                     serializeInt32(qts, buffer: buffer, boxed: false)
+                    break
+                case .updateChannelPinnedTopic(let flags, let channelId, let topicId):
+                    if boxed {
+                        buffer.appendInt32(-158027602)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    serializeInt64(channelId, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(topicId!, buffer: buffer, boxed: false)}
                     break
                 case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let messages):
                     if boxed {
@@ -1722,6 +1731,8 @@ public extension Api {
                 return ("updateChannelMessageViews", [("channelId", String(describing: channelId)), ("id", String(describing: id)), ("views", String(describing: views))])
                 case .updateChannelParticipant(let flags, let channelId, let date, let actorId, let userId, let prevParticipant, let newParticipant, let invite, let qts):
                 return ("updateChannelParticipant", [("flags", String(describing: flags)), ("channelId", String(describing: channelId)), ("date", String(describing: date)), ("actorId", String(describing: actorId)), ("userId", String(describing: userId)), ("prevParticipant", String(describing: prevParticipant)), ("newParticipant", String(describing: newParticipant)), ("invite", String(describing: invite)), ("qts", String(describing: qts))])
+                case .updateChannelPinnedTopic(let flags, let channelId, let topicId):
+                return ("updateChannelPinnedTopic", [("flags", String(describing: flags)), ("channelId", String(describing: channelId)), ("topicId", String(describing: topicId))])
                 case .updateChannelReadMessagesContents(let flags, let channelId, let topMsgId, let messages):
                 return ("updateChannelReadMessagesContents", [("flags", String(describing: flags)), ("channelId", String(describing: channelId)), ("topMsgId", String(describing: topMsgId)), ("messages", String(describing: messages))])
                 case .updateChannelTooLong(let flags, let channelId, let pts):
@@ -2277,6 +2288,23 @@ public extension Api {
             let _c9 = _9 != nil
             if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 {
                 return Api.Update.updateChannelParticipant(flags: _1!, channelId: _2!, date: _3!, actorId: _4!, userId: _5!, prevParticipant: _6, newParticipant: _7, invite: _8, qts: _9!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_updateChannelPinnedTopic(_ reader: BufferReader) -> Update? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int64?
+            _2 = reader.readInt64()
+            var _3: Int32?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt32() }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.Update.updateChannelPinnedTopic(flags: _1!, channelId: _2!, topicId: _3)
             }
             else {
                 return nil

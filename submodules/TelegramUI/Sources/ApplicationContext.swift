@@ -283,7 +283,7 @@ final class AuthorizedApplicationContext {
 
         let engine = context.engine
         self.notificationMessagesDisposable.set((context.account.stateManager.notificationMessages
-        |> mapToSignal { messageList -> Signal<[([Message], PeerGroupId, Bool)], NoError> in
+        |> mapToSignal { messageList -> Signal<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)], NoError> in
             return engine.data.get(EngineDataMap(
                 messageList.compactMap { item -> TelegramEngine.EngineData.Item.Messages.ChatListIndex? in
                     if let message = item.0.first {
@@ -293,7 +293,7 @@ final class AuthorizedApplicationContext {
                     }
                 }
             ))
-            |> map { chatListIndexMap -> [([Message], PeerGroupId, Bool)] in
+            |> map { chatListIndexMap -> [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] in
                 return messageList.filter { item in
                     guard let message = item.0.first else {
                         return false
@@ -311,7 +311,7 @@ final class AuthorizedApplicationContext {
                 return
             }
 
-            if let strongSelf = self, let (messages, _, notify) = messageList.last, let firstMessage = messages.first {
+            if let strongSelf = self, let (messages, _, notify, threadData) = messageList.last, let firstMessage = messages.first {
                 if UIApplication.shared.applicationState == .active {
                     var chatIsVisible = false
                     if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.traceVisibility() {
@@ -387,7 +387,7 @@ final class AuthorizedApplicationContext {
                             
                             if inAppNotificationSettings.displayPreviews {
                                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, tapAction: {
+                                strongSelf.notificationController.enqueue(ChatMessageNotificationItem(context: strongSelf.context, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, messages: messages, threadData: threadData, tapAction: {
                                     if let strongSelf = self {
                                         var foundOverlay = false
                                         strongSelf.mainWindow.forEachViewController({ controller in

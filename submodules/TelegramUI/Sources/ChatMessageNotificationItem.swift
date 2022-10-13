@@ -25,6 +25,7 @@ public final class ChatMessageNotificationItem: NotificationItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
+    let threadData: MessageHistoryThreadData?
     let tapAction: () -> Bool
     let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
@@ -32,12 +33,13 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], threadData: MessageHistoryThreadData?, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.context = context
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
+        self.threadData = threadData
         self.tapAction = tapAction
         self.expandAction = expandAction
     }

@@ -128,7 +128,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
                 if let attribute = attribute as? ReplyMessageAttribute {
                     if let threadMessageId = attribute.threadMessageId {
                         let threadId = makeMessageThreadId(threadMessageId)
-                        if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                        if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                             threadInfo[renderedMessage.id] = data
                             break
                         }
@@ -226,7 +226,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                             if let attribute = attribute as? ReplyMessageAttribute {
                                 if let threadMessageId = attribute.threadMessageId {
                                     let threadId = makeMessageThreadId(threadMessageId)
-                                    if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                                    if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                                         threadInfo[message.id] = data
                                         break
                                     }
@@ -424,7 +424,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                                     if let attribute = attribute as? ReplyMessageAttribute {
                                         if let threadMessageId = attribute.threadMessageId {
                                             let threadId = makeMessageThreadId(threadMessageId)
-                                            if let data = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                                            if let data = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                                                 threadInfo[message.id] = data
                                                 break
                                             }

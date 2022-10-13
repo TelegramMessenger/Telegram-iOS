@@ -297,3 +297,61 @@ class MessageHistoryThreadIndexTable: Table {
         self.updatedInfoItems.removeAll()
     }
 }
+
+/*class MessageHistoryThreadPinnedTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
+    }
+    
+    private let sharedKey = ValueBoxKey(length: 8 + 4 + 8)
+    
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
+    }
+    
+    private func key(peerId: PeerId, index: Int32, threadId: Int64) -> ValueBoxKey {
+        self.sharedKey.setInt64(0, value: peerId.toInt64())
+        self.sharedKey.setInt32(8, value: index)
+        self.sharedKey.setInt64(8 + 4, value: threadId)
+        
+        return self.sharedKey
+    }
+    
+    private static func extract(key: ValueBoxKey) -> (peerId: PeerId, threadId: Int64) {
+        return (
+            peerId: PeerId(key.getInt64(0)),
+            threadId: key.getInt64(8 + 4)
+        )
+    }
+    
+    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
+    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+        return self.lowerBound(peerId: peerId).successor
+    }
+    
+    func get(peerId: PeerId) -> [Int64] {
+        var result: [Int64] = []
+        self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
+            result.append(MessageHistoryThreadPinnedTable.extract(key: key).threadId)
+            return true
+        }, limit: 0)
+        
+        return result
+    }
+    
+    func set(peerId: PeerId, threadIds: [Int64]) {
+        self.valueBox.removeRange(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId))
+        for i in 0 ..< threadIds.count {
+            self.valueBox.set(self.table, key: self.key(peerId: peerId, index: Int32(i), threadId: threadIds[i]), value: MemoryBuffer())
+        }
+    }
+    
+    override func beforeCommit() {
+        super.beforeCommit()
+    }
+}*/
