@@ -1527,7 +1527,7 @@ public final class AccountViewTracker {
                         if let current = current {
                             return current
                         } else {
-                            return view.0.fixedReadStates ?? .peer([peerId: readState])
+                            return .peer([peerId: readState])
                         }
                     }
                     
@@ -1701,7 +1701,7 @@ public final class AccountViewTracker {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tagMask == nil {
-                return account.postbox.transaction { transaction -> MessageHistoryThreadData? in
+                signal = account.postbox.transaction { transaction -> MessageHistoryThreadData? in
                     return transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self)
                 }
                 |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in

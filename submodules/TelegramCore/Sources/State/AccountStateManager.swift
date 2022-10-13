@@ -100,8 +100,8 @@ public final class AccountStateManager {
         return self.isUpdatingValue.get()
     }
     
-    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId, Bool)]>()
-    public var notificationMessages: Signal<[([Message], PeerGroupId, Bool)], NoError> {
+    private let notificationMessagesPipe = ValuePipe<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)]>()
+    public var notificationMessages: Signal<[([Message], PeerGroupId, Bool, MessageHistoryThreadData?)], NoError> {
         return self.notificationMessagesPipe.signal()
     }
     
@@ -723,12 +723,13 @@ public final class AccountStateManager {
                     let _ = self.delayNotificatonsUntil.swap(events.delayNotificatonsUntil)
                 }
                 
-                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId, Bool)] in
-                    var messageList: [([Message], PeerGroupId, Bool)] = []
+                let signal = self.postbox.transaction { transaction -> [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] in
+                    var messageList: [([Message], PeerGroupId, Bool, MessageHistoryThreadData?)] = []
+                    
                     for id in events.addedIncomingMessageIds {
-                        let (messages, notify, _, _) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
+                        let (messages, notify, _, _, threadData) = messagesForNotification(transaction: transaction, id: id, alwaysReturnMessage: false)
                         if !messages.isEmpty {
-                            messageList.append((messages, .root, notify))
+                            messageList.append((messages, .root, notify, threadData))
                         }
                     }
                     var wasScheduledMessages: [Message] = []
@@ -738,7 +739,16 @@ public final class AccountStateManager {
                         }
                     }
                     if !wasScheduledMessages.isEmpty {
-                        messageList.append((wasScheduledMessages, .root, true))
+                        var threadData: MessageHistoryThreadData?
+                        let first = wasScheduledMessages[0]
+                        for attr in first.attributes {
+                            if let attribute = attr as? ReplyMessageAttribute {
+                                if let threadId = attribute.threadMessageId {
+                                    threadData = transaction.getMessageHistoryThreadInfo(peerId: first.id.peerId, threadId: makeMessageThreadId(threadId))?.get(MessageHistoryThreadData.self)
+                                }
+                            }
+                        }
+                        messageList.append((wasScheduledMessages, .root, true, threadData))
                     }
                     return messageList
                 }
@@ -1318,16 +1328,17 @@ public final class AccountStateManager {
     }
 }
 
-public func messagesForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (messages: [Message], notify: Bool, sound: PeerMessageSound, displayContents: Bool) {
+public func messagesForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (messages: [Message], notify: Bool, sound: PeerMessageSound, displayContents: Bool, threadData: MessageHistoryThreadData?) {
     guard let message = transaction.getMessage(id) else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
-        return ([], false, defaultCloudPeerNotificationSound, false)
+        return ([], false, defaultCloudPeerNotificationSound, false, nil)
     }
 
     var notify = true
     var sound: PeerMessageSound = defaultCloudPeerNotificationSound
     var muted = false
     var displayContents = true
+    var threadData: MessageHistoryThreadData?
     
     for attribute in message.attributes {
         if let attribute = attribute as? NotificationInfoMessageAttribute {
@@ -1335,7 +1346,14 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
                 muted = true
             }
         }
+        if let attribute = attribute as? ReplyMessageAttribute {
+            if let threadId = attribute.threadMessageId {
+                threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: makeMessageThreadId(threadId))?.get(MessageHistoryThreadData.self)
+            }
+        }
     }
+    
+    
     for media in message.media {
         if let action = media as? TelegramMediaAction {
             switch action.action {
@@ -1408,7 +1426,7 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {
         switch channel.participationStatus {
             case .kicked, .left:
-                return ([], false, sound, false)
+                return ([], false, sound, false, threadData)
             case .member:
                 break
         }
@@ -1440,8 +1458,8 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     }
     
     if notify {
-        return (resultMessages, isUnread, sound, displayContents)
+        return (resultMessages, isUnread, sound, displayContents, threadData)
     } else {
-        return (alwaysReturnMessage ? resultMessages : [], false, sound, displayContents)
+        return (alwaysReturnMessage ? resultMessages : [], false, sound, displayContents, threadData)
     }
 }
