@@ -101,7 +101,7 @@ public struct ChatListGroupReferenceEntry: Equatable {
 }
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: CodableEntry?, hasFailed: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: StoredMessageHistoryThreadInfo?, hasFailed: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     public var index: ChatListIndex {
@@ -184,7 +184,7 @@ public enum ChatListEntry: Comparable {
 
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(index: ChatListIndex, messageIndex: MessageIndex?)
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: CodableEntry?, hasFailedMessages: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: StoredMessageHistoryThreadInfo?, hasFailedMessages: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
@@ -489,7 +489,15 @@ final class MutableChatListView {
                             }
                             
                             let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
-                            let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                            
+                            let isUnread: Bool
+                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
+                                isUnread = count > 0
+                            } else {
+                                isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                            }
+                            
                             renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
                             
                             if foundIndices.count == 1 && message == nil {
@@ -559,7 +567,15 @@ final class MutableChatListView {
                     for i in 0 ..< self.groupEntries.count {
                         for j in 0 ..< groupEntries[i].renderedPeers.count {
                             if transaction.alteredInitialPeerCombinedReadStates[groupEntries[i].renderedPeers[j].peer.peerId] != nil {
-                                let isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
+                                
+                                let isUnread: Bool
+                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                    let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
+                                    isUnread = count > 0
+                                } else {
+                                    isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
+                                }
+                                
                                 if isUnread != groupEntries[i].renderedPeers[j].isUnread {
                                     var renderedPeers = self.groupEntries[i].renderedPeers
                                     renderedPeers[j] = ChatListGroupReferencePeer(peer: groupEntries[i].renderedPeers[j].peer, isUnread: isUnread)
@@ -641,12 +657,20 @@ final class MutableChatListView {
                 }
             }
             
-            var forumTopicData: CodableEntry?
+            var forumTopicData: StoredMessageHistoryThreadInfo?
             if let message = renderedMessages.first, let threadId = message.threadId {
                 forumTopicData = postbox.messageHistoryThreadIndexTable.get(peerId: message.id.peerId, threadId: threadId)
             }
             
-            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers)), presence: presence, tagSummaryInfo: [:], forumTopicData: forumTopicData, hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
+            let readState: CombinedPeerReadState?
+            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                let count = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)?.unreadCount ?? 0
+                readState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+            } else {
+                readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)
+            }
+            
+            return .MessageEntry(index: index, messages: renderedMessages, readState: readState, notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers)), presence: presence, tagSummaryInfo: [:], forumTopicData: forumTopicData, hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
         default:
             return nil
         }

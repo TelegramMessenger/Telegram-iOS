@@ -55,14 +55,102 @@ public extension EngineMessageHistoryThread {
 }
 
 public struct MessageHistoryThreadData: Codable, Equatable {
+    private enum CodingKeys: CodingKey {
+        case creationDate
+        case isOwnedByMe
+        case author
+        case info
+        case incomingUnreadCount
+        case maxIncomingReadId
+        case maxKnownMessageId
+        case maxOutgoingReadId
+        case isClosed
+        case notificationSettings
+    }
+    
     public var creationDate: Int32
+    public var isOwnedByMe: Bool
     public var author: PeerId
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
     public var maxIncomingReadId: Int32
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
+    public var isClosed: Bool
     public var notificationSettings: TelegramPeerNotificationSettings
+    
+    public init(
+        creationDate: Int32,
+        isOwnedByMe: Bool,
+        author: PeerId,
+        info: EngineMessageHistoryThread.Info,
+        incomingUnreadCount: Int32,
+        maxIncomingReadId: Int32,
+        maxKnownMessageId: Int32,
+        maxOutgoingReadId: Int32,
+        isClosed: Bool,
+        notificationSettings: TelegramPeerNotificationSettings
+    ) {
+        self.creationDate = creationDate
+        self.isOwnedByMe = isOwnedByMe
+        self.author = author
+        self.info = info
+        self.incomingUnreadCount = incomingUnreadCount
+        self.maxIncomingReadId = maxIncomingReadId
+        self.maxKnownMessageId = maxKnownMessageId
+        self.maxOutgoingReadId = maxOutgoingReadId
+        self.isClosed = isClosed
+        self.notificationSettings = notificationSettings
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.creationDate = try container.decode(Int32.self, forKey: .creationDate)
+        self.isOwnedByMe = try container.decodeIfPresent(Bool.self, forKey: .isOwnedByMe) ?? false
+        self.author = try container.decode(PeerId.self, forKey: .author)
+        self.info = try container.decode(EngineMessageHistoryThread.Info.self, forKey: .info)
+        self.incomingUnreadCount = try container.decode(Int32.self, forKey: .incomingUnreadCount)
+        self.maxIncomingReadId = try container.decode(Int32.self, forKey: .maxIncomingReadId)
+        self.maxKnownMessageId = try container.decode(Int32.self, forKey: .maxKnownMessageId)
+        self.maxOutgoingReadId = try container.decode(Int32.self, forKey: .maxOutgoingReadId)
+        self.isClosed = try container.decodeIfPresent(Bool.self, forKey: .isClosed) ?? false
+        self.notificationSettings = try container.decode(TelegramPeerNotificationSettings.self, forKey: .notificationSettings)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.creationDate, forKey: .creationDate)
+        try container.encode(self.isOwnedByMe, forKey: .isOwnedByMe)
+        try container.encode(self.author, forKey: .author)
+        try container.encode(self.info, forKey: .info)
+        try container.encode(self.incomingUnreadCount, forKey: .incomingUnreadCount)
+        try container.encode(self.maxIncomingReadId, forKey: .maxIncomingReadId)
+        try container.encode(self.maxKnownMessageId, forKey: .maxKnownMessageId)
+        try container.encode(self.maxOutgoingReadId, forKey: .maxOutgoingReadId)
+        try container.encode(self.isClosed, forKey: .isClosed)
+        try container.encode(self.notificationSettings, forKey: .notificationSettings)
+    }
+}
+
+extension StoredMessageHistoryThreadInfo {
+    init?(_ data: MessageHistoryThreadData) {
+        guard let entry = CodableEntry(data) else {
+            return nil
+        }
+        var mutedUntil: Int32?
+        switch data.notificationSettings.muteState {
+        case let .muted(until):
+            mutedUntil = until
+        case .unmuted, .default:
+            break
+        }
+        self.init(data: entry, summary: Summary(
+            totalUnreadCount: data.incomingUnreadCount,
+            mutedUntil: mutedUntil
+        ))
+    }
 }
 
 struct StoreMessageHistoryThreadData {
@@ -165,13 +253,13 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
             account.stateManager.addUpdates(result)
             
             return account.postbox.transaction { transaction -> Void in
-                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                     var data = initialData
                     
                     data.info = EngineMessageHistoryThread.Info(title: title, icon: iconFileId, iconColor: data.info.iconColor)
                     
                     if data != initialData {
-                        if let entry = CodableEntry(data) {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                         }
                     }
@@ -268,9 +356,10 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
                             let data = MessageHistoryThreadData(
                                 creationDate: date,
+                                isOwnedByMe: (flags & (1 << 1)) != 0,
                                 author: fromId.peerId,
                                 info: EngineMessageHistoryThread.Info(
                                     title: title,
@@ -281,9 +370,10 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                                 maxIncomingReadId: readInboxMaxId,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: readOutboxMaxId,
+                                isClosed: (flags & (1 << 2)) != 0,
                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                             )
-                            guard let info = CodableEntry(data) else {
+                            guard let info = StoredMessageHistoryThreadInfo(data) else {
                                 continue
                             }
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: info)

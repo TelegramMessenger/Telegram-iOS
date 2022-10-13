@@ -1153,19 +1153,29 @@ public final class Transaction {
         self.postbox?.removePeerTimeoutAttributeEntry(peerId: peerId, timestamp: timestamp)
     }
     
-    public func getMessageHistoryThreadIndex(peerId: PeerId) -> [(threadId: Int64, index: MessageIndex, info: CodableEntry)] {
+    public func getMessageHistoryThreadIndex(peerId: PeerId) -> [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadIndexTable.getAll(peerId: peerId)
     }
     
-    public func getMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64) -> CodableEntry? {
+    public func getMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64) -> StoredMessageHistoryThreadInfo? {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadIndexTable.get(peerId: peerId, threadId: threadId)
     }
     
-    public func setMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64, info: CodableEntry?) {
+    public func setMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64, info: StoredMessageHistoryThreadInfo?) {
         assert(!self.disposed)
         self.postbox!.messageHistoryThreadIndexTable.set(peerId: peerId, threadId: threadId, info: info)
+    }
+    
+    public func getPeerThreadCombinedState(peerId: PeerId) -> StoredPeerThreadCombinedState? {
+        assert(!self.disposed)
+        return self.postbox!.peerThreadCombinedStateTable.get(peerId: peerId)
+    }
+    
+    public func setPeerThreadCombinedState(peerId: PeerId, state: StoredPeerThreadCombinedState?) {
+        assert(!self.disposed)
+        return self.postbox!.setPeerThreadCombinedState(peerId: peerId, state: state)
     }
 }
 
@@ -1398,6 +1408,8 @@ final class PostboxImpl {
     private var currentUpdatedNoticeEntryKeys = Set<NoticeEntryKey>()
     private var currentUpdatedCacheEntryKeys = Set<ItemCacheEntryId>()
     
+    private var currentUpdatedPeerThreadCombinedStates = Set<PeerId>()
+    
     private var currentNeedsReindexUnreadCounters: Bool = false
     
     private let statePipe: ValuePipe<PostboxCoding> = ValuePipe()
@@ -1441,6 +1453,8 @@ final class PostboxImpl {
     let messageHistoryFailedTable: MessageHistoryFailedTable
     let messageHistoryTagsTable: MessageHistoryTagsTable
     let messageHistoryThreadsTable: MessageHistoryThreadsTable
+    let peerThreadCombinedStateTable: PeerThreadCombinedStateTable
+    let peerThreadsSummaryTable: PeerThreadsSummaryTable
     let messageHistoryThreadTagsTable: MessageHistoryThreadTagsTable
     let messageHistoryThreadHoleIndexTable: MessageHistoryThreadHoleIndexTable
     let messageHistoryThreadReverseIndexTable: MessageHistoryThreadReverseIndexTable
@@ -1519,10 +1533,12 @@ final class PostboxImpl {
         self.pendingMessageActionsTable = PendingMessageActionsTable(valueBox: self.valueBox, table: PendingMessageActionsTable.tableSpec(46), useCaches: useCaches, metadataTable: self.pendingMessageActionsMetadataTable)
         self.messageHistoryTagsTable = MessageHistoryTagsTable(valueBox: self.valueBox, table: MessageHistoryTagsTable.tableSpec(12), useCaches: useCaches, seedConfiguration: self.seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable)
         self.messageHistoryThreadsTable = MessageHistoryThreadsTable(valueBox: self.valueBox, table: MessageHistoryThreadsTable.tableSpec(62), useCaches: useCaches)
+        self.peerThreadCombinedStateTable = PeerThreadCombinedStateTable(valueBox: self.valueBox, table: PeerThreadCombinedStateTable.tableSpec(74), useCaches: useCaches)
+        self.peerThreadsSummaryTable = PeerThreadsSummaryTable(valueBox: self.valueBox, table: PeerThreadsSummaryTable.tableSpec(75), useCaches: useCaches)
         self.messageHistoryThreadTagsTable = MessageHistoryThreadTagsTable(valueBox: self.valueBox, table: MessageHistoryThreadTagsTable.tableSpec(71), useCaches: useCaches, seedConfiguration: self.seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable)
         self.messageHistoryThreadHoleIndexTable = MessageHistoryThreadHoleIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadHoleIndexTable.tableSpec(63), useCaches: useCaches, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
-        self.messageHistoryThreadReverseIndexTable = MessageHistoryThreadReverseIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadReverseIndexTable.tableSpec(69), useCaches: useCaches)
-        self.messageHistoryThreadIndexTable = MessageHistoryThreadIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadIndexTable.tableSpec(70), reverseIndexTable: self.messageHistoryThreadReverseIndexTable, useCaches: useCaches)
+        self.messageHistoryThreadReverseIndexTable = MessageHistoryThreadReverseIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadReverseIndexTable.tableSpec(72), useCaches: useCaches)
+        self.messageHistoryThreadIndexTable = MessageHistoryThreadIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadIndexTable.tableSpec(73), reverseIndexTable: self.messageHistoryThreadReverseIndexTable, useCaches: useCaches)
         self.globalMessageHistoryTagsTable = GlobalMessageHistoryTagsTable(valueBox: self.valueBox, table: GlobalMessageHistoryTagsTable.tableSpec(39), useCaches: useCaches)
         self.localMessageHistoryTagsTable = LocalMessageHistoryTagsTable(valueBox: self.valueBox, table: GlobalMessageHistoryTagsTable.tableSpec(52), useCaches: useCaches)
         self.messageHistoryIndexTable = MessageHistoryIndexTable(valueBox: self.valueBox, table: MessageHistoryIndexTable.tableSpec(4), useCaches: useCaches, messageHistoryHoleIndexTable: self.messageHistoryHoleIndexTable, globalMessageIdsTable: self.globalMessageIdsTable, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
@@ -1578,6 +1594,8 @@ final class PostboxImpl {
         tables.append(self.messageHistoryFailedTable)
         tables.append(self.messageHistoryTagsTable)
         tables.append(self.messageHistoryThreadsTable)
+        tables.append(self.peerThreadCombinedStateTable)
+        tables.append(self.peerThreadsSummaryTable)
         tables.append(self.messageHistoryThreadTagsTable)
         tables.append(self.messageHistoryThreadHoleIndexTable)
         tables.append(self.messageHistoryThreadReverseIndexTable)
@@ -2016,11 +2034,13 @@ final class PostboxImpl {
             }
         }
         let transactionParticipationInTotalUnreadCountUpdates = self.peerNotificationSettingsTable.transactionParticipationInTotalUnreadCountUpdates(postbox: self, transaction: currentTransaction)
-        self.chatListIndexTable.commitWithTransaction(postbox: self, currentTransaction: currentTransaction, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
-        
-        self.peerTable.commitDependentTables()
         
         let updatedMessageThreadPeerIds = self.messageHistoryThreadIndexTable.replay(threadsTable: self.messageHistoryThreadsTable, namespaces: self.seedConfiguration.chatMessagesNamespaces, updatedIds: self.messageHistoryThreadsTable.updatedIds)
+        let alteredInitialPeerThreadsSummaries = self.peerThreadsSummaryTable.update(peerIds: updatedMessageThreadPeerIds.union(self.currentUpdatedPeerThreadCombinedStates), indexTable: self.messageHistoryThreadIndexTable, combinedStateTable: self.peerThreadCombinedStateTable)
+        
+        self.chatListIndexTable.commitWithTransaction(postbox: self, currentTransaction: currentTransaction, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, updatedPeers: updatedPeers, transactionParticipationInTotalUnreadCountUpdates: transactionParticipationInTotalUnreadCountUpdates, alteredInitialPeerThreadsSummaries: alteredInitialPeerThreadsSummaries, updatedTotalUnreadStates: &self.currentUpdatedTotalUnreadStates, updatedGroupTotalUnreadSummaries: &self.currentUpdatedGroupTotalUnreadSummaries, currentUpdatedGroupSummarySynchronizeOperations: &self.currentUpdatedGroupSummarySynchronizeOperations)
+        
+        self.peerTable.commitDependentTables()
         
         if self.currentNeedsReindexUnreadCounters {
             self.reindexUnreadCounters(currentTransaction: currentTransaction)
@@ -2028,7 +2048,7 @@ final class PostboxImpl {
         
         let updatedPeerTimeoutAttributes = self.peerTimeoutPropertiesTable.hasUpdates
         
-        let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentPeerHoleOperations: self.currentPeerHoleOperations, currentOperationsByPeerId: self.currentOperationsByPeerId, chatListOperations: self.currentChatListOperations, currentUpdatedChatListInclusions: self.currentUpdatedChatListInclusions, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedPeerNotificationBehaviorTimestamps: self.currentUpdatedPeerNotificationBehaviorTimestamps, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadStates: self.currentUpdatedTotalUnreadStates, currentUpdatedTotalUnreadSummaries: self.currentUpdatedGroupTotalUnreadSummaries, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentUpdatedGroupSummarySynchronizeOperations: self.currentUpdatedGroupSummarySynchronizeOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, currentItemCollectionItemsOperations: self.currentItemCollectionItemsOperations, currentItemCollectionInfosOperations: self.currentItemCollectionInfosOperations, currentUpdatedPeerChatStates: self.currentUpdatedPeerChatStates, currentGlobalTagsOperations: self.currentGlobalTagsOperations, currentLocalTagsOperations: self.currentLocalTagsOperations, updatedMedia: self.currentUpdatedMedia, replaceRemoteContactCount: self.currentReplaceRemoteContactCount, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentPendingMessageActionsOperations: self.currentPendingMessageActionsOperations, currentUpdatedMessageActionsSummaries: self.currentUpdatedMessageActionsSummaries, currentUpdatedMessageTagSummaries: self.currentUpdatedMessageTagSummaries, currentInvalidateMessageTagSummaries: self.currentInvalidateMessageTagSummaries, currentUpdatedPendingPeerNotificationSettings: self.currentUpdatedPendingPeerNotificationSettings, replacedAdditionalChatListItems: self.currentReplacedAdditionalChatListItems, updatedNoticeEntryKeys: self.currentUpdatedNoticeEntryKeys, updatedCacheEntryKeys: self.currentUpdatedCacheEntryKeys, currentUpdatedMasterClientId: currentUpdatedMasterClientId, updatedFailedMessagePeerIds: self.messageHistoryFailedTable.updatedPeerIds, updatedFailedMessageIds: self.messageHistoryFailedTable.updatedMessageIds, updatedGlobalNotificationSettings: self.currentNeedsReindexUnreadCounters, updatedPeerTimeoutAttributes: updatedPeerTimeoutAttributes, updatedMessageThreadPeerIds: updatedMessageThreadPeerIds)
+        let transaction = PostboxTransaction(currentUpdatedState: self.currentUpdatedState, currentPeerHoleOperations: self.currentPeerHoleOperations, currentOperationsByPeerId: self.currentOperationsByPeerId, chatListOperations: self.currentChatListOperations, currentUpdatedChatListInclusions: self.currentUpdatedChatListInclusions, currentUpdatedPeers: self.currentUpdatedPeers, currentUpdatedPeerNotificationSettings: self.currentUpdatedPeerNotificationSettings, currentUpdatedPeerNotificationBehaviorTimestamps: self.currentUpdatedPeerNotificationBehaviorTimestamps, currentUpdatedCachedPeerData: self.currentUpdatedCachedPeerData, currentUpdatedPeerPresences: currentUpdatedPeerPresences, currentUpdatedPeerChatListEmbeddedStates: self.currentUpdatedPeerChatListEmbeddedStates, currentUpdatedTotalUnreadStates: self.currentUpdatedTotalUnreadStates, currentUpdatedTotalUnreadSummaries: self.currentUpdatedGroupTotalUnreadSummaries, alteredInitialPeerCombinedReadStates: alteredInitialPeerCombinedReadStates, currentPeerMergedOperationLogOperations: self.currentPeerMergedOperationLogOperations, currentTimestampBasedMessageAttributesOperations: self.currentTimestampBasedMessageAttributesOperations, unsentMessageOperations: self.currentUnsentOperations, updatedSynchronizePeerReadStateOperations: self.currentUpdatedSynchronizeReadStateOperations, currentUpdatedGroupSummarySynchronizeOperations: self.currentUpdatedGroupSummarySynchronizeOperations, currentPreferencesOperations: self.currentPreferencesOperations, currentOrderedItemListOperations: self.currentOrderedItemListOperations, currentItemCollectionItemsOperations: self.currentItemCollectionItemsOperations, currentItemCollectionInfosOperations: self.currentItemCollectionInfosOperations, currentUpdatedPeerChatStates: self.currentUpdatedPeerChatStates, currentGlobalTagsOperations: self.currentGlobalTagsOperations, currentLocalTagsOperations: self.currentLocalTagsOperations, updatedMedia: self.currentUpdatedMedia, replaceRemoteContactCount: self.currentReplaceRemoteContactCount, replaceContactPeerIds: self.currentReplacedContactPeerIds, currentPendingMessageActionsOperations: self.currentPendingMessageActionsOperations, currentUpdatedMessageActionsSummaries: self.currentUpdatedMessageActionsSummaries, currentUpdatedMessageTagSummaries: self.currentUpdatedMessageTagSummaries, currentInvalidateMessageTagSummaries: self.currentInvalidateMessageTagSummaries, currentUpdatedPendingPeerNotificationSettings: self.currentUpdatedPendingPeerNotificationSettings, replacedAdditionalChatListItems: self.currentReplacedAdditionalChatListItems, updatedNoticeEntryKeys: self.currentUpdatedNoticeEntryKeys, updatedCacheEntryKeys: self.currentUpdatedCacheEntryKeys, currentUpdatedMasterClientId: currentUpdatedMasterClientId, updatedFailedMessagePeerIds: self.messageHistoryFailedTable.updatedPeerIds, updatedFailedMessageIds: self.messageHistoryFailedTable.updatedMessageIds, updatedGlobalNotificationSettings: self.currentNeedsReindexUnreadCounters, updatedPeerTimeoutAttributes: updatedPeerTimeoutAttributes, updatedMessageThreadPeerIds: updatedMessageThreadPeerIds, updatedPeerThreadCombinedStates: self.currentUpdatedPeerThreadCombinedStates, updatedPeerThreadsSummaries: Set(alteredInitialPeerThreadsSummaries.keys))
         var updatedTransactionState: Int64?
         var updatedMasterClientId: Int64?
         if !transaction.isEmpty {
@@ -2059,6 +2079,7 @@ final class PostboxImpl {
         self.currentReplacedAdditionalChatListItems = nil
         self.currentUpdatedNoticeEntryKeys.removeAll()
         self.currentUpdatedCacheEntryKeys.removeAll()
+        self.currentUpdatedPeerThreadCombinedStates.removeAll()
         self.currentUpdatedMasterClientId = nil
         self.currentUpdatedPeerNotificationSettings.removeAll()
         self.currentUpdatedPeerNotificationBehaviorTimestamps.removeAll()
@@ -3683,6 +3704,11 @@ final class PostboxImpl {
     
     fileprivate func removePeerTimeoutAttributeEntry(peerId: PeerId, timestamp: UInt32) {
         self.peerTimeoutPropertiesTable.remove(peerId: peerId, timestamp: timestamp)
+    }
+    
+    fileprivate func setPeerThreadCombinedState(peerId: PeerId, state: StoredPeerThreadCombinedState?) {
+        self.currentUpdatedPeerThreadCombinedStates.insert(peerId)
+        self.peerThreadCombinedStateTable.set(peerId: peerId, state: state)
     }
     
     fileprivate func reindexUnreadCounters(currentTransaction: Transaction) {

@@ -15,7 +15,7 @@ func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64
         }
         
         if let threadId = threadId {
-            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 var updatedSettings: TelegramPeerNotificationSettings
                 switch data.notificationSettings.muteState {
                 case .default:
@@ -27,7 +27,7 @@ func _internal_togglePeerMuted(account: Account, peerId: PeerId, threadId: Int64
                 }
                 data.notificationSettings = updatedSettings
                 
-                if let entry = CodableEntry(data) {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
                     transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                     
                     //TODO:loc
@@ -71,7 +71,7 @@ func _internal_updatePeerMuteSetting(account: Account, peerId: PeerId, threadId:
 func _internal_updatePeerMuteSetting(account: Account, transaction: Transaction, peerId: PeerId, threadId: Int64?, muteInterval: Int32?) {
     if let peer = transaction.getPeer(peerId) {
         if let threadId = threadId {
-            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 let previousSettings: TelegramPeerNotificationSettings = data.notificationSettings
                 
                 let muteState: PeerMuteState
@@ -93,7 +93,7 @@ func _internal_updatePeerMuteSetting(account: Account, transaction: Transaction,
                 
                 data.notificationSettings = previousSettings.withUpdatedMuteState(muteState)
                 
-                if let entry = CodableEntry(data) {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
                     transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                 }
                 
@@ -146,12 +146,12 @@ func _internal_updatePeerDisplayPreviewsSetting(account: Account, peerId: PeerId
 func _internal_updatePeerDisplayPreviewsSetting(account: Account, transaction: Transaction, peerId: PeerId, threadId: Int64?, displayPreviews: PeerNotificationDisplayPreviews) {
     if let peer = transaction.getPeer(peerId) {
         if let threadId = threadId {
-            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 let previousSettings: TelegramPeerNotificationSettings = data.notificationSettings
                 
                 data.notificationSettings = previousSettings.withUpdatedDisplayPreviews(displayPreviews)
                 
-                if let entry = CodableEntry(data) {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
                     transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                 }
                 
@@ -187,12 +187,12 @@ func _internal_updatePeerNotificationSoundInteractive(account: Account, peerId: 
 func _internal_updatePeerNotificationSoundInteractive(account: Account, transaction: Transaction, peerId: PeerId, threadId: Int64?, sound: PeerMessageSound) {
     if let peer = transaction.getPeer(peerId) {
         if let threadId = threadId {
-            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+            if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 let previousSettings: TelegramPeerNotificationSettings = data.notificationSettings
                 
                 data.notificationSettings = previousSettings.withUpdatedMessageSound(sound)
                 
-                if let entry = CodableEntry(data) {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
                     transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                 }
                 

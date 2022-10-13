@@ -67,7 +67,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
             self.items.append(Item(
                 id: item.threadId,
                 index: item.index,
-                info: item.info,
+                info: item.info.data,
                 tagSummaryInfo: tagSummaryInfo,
                 topMessage: postbox.getMessage(item.index.id)
             ))
@@ -170,7 +170,7 @@ final class MutableMessageHistoryThreadInfoView: MutablePostboxView {
     private let peerId: PeerId
     private let threadId: Int64
     
-    fileprivate var info: CodableEntry?
+    fileprivate var info: StoredMessageHistoryThreadInfo?
     
     init(postbox: PostboxImpl, peerId: PeerId, threadId: Int64) {
         self.peerId = peerId
@@ -207,7 +207,7 @@ final class MutableMessageHistoryThreadInfoView: MutablePostboxView {
 }
 
 public final class MessageHistoryThreadInfoView: PostboxView {
-    public let info: CodableEntry?
+    public let info: StoredMessageHistoryThreadInfo?
     
     init(_ view: MutableMessageHistoryThreadInfoView) {
         self.info = view.info

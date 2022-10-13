@@ -824,7 +824,7 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
                         return nil
                     }
-                    return view.info?.get(MessageHistoryThreadData.self)
+                    return view.info?.data.get(MessageHistoryThreadData.self)
                 }
             } else {
                 threadData = .single(nil)

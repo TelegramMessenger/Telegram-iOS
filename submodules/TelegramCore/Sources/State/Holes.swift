@@ -751,7 +751,7 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             })
             
             for (threadMessageId, data) in fetchedChats.threadInfos {
-                if let entry = CodableEntry(data.data) {
+                if let entry = StoredMessageHistoryThreadInfo(data.data) {
                     transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
                 }
                 transaction.replaceMessageTagSummary(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: data.unreadMentionCount, maxId: data.topMessageId)

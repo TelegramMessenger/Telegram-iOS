@@ -59,7 +59,7 @@ public enum ChatListItemContent {
         }
     }
 
-    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumThreadTitle: String?)
+    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumTopicData: EngineChatList.ForumTopicData?)
     case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -1045,12 +1045,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let displayAsMessage: Bool
             let hasFailedMessages: Bool
             var threadInfo: ChatListItemContent.ThreadInfo?
-            var forumThreadTitle: String?
+            var forumTopicData: EngineChatList.ForumTopicData?
             
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumThreadTitleValue):
+                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumTopicDataValue):
                     messages = messagesValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -1071,7 +1071,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     threadInfo = threadInfoValue
                     hasUnseenMentions = hasUnseenMentionsValue
                     hasUnseenReactions = hasUnseenReactionsValue
-                    forumThreadTitle = forumThreadTitleValue
+                    forumTopicData = forumTopicDataValue
                     
                     switch peerValue.peer {
                     case .user, .secretChat:
@@ -1272,8 +1272,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                 
                     if let peerTextValue = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
-                        if let forumThreadTitle = forumThreadTitle {
-                            peerText = "\(peerTextValue) → \(forumThreadTitle)"
+                        if let forumTopicData = forumTopicData {
+                            peerText = "\(peerTextValue) → \(forumTopicData.title)"
                         } else {
                             //TODO:localize
                             peerText = "\(peerTextValue) → General"
@@ -1543,6 +1543,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         if case .chatList = item.chatListLocation {
                             if let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                                statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                            } else {
+                                statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                            }
+                        } else if case .forum = item.chatListLocation {
+                            if let forumTopicData = forumTopicData, message.id.namespace == forumTopicData.maxOutgoingReadMessageId.namespace, message.id.id >= forumTopicData.maxOutgoingReadMessageId.id {
                                 statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
                             } else {
                                 statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
@@ -2690,6 +2696,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             case RevealOptionKey.unmute.rawValue:
                 item.interaction.setPeerThreadMuted(peerId, threadId, false)
                 close = false
+            case RevealOptionKey.close.rawValue:
+                item.interaction.setPeerThreadStopped(peerId, threadId, true)
+            case RevealOptionKey.open.rawValue:
+                item.interaction.setPeerThreadStopped(peerId, threadId, false)
             default:
                 break
             }

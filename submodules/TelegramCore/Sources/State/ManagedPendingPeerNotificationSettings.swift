@@ -98,7 +98,7 @@ func pushPeerNotificationSettings(postbox: Postbox, network: Network, peerId: Pe
             }
             
             if let threadId = threadId {
-                if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                     let settings = data.notificationSettings
                     
                     let showPreviews: Api.Bool?

@@ -1330,6 +1330,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             strongSelf.deletePeerThread(peerId: peerId, threadId: threadId)
         }
+        self.chatListDisplayNode.containerNode.setPeerThreadStopped = { [weak self] peerId, threadId, isStopped in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setPeerThreadStopped(peerId: peerId, threadId: threadId, isStopped: isStopped)
+        }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
             if let strongSelf = self {
@@ -3673,6 +3679,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })
             strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         })
+    }
+    
+    private func setPeerThreadStopped(peerId: EnginePeer.Id, threadId: Int64, isStopped: Bool) {
+        
     }
     
     public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {

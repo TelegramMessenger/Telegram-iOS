@@ -4753,7 +4753,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
                             return (message, nil)
                         }
-                        return (message, view.info?.get(MessageHistoryThreadData.self))
+                        return (message, view.info?.data.get(MessageHistoryThreadData.self))
                     }
                 }
                 

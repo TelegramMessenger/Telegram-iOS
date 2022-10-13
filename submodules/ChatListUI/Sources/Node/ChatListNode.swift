@@ -70,6 +70,7 @@ public final class ChatListNodeInteraction {
     let setPeerThreadMuted: (EnginePeer.Id, Int64?, Bool) -> Void
     let deletePeer: (EnginePeer.Id, Bool) -> Void
     let deletePeerThread: (EnginePeer.Id, Int64) -> Void
+    let setPeerThreadStopped: (EnginePeer.Id, Int64, Bool) -> Void
     let updatePeerGrouping: (EnginePeer.Id, Bool) -> Void
     let togglePeerMarkedUnread: (EnginePeer.Id, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
@@ -102,6 +103,7 @@ public final class ChatListNodeInteraction {
         setPeerThreadMuted: @escaping (EnginePeer.Id, Int64?, Bool) -> Void,
         deletePeer: @escaping (EnginePeer.Id, Bool) -> Void,
         deletePeerThread: @escaping (EnginePeer.Id, Int64) -> Void,
+        setPeerThreadStopped: @escaping (EnginePeer.Id, Int64, Bool) -> Void,
         updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void,
         togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void,
         toggleArchivedFolderHiddenByDefault: @escaping () -> Void,
@@ -124,6 +126,7 @@ public final class ChatListNodeInteraction {
         self.setPeerThreadMuted = setPeerThreadMuted
         self.deletePeer = deletePeer
         self.deletePeerThread = deletePeerThread
+        self.setPeerThreadStopped = setPeerThreadStopped
         self.updatePeerGrouping = updatePeerGrouping
         self.togglePeerMarkedUnread = togglePeerMarkedUnread
         self.toggleArchivedFolderHiddenByDefault = toggleArchivedFolderHiddenByDefault
@@ -248,7 +251,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         nodeInteraction.additionalCategorySelected(id)
                     }
                 ), directionHint: entry.directionHint)
-            case let .PeerEntry(index, presentationData, messages, combinedReadState, isRemovedFromTotalUnreadCount, draftState, peer, threadInfo, presence, hasUnseenMentions, hasUnseenReactions, editing, hasActiveRevealControls, selected, inputActivities, promoInfo, hasFailedMessages, isContact, forumThreadTitle):
+            case let .PeerEntry(index, presentationData, messages, combinedReadState, isRemovedFromTotalUnreadCount, draftState, peer, threadInfo, presence, hasUnseenMentions, hasUnseenReactions, editing, hasActiveRevealControls, selected, inputActivities, promoInfo, hasFailedMessages, isContact, forumTopicData):
                 switch mode {
                     case .chatList:
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
@@ -272,7 +275,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 ignoreUnreadBadge: false,
                                 displayAsMessage: false,
                                 hasFailedMessages: hasFailedMessages,
-                                forumThreadTitle: forumThreadTitle
+                                forumTopicData: forumTopicData
                             ),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -439,7 +442,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
 private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatListNodeInteraction, location: ChatListControllerLocation, filterData: ChatListItemFilterData?, mode: ChatListNodeMode, entries: [ChatListNodeViewTransitionUpdateEntry]) -> [ListViewUpdateItem] {
     return entries.map { entry -> ListViewUpdateItem in
         switch entry.entry {
-            case let .PeerEntry(index, presentationData, messages, combinedReadState, isRemovedFromTotalUnreadCount, draftState, peer, threadInfo, presence, hasUnseenMentions, hasUnseenReactions, editing, hasActiveRevealControls, selected, inputActivities, promoInfo, hasFailedMessages, isContact, forumThreadTitle):
+            case let .PeerEntry(index, presentationData, messages, combinedReadState, isRemovedFromTotalUnreadCount, draftState, peer, threadInfo, presence, hasUnseenMentions, hasUnseenReactions, editing, hasActiveRevealControls, selected, inputActivities, promoInfo, hasFailedMessages, isContact, forumTopicData):
                 switch mode {
                     case .chatList:
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ChatListItem(
@@ -463,7 +466,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 ignoreUnreadBadge: false,
                                 displayAsMessage: false,
                                 hasFailedMessages: hasFailedMessages,
-                                forumThreadTitle: forumThreadTitle
+                                forumTopicData: forumTopicData
                             ),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
@@ -662,6 +665,7 @@ public final class ChatListNode: ListView {
     public var activateSearch: (() -> Void)?
     public var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?
     public var deletePeerThread: ((EnginePeer.Id, Int64) -> Void)?
+    public var setPeerThreadStopped: ((EnginePeer.Id, Int64, Bool) -> Void)?
     public var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
@@ -973,6 +977,8 @@ public final class ChatListNode: ListView {
             self?.deletePeerChat?(peerId, joined)
         }, deletePeerThread: { [weak self] peerId, threadId in
             self?.deletePeerThread?(peerId, threadId)
+        }, setPeerThreadStopped: { [weak self] peerId, threadId, isStopped in
+            self?.setPeerThreadStopped?(peerId, threadId, isStopped)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }, togglePeerMarkedUnread: { [weak self, weak context] peerId, animated in
