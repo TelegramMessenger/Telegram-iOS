@@ -2612,7 +2612,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(user.phone ?? "")
                 
-                let mainUsername = user.usernames.first?.username ?? user.username
+                let mainUsername = user.usernames.first(where: { $0.flags.contains(.isActive) })?.username ?? user.username
                 if let mainUsername = mainUsername, !mainUsername.isEmpty {
                     subtitle = "\(subtitle) • @\(mainUsername)"
                 }

@@ -58,6 +58,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func update(wallpaper: TelegramWallpaper)
     func _internalUpdateIsSettingUpWallpaper()
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateIsLooping(_ isLooping: Bool)
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool)
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
@@ -740,6 +741,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             gradientAngle = file.settings.rotation ?? 0
         }
 
+        var scheduleLoopingEvent = false
         if gradientColors.count >= 3 {
             let mappedColors = gradientColors.map { color -> UIColor in
                 return UIColor(rgb: color)
@@ -749,6 +751,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.setPatternOverlay(layer: self.patternImageLayer)
+                
+                if self.isLooping {
+                    scheduleLoopingEvent = true
+                }
             }
             self.gradientBackgroundNode?.updateColors(colors: mappedColors)
 
@@ -828,6 +834,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: .immediate)
             self.updateBubbles()
+            
+            if scheduleLoopingEvent {
+                self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
+            }
         }
     }
 
@@ -1089,11 +1099,28 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
     }
 
+    private var isLooping = false
+    
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
-        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
+        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
+            if let strongSelf = self {
+                if strongSelf.isLooping {
+                    strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
+                }
+            }
+        })
         self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
     }
 
+    func updateIsLooping(_ isLooping: Bool) {
+        let wasLooping = self.isLooping
+        self.isLooping = isLooping
+        
+        if isLooping && !wasLooping {
+            self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
+        }
+    }
+    
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
             self.bubbleTheme = bubbleTheme
@@ -1916,6 +1943,7 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         }
     }
 
+    private var isLooping = false
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
         if let gradient = self.gradient {
             self.isAnimating = true
@@ -1924,11 +1952,24 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.isAnimating = false
-                strongSelf.componentsUpdated()
+                if strongSelf.isLooping {
+                    strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
+                } else {
+                    strongSelf.isAnimating = false
+                    strongSelf.componentsUpdated()
+                }
             })
         } else {
             self.isAnimating = false
+        }
+    }
+    
+    func updateIsLooping(_ isLooping: Bool) {
+        let wasLooping = self.isLooping
+        self.isLooping = isLooping
+        
+        if isLooping && !wasLooping {
+            self.animateEvent(transition: .animated(duration: 0.4, curve: .linear), extendAnimation: false)
         }
     }
 

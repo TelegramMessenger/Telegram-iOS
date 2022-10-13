@@ -214,21 +214,25 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
             
             let titleText: String
             let subtitleText: String
+            let subtitleColor: UIColor
             if let username = item.username {
                 titleText = "@\(username.username)"
                 
                 if username.flags.contains(.isEditable) || username.flags.contains(.isActive) {
                     subtitleText = item.presentationData.strings.Group_Setup_LinkActive
+                    subtitleColor = item.presentationData.theme.list.itemAccentColor
                 } else {
                     subtitleText = item.presentationData.strings.Group_Setup_LinkInactive
+                    subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor
                 }
             } else {
                 titleText = " "
                 subtitleText = " "
+                subtitleColor = item.presentationData.theme.list.itemSecondaryTextColor
             }
             
             let titleAttributedString = NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor)
-            let subtitleAttributedString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+            let subtitleAttributedString = NSAttributedString(string: subtitleText, font: subtitleFont, textColor: subtitleColor)
             
             let reorderControlSizeAndApply = reorderControlLayout(item.presentationData.theme)
             let reorderInset: CGFloat = reorderControlSizeAndApply.0

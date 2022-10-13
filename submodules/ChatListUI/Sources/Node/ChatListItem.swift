@@ -226,8 +226,8 @@ private let archiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_ar
 private let unarchiveIcon = ItemListRevealOptionIcon.animation(animation: "anim_unarchive", scale: 0.642, offset: -9.0, replaceColors: [0xa9a9ad], flip: false)
 private let hideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: 2.0, replaceColors: [0xbdbdc2], flip: false)
 private let unhideIcon = ItemListRevealOptionIcon.animation(animation: "anim_hide", scale: 1.0, offset: -20.0, replaceColors: [0xbdbdc2], flip: true)
-private let startIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
-private let closeIcon = ItemListRevealOptionIcon.animation(animation: "anim_pin", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
+private let startIcon = ItemListRevealOptionIcon.animation(animation: "anim_play", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
+private let closeIcon = ItemListRevealOptionIcon.animation(animation: "anim_pause", scale: 1.0, offset: 0.0, replaceColors: [0xbdbdc2], flip: false)
 
 private enum RevealOptionKey: Int32 {
     case pin
@@ -439,6 +439,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             self.playIcon.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
         
+        var isRound = false
         var dimensions = CGSize(width: 100.0, height: 100.0)
         if case let .image(image) = self.media {
             self.playIcon.isHidden = true
@@ -451,6 +452,9 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 }
             }
         } else if case let .file(file) = self.media {
+            if file.isInstantVideo {
+                isRound = true
+            }
             if file.isAnimated {
                 self.playIcon.isHidden = true
             } else {
@@ -468,7 +472,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
         
         let makeLayout = self.imageNode.asyncLayout()
         self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
-        let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
+        let apply = makeLayout(TransformImageArguments(corners: ImageCorners(radius: isRound ? size.width / 2.0 : 2.0), imageSize: dimensions.aspectFilled(size), boundingSize: size, intrinsicInsets: UIEdgeInsets()))
         apply()
     }
 }
@@ -1400,7 +1404,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                         }
                                         break inner
                                     } else if let file = media as? TelegramMediaFile {
-                                        if file.isVideo, !file.isInstantVideo && !file.isVideoSticker, let _ = file.dimensions {
+                                        if file.isVideo, !file.isVideoSticker, let _ = file.dimensions {
                                             let fitSize = contentImageSize
                                             contentImageSpecs.append((message, .file(file), fitSize))
                                         }

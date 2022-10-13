@@ -2285,7 +2285,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var animateReplyNodeIn = false
             if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
-                    self.swipeToReplyFeedback?.impact()
+                    self.swipeToReplyFeedback?.impact(.heavy)
                     
                     let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
@@ -2671,6 +2671,42 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 replyBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
             }
         }
+    }
+    
+    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, transition: ContainedViewLayoutTransition) {
+        guard let _ = self.item, let animationNode = self.animationNode else {
+            return
+        }
+        
+        let targetFrame = self.view.convert(animationNode.frame, to: messageContainer.parentView)
+        messageContainer.animateBackgroundFrame(to: targetFrame, transition: transition)
+        
+        var backgroundFrame = messageContainer.frame
+        backgroundFrame.size.width = backgroundFrame.size.height
+        
+//        let localSourceContentFrame = self.contextSourceNode.contentNode.view.convert(backgroundFrame.offsetBy(dx: self.contextSourceNode.contentRect.minX, dy: self.contextSourceNode.contentRect.minY), to: self.contextSourceNode.contentNode.view)
+
+//        let sourceCenter = CGPoint(
+//            x: localSourceContentFrame.minX + 11.2,
+//            y: localSourceContentFrame.midY - 1.8
+//        )
+    
+        let sourceScale: CGFloat = 36.0 / self.imageNode.frame.height
+
+        let offset = CGPoint(x: -90.0, y: 90.0)
+//        let offset = CGPoint(
+//            x: sourceCenter.x - self.imageNode.frame.midX,
+//            y: sourceCenter.y - self.imageNode.frame.midY
+//        )
+
+        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
+        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
+        if let animationNode = self.animationNode {
+            transition.animatePositionAdditive(layer: animationNode.layer, offset: offset)
+            transition.animateTransformScale(node: animationNode, from: sourceScale)
+        }
+        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
+        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
     }
     
     override func openMessageContextMenu() {

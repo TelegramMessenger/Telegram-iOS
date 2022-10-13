@@ -956,7 +956,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             }))
         }
         if let username = user.username {
-            let mainUsername = user.usernames.first?.username ?? username
+            let mainUsername = user.usernames.first(where: { $0.flags.contains(.isActive) })?.username ?? username
             var additionalUsernames: String?
             let usernames = user.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
             if !usernames.isEmpty {
@@ -1135,7 +1135,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
             
             if let username = channel.username {
                 var additionalUsernames: String?
-                let mainUsername = channel.usernames.first?.username ?? username
+                let mainUsername = channel.usernames.first(where: { $0.flags.contains(.isActive) })?.username ?? username
 
                 let usernames = channel.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
                 if !usernames.isEmpty {

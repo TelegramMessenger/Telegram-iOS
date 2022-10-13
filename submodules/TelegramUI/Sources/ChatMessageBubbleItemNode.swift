@@ -796,6 +796,48 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
     }
+    
+    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, transition: ContainedViewLayoutTransition) {
+        guard let _ = self.item else {
+            return
+        }
+        
+        let targetFrame = self.view.convert(self.backgroundNode.frame, to: messageContainer.parentView)
+        messageContainer.animateBackgroundFrame(to: targetFrame, transition: transition)
+        
+//        let backgroundFrame = messageContainer.frame
+////        let widthDifference = self.backgroundNode.frame.width - backgroundFrame.width
+////        let heightDifference = self.backgroundNode.frame.height - backgroundFrame.height
+//
+//        if let type = self.backgroundNode.type {
+//            if case .none = type {
+//            } else {
+//                self.clippingNode.clipsToBounds = true
+//            }
+//        }
+//        transition.animateFrame(layer: self.clippingNode.layer, from: CGRect(origin: CGPoint(x: self.clippingNode.frame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak self] _ in
+//            guard let strongSelf = self else {
+//                return
+//            }
+//            strongSelf.clippingNode.clipsToBounds = false
+//        })
+//        transition.animateOffsetAdditive(layer: self.clippingNode.layer, offset: backgroundFrame.minY - self.clippingNode.frame.minY)
+//        
+//        let combinedTransition = CombinedTransition(horizontal: transition, vertical: transition)
+//        
+//        self.backgroundWallpaperNode.animateFrom(sourceView: messageContainer.bubbleNode.view, mediaBox: item.context.account.postbox.mediaBox, transition: combinedTransition)
+//        self.backgroundNode.animateFrom(sourceView: messageContainer.bubbleNode.view, transition: combinedTransition)
+        
+//        for contentNode in self.contentNodes {
+//            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
+//                let localSourceContentFrame = self.mainContextSourceNode.contentNode.view.convert(textInput.contentView.frame.offsetBy(dx: self.mainContextSourceNode.contentRect.minX, dy: self.mainContextSourceNode.contentRect.minY), to: contentNode.view)
+//                textInput.contentView.frame = localSourceContentFrame
+//                contentNode.animateFrom(sourceView: textInput.contentView, scrollOffset: textInput.scrollOffset, widthDifference: widthDifference, transition: transition)
+//            } else if let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
+//                transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: 0.0, y: heightDifference))
+//            }
+//        }
+    }
 
     func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
         guard let item = self.item else {
@@ -2531,6 +2573,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.nameNode = nil
             strongSelf.adminBadgeNode?.removeFromSupernode()
             strongSelf.adminBadgeNode = nil
+            strongSelf.credibilityIconView?.removeFromSuperview()
+            strongSelf.credibilityIconView = nil
         }
         
         let beginAt = applyInfo.timestamp ?? CACurrentMediaTime()
@@ -3892,6 +3936,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     }
     
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
+        var offset: CGFloat = 0.0
+        var swipeOffset: CGFloat = 45.0
+        if let item = self.item, item.content.effectivelyIncoming(item.context.account.peerId, associatedData: item.associatedData) {
+            offset = -24.0
+        } else {
+            offset = 10.0
+            swipeOffset = 60.0
+        }
+        
         switch recognizer.state {
             case .began:
                 self.currentSwipeToReplyTranslation = 0.0
@@ -3903,17 +3956,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             case .changed:
                 var translation = recognizer.translation(in: self.view)
                 translation.x = max(-80.0, min(0.0, translation.x))
-                var animateReplyNodeIn = false
-                if (translation.x < -45.0) != (self.currentSwipeToReplyTranslation < -45.0) {
-                    if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
-                        self.swipeToReplyFeedback?.impact(.heavy)
-
-                        let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
-                        self.swipeToReplyNode = swipeToReplyNode
-                        self.insertSubnode(swipeToReplyNode, belowSubnode: self.messageAccessibilityArea)
-                        animateReplyNodeIn = true
-                    }
+            
+            
+                if let item = self.item, self.swipeToReplyNode == nil {
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                    self.swipeToReplyNode = swipeToReplyNode
+                    self.insertSubnode(swipeToReplyNode, at: 0)
                 }
+            
                 self.currentSwipeToReplyTranslation = translation.x
                 var bounds = self.bounds
                 bounds.origin.x = -translation.x
@@ -3925,25 +3975,20 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 self.updateAttachedAvatarNodeOffset(offset: translation.x, transition: .immediate)
             
                 if let swipeToReplyNode = self.swipeToReplyNode {
-                    swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                    swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width + offset, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
                     
                     if let (rect, containerSize) = self.absoluteRect {
                         let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
                         swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
                     }
                     
-                    if animateReplyNodeIn {
-                        swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
-                        swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
-                    } else {
-                        swipeToReplyNode.alpha = min(1.0, abs(translation.x / 45.0))
-                    }
+                    swipeToReplyNode.updateProgress(abs(translation.x) / swipeOffset)
                 }
             case .cancelled, .ended:
                 self.swipeToReplyFeedback = nil
                 
                 let translation = recognizer.translation(in: self.view)
-                if case .ended = recognizer.state, translation.x < -45.0 {
+                if case .ended = recognizer.state, translation.x < -swipeOffset {
                     if let item = self.item {
                         if let currentSwipeAction = currentSwipeAction {
                             switch currentSwipeAction {
