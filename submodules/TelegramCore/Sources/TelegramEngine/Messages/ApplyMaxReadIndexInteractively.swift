@@ -133,7 +133,7 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewT
     }
     
     if !hasUnread && peerId.namespace == Namespaces.Peer.SecretChat {
-        let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+        let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
         let actionSummary = transaction.getPendingMessageActionsSummary(peerId: peerId, type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)
         if (unseenSummary?.count ?? 0) - (actionSummary ?? 0) > 0 {
             hasUnread = true
@@ -147,7 +147,7 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewT
             } else {
                 transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: false, interactive: true)
             }
-            viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
+            viewTracker.updateMarkAllMentionsSeen(peerId: peerId, threadId: nil)
         }
     } else {
         if setToValue == nil || setToValue! {
@@ -156,22 +156,22 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewT
     }
 }
 
-public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+public func clearPeerUnseenPersonalMessagesInteractively(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return
         }
-        account.viewTracker.updateMarkAllMentionsSeen(peerId: peerId)
+        account.viewTracker.updateMarkAllMentionsSeen(peerId: peerId, threadId: threadId)
     }
     |> ignoreValues
 }
 
-public func clearPeerUnseenReactionsInteractively(account: Account, peerId: PeerId) -> Signal<Never, NoError> {
+public func clearPeerUnseenReactionsInteractively(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Void in
         if peerId.namespace == Namespaces.Peer.SecretChat {
             return
         }
-        account.viewTracker.updateMarkAllReactionsSeen(peerId: peerId)
+        account.viewTracker.updateMarkAllReactionsSeen(peerId: peerId, threadId: threadId)
     }
     |> ignoreValues
 }

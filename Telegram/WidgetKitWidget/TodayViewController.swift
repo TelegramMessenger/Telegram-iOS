@@ -159,7 +159,7 @@ private func getCommonTimeline(friends: [Friend]?, in context: TimelineProviderC
                 
                 if let readState = transaction.getCombinedPeerReadState(peer.id), readState.count > 0 {
                     var isMuted = false
-                    if let notificationSettings = transaction.getPeerNotificationSettings(peer.id) as? TelegramPeerNotificationSettings {
+                    if let notificationSettings = transaction.getPeerNotificationSettings(id: peer.id) as? TelegramPeerNotificationSettings {
                         isMuted = notificationSettings.isRemovedFromTotalUnreadCount(default: false)
                     }
                     badge = WidgetDataPeer.Badge(

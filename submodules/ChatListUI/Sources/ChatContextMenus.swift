@@ -397,7 +397,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                 isMuted = true
                             }
                             items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                let _ = (context.engine.peers.togglePeerMuted(peerId: peerId)
+                                let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: nil)
                                 |> deliverOnMainQueue).start(completed: {
                                     f(.default)
                                 })

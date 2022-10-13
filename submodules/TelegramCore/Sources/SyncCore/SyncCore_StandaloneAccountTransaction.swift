@@ -68,11 +68,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                     if channel.flags.contains(.isForum) {
                         return []
                     }
-                    if channel.username != nil {
-                        return .group
-                    } else {
-                        return .group
-                    }
+                    return .group
                 }
             } else {
                 assertionFailure()

@@ -89,14 +89,16 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months))
     case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
         return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
-    case let .messageActionTopicEdit(flags, title, iconEmojiId):
+    case let .messageActionTopicEdit(flags, title, iconEmojiId, closed):
         var componenents: [TelegramMediaActionType.ForumTopicEditComponent] = []
-        //messageActionTopicEdit#b117a9f5 flags:# title:flags.0?string icon_emoji_id:flags.1?long = MessageAction;
-        if let title {
+        if let title = title {
             componenents.append(.title(title))
         }
         if (flags & (1 << 1)) != 0 {
             componenents.append(.iconFileId(iconEmojiId == 0 ? nil : iconEmojiId))
+        }
+        if let closed = closed {
+            componenents.append(.isClosed(closed == .boolTrue))
         }
         return TelegramMediaAction(action: .topicEdited(components: componenents))
     }

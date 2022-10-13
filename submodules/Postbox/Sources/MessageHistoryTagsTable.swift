@@ -46,7 +46,7 @@ class MessageHistoryTagsTable: Table {
         for tag in tags {
             self.valueBox.set(self.table, key: self.key(tag: tag, index: index, key: self.sharedKey), value: MemoryBuffer())
             if self.summaryTags.contains(tag) {
-                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, isNewlyAdded: isNewlyAdded, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
+                self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, threadId: nil, namespace: index.id.namespace), id: index.id.id, isNewlyAdded: isNewlyAdded, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
     }
@@ -56,7 +56,7 @@ class MessageHistoryTagsTable: Table {
             self.valueBox.remove(self.table, key: self.key(tag: tag, index: index, key: self.sharedKey), secure: false)
             
             if self.summaryTags.contains(tag) {
-                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
+                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: tag, peerId: index.id.peerId, threadId: nil, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedSummaries, invalidateSummaries: &invalidateSummaries)
             }
         }
     }

@@ -2688,10 +2688,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch option.key {
             case RevealOptionKey.delete.rawValue:
                 item.interaction.deletePeerThread(peerId, threadId)
-            case RevealOptionKey.open.rawValue:
-                break
-            case RevealOptionKey.close.rawValue:
-                break
+            case RevealOptionKey.mute.rawValue:
+                item.interaction.setPeerThreadMuted(peerId, threadId, true)
+                close = false
+            case RevealOptionKey.unmute.rawValue:
+                item.interaction.setPeerThreadMuted(peerId, threadId, false)
+                close = false
             default:
                 break
             }

@@ -2031,7 +2031,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             
             return context.engine.data.subscribe(EngineDataMap(
-                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: $0) }
+                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: $0) }
             ))
             |> map { summaries -> (ContentType, [MessageTags: Int32]) in
                 var result: [MessageTags: Int32] = [:]

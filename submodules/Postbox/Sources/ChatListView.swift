@@ -10,7 +10,7 @@ public struct ChatListEntryMessageTagSummaryKey: Hashable {
     }
 }
 
-public struct ChatListEntryMessageTagSummaryComponent {
+public struct ChatListEntryMessageTagSummaryComponent: Equatable {
     public let namespace: MessageId.Namespace
     
     public init(namespace: MessageId.Namespace) {
@@ -18,7 +18,7 @@ public struct ChatListEntryMessageTagSummaryComponent {
     }
 }
 
-public struct ChatListEntryPendingMessageActionsSummaryComponent {
+public struct ChatListEntryPendingMessageActionsSummaryComponent: Equatable {
     public let namespace: MessageId.Namespace
     
     public init(namespace: MessageId.Namespace) {
@@ -26,8 +26,8 @@ public struct ChatListEntryPendingMessageActionsSummaryComponent {
     }
 }
 
-public struct ChatListEntrySummaryComponents {
-    public struct Component {
+public struct ChatListEntrySummaryComponents: Equatable {
+    public struct Component: Equatable {
         public let tagSummary: ChatListEntryMessageTagSummaryComponent?
         public let actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent?
         
