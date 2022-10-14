@@ -3,6 +3,7 @@ import Foundation
 final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
     final class Item {
         let id: Int64
+        let pinnedIndex: Int?
         let index: MessageIndex
         var info: CodableEntry
         var tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo]
@@ -10,12 +11,14 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         
         init(
             id: Int64,
+            pinnedIndex: Int?,
             index: MessageIndex,
             info: CodableEntry,
             tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo],
             topMessage: Message?
         ) {
             self.id = id
+            self.pinnedIndex = pinnedIndex
             self.index = index
             self.info = info
             self.tagSummaryInfo = tagSummaryInfo
@@ -40,7 +43,16 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         
         self.peer = postbox.peerTable.get(self.peerId)
         
+        let pinnedThreadIds = postbox.messageHistoryThreadPinnedTable.get(peerId: self.peerId)
+        var nextPinnedIndex = 0
+        
         for item in postbox.messageHistoryThreadIndexTable.getAll(peerId: self.peerId) {
+            var pinnedIndex: Int?
+            if pinnedThreadIds.contains(item.threadId) {
+                pinnedIndex = nextPinnedIndex
+                nextPinnedIndex += 1
+            }
+            
             var tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo] = [:]
             for (key, component) in self.summaryComponents.components {
                 var tagSummaryCount: Int32?
@@ -66,18 +78,33 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
             
             self.items.append(Item(
                 id: item.threadId,
+                pinnedIndex: pinnedIndex,
                 index: item.index,
                 info: item.info.data,
                 tagSummaryInfo: tagSummaryInfo,
                 topMessage: postbox.getMessage(item.index.id)
             ))
         }
+        
+        self.items.sort(by: { lhs, rhs in
+            if let lhsPinnedIndex = lhs.pinnedIndex, let rhsPinnedIndex = rhs.pinnedIndex {
+                return lhsPinnedIndex < rhsPinnedIndex
+            } else if (lhs.pinnedIndex == nil) != (rhs.pinnedIndex == nil) {
+                if lhs.pinnedIndex != nil {
+                    return true
+                } else {
+                    return false
+                }
+            }
+            
+            return lhs.index > rhs.index
+        })
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) {
+        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.updatedPinnedThreads.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) {
             self.reload(postbox: postbox)
             updated = true
         }
@@ -97,6 +124,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
 public final class EngineMessageHistoryThread {
     public final class Item: Equatable {
         public let id: Int64
+        public let pinnedIndex: Int?
         public let index: MessageIndex
         public let info: CodableEntry
         public let tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo]
@@ -104,12 +132,14 @@ public final class EngineMessageHistoryThread {
         
         public init(
             id: Int64,
+            pinnedIndex: Int?,
             index: MessageIndex,
             info: CodableEntry,
             tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo],
             topMessage: Message?
         ) {
             self.id = id
+            self.pinnedIndex = pinnedIndex
             self.index = index
             self.info = info
             self.tagSummaryInfo = tagSummaryInfo
@@ -118,6 +148,9 @@ public final class EngineMessageHistoryThread {
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
             if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.pinnedIndex != rhs.pinnedIndex {
                 return false
             }
             if lhs.index != rhs.index {
@@ -156,6 +189,7 @@ public final class MessageHistoryThreadIndexView: PostboxView {
         for item in view.items {
             items.append(EngineMessageHistoryThread.Item(
                 id: item.id,
+                pinnedIndex: item.pinnedIndex,
                 index: item.index,
                 info: item.info,
                 tagSummaryInfo: item.tagSummaryInfo,

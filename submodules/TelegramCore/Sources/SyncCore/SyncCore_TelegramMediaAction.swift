@@ -56,7 +56,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                     encoder.encodeNil(forKey: "fileId")
                 }
             case let .isClosed(isClosed):
-                encoder.encodeInt32(2, forKey: "isClosed")
+                encoder.encodeInt32(2, forKey: "_t")
                 encoder.encodeBool(isClosed, forKey: "isClosed")
             }
         }

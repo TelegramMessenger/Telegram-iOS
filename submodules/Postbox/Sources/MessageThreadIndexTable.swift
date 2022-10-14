@@ -298,7 +298,7 @@ class MessageHistoryThreadIndexTable: Table {
     }
 }
 
-/*class MessageHistoryThreadPinnedTable: Table {
+class MessageHistoryThreadPinnedTable: Table {
     static func tableSpec(_ id: Int32) -> ValueBoxTable {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
@@ -354,4 +354,4 @@ class MessageHistoryThreadIndexTable: Table {
     override func beforeCommit() {
         super.beforeCommit()
     }
-}*/
+}

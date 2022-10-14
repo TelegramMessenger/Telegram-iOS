@@ -41,7 +41,10 @@ final class ChatRestrictedInputPanelNode: ChatInputPanelNode {
             bannedPermission = nil
         }
         
-        if let (untilDate, personal) = bannedPermission {
+        if let threadData = interfaceState.threadData, threadData.isClosed {
+            //TODO:localize
+            self.textNode.attributedText = NSAttributedString(string: "The topic is closed by admin", font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
+        } else if let (untilDate, personal) = bannedPermission {
             if personal && untilDate != 0 && untilDate != Int32.max {
                 self.textNode.attributedText = NSAttributedString(string: interfaceState.strings.Conversation_RestrictedTextTimed(stringForFullDate(timestamp: untilDate, strings: interfaceState.strings, dateTimeFormat: interfaceState.dateTimeFormat)).string, font: Font.regular(13.0), textColor: interfaceState.theme.chat.inputPanel.secondaryTextColor)
             } else if personal {

@@ -271,6 +271,111 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
     }
 }
 
+func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, threadId: Int64, isClosed: Bool) -> Signal<Never, EditForumChannelTopicError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        return transaction.getPeer(id).flatMap(apiInputChannel)
+    }
+    |> castError(EditForumChannelTopicError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, EditForumChannelTopicError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        
+        return account.network.request(Api.functions.channels.editForumTopic(
+            flags: flags,
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            title: nil,
+            iconEmojiId: nil,
+            closed: isClosed ? .boolTrue : .boolFalse
+        ))
+        |> mapError { _ -> EditForumChannelTopicError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, EditForumChannelTopicError> in
+            account.stateManager.addUpdates(result)
+            
+            return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.isClosed = isClosed
+                    
+                    if data != initialData {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues
+        }
+    }
+}
+
+public enum SetForumChannelTopicPinnedError {
+    case generic
+}
+
+func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
+            return nil
+        }
+        
+        if isPinned {
+            transaction.setPeerPinnedThreads(peerId: id, threadIds: [threadId])
+        } else {
+            if transaction.getPeerPinnedThreads(peerId: id).contains(threadId) {
+                transaction.setPeerPinnedThreads(peerId: id, threadIds: [])
+            }
+        }
+        
+        return inputChannel
+    }
+    |> castError(SetForumChannelTopicPinnedError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, SetForumChannelTopicPinnedError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        
+        return account.network.request(Api.functions.channels.updatePinnedForumTopic(
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            pinned: isPinned ? .boolTrue : .boolFalse
+        ))
+        |> mapError { _ -> SetForumChannelTopicPinnedError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, SetForumChannelTopicPinnedError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+            
+            /*return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.isClosed = isClosed
+                    
+                    if data != initialData {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues*/
+        }
+    }
+}
+
 func _internal_setChannelForumMode(account: Account, peerId: PeerId, isForum: Bool) -> Signal<Never, NoError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
@@ -322,6 +427,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
         }
         |> mapToSignal { result -> Signal<Never, LoadMessageHistoryThreadsError> in
             return account.postbox.transaction { transaction -> Void in
+                var pinnedId: Int64?
                 switch result {
                 case let .forumTopics(flags, count, topics, messages, chats, users, pts):
                     var peers: [Peer] = []
@@ -357,6 +463,10 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     for topic in topics {
                         switch topic {
                         case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                            if (flags & (1 << 3)) != 0 {
+                                pinnedId = Int64(id)
+                            }
+                            
                             let data = MessageHistoryThreadData(
                                 creationDate: date,
                                 isOwnedByMe: (flags & (1 << 1)) != 0,
@@ -383,6 +493,12 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                         case .forumTopicDeleted:
                             break
                         }
+                    }
+                    
+                    if let pinnedId = pinnedId {
+                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [pinnedId])
+                    } else {
+                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
                     }
                 }
             }

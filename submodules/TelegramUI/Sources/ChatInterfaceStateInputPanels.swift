@@ -157,6 +157,30 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                     }
                 }
             }
+            
+            if channel.flags.contains(.isForum) {
+                if let threadData = chatPresentationInterfaceState.threadData {
+                    if threadData.isClosed {
+                        var canManage = false
+                        if channel.hasPermission(.pinMessages) {
+                            canManage = true
+                        } else if threadData.isOwn {
+                            canManage = true
+                        }
+                        
+                        if !canManage {
+                            if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                                return (currentPanel, nil)
+                            } else {
+                                let panel = ChatRestrictedInputPanelNode()
+                                panel.context = context
+                                panel.interfaceInteraction = interfaceInteraction
+                                return (panel, nil)
+                            }
+                        }
+                    }
+                }
+            }
                         
             if isMember && channel.hasBannedPermission(.banSendMessages) != nil && !channel.flags.contains(.isGigagroup) {
                 if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {

@@ -810,6 +810,10 @@ public extension TelegramEngine {
             return _internal_editForumChannelTopic(account: self.account, peerId: id, threadId: threadId, title: title, iconFileId: iconFileId)
         }
         
+        public func setForumChannelTopicClosed(id: EnginePeer.Id, threadId: Int64, isClosed: Bool) -> Signal<Never, EditForumChannelTopicError> {
+            return _internal_setForumChannelTopicClosed(account: self.account, id: id, threadId: threadId, isClosed: isClosed)
+        }
+        
         public func removeForumChannelThread(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 cloudChatAddClearHistoryOperation(transaction: transaction, peerId: id, threadId: threadId, explicitTopMessageId: nil, minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(.forEveryone))
@@ -819,6 +823,10 @@ public extension TelegramEngine {
                 _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
             }
             |> ignoreValues
+        }
+        
+        public func setForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
+            return _internal_setForumChannelTopicPinned(account: self.account, id: id, threadId: threadId, isPinned: isPinned)
         }
     }
 }

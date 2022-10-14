@@ -43,11 +43,35 @@ public final class EngineChatList: Equatable {
             case forum(Int64)
         }
         
+        public enum PinnedIndex: Equatable, Comparable {
+            case none
+            case index(Int)
+            
+            public static func <(lhs: PinnedIndex, rhs: PinnedIndex) -> Bool {
+                switch lhs {
+                case .none:
+                    switch rhs {
+                    case .none:
+                        return false
+                    case .index:
+                        return false
+                    }
+                case let .index(lhsValue):
+                    switch rhs {
+                    case .none:
+                        return true
+                    case let .index(rhsValue):
+                        return lhsValue >= rhsValue
+                    }
+                }
+            }
+        }
+        
         public enum Index: Equatable, Comparable {
             public typealias ChatList = ChatListIndex
             
             case chatList(ChatListIndex)
-            case forum(timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
+            case forum(pinnedIndex: PinnedIndex, timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
             
             public static func <(lhs: Index, rhs: Index) -> Bool {
                 switch lhs {
@@ -57,8 +81,11 @@ public final class EngineChatList: Equatable {
                     } else {
                         return true
                     }
-                case let .forum(lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
-                    if case let .forum(rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                case let .forum(lhsPinnedIndex, lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
+                    if case let .forum(rhsPinnedIndex, rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                        if lhsPinnedIndex != rhsPinnedIndex {
+                            return lhsPinnedIndex < rhsPinnedIndex
+                        }
                         if lhsTimestamp != rhsTimestamp {
                             return lhsTimestamp < rhsTimestamp
                         }
@@ -82,7 +109,7 @@ public final class EngineChatList: Equatable {
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draft: Draft?
-        public let threadInfo: EngineMessageHistoryThread.Info?
+        public let threadData: MessageHistoryThreadData?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
@@ -98,7 +125,7 @@ public final class EngineChatList: Equatable {
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draft: Draft?,
-            threadInfo: EngineMessageHistoryThread.Info?,
+            threadData: MessageHistoryThreadData?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
@@ -113,7 +140,7 @@ public final class EngineChatList: Equatable {
             self.readCounters = readCounters
             self.isMuted = isMuted
             self.draft = draft
-            self.threadInfo = threadInfo
+            self.threadData = threadData
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
@@ -142,7 +169,7 @@ public final class EngineChatList: Equatable {
             if lhs.draft != rhs.draft {
                 return false
             }
-            if lhs.threadInfo != rhs.threadInfo {
+            if lhs.threadData != rhs.threadData {
                 return false
             }
             if lhs.renderedPeer != rhs.renderedPeer {
@@ -407,7 +434,7 @@ extension EngineChatList.Item {
                 readCounters: readCounters,
                 isMuted: isRemovedFromTotalUnreadCount,
                 draft: draft,
-                threadInfo: nil,
+                threadData: nil,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,

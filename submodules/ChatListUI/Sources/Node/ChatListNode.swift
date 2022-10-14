@@ -71,6 +71,7 @@ public final class ChatListNodeInteraction {
     let deletePeer: (EnginePeer.Id, Bool) -> Void
     let deletePeerThread: (EnginePeer.Id, Int64) -> Void
     let setPeerThreadStopped: (EnginePeer.Id, Int64, Bool) -> Void
+    let setPeerThreadPinned: (EnginePeer.Id, Int64, Bool) -> Void
     let updatePeerGrouping: (EnginePeer.Id, Bool) -> Void
     let togglePeerMarkedUnread: (EnginePeer.Id, Bool) -> Void
     let toggleArchivedFolderHiddenByDefault: () -> Void
@@ -104,6 +105,7 @@ public final class ChatListNodeInteraction {
         deletePeer: @escaping (EnginePeer.Id, Bool) -> Void,
         deletePeerThread: @escaping (EnginePeer.Id, Int64) -> Void,
         setPeerThreadStopped: @escaping (EnginePeer.Id, Int64, Bool) -> Void,
+        setPeerThreadPinned: @escaping (EnginePeer.Id, Int64, Bool) -> Void,
         updatePeerGrouping: @escaping (EnginePeer.Id, Bool) -> Void,
         togglePeerMarkedUnread: @escaping (EnginePeer.Id, Bool) -> Void,
         toggleArchivedFolderHiddenByDefault: @escaping () -> Void,
@@ -127,6 +129,7 @@ public final class ChatListNodeInteraction {
         self.deletePeer = deletePeer
         self.deletePeerThread = deletePeerThread
         self.setPeerThreadStopped = setPeerThreadStopped
+        self.setPeerThreadPinned = setPeerThreadPinned
         self.updatePeerGrouping = updatePeerGrouping
         self.togglePeerMarkedUnread = togglePeerMarkedUnread
         self.toggleArchivedFolderHiddenByDefault = toggleArchivedFolderHiddenByDefault
@@ -666,6 +669,7 @@ public final class ChatListNode: ListView {
     public var deletePeerChat: ((EnginePeer.Id, Bool) -> Void)?
     public var deletePeerThread: ((EnginePeer.Id, Int64) -> Void)?
     public var setPeerThreadStopped: ((EnginePeer.Id, Int64, Bool) -> Void)?
+    public var setPeerThreadPinned: ((EnginePeer.Id, Int64, Bool) -> Void)?
     public var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?
     public var presentAlert: ((String) -> Void)?
     public var present: ((ViewController) -> Void)?
@@ -979,6 +983,8 @@ public final class ChatListNode: ListView {
             self?.deletePeerThread?(peerId, threadId)
         }, setPeerThreadStopped: { [weak self] peerId, threadId, isStopped in
             self?.setPeerThreadStopped?(peerId, threadId, isStopped)
+        }, setPeerThreadPinned: { [weak self] peerId, threadId, isPinned in
+            self?.setPeerThreadPinned?(peerId, threadId, isPinned)
         }, updatePeerGrouping: { [weak self] peerId, group in
             self?.updatePeerGrouping?(peerId, group)
         }, togglePeerMarkedUnread: { [weak self, weak context] peerId, animated in

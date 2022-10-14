@@ -57,6 +57,29 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         }
     }
     
+    if let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let threadData = chatPresentationInterfaceState.threadData {
+            if threadData.isClosed {
+                var canManage = false
+                if channel.hasPermission(.pinMessages) {
+                    canManage = true
+                } else if threadData.isOwn {
+                    canManage = true
+                }
+                
+                if canManage {
+                    if let currentPanel = currentPanel as? ChatReportPeerTitlePanelNode {
+                        return currentPanel
+                    } else if let controllerInteraction = controllerInteraction {
+                        let panel = ChatReportPeerTitlePanelNode(context: context, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
+                        panel.interfaceInteraction = interfaceInteraction
+                        return panel
+                    }
+                }
+            }
+        }
+    }
+    
     var displayActionsPanel = false
     if !chatPresentationInterfaceState.peerIsBlocked && !inhibitTitlePanelDisplay, let contactStatus = chatPresentationInterfaceState.contactStatus, let peerStatusSettings = contactStatus.peerStatusSettings {
         if !peerStatusSettings.flags.isEmpty {

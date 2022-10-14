@@ -233,6 +233,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         }, deletePeer: { _, _ in
         }, deletePeerThread: { _, _ in
         }, setPeerThreadStopped: { _, _, _ in
+        }, setPeerThreadPinned: { _, _, _ in
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {

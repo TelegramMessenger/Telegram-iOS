@@ -98,7 +98,7 @@ enum ChatListNodeEntry: Comparable, Identifiable {
             switch index {
             case let .chatList(index):
                 return .PeerId(index.messageIndex.id.peerId.toInt64())
-            case let .forum(_, threadId, _, _):
+            case let .forum(_, _, threadId, _, _):
                 return .ThreadId(threadId)
             }
         case let .HoleEntry(holeIndex, _):
@@ -380,13 +380,13 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         
         var threadId: Int64 = 0
         switch entry.index {
-        case let .forum(_, threadIdValue, _, _):
+        case let .forum(_, _, threadIdValue, _, _):
             threadId = threadIdValue
         default:
             break
         }
 
-        result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, threadInfo: entry.threadInfo.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0) }, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, hasUnseenReactions: entry.hasUnseenReactions, editing: state.editing, hasActiveRevealControls: hasActiveRevealControls, selected: isSelected, inputActivities: inputActivities, promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact, forumTopicData: entry.forumTopicData))
+        result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, threadInfo: entry.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwner: $0.isOwnedByMe, isClosed: $0.isClosed) }, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, hasUnseenReactions: entry.hasUnseenReactions, editing: state.editing, hasActiveRevealControls: hasActiveRevealControls, selected: isSelected, inputActivities: inputActivities, promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact, forumTopicData: entry.forumTopicData))
     }
     if !view.hasLater {
         var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
@@ -450,7 +450,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     
                     var threadId: Int64 = 0
                     switch item.item.index {
-                    case let .forum(_, threadIdValue, _, _):
+                    case let .forum(_, _, threadIdValue, _, _):
                         threadId = threadIdValue
                     default:
                         break
@@ -464,7 +464,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         isRemovedFromTotalUnreadCount: item.item.isMuted,
                         draftState: draftState,
                         peer: item.item.renderedPeer,
-                        threadInfo: item.item.threadInfo.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0) },
+                        threadInfo: item.item.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwner: $0.isOwnedByMe, isClosed: $0.isClosed) },
                         presence: item.item.presence,
                         hasUnseenMentions: item.item.hasUnseenMentions,
                         hasUnseenReactions: item.item.hasUnseenReactions,
