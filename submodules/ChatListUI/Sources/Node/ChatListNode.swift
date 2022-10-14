@@ -1254,6 +1254,8 @@ public final class ChatListNode: ListView {
             } else {
                 var previousPinnedChats: [EnginePeer.Id] = []
                 var updatedPinnedChats: [EnginePeer.Id] = []
+                var previousPinnedThreads: [Int64] = []
+                var updatedPinnedThreads: [Int64] = []
                 
                 var didIncludeRemovingPeerId = false
                 var didIncludeHiddenByDefaultArchive = false
@@ -1266,6 +1268,10 @@ public final class ChatListNode: ListView {
                                 }
                                 if chatListIndex.messageIndex.id.peerId == removingPeerId {
                                     didIncludeRemovingPeerId = true
+                                }
+                            } else if case let .forum(pinnedIndex, _, threadId, _, _) = index {
+                                if case .index = pinnedIndex {
+                                    previousPinnedThreads.append(threadId)
                                 }
                             }
                         } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
@@ -1280,7 +1286,12 @@ public final class ChatListNode: ListView {
                     if case let .PeerEntry(index, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = entry {
                         if case let .chatList(index) = index, index.pinningIndex != nil {
                             updatedPinnedChats.append(index.messageIndex.id.peerId)
+                        } else if case let .forum(pinnedIndex, _, threadId, _, _) = index {
+                            if case .index = pinnedIndex {
+                                updatedPinnedThreads.append(threadId)
+                            }
                         }
+                        
                         if case let .chatList(index) = index, index.messageIndex.id.peerId == removingPeerId {
                             doesIncludeRemovingPeerId = true
                         }
@@ -1289,7 +1300,7 @@ public final class ChatListNode: ListView {
                         doesIncludeHiddenByDefaultArchive = hiddenByDefault
                     }
                 }
-                if previousPinnedChats != updatedPinnedChats {
+                if previousPinnedChats != updatedPinnedChats || previousPinnedThreads != updatedPinnedThreads {
                     disableAnimations = false
                 }
                 if previousState.selectedPeerIds != state.selectedPeerIds {
