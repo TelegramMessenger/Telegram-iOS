@@ -748,7 +748,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
                                 strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
                             case .forum:
-                                strongSelf.navigationItem.setRightBarButton(strongSelf.moreBarButtonItem, animated: true)
+                                if strongSelf.navigationItem.rightBarButtonItem !== strongSelf.moreBarButtonItem {
+                                    strongSelf.navigationItem.setRightBarButton(strongSelf.moreBarButtonItem, animated: true)
+                                }
                             }
                         }
                         

@@ -534,6 +534,38 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
     return signal
 }
 
+func _internal_forumChannelTopicNotificationExceptions(account: Account, id: EnginePeer.Id) -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(id).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
+        guard let inputPeer = inputPeer else {
+            return .single([])
+        }
+        return account.network.request(Api.functions.account.getNotifyExceptions(flags: 1 << 0, peer: Api.InputNotifyPeer.inputNotifyPeer(peer: inputPeer)))
+        |> map { result -> [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] in
+            var list: [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] = []
+            for update in result.allUpdates {
+                switch update {
+                case let .updateNotifySettings(peer, notifySettings):
+                    switch peer {
+                    case let .notifyForumTopic(_, topMsgId):
+                        list.append((Int64(topMsgId), EnginePeer.NotificationSettings(TelegramPeerNotificationSettings(apiSettings: notifySettings))))
+                    default:
+                        break
+                    }
+                default:
+                    break
+                }
+            }
+            return list
+        }
+        |> `catch` { _ -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
+            return .single([])
+        }
+    }
+}
+
 public final class ForumChannelTopics {
     private final class Impl {
         private let queue: Queue

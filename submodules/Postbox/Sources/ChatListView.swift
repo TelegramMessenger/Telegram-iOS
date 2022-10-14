@@ -492,8 +492,8 @@ final class MutableChatListView {
                             
                             let isUnread: Bool
                             if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                                let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
-                                isUnread = count > 0
+                                let hasUnmutedUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
+                                isUnread = hasUnmutedUnread
                             } else {
                                 isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
                             }
@@ -570,8 +570,7 @@ final class MutableChatListView {
                                 
                                 let isUnread: Bool
                                 if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                                    let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
-                                    isUnread = count > 0
+                                    isUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
                                 } else {
                                     isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
                                 }
@@ -664,7 +663,7 @@ final class MutableChatListView {
             
             let readState: CombinedPeerReadState?
             if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                let count = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)?.unreadCount ?? 0
+                let count = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)?.totalUnreadCount ?? 0
                 readState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
             } else {
                 readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)

@@ -108,26 +108,75 @@ class PeerThreadCombinedStateTable: Table {
 }
 
 struct StoredPeerThreadsSummary: Equatable, Codable {
-    private enum CodingKeys: String, CodingKey {
-        case unreadCount = "u"
+    struct ThreadsTagSummary: Equatable, Codable {
+        private enum CodingKeys: String, CodingKey {
+            case tag = "t"
+            case count = "c"
+        }
+        
+        var tag: MessageTags
+        var count: Int32
+        
+        init(tag: MessageTags, count: Int32) {
+            self.tag = tag
+            self.count = count
+        }
+        
+        init(from decoder: Decoder) throws {
+            let container = try decoder.container(keyedBy: CodingKeys.self)
+            
+            self.tag = MessageTags(rawValue: UInt32(bitPattern: try container.decode(Int32.self, forKey: .tag)))
+            self.count = try container.decode(Int32.self, forKey: .count)
+        }
+        
+        func encode(to encoder: Encoder) throws {
+            var container = encoder.container(keyedBy: CodingKeys.self)
+            
+            try container.encode(Int32(bitPattern: self.tag.rawValue), forKey: .tag)
+            try container.encode(self.count, forKey: .count)
+        }
     }
     
-    var unreadCount: Int32
+    private enum CodingKeys: String, CodingKey {
+        case totalUnreadCount = "u"
+        case hasUnmutedUnread = "h"
+        case tagSummaries = "ts"
+    }
     
-    init(unreadCount: Int32) {
-        self.unreadCount = unreadCount
+    var totalUnreadCount: Int32
+    var hasUnmutedUnread: Bool
+    var tagSummaries: [ThreadsTagSummary]
+    
+    init(totalUnreadCount: Int32, hasUnmutedUnread: Bool, tagSummaries: [ThreadsTagSummary]) {
+        self.totalUnreadCount = totalUnreadCount
+        self.hasUnmutedUnread = hasUnmutedUnread
+        self.tagSummaries = tagSummaries
     }
     
     init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         
-        self.unreadCount = try container.decode(Int32.self, forKey: .unreadCount)
+        self.totalUnreadCount = try container.decodeIfPresent(Int32.self, forKey: .totalUnreadCount) ?? 0
+        self.hasUnmutedUnread = try container.decodeIfPresent(Bool.self, forKey: .hasUnmutedUnread) ?? false
+        self.tagSummaries = try container.decodeIfPresent([ThreadsTagSummary].self, forKey: .tagSummaries) ?? []
     }
     
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         
-        try container.encode(self.unreadCount, forKey: .unreadCount)
+        try container.encode(self.totalUnreadCount, forKey: .totalUnreadCount)
+        try container.encode(self.hasUnmutedUnread, forKey: .hasUnmutedUnread)
+        try container.encode(self.tagSummaries, forKey: .tagSummaries)
+    }
+}
+
+extension StoredPeerThreadsSummary {
+    var effectiveUnreadCount: Int32 {
+        if self.hasUnmutedUnread {
+            return 1
+        } else {
+            return 0
+        }
     }
 }
 
@@ -136,11 +185,15 @@ class PeerThreadsSummaryTable: Table {
         return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
     }
     
+    private let seedConfiguration: SeedConfiguration
+    
     private let sharedKey = ValueBoxKey(length: 8)
     
     private(set) var updatedIds = Set<PeerId>()
     
-    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+    init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool, seedConfiguration: SeedConfiguration) {
+        self.seedConfiguration = seedConfiguration
+        
         super.init(valueBox: valueBox, table: table, useCaches: useCaches)
     }
     
@@ -172,20 +225,33 @@ class PeerThreadsSummaryTable: Table {
         }
     }
     
-    func update(peerIds: Set<PeerId>, indexTable: MessageHistoryThreadIndexTable, combinedStateTable: PeerThreadCombinedStateTable) -> [PeerId: StoredPeerThreadsSummary] {
+    func update(peerIds: Set<PeerId>, indexTable: MessageHistoryThreadIndexTable, combinedStateTable: PeerThreadCombinedStateTable, tagsSummaryTable: MessageHistoryTagsSummaryTable) -> [PeerId: StoredPeerThreadsSummary] {
         var updatedInitialSummaries: [PeerId: StoredPeerThreadsSummary] = [:]
         
         for peerId in peerIds {
-            var unreadCount: Int32 = 0
+            var totalUnreadCount: Int32 = 0
+            var hasUnmutedUnread: Bool = false
+            var tagSummaries: [StoredPeerThreadsSummary.ThreadsTagSummary] = []
             for item in indexTable.fetch(peerId: peerId, namespace: 0, start: .upperBound, end: .lowerBound, limit: 20) {
-                if item.info.summary.mutedUntil == nil {
-                    unreadCount += item.info.summary.totalUnreadCount
+                if item.info.summary.totalUnreadCount > 0 {
+                    totalUnreadCount += 1
+                    if item.info.summary.mutedUntil == nil {
+                        hasUnmutedUnread = true
+                    }
                 }
+                
+                for tag in self.seedConfiguration.messageTagsWithThreadSummary {
+                    if let value = tagsSummaryTable.get(MessageHistoryTagsSummaryKey(tag: tag, peerId: peerId, threadId: item.threadId, namespace: 0)) {
+                        tagSummaries.append(StoredPeerThreadsSummary.ThreadsTagSummary(tag: tag, count: value.count))
+                    }
+                }
+                
+                tagSummaries.removeAll()
             }
             let current = self.get(peerId: peerId)
-            if current?.unreadCount != unreadCount {
-                updatedInitialSummaries[peerId] = current ?? StoredPeerThreadsSummary(unreadCount: 0)
-                self.set(peerId: peerId, state: StoredPeerThreadsSummary(unreadCount: unreadCount))
+            if current?.totalUnreadCount != totalUnreadCount || current?.hasUnmutedUnread != hasUnmutedUnread || current?.tagSummaries != tagSummaries {
+                updatedInitialSummaries[peerId] = current ?? StoredPeerThreadsSummary(totalUnreadCount: 0, hasUnmutedUnread: false, tagSummaries: [])
+                self.set(peerId: peerId, state: StoredPeerThreadsSummary(totalUnreadCount: totalUnreadCount, hasUnmutedUnread: hasUnmutedUnread, tagSummaries: tagSummaries))
             }
         }
         

@@ -828,6 +828,10 @@ public extension TelegramEngine {
         public func setForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
             return _internal_setForumChannelTopicPinned(account: self.account, id: id, threadId: threadId, isPinned: isPinned)
         }
+        
+        public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> {
+            return _internal_forumChannelTopicNotificationExceptions(account: self.account, id: id)
+        }
     }
 }
 

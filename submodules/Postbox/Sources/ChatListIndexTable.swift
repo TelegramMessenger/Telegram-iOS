@@ -372,9 +372,9 @@ final class ChatListIndexTable: Table {
                     } else {
                         let previousCount: Int32
                         if let previousSummary = alteredInitialPeerThreadsSummaries[peerId] {
-                            previousCount = previousSummary.unreadCount
+                            previousCount = previousSummary.effectiveUnreadCount
                         } else {
-                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0
+                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                         }
                         initialReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: previousCount, markedUnread: false))])
                     }
@@ -382,9 +382,9 @@ final class ChatListIndexTable: Table {
                     if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
                         let previousCount: Int32
                         if let previousSummary = alteredInitialPeerThreadsSummaries[peerId] {
-                            previousCount = previousSummary.unreadCount
+                            previousCount = previousSummary.effectiveUnreadCount
                         } else {
-                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0
+                            previousCount = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                         }
                         initialReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: previousCount, markedUnread: false))])
                     } else {
@@ -394,7 +394,7 @@ final class ChatListIndexTable: Table {
                 
                 let currentReadState: CombinedPeerReadState?
                 if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                    let count = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0
+                    let count = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                     currentReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
                 } else {
                     currentReadState = postbox.readStateTable.getCombinedState(peerId)
@@ -627,7 +627,7 @@ final class ChatListIndexTable: Table {
             
             let combinedState: CombinedPeerReadState?
             if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0
+                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                 combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
             } else {
                 combinedState = postbox.readStateTable.getCombinedState(peerId)
@@ -719,7 +719,7 @@ final class ChatListIndexTable: Table {
             
             let combinedState: CombinedPeerReadState?
             if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0
+                let count: Int32 = postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0
                 combinedState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
             } else {
                 combinedState = postbox.readStateTable.getCombinedState(peerId)

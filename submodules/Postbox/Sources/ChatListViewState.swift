@@ -61,7 +61,7 @@ private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransact
             if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
                 var isUnread: Bool
                 if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0) > 0
+                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.effectiveUnreadCount ?? 0) > 0
                 } else {
                     isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
                 }
@@ -412,7 +412,7 @@ private final class ChatListViewSpaceState {
                                 
                                 var isUnread: Bool
                                 if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0) > 0
+                                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.effectiveUnreadCount ?? 0) > 0
                                 } else {
                                     isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
                                 }
@@ -537,7 +537,7 @@ private final class ChatListViewSpaceState {
                 if settingsChange != nil || transaction.updatedPeerThreadsSummaries.contains(entryNotificationsPeerId) {
                     var isUnread: Bool
                     if postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer) {
-                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.unreadCount ?? 0) > 0
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.effectiveUnreadCount ?? 0) > 0
                     } else {
                         isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
                     }
@@ -581,7 +581,7 @@ private final class ChatListViewSpaceState {
                     
                     var isUnread: Bool
                     if postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer) {
-                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0) > 0
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0) > 0
                     } else {
                         isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
                     }
@@ -784,7 +784,7 @@ private final class ChatListViewSpaceState {
                 if updatedMessageSummary != nil || updatedActionsSummary != nil {
                     var isUnread: Bool
                     if postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer) {
-                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.unreadCount ?? 0) > 0
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.effectiveUnreadCount ?? 0) > 0
                     } else {
                         isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
                     }
@@ -834,7 +834,7 @@ private final class ChatListViewSpaceState {
                     
                     var isUnread: Bool
                     if postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer) {
-                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.unreadCount ?? 0) > 0
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0) > 0
                     } else {
                         isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
                     }
@@ -913,7 +913,7 @@ private final class ChatListViewSpaceState {
                     
                     var updatedReadState = readState
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
+                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.totalUnreadCount ?? 0
                         updatedReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
                     } else {
                         updatedReadState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)
@@ -1516,7 +1516,7 @@ struct ChatListViewState {
                     
                     let readState: CombinedPeerReadState?
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.unreadCount ?? 0
+                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.totalUnreadCount ?? 0
                         readState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
                     } else {
                         readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)
