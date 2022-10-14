@@ -256,7 +256,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 additionalItems: [],
                 hasEarlier: false,
                 hasLater: false,
-                isLoading: false
+                isLoading: view.isLoading
             )
             
             let type: ViewUpdateType

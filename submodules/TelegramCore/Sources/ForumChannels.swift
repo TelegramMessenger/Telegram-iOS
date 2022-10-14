@@ -160,6 +160,23 @@ struct StoreMessageHistoryThreadData {
     var unreadReactionCount: Int32
 }
 
+struct PeerThreadCombinedState: Equatable, Codable {
+    var validIndexBoundary: StoredPeerThreadCombinedState.Index?
+    
+    init(validIndexBoundary: StoredPeerThreadCombinedState.Index?) {
+        self.validIndexBoundary = validIndexBoundary
+    }
+}
+
+extension StoredPeerThreadCombinedState {
+    init?(_ state: PeerThreadCombinedState) {
+        guard let entry = CodableEntry(state) else {
+            return nil
+        }
+        self.init(data: entry, validIndexBoundary: state.validIndexBoundary)
+    }
+}
+
 public enum CreateForumChannelTopicError {
     case generic
 }
@@ -499,6 +516,12 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                         transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [pinnedId])
                     } else {
                         transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                    }
+                    
+                    if let entry = StoredPeerThreadCombinedState(PeerThreadCombinedState(
+                        validIndexBoundary: StoredPeerThreadCombinedState.Index(timestamp: Int32.max, threadId: Int64(Int32.max), messageId: Int32.max)
+                    )) {
+                        transaction.setPeerThreadCombinedState(peerId: peerId, state: entry)
                     }
                 }
             }

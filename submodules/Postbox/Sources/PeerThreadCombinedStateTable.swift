@@ -34,8 +34,13 @@ public struct StoredPeerThreadCombinedState: Equatable, Codable {
         case validIndexBoundary = "r"
     }
     
-    var data: CodableEntry
-    var validIndexBoundary: Index?
+    public var data: CodableEntry
+    public var validIndexBoundary: Index?
+    
+    public init(data: CodableEntry, validIndexBoundary: Index?) {
+        self.data = data
+        self.validIndexBoundary = validIndexBoundary
+    }
     
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
