@@ -1306,6 +1306,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let peerTextValue = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
                         if let forumTopicData = forumTopicData {
                             peerText = "\(peerTextValue) → \(forumTopicData.title)"
+                        } else if let threadInfo = threadInfo?.info {
+                            peerText = "\(peerTextValue) → \(threadInfo.title)"
                         } else {
                             //TODO:localize
                             peerText = "\(peerTextValue) → General"

@@ -837,6 +837,7 @@ private struct ChatListSearchMessagesResult {
     let query: String
     let messages: [EngineMessage]
     let readStates: [EnginePeer.Id: EnginePeerReadCounters]
+    let threadInfo: [EngineMessage.Id: MessageHistoryThreadData]
     let hasMore: Bool
     let totalCount: Int32
     let state: SearchMessagesState
@@ -1427,9 +1428,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             updateSearchContext { _ in
                 return (nil, true)
             }
-            let foundRemoteMessages: Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError>
+            let foundRemoteMessages: Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError>
             if peersFilter.contains(.doNotSearchMessages) {
-                foundRemoteMessages = .single((([], [:], 0), false))
+                foundRemoteMessages = .single((([], [:], [:], 0), false))
             } else {
                 if !finalQuery.isEmpty {
                     addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
@@ -1437,18 +1438,18 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 
                 let searchSignal = context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: nil, limit: 50)
                 |> map { result, updatedState -> ChatListSearchMessagesResult in
-                    return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
+                    return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                 }
                 
                 let loadMore = searchContext.get()
-                |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError> in
+                |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError> in
                     if let searchContext = searchContext, searchContext.result.hasMore {
                         if let _ = searchContext.loadMoreIndex {
                             return context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: searchContext.result.state, limit: 80)
                             |> map { result, updatedState -> ChatListSearchMessagesResult in
-                                return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
+                                return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues(EnginePeerReadCounters.init), threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                             }
-                            |> mapToSignal { foundMessages -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool), NoError> in
+                            |> mapToSignal { foundMessages -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError> in
                                 updateSearchContext { previous in
                                     let updated = ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil)
                                     return (updated, true)
@@ -1456,21 +1457,21 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 return .complete()
                             }
                         } else {
-                            return .single(((searchContext.result.messages, searchContext.result.readStates, searchContext.result.totalCount), false))
+                            return .single(((searchContext.result.messages, searchContext.result.readStates, searchContext.result.threadInfo, searchContext.result.totalCount), false))
                         }
                     } else {
                         return .complete()
                     }
                 }
                 
-                foundRemoteMessages = .single((([], [:], 0), true))
+                foundRemoteMessages = .single((([], [:], [:], 0), true))
                 |> then(
                     searchSignal
-                    |> map { foundMessages -> (([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], Int32), Bool) in
+                    |> map { foundMessages -> (([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool) in
                         updateSearchContext { _ in
                             return (ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil), true)
                         }
-                        return ((foundMessages.messages, foundMessages.readStates, foundMessages.totalCount), false)
+                        return ((foundMessages.messages, foundMessages.readStates, foundMessages.threadInfo, foundMessages.totalCount), false)
                     }
                     |> delay(0.2, queue: Queue.concurrentDefaultQueue())
                     |> then(loadMore)
@@ -1490,26 +1491,27 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             })
             
-            let foundThreads: Signal<([Int64: MessageHistoryThreadData], [EngineChatList.Item]), NoError> = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account)
-            |> map { view -> ([Int64: MessageHistoryThreadData], [EngineChatList.Item]) in
-                var itemsMap: [Int64: MessageHistoryThreadData] = [:]
-                var filteredItems: [EngineChatList.Item] = []
-                let queryTokens = stringIndexTokens(finalQuery, transliteration: .combined)
-                for item in view.list.items {
-                    if case let .forum(_, _, index, _, _) = item.index, let threadData = item.threadData {
-                        itemsMap[index] = threadData
-                    }
-                    if !finalQuery.isEmpty {
-                        if let title = item.threadData?.info.title {
-                            let tokens = stringIndexTokens(title, transliteration: .combined)
-                            if matchStringIndexTokens(tokens, with: queryTokens) {
-                                filteredItems.append(item)
+            let foundThreads: Signal<[EngineChatList.Item], NoError>
+            if case .forum = location {
+                foundThreads = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account)
+                |> map { view -> [EngineChatList.Item] in
+                    var filteredItems: [EngineChatList.Item] = []
+                    let queryTokens = stringIndexTokens(finalQuery, transliteration: .combined)
+                    for item in view.list.items {
+                        if !finalQuery.isEmpty {
+                            if let title = item.threadData?.info.title {
+                                let tokens = stringIndexTokens(title, transliteration: .combined)
+                                if matchStringIndexTokens(tokens, with: queryTokens) {
+                                    filteredItems.append(item)
+                                }
                             }
                         }
                     }
+                    
+                    return filteredItems
                 }
-                
-                return (itemsMap, filteredItems)
+            } else {
+                foundThreads = .single([])
             }
             
             return combineLatest(accountPeer, foundLocalPeers, foundRemotePeers, foundRemoteMessages, presentationDataPromise.get(), searchStatePromise.get(), selectionPromise.get(), resolvedMessage, fixedRecentlySearchedPeers, foundThreads)
@@ -1518,7 +1520,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 var entries: [ChatListSearchEntry] = []
                 var index = 0
                 
-                for thread in allAndFoundThreads.1 {
+                for thread in allAndFoundThreads {
                     if let peer = thread.renderedPeer.peer, let threadData = thread.threadData, case let .forum(_, _, id, _, _) = thread.index {
                         entries.append(.topic(peer, ChatListItemContent.ThreadInfo(id: id, info: threadData.info, isOwner: threadData.isOwnedByMe, isClosed: threadData.isClosed), index, presentationData.theme, presentationData.strings, .none))
                         index += 1
@@ -1716,7 +1718,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             peer = EngineRenderedPeer(peer: EnginePeer(channelPeer))
                         }
                     }
-                    entries.append(.message(message, peer, nil, message.threadId.flatMap { allAndFoundThreads.0[$0]?.info }, presentationData, 1, nil, true, .index(message.index), nil, .generic, false))
+                    entries.append(.message(message, peer, nil, nil, presentationData, 1, nil, true, .index(message.index), nil, .generic, false))
                     index += 1
                 }
                 
@@ -1739,7 +1741,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 peer = EngineRenderedPeer(peer: EnginePeer(channelPeer))
                             }
                         }
-                        entries.append(.message(message, peer, foundRemoteMessages.0.1[message.id.peerId], message.threadId.flatMap { allAndFoundThreads.0[$0]?.info }, presentationData, foundRemoteMessages.0.2, selectionState?.contains(message.id), headerId == firstHeaderId, .index(message.index), nil, .generic, false))
+                        
+                        entries.append(.message(message, peer, foundRemoteMessages.0.1[message.id.peerId], foundRemoteMessages.0.2[message.id]?.info, presentationData, foundRemoteMessages.0.3, selectionState?.contains(message.id), headerId == firstHeaderId, .index(message.index), nil, .generic, false))
                         index += 1
                     }
                 }
