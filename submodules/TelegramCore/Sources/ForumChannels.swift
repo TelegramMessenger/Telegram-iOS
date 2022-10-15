@@ -55,14 +55,102 @@ public extension EngineMessageHistoryThread {
 }
 
 public struct MessageHistoryThreadData: Codable, Equatable {
+    private enum CodingKeys: CodingKey {
+        case creationDate
+        case isOwnedByMe
+        case author
+        case info
+        case incomingUnreadCount
+        case maxIncomingReadId
+        case maxKnownMessageId
+        case maxOutgoingReadId
+        case isClosed
+        case notificationSettings
+    }
+    
     public var creationDate: Int32
+    public var isOwnedByMe: Bool
     public var author: PeerId
     public var info: EngineMessageHistoryThread.Info
     public var incomingUnreadCount: Int32
-    public var maxIncomingReadId: Int32
+    public var maxIncomingReadId: Int32 
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
+    public var isClosed: Bool
     public var notificationSettings: TelegramPeerNotificationSettings
+    
+    public init(
+        creationDate: Int32,
+        isOwnedByMe: Bool,
+        author: PeerId,
+        info: EngineMessageHistoryThread.Info,
+        incomingUnreadCount: Int32,
+        maxIncomingReadId: Int32,
+        maxKnownMessageId: Int32,
+        maxOutgoingReadId: Int32,
+        isClosed: Bool,
+        notificationSettings: TelegramPeerNotificationSettings
+    ) {
+        self.creationDate = creationDate
+        self.isOwnedByMe = isOwnedByMe
+        self.author = author
+        self.info = info
+        self.incomingUnreadCount = incomingUnreadCount
+        self.maxIncomingReadId = maxIncomingReadId
+        self.maxKnownMessageId = maxKnownMessageId
+        self.maxOutgoingReadId = maxOutgoingReadId
+        self.isClosed = isClosed
+        self.notificationSettings = notificationSettings
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        self.creationDate = try container.decode(Int32.self, forKey: .creationDate)
+        self.isOwnedByMe = try container.decodeIfPresent(Bool.self, forKey: .isOwnedByMe) ?? false
+        self.author = try container.decode(PeerId.self, forKey: .author)
+        self.info = try container.decode(EngineMessageHistoryThread.Info.self, forKey: .info)
+        self.incomingUnreadCount = try container.decode(Int32.self, forKey: .incomingUnreadCount)
+        self.maxIncomingReadId = try container.decode(Int32.self, forKey: .maxIncomingReadId)
+        self.maxKnownMessageId = try container.decode(Int32.self, forKey: .maxKnownMessageId)
+        self.maxOutgoingReadId = try container.decode(Int32.self, forKey: .maxOutgoingReadId)
+        self.isClosed = try container.decodeIfPresent(Bool.self, forKey: .isClosed) ?? false
+        self.notificationSettings = try container.decode(TelegramPeerNotificationSettings.self, forKey: .notificationSettings)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        
+        try container.encode(self.creationDate, forKey: .creationDate)
+        try container.encode(self.isOwnedByMe, forKey: .isOwnedByMe)
+        try container.encode(self.author, forKey: .author)
+        try container.encode(self.info, forKey: .info)
+        try container.encode(self.incomingUnreadCount, forKey: .incomingUnreadCount)
+        try container.encode(self.maxIncomingReadId, forKey: .maxIncomingReadId)
+        try container.encode(self.maxKnownMessageId, forKey: .maxKnownMessageId)
+        try container.encode(self.maxOutgoingReadId, forKey: .maxOutgoingReadId)
+        try container.encode(self.isClosed, forKey: .isClosed)
+        try container.encode(self.notificationSettings, forKey: .notificationSettings)
+    }
+}
+
+extension StoredMessageHistoryThreadInfo {
+    init?(_ data: MessageHistoryThreadData) {
+        guard let entry = CodableEntry(data) else {
+            return nil
+        }
+        var mutedUntil: Int32?
+        switch data.notificationSettings.muteState {
+        case let .muted(until):
+            mutedUntil = until
+        case .unmuted, .default:
+            break
+        }
+        self.init(data: entry, summary: Summary(
+            totalUnreadCount: data.incomingUnreadCount,
+            mutedUntil: mutedUntil
+        ))
+    }
 }
 
 struct StoreMessageHistoryThreadData {
@@ -70,6 +158,23 @@ struct StoreMessageHistoryThreadData {
     var topMessageId: Int32
     var unreadMentionCount: Int32
     var unreadReactionCount: Int32
+}
+
+struct PeerThreadCombinedState: Equatable, Codable {
+    var validIndexBoundary: StoredPeerThreadCombinedState.Index?
+    
+    init(validIndexBoundary: StoredPeerThreadCombinedState.Index?) {
+        self.validIndexBoundary = validIndexBoundary
+    }
+}
+
+extension StoredPeerThreadCombinedState {
+    init?(_ state: PeerThreadCombinedState) {
+        guard let entry = CodableEntry(state) else {
+            return nil
+        }
+        self.init(data: entry, validIndexBoundary: state.validIndexBoundary)
+    }
 }
 
 public enum CreateForumChannelTopicError {
@@ -165,13 +270,13 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
             account.stateManager.addUpdates(result)
             
             return account.postbox.transaction { transaction -> Void in
-                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                     var data = initialData
                     
                     data.info = EngineMessageHistoryThread.Info(title: title, icon: iconFileId, iconColor: data.info.iconColor)
                     
                     if data != initialData {
-                        if let entry = CodableEntry(data) {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
                         }
                     }
@@ -179,6 +284,111 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
             }
             |> castError(EditForumChannelTopicError.self)
             |> ignoreValues
+        }
+    }
+}
+
+func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, threadId: Int64, isClosed: Bool) -> Signal<Never, EditForumChannelTopicError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        return transaction.getPeer(id).flatMap(apiInputChannel)
+    }
+    |> castError(EditForumChannelTopicError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, EditForumChannelTopicError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        
+        return account.network.request(Api.functions.channels.editForumTopic(
+            flags: flags,
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            title: nil,
+            iconEmojiId: nil,
+            closed: isClosed ? .boolTrue : .boolFalse
+        ))
+        |> mapError { _ -> EditForumChannelTopicError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, EditForumChannelTopicError> in
+            account.stateManager.addUpdates(result)
+            
+            return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.isClosed = isClosed
+                    
+                    if data != initialData {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues
+        }
+    }
+}
+
+public enum SetForumChannelTopicPinnedError {
+    case generic
+}
+
+func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
+            return nil
+        }
+        
+        if isPinned {
+            transaction.setPeerPinnedThreads(peerId: id, threadIds: [threadId])
+        } else {
+            if transaction.getPeerPinnedThreads(peerId: id).contains(threadId) {
+                transaction.setPeerPinnedThreads(peerId: id, threadIds: [])
+            }
+        }
+        
+        return inputChannel
+    }
+    |> castError(SetForumChannelTopicPinnedError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, SetForumChannelTopicPinnedError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 2)
+        
+        return account.network.request(Api.functions.channels.updatePinnedForumTopic(
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            pinned: isPinned ? .boolTrue : .boolFalse
+        ))
+        |> mapError { _ -> SetForumChannelTopicPinnedError in
+            return .generic
+        }
+        |> mapToSignal { result -> Signal<Never, SetForumChannelTopicPinnedError> in
+            account.stateManager.addUpdates(result)
+            
+            return .complete()
+            
+            /*return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.isClosed = isClosed
+                    
+                    if data != initialData {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues*/
         }
     }
 }
@@ -234,6 +444,7 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
         }
         |> mapToSignal { result -> Signal<Never, LoadMessageHistoryThreadsError> in
             return account.postbox.transaction { transaction -> Void in
+                var pinnedId: Int64?
                 switch result {
                 case let .forumTopics(flags, count, topics, messages, chats, users, pts):
                     var peers: [Peer] = []
@@ -268,9 +479,14 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                            if (flags & (1 << 3)) != 0 {
+                                pinnedId = Int64(id)
+                            }
+                            
                             let data = MessageHistoryThreadData(
                                 creationDate: date,
+                                isOwnedByMe: (flags & (1 << 1)) != 0,
                                 author: fromId.peerId,
                                 info: EngineMessageHistoryThread.Info(
                                     title: title,
@@ -281,16 +497,31 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                                 maxIncomingReadId: readInboxMaxId,
                                 maxKnownMessageId: topMessage,
                                 maxOutgoingReadId: readOutboxMaxId,
+                                isClosed: (flags & (1 << 2)) != 0,
                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                             )
-                            guard let info = CodableEntry(data) else {
+                            guard let info = StoredMessageHistoryThreadInfo(data) else {
                                 continue
                             }
                             transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: info)
                             
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
+                        case .forumTopicDeleted:
+                            break
                         }
+                    }
+                    
+                    if let pinnedId = pinnedId {
+                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [pinnedId])
+                    } else {
+                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                    }
+                    
+                    if let entry = StoredPeerThreadCombinedState(PeerThreadCombinedState(
+                        validIndexBoundary: StoredPeerThreadCombinedState.Index(timestamp: Int32.max, threadId: Int64(Int32.max), messageId: Int32.max)
+                    )) {
+                        transaction.setPeerThreadCombinedState(peerId: peerId, state: entry)
                     }
                 }
             }
@@ -301,6 +532,38 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
     }
     
     return signal
+}
+
+func _internal_forumChannelTopicNotificationExceptions(account: Account, id: EnginePeer.Id) -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> {
+    return account.postbox.transaction { transaction -> Api.InputPeer? in
+        return transaction.getPeer(id).flatMap(apiInputPeer)
+    }
+    |> mapToSignal { inputPeer -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
+        guard let inputPeer = inputPeer else {
+            return .single([])
+        }
+        return account.network.request(Api.functions.account.getNotifyExceptions(flags: 1 << 0, peer: Api.InputNotifyPeer.inputNotifyPeer(peer: inputPeer)))
+        |> map { result -> [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] in
+            var list: [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] = []
+            for update in result.allUpdates {
+                switch update {
+                case let .updateNotifySettings(peer, notifySettings):
+                    switch peer {
+                    case let .notifyForumTopic(_, topMsgId):
+                        list.append((Int64(topMsgId), EnginePeer.NotificationSettings(TelegramPeerNotificationSettings(apiSettings: notifySettings))))
+                    default:
+                        break
+                    }
+                default:
+                    break
+                }
+            }
+            return list
+        }
+        |> `catch` { _ -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
+            return .single([])
+        }
+    }
 }
 
 public final class ForumChannelTopics {

@@ -258,6 +258,23 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         break
     }
     
+    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if let threadData = chatPresentationInterfaceState.threadData {
+            if threadData.isClosed {
+                var canManage = false
+                if channel.hasPermission(.pinMessages) {
+                    canManage = true
+                } else if threadData.isOwn {
+                    canManage = true
+                }
+                
+                if !canManage {
+                    return false
+                }
+            }
+        }
+    }
+    
     var canReply = false
     switch chatPresentationInterfaceState.chatLocation {
     case .peer:

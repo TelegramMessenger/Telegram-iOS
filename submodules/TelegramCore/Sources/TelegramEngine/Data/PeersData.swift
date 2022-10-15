@@ -278,7 +278,7 @@ public extension TelegramEngine.EngineData.Item {
                 guard let view = view as? MessageHistoryThreadInfoView else {
                     preconditionFailure()
                 }
-                guard let data = view.info?.get(MessageHistoryThreadData.self) else {
+                guard let data = view.info?.data.get(MessageHistoryThreadData.self) else {
                     return EnginePeer.NotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
                 }
                 return EnginePeer.NotificationSettings(data.notificationSettings)

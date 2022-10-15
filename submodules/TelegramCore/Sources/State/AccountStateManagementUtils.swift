@@ -1111,7 +1111,10 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 switch apiPeer {
                     case let .notifyPeer(peer):
                         let notificationSettings = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
-                        updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: notificationSettings)
+                        updatedState.updateNotificationSettings(.peer(peerId: peer.peerId, threadId: nil), notificationSettings: notificationSettings)
+                    case let .notifyForumTopic(peer, topMsgId):
+                        let notificationSettings = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
+                        updatedState.updateNotificationSettings(.peer(peerId: peer.peerId, threadId: Int64(topMsgId)), notificationSettings: notificationSettings)
                     case .notifyUsers:
                         updatedState.updateGlobalNotificationSettings(.privateChats, notificationSettings: MessageNotificationSettings(apiSettings: apiNotificationSettings))
                     case .notifyChats:
@@ -1694,12 +1697,13 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
                                         state.operations.append(.ResetForumTopic(
                                             topicId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id),
                                             data: StoreMessageHistoryThreadData(
                                                 data: MessageHistoryThreadData(
                                                     creationDate: date,
+                                                    isOwnedByMe: (flags & (1 << 1)) != 0,
                                                     author: fromId.peerId,
                                                     info: EngineMessageHistoryThread.Info(
                                                         title: title,
@@ -1710,6 +1714,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                                     maxIncomingReadId: readInboxMaxId,
                                                     maxKnownMessageId: topMessage,
                                                     maxOutgoingReadId: readOutboxMaxId,
+                                                    isClosed: (flags & (1 << 2)) != 0,
                                                     notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                                 ),
                                                 topMessageId: topMessage,
@@ -1718,6 +1723,8 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                             ),
                                             pts: pts
                                         ))
+                                    case .forumTopicDeleted:
+                                        break
                                     }
                                 }
                             }
@@ -1790,9 +1797,10 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                                     
                                     for topic in topics {
                                         switch topic {
-                                        case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
                                             let data = MessageHistoryThreadData(
                                                 creationDate: date,
+                                                isOwnedByMe: (flags & (1 << 1)) != 0,
                                                 author: fromId.peerId,
                                                 info: EngineMessageHistoryThread.Info(
                                                     title: title,
@@ -1803,14 +1811,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
+                                                isClosed: (flags & (1 << 2)) != 0,
                                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                             )
-                                            if let entry = CodableEntry(data) {
+                                            if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: Int64(id), info: entry)
                                             }
                                             
                                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
+                                        case .forumTopicDeleted:
+                                            break
                                         }
                                     }
                                 }
@@ -1906,10 +1917,11 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(_, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
                                         fetchedChatList.threadInfos[MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)] = StoreMessageHistoryThreadData(
                                             data: MessageHistoryThreadData(
                                                 creationDate: date,
+                                                isOwnedByMe: (flags & (1 << 1)) != 0,
                                                 author: fromId.peerId,
                                                 info: EngineMessageHistoryThread.Info(
                                                     title: title,
@@ -1920,12 +1932,15 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                                 maxIncomingReadId: readInboxMaxId,
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
+                                                isClosed: (flags & (1 << 2)) != 0,
                                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                             ),
                                             topMessageId: topMessage,
                                             unreadMentionCount: unreadMentionsCount,
                                             unreadReactionCount: unreadReactionsCount
                                         )
+                                    case .forumTopicDeleted:
+                                        break
                                     }
                                 }
                             }
@@ -2152,7 +2167,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                 }
                                 
                                 let notificationSettings = TelegramPeerNotificationSettings(apiSettings: notifySettings)
-                                updatedState.updateNotificationSettings(.peer(peer.peerId), notificationSettings: notificationSettings)
+                                updatedState.updateNotificationSettings(.peer(peerId: peer.peerId, threadId: nil), notificationSettings: notificationSettings)
                                 
                                 updatedState.resetReadState(peer.peerId, namespace: Namespaces.Message.Cloud, maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: nil)
                                 updatedState.resetMessageTagSummary(peer.peerId, tag: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, range: MessageHistoryTagNamespaceCountValidityRange(maxId: topMessage))
@@ -2329,7 +2344,7 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
         var channelStates: [PeerId: AccountStateChannelState] = [:]
         var invalidateChannelStates: [PeerId: Int32] = [:]
         var channelSynchronizedUntilMessage: [PeerId: MessageId.Id] = [:]
-        var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+        var notificationSettings: [PeerId: TelegramPeerNotificationSettings] = [:]
         
         if let result = result {
             switch result {
@@ -2448,7 +2463,7 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
         }
         
         for (peerId, settings) in notificationSettings {
-            updatedState.updateNotificationSettings(.peer(peerId), notificationSettings: settings)
+            updatedState.updateNotificationSettings(.peer(peerId: peerId, threadId: nil), notificationSettings: settings)
         }
         
         // TODO: delete messages later than top
@@ -2994,7 +3009,7 @@ func replayFinalState(
                                     if let action = media as? TelegramMediaAction {
                                         switch action.action {
                                         case let .topicEdited(components):
-                                            if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                                            if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                                                 var data = initialData
                                                 
                                                 for component in components {
@@ -3009,7 +3024,7 @@ func replayFinalState(
                                                 }
                                                 
                                                 if data != initialData {
-                                                    if let entry = CodableEntry(data) {
+                                                    if let entry = StoredMessageHistoryThreadInfo(data) {
                                                         transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
                                                     }
                                                 }
@@ -3028,12 +3043,12 @@ func replayFinalState(
                                 }
                                 
                                 if message.flags.contains(.Incoming) {
-                                    if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.get(MessageHistoryThreadData.self) {
+                                    if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                                         if id.id >= data.maxKnownMessageId {
                                             data.maxKnownMessageId = id.id
                                             data.incomingUnreadCount += 1
                                             
-                                            if let entry = CodableEntry(data) {
+                                            if let entry = StoredMessageHistoryThreadInfo(data) {
                                                 transaction.setMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId, info: entry)
                                             }
                                         }
@@ -3297,7 +3312,7 @@ func replayFinalState(
                         updatedIncomingThreadReadStates[threadMessageId] = readMaxId
                     }
                     if let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
-                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id))?.get(MessageHistoryThreadData.self) {
+                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id))?.data.get(MessageHistoryThreadData.self) {
                             if readMaxId > data.maxIncomingReadId {
                                 if let toIndex = transaction.getMessage(MessageId(peerId: threadMessageId.peerId, namespace: threadMessageId.namespace, id: readMaxId))?.index {
                                     if let count = transaction.getThreadMessageCount(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), namespace: threadMessageId.namespace, fromIdExclusive: data.maxIncomingReadId, toIndex: toIndex) {
@@ -3307,7 +3322,7 @@ func replayFinalState(
                                 
                                 data.maxKnownMessageId = max(data.maxKnownMessageId, readMaxId)
                                 
-                                if let entry = CodableEntry(data) {
+                                if let entry = StoredMessageHistoryThreadInfo(data) {
                                     transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
                                 }
                             }
@@ -3338,11 +3353,11 @@ func replayFinalState(
                         updatedOutgoingThreadReadStates[threadMessageId] = readMaxId
                     }
                     if let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
-                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id))?.get(MessageHistoryThreadData.self) {
+                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id))?.data.get(MessageHistoryThreadData.self) {
                             if readMaxId >= data.maxOutgoingReadId {
                                 data.maxOutgoingReadId = readMaxId
                                 
-                                if let entry = CodableEntry(data) {
+                                if let entry = StoredMessageHistoryThreadInfo(data) {
                                     transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)
                                 }
                             }
@@ -3470,8 +3485,22 @@ func replayFinalState(
                 Logger.shared.log("State", "apply channel synchronized until message \(peerId): \(state)")
             case let .UpdateNotificationSettings(subject, notificationSettings):
                 switch subject {
-                    case let .peer(peerId):
+                case let .peer(peerId, threadId):
+                    if let threadId = threadId {
+                        if let initialData = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                            var data = initialData
+                            
+                            data.notificationSettings = notificationSettings
+                            
+                            if data != initialData {
+                                if let entry = StoredMessageHistoryThreadInfo(data) {
+                                    transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+                                }
+                            }
+                        }
+                    } else {
                         transaction.updateCurrentPeerNotificationSettings([peerId: notificationSettings])
+                    }
                 }
             case let .UpdateGlobalNotificationSettings(subject, notificationSettings):
                 switch subject {
@@ -3954,7 +3983,7 @@ func replayFinalState(
             case let .ResetForumTopic(topicId, data, pts):
                 if finalState.state.resetForumTopicLists[topicId.peerId] == nil {
                     let _ = pts
-                    if let entry = CodableEntry(data.data) {
+                    if let entry = StoredMessageHistoryThreadInfo(data.data) {
                         transaction.setMessageHistoryThreadInfo(peerId: topicId.peerId, threadId: Int64(topicId.id), info: entry)
                     } else {
                         assertionFailure()

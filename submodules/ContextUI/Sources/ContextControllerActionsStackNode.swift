@@ -963,7 +963,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             return (size, apparentHeight)
         }
         
-        func updateTip(presentationData: PresentationData, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: InnerTextSelectionTipContainerNode, height: CGFloat)? {
+        func updateTip(presentationData: PresentationData, presentation: ContextControllerActionsStackNode.Presentation, width: CGFloat, transition: ContainedViewLayoutTransition) -> (node: InnerTextSelectionTipContainerNode, height: CGFloat)? {
             if let tip = self.tip {
                 var updatedTransition = transition
                 if let tipNode = self.tipNode, tipNode.tip == tip {
@@ -985,7 +985,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 }
                 
                 if let tipNode = self.tipNode {
-                    let size = tipNode.updateLayout(widthClass: .compact, width: width, transition: updatedTransition)
+                    let size = tipNode.updateLayout(widthClass: .compact, presentation: presentation, width: width, transition: updatedTransition)
                     return (tipNode, size.height)
                 } else {
                     return nil
@@ -1229,7 +1229,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
                 standardMaxWidth = 240.0
                 standardMinWidth = standardMaxWidth
                 
-                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: standardMaxWidth, transition: itemContainerTransition) {
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, presentation: presentation, width: standardMaxWidth, transition: itemContainerTransition) {
                     tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
                     additionalBottomInset = tipHeight + 10.0
                 } else {
@@ -1256,7 +1256,7 @@ final class ContextControllerActionsStackNode: ASDisplayNode {
             }
             
             if !itemContainer.node.wantsFullWidth {
-                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, width: itemSize.size.width, transition: itemContainerTransition) {
+                if let (tipNode, tipHeight) = itemContainer.updateTip(presentationData: presentationData, presentation: presentation, width: itemSize.size.width, transition: itemContainerTransition) {
                     tip = TipLayout(tipNode: tipNode, tipHeight: tipHeight)
                 }
             }

@@ -32,10 +32,14 @@ public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
         public var id: Int64
         public var info: EngineMessageHistoryThread.Info
+        public var isOwner: Bool
+        public var isClosed: Bool
         
-        public init(id: Int64, info: EngineMessageHistoryThread.Info) {
+        public init(id: Int64, info: EngineMessageHistoryThread.Info, isOwner: Bool, isClosed: Bool) {
             self.id = id
             self.info = info
+            self.isOwner = isOwner
+            self.isClosed = isClosed
         }
     }
     
@@ -59,7 +63,7 @@ public enum ChatListItemContent {
         }
     }
 
-    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumThreadTitle: String?)
+    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumTopicData: EngineChatList.ForumTopicData?)
     case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
@@ -171,7 +175,7 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
             case let .peer(messages, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _):
                 if let message = messages.last, let peer = peer.peer {
                     var threadId: Int64?
-                    if case let .forum(_, threadIdValue, _, _) = self.index {
+                    if case let .forum(_, _, threadIdValue, _, _) = self.index {
                         threadId = threadIdValue
                     }
                     self.interaction.messageSelected(peer, threadId, message, promoInfo)
@@ -326,7 +330,7 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isEditing: Bool, canDelete: Bool) -> [ItemListRevealOption] {
+private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isEditing: Bool, canManage: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
         if let isMuted = isMuted {
@@ -337,35 +341,59 @@ private func forumRevealOptions(strings: PresentationStrings, theme: Presentatio
             }
         }
     }
-    if canDelete {
+    if canManage {
         options.append(ItemListRevealOption(key: RevealOptionKey.delete.rawValue, title: strings.Common_Delete, icon: deleteIcon, color: theme.list.itemDisclosureActions.destructive.fillColor, textColor: theme.list.itemDisclosureActions.destructive.foregroundColor))
-    }
-    if !isEditing {
-        options.append(ItemListRevealOption(key: RevealOptionKey.close.rawValue, title: strings.ChatList_CloseAction, icon: closeIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
-    }
-    return options
-}
-
-private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, location: ChatListControllerLocation, peer: EnginePeer, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
-    guard case .chatList(.root) = location else {
-        return []
-    }
-    var options: [ItemListRevealOption] = []
-    if isUnread {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
-    } else {
-        options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
-    }
-    if !isEditing {
-        if isPinned {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-        } else {
-            if filterData == nil || peer.id.namespace != Namespaces.Peer.SecretChat {
-                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+        if !isEditing {
+            if !isClosed {
+                options.append(ItemListRevealOption(key: RevealOptionKey.close.rawValue, title: strings.ChatList_CloseAction, icon: closeIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.open.rawValue, title: strings.ChatList_StartAction, icon: closeIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             }
         }
     }
     return options
+}
+
+private func forumLeftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, location: ChatListControllerLocation, peer: EnginePeer) -> [ItemListRevealOption] {
+    var options: [ItemListRevealOption] = []
+    
+    if case let .channel(channel) = peer, channel.hasPermission(.pinMessages) {
+        if isPinned {
+            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+        } else {
+            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+        }
+    }
+    
+    return options
+}
+
+private func leftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, isSavedMessages: Bool, location: ChatListControllerLocation, peer: EnginePeer, filterData: ChatListItemFilterData?) -> [ItemListRevealOption] {
+    switch location {
+    case let .chatList(groupId):
+        if case .root = groupId {
+            var options: [ItemListRevealOption] = []
+            if isUnread {
+                options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+            }
+            if !isEditing {
+                if isPinned {
+                    options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+                } else {
+                    if filterData == nil || peer.id.namespace != Namespaces.Peer.SecretChat {
+                        options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+                    }
+                }
+            }
+            return options
+        } else {
+            return []
+        }
+    case .forum:
+       return []
+    }
 }
 
 private final class ChatListItemAccessibilityCustomAction: UIAccessibilityCustomAction {
@@ -1049,12 +1077,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let displayAsMessage: Bool
             let hasFailedMessages: Bool
             var threadInfo: ChatListItemContent.ThreadInfo?
-            var forumThreadTitle: String?
+            var forumTopicData: EngineChatList.ForumTopicData?
             
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumThreadTitleValue):
+                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumTopicDataValue):
                     messages = messagesValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -1075,7 +1103,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     threadInfo = threadInfoValue
                     hasUnseenMentions = hasUnseenMentionsValue
                     hasUnseenReactions = hasUnseenReactionsValue
-                    forumThreadTitle = forumThreadTitleValue
+                    forumTopicData = forumTopicDataValue
                     
                     switch peerValue.peer {
                     case .user, .secretChat:
@@ -1276,8 +1304,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                 
                     if let peerTextValue = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
-                        if let forumThreadTitle = forumThreadTitle {
-                            peerText = "\(peerTextValue) → \(forumThreadTitle)"
+                        if let forumTopicData = forumTopicData {
+                            peerText = "\(peerTextValue) → \(forumTopicData.title)"
                         } else {
                             //TODO:localize
                             peerText = "\(peerTextValue) → General"
@@ -1551,6 +1579,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             } else {
                                 statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
                             }
+                        } else if case .forum = item.chatListLocation {
+                            if let forumTopicData = forumTopicData, message.id.namespace == forumTopicData.maxOutgoingReadMessageId.namespace, message.id.id >= forumTopicData.maxOutgoingReadMessageId.id {
+                                statusState = .read(item.presentationData.theme.chatList.checkmarkColor)
+                            } else {
+                                statusState = .delivered(item.presentationData.theme.chatList.checkmarkColor)
+                            }
                         }
                     }
                 }
@@ -1762,6 +1796,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var isPinned = false
             if case let .chatList(index) = item.index {
                 isPinned = index.pinningIndex != nil
+            } else if case let .forum(pinnedIndex, _, _, _, _) = item.index {
+                if case .index = pinnedIndex {
+                    isPinned = true
+                }
             }
 
             let peerRevealOptions: [ItemListRevealOption]
@@ -1794,8 +1832,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     if item.enableContextActions {
                         if case .forum = item.chatListLocation {
-                            peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isEditing: item.editing, canDelete: true)
-                            peerLeftRevealOptions = []
+                            if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
+                                var canManage = false
+                                if channel.hasPermission(.pinMessages) {
+                                    canManage = true
+                                } else if let threadInfo {
+                                    canManage = threadInfo.isOwner
+                                }
+                                var isClosed = false
+                                if let threadInfo {
+                                    isClosed = threadInfo.isClosed
+                                }
+                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canManage: canManage)
+                                peerLeftRevealOptions = forumLeftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, location: item.chatListLocation, peer: itemPeer.peers[itemPeer.peerId]!)
+                            } else {
+                                peerRevealOptions = []
+                                peerLeftRevealOptions = []
+                            }
                         } else if case .psa = promoInfo {
                             peerRevealOptions = [
                                 ItemListRevealOption(key: RevealOptionKey.hidePsa.rawValue, title: item.presentationData.strings.ChatList_HideAction, icon: deleteIcon, color: item.presentationData.theme.list.itemDisclosureActions.inactive.fillColor, textColor: item.presentationData.theme.list.itemDisclosureActions.neutral1.foregroundColor)
@@ -2684,7 +2737,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             default:
                 break
             }
-        } else if case let .forum(_, threadId, _, _) = item.index, case let .forum(peerId) = item.chatListLocation {
+        } else if case let .forum(_, _, threadId, _, _) = item.index, case let .forum(peerId) = item.chatListLocation {
             switch option.key {
             case RevealOptionKey.delete.rawValue:
                 item.interaction.deletePeerThread(peerId, threadId)
@@ -2694,6 +2747,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             case RevealOptionKey.unmute.rawValue:
                 item.interaction.setPeerThreadMuted(peerId, threadId, false)
                 close = false
+            case RevealOptionKey.close.rawValue:
+                item.interaction.setPeerThreadStopped(peerId, threadId, true)
+            case RevealOptionKey.open.rawValue:
+                item.interaction.setPeerThreadStopped(peerId, threadId, false)
+            case RevealOptionKey.pin.rawValue:
+                item.interaction.setPeerThreadPinned(peerId, threadId, true)
+            case RevealOptionKey.unpin.rawValue:
+                item.interaction.setPeerThreadPinned(peerId, threadId, false)
             default:
                 break
             }

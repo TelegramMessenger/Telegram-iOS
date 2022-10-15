@@ -1,5 +1,49 @@
 import Foundation
 
+public struct StoredMessageHistoryThreadInfo: Equatable, PostboxCoding {
+    public struct Summary: Equatable, PostboxCoding {
+        public var totalUnreadCount: Int32
+        public var mutedUntil: Int32?
+        
+        public init(totalUnreadCount: Int32, mutedUntil: Int32?) {
+            self.totalUnreadCount = totalUnreadCount
+            self.mutedUntil = mutedUntil
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.totalUnreadCount = decoder.decodeInt32ForKey("u", orElse: 0)
+            self.mutedUntil = decoder.decodeOptionalInt32ForKey("m")
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.totalUnreadCount, forKey: "u")
+            if let mutedUntil = self.mutedUntil {
+                encoder.encodeInt32(mutedUntil, forKey: "m")
+            } else {
+                encoder.encodeNil(forKey: "m")
+            }
+        }
+    }
+    
+    public var data: CodableEntry
+    public var summary: Summary
+    
+    public init(data: CodableEntry, summary: Summary) {
+        self.data = data
+        self.summary = summary
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.data = CodableEntry(data: decoder.decodeDataForKey("d")!)
+        self.summary = decoder.decodeObjectForKey("s", decoder: { return Summary(decoder: $0) }) as! Summary
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeData(self.data.data, forKey: "d")
+        encoder.encodeObject(self.summary, forKey: "s")
+    }
+}
+
 private func extractKey(_ key: ValueBoxKey) -> MessageIndex {
     return MessageIndex(id: MessageId(peerId: PeerId(key.getInt64(0)), namespace: key.getInt32(8 + 8), id: key.getInt32(8 + 8 + 4 + 4)), timestamp: key.getInt32(8 + 8 + 4))
 }
@@ -65,7 +109,13 @@ class MessageHistoryThreadIndexTable: Table {
     }
     
     private struct UpdatedEntry {
-        var value: CodableEntry?
+        var value: StoredMessageHistoryThreadInfo?
+    }
+    
+    enum IndexBoundary {
+        case lowerBound
+        case upperBound
+        case index(StoredPeerThreadCombinedState.Index)
     }
     
     private let reverseIndexTable: MessageHistoryThreadReverseIndexTable
@@ -114,14 +164,16 @@ class MessageHistoryThreadIndexTable: Table {
         return self.lowerBound(peerId: peerId).successor
     }
     
-    func get(peerId: PeerId, threadId: Int64) -> CodableEntry? {
+    func get(peerId: PeerId, threadId: Int64) -> StoredMessageHistoryThreadInfo? {
         if let updated = self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] {
             return updated.value
         } else {
             if let itemIndex = self.reverseIndexTable.get(peerId: peerId, threadId: threadId) {
                 if let value = self.valueBox.get(self.table, key: self.key(peerId: itemIndex.id.peerId, timestamp: itemIndex.timestamp, threadId: threadId, namespace: itemIndex.id.namespace, id: itemIndex.id.id, key: self.sharedKey)) {
                     if value.length != 0 {
-                        return CodableEntry(data: value.makeData())
+                        let decoder = PostboxDecoder(buffer: value)
+                        let state = StoredMessageHistoryThreadInfo(decoder: decoder)
+                        return state
                     } else {
                         return nil
                     }
@@ -134,7 +186,7 @@ class MessageHistoryThreadIndexTable: Table {
         }
     }
     
-    func set(peerId: PeerId, threadId: Int64, info: CodableEntry?) {
+    func set(peerId: PeerId, threadId: Int64, info: StoredMessageHistoryThreadInfo?) {
         self.updatedInfoItems[MessageHistoryThreadsTable.ItemId(peerId: peerId, threadId: threadId)] = UpdatedEntry(value: info)
     }
     
@@ -160,7 +212,9 @@ class MessageHistoryThreadIndexTable: Table {
                 }
                 if let updatedInfo = self.updatedInfoItems[itemId] {
                     if let value = updatedInfo.value {
-                        info = ReadBuffer(data: value.data)
+                        let encoder = PostboxEncoder()
+                        value.encode(encoder)
+                        info = encoder.makeReadBufferAndReset()
                     } else {
                         info = nil
                     }
@@ -185,15 +239,52 @@ class MessageHistoryThreadIndexTable: Table {
         return peerIds
     }
     
-    func getAll(peerId: PeerId) -> [(threadId: Int64, index: MessageIndex, info: CodableEntry)] {
-        var result: [(threadId: Int64, index: MessageIndex, info: CodableEntry)] = []
+    func fetch(peerId: PeerId, namespace: MessageId.Namespace, start: IndexBoundary, end: IndexBoundary, limit: Int) -> [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] {
+        let startKey: ValueBoxKey
+        switch start {
+        case let .index(index):
+            startKey = self.key(peerId: peerId, timestamp: index.timestamp, threadId: index.threadId, namespace: namespace, id: index.messageId, key: ValueBoxKey(length: self.sharedKey.length))
+        case .lowerBound:
+            startKey = self.lowerBound(peerId: peerId)
+        case .upperBound:
+            startKey = self.upperBound(peerId: peerId)
+        }
+        
+        let endKey: ValueBoxKey
+        switch end {
+        case let .index(index):
+            endKey = self.key(peerId: peerId, timestamp: index.timestamp, threadId: index.threadId, namespace: namespace, id: index.messageId, key: ValueBoxKey(length: self.sharedKey.length))
+        case .lowerBound:
+            endKey = self.lowerBound(peerId: peerId)
+        case .upperBound:
+            endKey = self.upperBound(peerId: peerId)
+        }
+        
+        var result: [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] = []
+        self.valueBox.range(self.table, start: startKey, end: endKey, values: { key, value in
+            let keyData = MessageHistoryThreadIndexTable.extract(key: key)
+            if value.length == 0 {
+                return true
+            }
+            let decoder = PostboxDecoder(buffer: value)
+            let state = StoredMessageHistoryThreadInfo(decoder: decoder)
+            result.append((keyData.threadId, keyData.index, state))
+            return true
+        }, limit: limit)
+        
+        return result
+    }
+    
+    func getAll(peerId: PeerId) -> [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] {
+        var result: [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] = []
         self.valueBox.range(self.table, start: self.upperBound(peerId: peerId), end: self.lowerBound(peerId: peerId), values: { key, value in
             let keyData = MessageHistoryThreadIndexTable.extract(key: key)
             if value.length == 0 {
                 return true
             }
-            let info = CodableEntry(data: value.makeData())
-            result.append((keyData.threadId, keyData.index, info))
+            let decoder = PostboxDecoder(buffer: value)
+            let state = StoredMessageHistoryThreadInfo(decoder: decoder)
+            result.append((keyData.threadId, keyData.index, state))
             return true
         }, limit: 100000)
         
@@ -204,5 +295,63 @@ class MessageHistoryThreadIndexTable: Table {
         super.beforeCommit()
         
         self.updatedInfoItems.removeAll()
+    }
+}
+
+class MessageHistoryThreadPinnedTable: Table {
+    static func tableSpec(_ id: Int32) -> ValueBoxTable {
+        return ValueBoxTable(id: id, keyType: .binary, compactValuesOnCreation: true)
+    }
+    
+    private let sharedKey = ValueBoxKey(length: 8 + 4 + 8)
+    
+    override init(valueBox: ValueBox, table: ValueBoxTable, useCaches: Bool) {
+        super.init(valueBox: valueBox, table: table, useCaches: useCaches)
+    }
+    
+    private func key(peerId: PeerId, index: Int32, threadId: Int64) -> ValueBoxKey {
+        self.sharedKey.setInt64(0, value: peerId.toInt64())
+        self.sharedKey.setInt32(8, value: index)
+        self.sharedKey.setInt64(8 + 4, value: threadId)
+        
+        return self.sharedKey
+    }
+    
+    private static func extract(key: ValueBoxKey) -> (peerId: PeerId, threadId: Int64) {
+        return (
+            peerId: PeerId(key.getInt64(0)),
+            threadId: key.getInt64(8 + 4)
+        )
+    }
+    
+    private func lowerBound(peerId: PeerId) -> ValueBoxKey {
+        let key = ValueBoxKey(length: 8)
+        key.setInt64(0, value: peerId.toInt64())
+        return key
+    }
+    
+    private func upperBound(peerId: PeerId) -> ValueBoxKey {
+        return self.lowerBound(peerId: peerId).successor
+    }
+    
+    func get(peerId: PeerId) -> [Int64] {
+        var result: [Int64] = []
+        self.valueBox.range(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId), keys: { key in
+            result.append(MessageHistoryThreadPinnedTable.extract(key: key).threadId)
+            return true
+        }, limit: 0)
+        
+        return result
+    }
+    
+    func set(peerId: PeerId, threadIds: [Int64]) {
+        self.valueBox.removeRange(self.table, start: self.lowerBound(peerId: peerId), end: self.upperBound(peerId: peerId))
+        for i in 0 ..< threadIds.count {
+            self.valueBox.set(self.table, key: self.key(peerId: peerId, index: Int32(i), threadId: threadIds[i]), value: MemoryBuffer())
+        }
+    }
+    
+    override func beforeCommit() {
+        super.beforeCommit()
     }
 }

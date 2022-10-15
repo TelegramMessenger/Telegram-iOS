@@ -365,7 +365,7 @@ public final class AccountContextImpl: AccountContext {
                 let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: data.messageId.peerId, threadId: Int64(data.messageId.id))
                 return self.account.postbox.combinedView(keys: [viewKey])
                 |> map { views -> MessageId? in
-                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.get(MessageHistoryThreadData.self) {
+                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.data.get(MessageHistoryThreadData.self) {
                         return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: data.maxOutgoingReadId)
                     } else {
                         return nil
@@ -402,7 +402,7 @@ public final class AccountContextImpl: AccountContext {
                 let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: data.messageId.peerId, threadId: Int64(data.messageId.id))
                 return self.account.postbox.combinedView(keys: [viewKey])
                 |> map { views -> Int in
-                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.get(MessageHistoryThreadData.self) {
+                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.data.get(MessageHistoryThreadData.self) {
                         return Int(data.incomingUnreadCount)
                     } else {
                         return 0

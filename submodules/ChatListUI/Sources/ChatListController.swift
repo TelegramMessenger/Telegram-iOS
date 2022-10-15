@@ -344,6 +344,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let selectAddMemberDisposable = MetaDisposable()
     private let addMemberDisposable = MetaDisposable()
     private let joinForumDisposable = MetaDisposable()
+    private let actionDisposables = DisposableSet()
     
     public override func updateNavigationCustomData(_ data: Any?, progress: CGFloat, transition: ContainedViewLayoutTransition) {
         if self.isNodeLoaded {
@@ -747,7 +748,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 editItem.accessibilityLabel = strongSelf.presentationData.strings.Common_Edit
                                 strongSelf.navigationItem.setRightBarButton(editItem, animated: true)
                             case .forum:
-                                strongSelf.navigationItem.setRightBarButton(strongSelf.moreBarButtonItem, animated: true)
+                                if strongSelf.navigationItem.rightBarButtonItem !== strongSelf.moreBarButtonItem {
+                                    strongSelf.navigationItem.setRightBarButton(strongSelf.moreBarButtonItem, animated: true)
+                                }
                             }
                         }
                         
@@ -1174,6 +1177,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.selectAddMemberDisposable.dispose()
         self.addMemberDisposable.dispose()
         self.joinForumDisposable.dispose()
+        self.actionDisposables.dispose()
     }
     
     private func openStatusSetup(sourceView: UIView) {
@@ -1332,6 +1336,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return
             }
             strongSelf.deletePeerThread(peerId: peerId, threadId: threadId)
+        }
+        self.chatListDisplayNode.containerNode.setPeerThreadStopped = { [weak self] peerId, threadId, isStopped in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setPeerThreadStopped(peerId: peerId, threadId: threadId, isStopped: isStopped)
+        }
+        self.chatListDisplayNode.containerNode.setPeerThreadPinned = { [weak self] peerId, threadId, isPinned in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setPeerThreadPinned(peerId: peerId, threadId: threadId, isPinned: isPinned)
         }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
@@ -3676,6 +3692,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })
             strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
         })
+    }
+    
+    private func setPeerThreadStopped(peerId: EnginePeer.Id, threadId: Int64, isStopped: Bool) {
+        self.actionDisposables.add(self.context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: isStopped).start())
+    }
+    
+    private func setPeerThreadPinned(peerId: EnginePeer.Id, threadId: Int64, isPinned: Bool) {
+        self.actionDisposables.add(self.context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: isPinned).start())
     }
     
     public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {

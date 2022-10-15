@@ -344,6 +344,7 @@ private final class InnerActionsContainerNode: ASDisplayNode {
 
 final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     private let presentationData: PresentationData
+    private let shadowNode: ASImageNode
     private var effectView: UIVisualEffectView?
     private let highlightBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightTrackingButtonNode
@@ -367,6 +368,13 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     init(presentationData: PresentationData, tip: ContextController.Tip) {
         self.tip = tip
         self.presentationData = presentationData
+        
+        self.shadowNode = ASImageNode()
+        self.shadowNode.displaysAsynchronously = false
+        self.shadowNode.displayWithoutProcessing = true
+        self.shadowNode.image = UIImage(bundleImageName: "Components/Context Menu/Shadow")?.stretchableImage(withLeftCapWidth: 60, topCapHeight: 60)
+        self.shadowNode.contentMode = .scaleToFill
+        self.shadowNode.isHidden = true
         
         self.highlightBackgroundNode = ASDisplayNode()
         self.highlightBackgroundNode.isAccessibilityElement = false
@@ -408,6 +416,12 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
             self.targetSelectionIndex = nil
             icon = nil
             isUserInteractionEnabled = text != nil
+        case let .notificationTopicExceptions(text, action):
+            self.action = action
+            self.text = text
+            self.targetSelectionIndex = nil
+            icon = nil
+            isUserInteractionEnabled = action != nil
         }
         
         self.iconNode = ASImageNode()
@@ -499,7 +513,14 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, presentation: ContextControllerActionsStackNode.Presentation, width: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+        switch presentation {
+        case .inline:
+            self.shadowNode.isHidden = true
+        case .modal:
+            self.shadowNode.isHidden = false
+        }
+        
         switch widthClass {
         case .compact:
             if let effectView = self.effectView {
@@ -609,6 +630,9 @@ final class InnerTextSelectionTipContainerNode: ASDisplayNode {
     func setActualSize(size: CGSize, transition: ContainedViewLayoutTransition) {
         self.highlightBackgroundNode.frame = CGRect(origin: CGPoint(), size: size)
         self.buttonNode.frame = CGRect(origin: CGPoint(), size: size)
+        
+        let bounds = CGRect(origin: CGPoint(), size: size)
+        transition.updateFrame(node: self.shadowNode, frame: bounds.insetBy(dx: -30.0, dy: -30.0))
     }
     
     func updateTheme(presentationData: PresentationData) {
@@ -774,7 +798,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         self.textSelectionTipNodeDisposable?.dispose()
     }
     
-    func updateLayout(widthClass: ContainerViewLayoutSizeClass, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
+    func updateLayout(widthClass: ContainerViewLayoutSizeClass, presentation: ContextControllerActionsStackNode.Presentation, constrainedWidth: CGFloat, constrainedHeight: CGFloat, transition: ContainedViewLayoutTransition) -> CGSize {
         var widthClass = widthClass
         if !self.blurBackground {
             widthClass = .regular
@@ -829,7 +853,7 @@ final class ContextActionsContainerNode: ASDisplayNode {
         
         if let textSelectionTipNode = self.textSelectionTipNode {
             contentSize.height += 8.0
-            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, width: actionsSize.width, transition: transition)
+            let textSelectionTipSize = textSelectionTipNode.updateLayout(widthClass: widthClass, presentation: presentation, width: actionsSize.width, transition: transition)
             transition.updateFrame(node: textSelectionTipNode, frame: CGRect(origin: CGPoint(x: 0.0, y: contentSize.height), size: textSelectionTipSize))
             textSelectionTipNode.setActualSize(size: textSelectionTipSize, transition: transition)
             contentSize.height += textSelectionTipSize.height

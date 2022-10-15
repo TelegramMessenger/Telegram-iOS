@@ -45,6 +45,9 @@ final class PostboxTransaction {
     let updatedGlobalNotificationSettings: Bool
     let updatedPeerTimeoutAttributes: Bool
     let updatedMessageThreadPeerIds: Set<PeerId>
+    let updatedPeerThreadCombinedStates: Set<PeerId>
+    let updatedPeerThreadsSummaries: Set<PeerId>
+    let updatedPinnedThreads: Set<PeerId>
     
     var isEmpty: Bool {
         if currentUpdatedState != nil {
@@ -179,10 +182,19 @@ final class PostboxTransaction {
         if !self.updatedMessageThreadPeerIds.isEmpty {
             return false
         }
+        if !self.updatedPeerThreadCombinedStates.isEmpty {
+            return false
+        }
+        if !self.updatedPeerThreadsSummaries.isEmpty {
+            return false
+        }
+        if !self.updatedPinnedThreads.isEmpty {
+            return false
+        }
         return true
     }
     
-    init(currentUpdatedState: PostboxCoding?, currentPeerHoleOperations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:], currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], chatListOperations: [PeerGroupId: [ChatListOperation]], currentUpdatedChatListInclusions: [PeerId: PeerChatListInclusion], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], currentUpdatedPeerNotificationBehaviorTimestamps: [PeerId: PeerNotificationSettingsBehaviorTimestamp], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: Set<PeerId>, currentUpdatedTotalUnreadStates: [PeerGroupId: ChatListTotalUnreadState], currentUpdatedTotalUnreadSummaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentUpdatedGroupSummarySynchronizeOperations: [PeerGroupAndNamespace: Bool], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]], currentItemCollectionInfosOperations: [ItemCollectionInfosOperation], currentUpdatedPeerChatStates: Set<PeerId>, currentGlobalTagsOperations: [GlobalMessageHistoryTagsOperation], currentLocalTagsOperations: [IntermediateMessageHistoryLocalTagsOperation], updatedMedia: [MediaId: Media?], replaceRemoteContactCount: Int32?, replaceContactPeerIds: Set<PeerId>?, currentPendingMessageActionsOperations: [PendingMessageActionsOperation], currentUpdatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32], currentUpdatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], currentInvalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation], currentUpdatedPendingPeerNotificationSettings: Set<PeerId>, replacedAdditionalChatListItems: [AdditionalChatListItem]?, updatedNoticeEntryKeys: Set<NoticeEntryKey>, updatedCacheEntryKeys: Set<ItemCacheEntryId>, currentUpdatedMasterClientId: Int64?, updatedFailedMessagePeerIds: Set<PeerId>, updatedFailedMessageIds: Set<MessageId>, updatedGlobalNotificationSettings: Bool, updatedPeerTimeoutAttributes: Bool, updatedMessageThreadPeerIds: Set<PeerId>) {
+    init(currentUpdatedState: PostboxCoding?, currentPeerHoleOperations: [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]] = [:], currentOperationsByPeerId: [PeerId: [MessageHistoryOperation]], chatListOperations: [PeerGroupId: [ChatListOperation]], currentUpdatedChatListInclusions: [PeerId: PeerChatListInclusion], currentUpdatedPeers: [PeerId: Peer], currentUpdatedPeerNotificationSettings: [PeerId: (PeerNotificationSettings?, PeerNotificationSettings)], currentUpdatedPeerNotificationBehaviorTimestamps: [PeerId: PeerNotificationSettingsBehaviorTimestamp], currentUpdatedCachedPeerData: [PeerId: CachedPeerData], currentUpdatedPeerPresences: [PeerId: PeerPresence], currentUpdatedPeerChatListEmbeddedStates: Set<PeerId>, currentUpdatedTotalUnreadStates: [PeerGroupId: ChatListTotalUnreadState], currentUpdatedTotalUnreadSummaries: [PeerGroupId: PeerGroupUnreadCountersCombinedSummary], alteredInitialPeerCombinedReadStates: [PeerId: CombinedPeerReadState], currentPeerMergedOperationLogOperations: [PeerMergedOperationLogOperation], currentTimestampBasedMessageAttributesOperations: [TimestampBasedMessageAttributesOperation], unsentMessageOperations: [IntermediateMessageHistoryUnsentOperation], updatedSynchronizePeerReadStateOperations: [PeerId: PeerReadStateSynchronizationOperation?], currentUpdatedGroupSummarySynchronizeOperations: [PeerGroupAndNamespace: Bool], currentPreferencesOperations: [PreferencesOperation], currentOrderedItemListOperations: [Int32: [OrderedItemListOperation]], currentItemCollectionItemsOperations: [ItemCollectionId: [ItemCollectionItemsOperation]], currentItemCollectionInfosOperations: [ItemCollectionInfosOperation], currentUpdatedPeerChatStates: Set<PeerId>, currentGlobalTagsOperations: [GlobalMessageHistoryTagsOperation], currentLocalTagsOperations: [IntermediateMessageHistoryLocalTagsOperation], updatedMedia: [MediaId: Media?], replaceRemoteContactCount: Int32?, replaceContactPeerIds: Set<PeerId>?, currentPendingMessageActionsOperations: [PendingMessageActionsOperation], currentUpdatedMessageActionsSummaries: [PendingMessageActionsSummaryKey: Int32], currentUpdatedMessageTagSummaries: [MessageHistoryTagsSummaryKey: MessageHistoryTagNamespaceSummary], currentInvalidateMessageTagSummaries: [InvalidatedMessageHistoryTagsSummaryEntryOperation], currentUpdatedPendingPeerNotificationSettings: Set<PeerId>, replacedAdditionalChatListItems: [AdditionalChatListItem]?, updatedNoticeEntryKeys: Set<NoticeEntryKey>, updatedCacheEntryKeys: Set<ItemCacheEntryId>, currentUpdatedMasterClientId: Int64?, updatedFailedMessagePeerIds: Set<PeerId>, updatedFailedMessageIds: Set<MessageId>, updatedGlobalNotificationSettings: Bool, updatedPeerTimeoutAttributes: Bool, updatedMessageThreadPeerIds: Set<PeerId>, updatedPeerThreadCombinedStates: Set<PeerId>, updatedPeerThreadsSummaries: Set<PeerId>, updatedPinnedThreads: Set<PeerId>) {
         self.currentUpdatedState = currentUpdatedState
         self.currentPeerHoleOperations = currentPeerHoleOperations
         self.currentOperationsByPeerId = currentOperationsByPeerId
@@ -226,5 +238,8 @@ final class PostboxTransaction {
         self.updatedGlobalNotificationSettings = updatedGlobalNotificationSettings
         self.updatedPeerTimeoutAttributes = updatedPeerTimeoutAttributes
         self.updatedMessageThreadPeerIds = updatedMessageThreadPeerIds
+        self.updatedPeerThreadCombinedStates = updatedPeerThreadCombinedStates
+        self.updatedPeerThreadsSummaries = updatedPeerThreadsSummaries
+        self.updatedPinnedThreads = updatedPinnedThreads
     }
 }

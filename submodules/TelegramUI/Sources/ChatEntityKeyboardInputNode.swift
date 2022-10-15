@@ -2145,7 +2145,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             pendingUnpinnedAllMessages: false,
             activeGroupCallInfo: nil,
             hasActiveGroupCall: false,
-            importState: nil
+            importState: nil,
+            threadData: nil
         )
 
         let _ = inputNode.updateLayout(

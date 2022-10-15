@@ -50,7 +50,7 @@ enum AccountStateUpdateStickerPacksOperation {
 }
 
 enum AccountStateNotificationSettingsSubject {
-    case peer(PeerId)
+    case peer(peerId: PeerId, threadId: Int64?)
 }
 
 enum AccountStateGlobalNotificationSettingsSubject {
@@ -79,7 +79,7 @@ enum AccountStateMutationOperation {
     case UpdateChannelState(PeerId, Int32)
     case UpdateChannelInvalidationPts(PeerId, Int32)
     case UpdateChannelSynchronizedUntilMessage(PeerId, MessageId.Id)
-    case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, PeerNotificationSettings)
+    case UpdateNotificationSettings(AccountStateNotificationSettingsSubject, TelegramPeerNotificationSettings)
     case UpdateGlobalNotificationSettings(AccountStateGlobalNotificationSettingsSubject, MessageNotificationSettings)
     case MergeApiChats([Api.Chat])
     case UpdatePeer(PeerId, (Peer?) -> Peer?)
@@ -346,7 +346,7 @@ struct AccountMutableState {
         self.addOperation(.UpdateChannelSynchronizedUntilMessage(peerId, id))
     }
     
-    mutating func updateNotificationSettings(_ subject: AccountStateNotificationSettingsSubject, notificationSettings: PeerNotificationSettings) {
+    mutating func updateNotificationSettings(_ subject: AccountStateNotificationSettingsSubject, notificationSettings: TelegramPeerNotificationSettings) {
         self.addOperation(.UpdateNotificationSettings(subject, notificationSettings))
     }
     
@@ -581,8 +581,8 @@ struct AccountMutableState {
             case .UpdateChannelSynchronizedUntilMessage:
                 break
             case let .UpdateNotificationSettings(subject, notificationSettings):
-                if case let .peer(peerId) = subject {
-                    if var currentInfo = self.peerChatInfos[peerId] {
+                if case let .peer(peerId, threadId) = subject {
+                    if threadId == nil, var currentInfo = self.peerChatInfos[peerId] {
                         currentInfo.notificationSettings = notificationSettings
                         self.peerChatInfos[peerId] = currentInfo
                     }

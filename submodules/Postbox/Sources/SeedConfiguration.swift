@@ -62,9 +62,11 @@ public final class SeedConfiguration {
     public let upgradedMessageHoles: [PeerId.Namespace: [MessageId.Namespace: Set<MessageTags>]]
     public let messageThreadHoles: [PeerId.Namespace: [MessageId.Namespace]]
     public let messageTagsWithSummary: MessageTags
+    public let messageTagsWithThreadSummary: MessageTags
     public let existingGlobalMessageTags: GlobalMessageTags
     public let peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace]
     public let peerSummaryCounterTags: (Peer, Bool) -> PeerSummaryCounterTags
+    public let peerSummaryIsThreadBased: (Peer) -> Bool
     public let additionalChatListIndexNamespace: MessageId.Namespace?
     public let messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>
     public let defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState]
@@ -84,9 +86,11 @@ public final class SeedConfiguration {
         messageThreadHoles: [PeerId.Namespace: [MessageId.Namespace]],
         existingMessageTags: MessageTags,
         messageTagsWithSummary: MessageTags,
+        messageTagsWithThreadSummary: MessageTags,
         existingGlobalMessageTags: GlobalMessageTags,
         peerNamespacesRequiringMessageTextIndex: [PeerId.Namespace],
         peerSummaryCounterTags: @escaping (Peer, Bool) -> PeerSummaryCounterTags,
+        peerSummaryIsThreadBased: @escaping (Peer) -> Bool,
         additionalChatListIndexNamespace: MessageId.Namespace?,
         messageNamespacesRequiringGroupStatsValidation: Set<MessageId.Namespace>,
         defaultMessageNamespaceReadStates: [MessageId.Namespace: PeerReadState],
@@ -101,9 +105,11 @@ public final class SeedConfiguration {
         self.upgradedMessageHoles = upgradedMessageHoles
         self.messageThreadHoles = messageThreadHoles
         self.messageTagsWithSummary = messageTagsWithSummary
+        self.messageTagsWithThreadSummary = messageTagsWithThreadSummary
         self.existingGlobalMessageTags = existingGlobalMessageTags
         self.peerNamespacesRequiringMessageTextIndex = peerNamespacesRequiringMessageTextIndex
         self.peerSummaryCounterTags = peerSummaryCounterTags
+        self.peerSummaryIsThreadBased = peerSummaryIsThreadBased
         self.additionalChatListIndexNamespace = additionalChatListIndexNamespace
         self.messageNamespacesRequiringGroupStatsValidation = messageNamespacesRequiringGroupStatsValidation
         self.defaultMessageNamespaceReadStates = defaultMessageNamespaceReadStates

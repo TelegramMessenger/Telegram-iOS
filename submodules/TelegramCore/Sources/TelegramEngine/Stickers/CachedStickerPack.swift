@@ -46,9 +46,9 @@ func cacheStickerPack(transaction: Transaction, info: StickerPackCollectionInfo,
                     namespace = Namespaces.ItemCollection.CloudStickerPacks
                 }
                 id = _id
-            default:
-                assertionFailure()
-                break
+            case .name:
+                namespace = info.id.namespace
+                id = info.id.id
         }
         if let namespace = namespace, let id = id {
             if let entry = CodableEntry(CachedStickerPack(info: info, items: items, hash: info.hash)) {

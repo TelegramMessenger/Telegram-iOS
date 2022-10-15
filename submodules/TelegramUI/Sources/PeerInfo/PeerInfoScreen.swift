@@ -370,6 +370,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, updateShowWebView: { _ in
         }, insertText: { _ in
         }, backwardsDeleteText: {
+        }, restartTopic: {
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -387,7 +388,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         self.backgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.blurredBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.rootController.navigationBar.separatorColor
         
-        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
+        let interfaceState = ChatPresentationInterfaceState(chatWallpaper: .color(0), theme: presentationData.theme, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, limitsConfiguration: .defaultValue, fontSize: .regular, bubbleCorners: PresentationChatBubbleCorners(mainRadius: 16.0, auxiliaryRadius: 8.0, mergeBubbleCorners: true), accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: self.peerId), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil, threadData: nil)
         let panelHeight = self.selectionPanel.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: layout.intrinsicInsets.bottom, additionalSideInsets: UIEdgeInsets(), maxHeight: 0.0, isSecondary: false, transition: transition, interfaceState: interfaceState, metrics: layout.metrics, isMediaInputExpanded: false)
         
         transition.updateFrame(node: self.selectionPanel, frame: CGRect(origin: CGPoint(), size: CGSize(width: layout.size.width, height: panelHeight)))
@@ -1875,6 +1876,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     
     private weak var copyProtectionTooltipController: TooltipController?
     weak var emojiStatusSelectionController: ViewController?
+    
+    private var forumTopicNotificationExceptions: [(threadId: Int64, EnginePeer.NotificationSettings)] = []
+    private var forumTopicNotificationExceptionsDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
     var ready: Promise<Bool> {
@@ -3410,6 +3414,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.shareStatusDisposable?.dispose()
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
+        self.forumTopicNotificationExceptionsDisposable?.dispose()
         
         self.copyProtectionTooltipController?.dismiss()
     }
@@ -3444,6 +3449,19 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 self.groupMembersSearchContext = nil
             }
         }
+        
+        if let channel = data.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            if self.forumTopicNotificationExceptionsDisposable == nil {
+                self.forumTopicNotificationExceptionsDisposable = (self.context.engine.peers.forumChannelTopicNotificationExceptions(id: channel.id)
+                |> deliverOnMainQueue).start(next: { [weak self] list in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.forumTopicNotificationExceptions = list
+                })
+            }
+        }
+        
         if let (layout, navigationHeight) = self.validLayout {
             var updatedMemberCount: Int?
             if let data = self.data {
@@ -4124,10 +4142,23 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
                 })))
                 
+                var tip: ContextController.Tip?
+                if !self.forumTopicNotificationExceptions.isEmpty {
+                    //TODO:localize
+                    let text: String
+                    if self.forumTopicNotificationExceptions.count == 1 {
+                        text = "There is 1 topic that is listed as exception."
+                    } else {
+                        text = "There are \(self.forumTopicNotificationExceptions.count) topics that are listed as exceptions."
+                    }
+                    tip = .notificationTopicExceptions(text: text, action: {
+                    })
+                }
+                
                 self.view.endEditing(true)
                 
                 if let sourceNode = self.headerNode.buttonNodes[.mute]?.referenceNode {
-                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+                    let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: .reference(PeerInfoContextReferenceContentSource(controller: controller, sourceNode: sourceNode)), items: .single(ContextController.Items(content: .list(items), tip: tip)), gesture: gesture)
                     contextController.dismissed = { [weak self] in
                         if let strongSelf = self {
                             strongSelf.state = strongSelf.state.withHighlightedButton(nil)

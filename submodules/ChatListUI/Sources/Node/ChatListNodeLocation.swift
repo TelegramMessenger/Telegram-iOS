@@ -225,19 +225,26 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
                 }
                 
+                let pinnedIndex: EngineChatList.Item.PinnedIndex
+                if let index = item.pinnedIndex {
+                    pinnedIndex = .index(index)
+                } else {
+                    pinnedIndex = .none
+                }
+                
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
-                    index: .forum(timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
+                    index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                     messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
                     readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
                     isMuted: isMuted,
                     draft: nil,
-                    threadInfo: data.info,
+                    threadData: data,
                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
                     presence: nil,
                     hasUnseenMentions: hasUnseenMentions,
                     hasUnseenReactions: hasUnseenReactions,
-                    forumTopicTitle: nil,
+                    forumTopicData: nil,
                     hasFailed: false,
                     isContact: false
                 ))
@@ -249,7 +256,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 additionalItems: [],
                 hasEarlier: false,
                 hasLater: false,
-                isLoading: false
+                isLoading: view.isLoading
             )
             
             let type: ViewUpdateType

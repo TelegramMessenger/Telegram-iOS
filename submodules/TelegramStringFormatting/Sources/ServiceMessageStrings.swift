@@ -684,7 +684,20 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 attributedString = NSAttributedString(string: "Topic created", font: titleFont, textColor: primaryTextColor)
             case let .topicEdited(components):
                 //TODO:localize
-                if let title = components.compactMap({ item -> String? in
+                if let isClosed = components.compactMap({ item -> Bool? in
+                    switch item {
+                    case let .isClosed(isClosed):
+                        return isClosed
+                    default:
+                        return nil
+                    }
+                }).first {
+                    if isClosed {
+                        attributedString = NSAttributedString(string: "Topic closed", font: titleFont, textColor: primaryTextColor)
+                    } else {
+                        attributedString = NSAttributedString(string: "Topic restarted", font: titleFont, textColor: primaryTextColor)
+                    }
+                } else if let title = components.compactMap({ item -> String? in
                     switch item {
                     case let .title(title):
                         return title

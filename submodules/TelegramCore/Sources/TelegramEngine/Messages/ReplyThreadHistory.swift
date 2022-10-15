@@ -337,7 +337,7 @@ private class ReplyThreadHistoryContextImpl {
         let account = self.account
         
         let _ = (self.account.postbox.transaction { transaction -> (Api.InputPeer?, MessageId?, Int?) in
-            if var data = transaction.getMessageHistoryThreadInfo(peerId: messageId.peerId, threadId: Int64(messageId.id))?.get(MessageHistoryThreadData.self) {
+            if var data = transaction.getMessageHistoryThreadInfo(peerId: messageId.peerId, threadId: Int64(messageId.id))?.data.get(MessageHistoryThreadData.self) {
                 if messageIndex.id.id >= data.maxIncomingReadId {
                     if let count = transaction.getThreadMessageCount(peerId: messageId.peerId, threadId: Int64(messageId.id), namespace: messageId.namespace, fromIdExclusive: data.maxIncomingReadId, toIndex: messageIndex) {
                         data.incomingUnreadCount = max(0, data.incomingUnreadCount - Int32(count))
@@ -346,7 +346,7 @@ private class ReplyThreadHistoryContextImpl {
                     
                     data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
                     
-                    if let entry = CodableEntry(data) {
+                    if let entry = StoredMessageHistoryThreadInfo(data) {
                         transaction.setMessageHistoryThreadInfo(peerId: messageId.peerId, threadId: Int64(messageId.id), info: entry)
                     }
                 }
@@ -598,7 +598,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
         
         let replyInfo = Promise<MessageHistoryThreadData?>()
         replyInfo.set(account.postbox.transaction { transaction -> MessageHistoryThreadData? in
-            return transaction.getMessageHistoryThreadInfo(peerId: messageId.peerId, threadId: Int64(messageId.id))?.get(MessageHistoryThreadData.self)
+            return transaction.getMessageHistoryThreadInfo(peerId: messageId.peerId, threadId: Int64(messageId.id))?.data.get(MessageHistoryThreadData.self)
         })
         
         let remoteDiscussionMessageSignal: Signal<DiscussionMessage?, NoError> = account.network.request(Api.functions.messages.getDiscussionMessage(peer: inputPeer, msgId: messageId.id))

@@ -1520,14 +1520,14 @@ public final class AccountViewTracker {
             signal = combineLatest(signal, postbox.combinedView(keys: [viewKey]))
             |> map { view, additionalViews -> (MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?) in
                 var view = view
-                if let threadInfo = additionalViews.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.get(MessageHistoryThreadData.self) {
+                if let threadInfo = additionalViews.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.data.get(MessageHistoryThreadData.self) {
                     let readState = CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: data.maxIncomingReadId, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: data.maxKnownMessageId, count: data.incomingUnreadCount, markedUnread: false))])
                     
                     let fixed = fixedReadStates.modify { current in
                         if let current = current {
                             return current
                         } else {
-                            return view.0.fixedReadStates ?? .peer([peerId: readState])
+                            return .peer([peerId: readState])
                         }
                     }
                     
@@ -1701,8 +1701,8 @@ public final class AccountViewTracker {
         if let account = self.account {
             let signal: Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError>
             if let peerId = chatLocation.peerId, let threadId = chatLocation.threadId, tagMask == nil {
-                return account.postbox.transaction { transaction -> MessageHistoryThreadData? in
-                    return transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.get(MessageHistoryThreadData.self)
+                signal = account.postbox.transaction { transaction -> MessageHistoryThreadData? in
+                    return transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self)
                 }
                 |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
                     if let threadInfo = threadInfo {

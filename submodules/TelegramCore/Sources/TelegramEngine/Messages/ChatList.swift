@@ -26,6 +26,16 @@ public final class EngineChatList: Equatable {
             self.entities = entities
         }
     }
+    
+    public struct ForumTopicData: Equatable {
+        public var title: String
+        public var maxOutgoingReadMessageId: EngineMessage.Id
+        
+        public init(title: String, maxOutgoingReadMessageId: EngineMessage.Id) {
+            self.title = title
+            self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
+        }
+    }
 
     public final class Item: Equatable {
         public enum Id: Hashable {
@@ -33,11 +43,35 @@ public final class EngineChatList: Equatable {
             case forum(Int64)
         }
         
+        public enum PinnedIndex: Equatable, Comparable {
+            case none
+            case index(Int)
+            
+            public static func <(lhs: PinnedIndex, rhs: PinnedIndex) -> Bool {
+                switch lhs {
+                case .none:
+                    switch rhs {
+                    case .none:
+                        return false
+                    case .index:
+                        return false
+                    }
+                case let .index(lhsValue):
+                    switch rhs {
+                    case .none:
+                        return true
+                    case let .index(rhsValue):
+                        return lhsValue >= rhsValue
+                    }
+                }
+            }
+        }
+        
         public enum Index: Equatable, Comparable {
             public typealias ChatList = ChatListIndex
             
             case chatList(ChatListIndex)
-            case forum(timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
+            case forum(pinnedIndex: PinnedIndex, timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
             
             public static func <(lhs: Index, rhs: Index) -> Bool {
                 switch lhs {
@@ -47,8 +81,11 @@ public final class EngineChatList: Equatable {
                     } else {
                         return true
                     }
-                case let .forum(lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
-                    if case let .forum(rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                case let .forum(lhsPinnedIndex, lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
+                    if case let .forum(rhsPinnedIndex, rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                        if lhsPinnedIndex != rhsPinnedIndex {
+                            return lhsPinnedIndex < rhsPinnedIndex
+                        }
                         if lhsTimestamp != rhsTimestamp {
                             return lhsTimestamp < rhsTimestamp
                         }
@@ -72,12 +109,12 @@ public final class EngineChatList: Equatable {
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draft: Draft?
-        public let threadInfo: EngineMessageHistoryThread.Info?
+        public let threadData: MessageHistoryThreadData?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
         public let hasUnseenReactions: Bool
-        public let forumTopicTitle: String?
+        public let forumTopicData: ForumTopicData?
         public let hasFailed: Bool
         public let isContact: Bool
 
@@ -88,12 +125,12 @@ public final class EngineChatList: Equatable {
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draft: Draft?,
-            threadInfo: EngineMessageHistoryThread.Info?,
+            threadData: MessageHistoryThreadData?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
-            forumTopicTitle: String?,
+            forumTopicData: ForumTopicData?,
             hasFailed: Bool,
             isContact: Bool
         ) {
@@ -103,12 +140,12 @@ public final class EngineChatList: Equatable {
             self.readCounters = readCounters
             self.isMuted = isMuted
             self.draft = draft
-            self.threadInfo = threadInfo
+            self.threadData = threadData
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
-            self.forumTopicTitle = forumTopicTitle
+            self.forumTopicData = forumTopicData
             self.hasFailed = hasFailed
             self.isContact = isContact
         }
@@ -132,7 +169,7 @@ public final class EngineChatList: Equatable {
             if lhs.draft != rhs.draft {
                 return false
             }
-            if lhs.threadInfo != rhs.threadInfo {
+            if lhs.threadData != rhs.threadData {
                 return false
             }
             if lhs.renderedPeer != rhs.renderedPeer {
@@ -147,7 +184,7 @@ public final class EngineChatList: Equatable {
             if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
                 return false
             }
-            if lhs.forumTopicTitle != rhs.forumTopicTitle {
+            if lhs.forumTopicData != rhs.forumTopicData {
                 return false
             }
             if lhs.hasFailed != rhs.hasFailed {
@@ -383,16 +420,12 @@ extension EngineChatList.Item {
                 hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
             }
             
-            var forumTopicTitle: String?
-            if let forumTopicData = forumTopicData?.get(MessageHistoryThreadData.self) {
-                forumTopicTitle = forumTopicData.info.title
+            var forumTopicDataValue: EngineChatList.ForumTopicData?
+            if let forumTopicData = forumTopicData?.data.get(MessageHistoryThreadData.self) {
+                forumTopicDataValue = EngineChatList.ForumTopicData(title: forumTopicData.info.title, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
             }
             
-            var readCounters = readState.flatMap(EnginePeerReadCounters.init)
-            
-            if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.isForum) {
-                readCounters = nil
-            }
+            let readCounters = readState.flatMap(EnginePeerReadCounters.init)
 
             self.init(
                 id: .chatList(index.messageIndex.id.peerId),
@@ -401,12 +434,12 @@ extension EngineChatList.Item {
                 readCounters: readCounters,
                 isMuted: isRemovedFromTotalUnreadCount,
                 draft: draft,
-                threadInfo: nil,
+                threadData: nil,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,
                 hasUnseenReactions: hasUnseenReactions,
-                forumTopicTitle: forumTopicTitle,
+                forumTopicData: forumTopicDataValue,
                 hasFailed: hasFailed,
                 isContact: isContact
             )
