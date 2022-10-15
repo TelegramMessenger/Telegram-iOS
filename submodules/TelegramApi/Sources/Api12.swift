@@ -1,5 +1,5 @@
 public extension Api {
-    indirect enum MessageEntity: TypeConstructorDescription {
+    enum MessageEntity: TypeConstructorDescription {
         case inputMessageEntityMentionName(offset: Int32, length: Int32, userId: Api.InputUser)
         case messageEntityBankCard(offset: Int32, length: Int32)
         case messageEntityBlockquote(offset: Int32, length: Int32)

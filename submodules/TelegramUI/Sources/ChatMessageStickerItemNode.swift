@@ -590,7 +590,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
-                        inlineBotNameString = bot.username
+                        inlineBotNameString = bot.addressName
                     } else {
                         inlineBotNameString = attribute.title
                     }

@@ -184,7 +184,7 @@ class ChatMessageForwardInfoNode: ASDisplayNode {
             var currentCredibilityIconImage: UIImage?
             var highlight = true
             if let peer = peer {
-                if let channel = peer as? TelegramChannel, channel.username == nil {
+                if let channel = peer as? TelegramChannel, channel.addressName == nil {
                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                     } else if case .member = channel.participationStatus {
                     } else {

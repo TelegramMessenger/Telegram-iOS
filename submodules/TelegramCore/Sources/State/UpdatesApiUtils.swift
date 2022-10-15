@@ -296,7 +296,7 @@ extension Api.Update {
                 } else {
                     return []
                 }
-            case let .updateDraftMessage(peer: peer, draft: _):
+            case let .updateDraftMessage(_, peer, _, _):
                 return [peer.peerId]
             case let .updateNewScheduledMessage(message):
                 return apiMessagePeerIds(message)

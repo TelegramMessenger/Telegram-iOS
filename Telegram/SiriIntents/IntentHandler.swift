@@ -790,7 +790,7 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
-                        if let username = peer.username, !username.isEmpty {
+                        if let username = peer.addressName, !username.isEmpty {
                             accountTitle = "@\(username)"
                         } else {
                             accountTitle = peer.debugDisplayTitle
@@ -963,7 +963,7 @@ private final class WidgetIntentHandler {
                 accountResults.append(accountTransaction(rootPath: rootPath, id: accountId, encryptionParameters: encryptionParameters, isReadOnly: true, useCopy: false, transaction: { postbox, transaction -> INObjectSection<Friend> in
                     var accountTitle: String = ""
                     if let peer = transaction.getPeer(accountPeerId) as? TelegramUser {
-                        if let username = peer.username, !username.isEmpty {
+                        if let username = peer.addressName, !username.isEmpty {
                             accountTitle = "@\(username)"
                         } else {
                             accountTitle = peer.debugDisplayTitle

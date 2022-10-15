@@ -125,7 +125,7 @@ private func peerIdsRequiringLocalChatStateFromUpdates(_ updates: [Api.Update]) 
                 peerIds.insert(PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)))
             case let .updateReadHistoryInbox(_, _, peer, _, _, _, _):
                 peerIds.insert(peer.peerId)
-            case let .updateDraftMessage(peer, draft):
+            case let .updateDraftMessage(_, peer, _, draft):
                 switch draft {
                     case .draftMessage:
                         peerIds.insert(peer.peerId)
@@ -1236,11 +1236,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 })
             case let .updateUserStatus(userId, status):
                 updatedState.mergePeerPresences([PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)): status], explicit: true)
-            case let .updateUserName(userId, _, _, username):
+            case let .updateUserName(userId, _, _, usernames):
                 //TODO add contact checking for apply first and last name
                 updatedState.updatePeer(PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), { peer in
                     if let user = peer as? TelegramUser {
-                        return user.withUpdatedUsername(username)
+                        return user.withUpdatedUsernames(usernames.map { TelegramPeerUsername(apiUsername: $0) })
                     } else {
                         return peer
                     }
@@ -1410,7 +1410,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addUpdateInstalledStickerPacks(.sync)
             case .updateSavedGifs:
                 updatedState.addUpdateRecentGifs()
-            case let .updateDraftMessage(peer, draft):
+            case let .updateDraftMessage(_, peer, _, draft):
                 let inputState: SynchronizeableChatInputState?
                 switch draft {
                     case .draftMessageEmpty:
@@ -1551,7 +1551,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         return current
                     }
                 })
-            case let .updateMessageReactions(peer, msgId, reactions):
+            case let .updateMessageReactions(_, peer, msgId, _, reactions):
                 updatedState.updateMessageReactions(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), reactions: reactions, eventTimestamp: updatesDate)
             case .updateAttachMenuBots:
                 updatedState.addUpdateAttachMenuBots()

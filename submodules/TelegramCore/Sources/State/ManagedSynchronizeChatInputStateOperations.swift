@@ -141,14 +141,14 @@ private func synchronizeChatInputState(transaction: Transaction, postbox: Postbo
                 flags |= (1 << 3)
             }
         }
-        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
-            |> delay(2.0, queue: Queue.concurrentDefaultQueue())
-            |> `catch` { _ -> Signal<Api.Bool, NoError> in
-                return .single(.boolFalse)
-            }
-            |> mapToSignal { _ -> Signal<Void, NoError> in
-                return .complete()
-            }
+        return network.request(Api.functions.messages.saveDraft(flags: flags, replyToMsgId: inputState?.replyToMessageId?.id, topMsgId: nil, peer: inputPeer, message: inputState?.text ?? "", entities: apiEntitiesFromMessageTextEntities(inputState?.entities ?? [], associatedPeers: SimpleDictionary())))
+        |> delay(2.0, queue: Queue.concurrentDefaultQueue())
+        |> `catch` { _ -> Signal<Api.Bool, NoError> in
+            return .single(.boolFalse)
+        }
+        |> mapToSignal { _ -> Signal<Void, NoError> in
+            return .complete()
+        }
     } else {
         return .complete()
     }

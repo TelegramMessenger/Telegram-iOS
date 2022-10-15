@@ -1291,7 +1291,7 @@ public extension Api.payments {
     }
 }
 public extension Api.payments {
-    indirect enum PaymentResult: TypeConstructorDescription {
+    enum PaymentResult: TypeConstructorDescription {
         case paymentResult(updates: Api.Updates)
         case paymentVerificationNeeded(url: String)
     

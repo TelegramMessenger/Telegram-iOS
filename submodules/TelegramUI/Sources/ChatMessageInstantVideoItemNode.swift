@@ -424,7 +424,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
                     if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
-                        inlineBotNameString = bot.username
+                        inlineBotNameString = bot.addressName
                     } else {
                         inlineBotNameString = attribute.title
                     }
@@ -918,7 +918,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if let item = self.item, let forwardInfo = item.message.forwardInfo {
                     let performAction: () -> Void = {
                         if let sourceMessageId = forwardInfo.sourceMessageId {
-                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                            if !item.message.id.peerId.isReplies, let channel = forwardInfo.author as? TelegramChannel, channel.addressName == nil {
                                 if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                 } else if case .member = channel.participationStatus {
                                 } else {

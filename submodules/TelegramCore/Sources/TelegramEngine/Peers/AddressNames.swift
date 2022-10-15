@@ -303,7 +303,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
     return account.postbox.transaction { transaction -> Signal<Void, ReorderAddressNamesError> in
         switch domain {
             case .account:
-                return account.network.request(Api.functions.account.reorderUsernames(order: names.filter { $0.flags.contains(.isActive) }.map { $0.username }), automaticFloodWait: false)
+                return account.network.request(Api.functions.account.reorderUsernames(order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
                 |> mapError { _ -> ReorderAddressNamesError in
                     return .generic
                 }
@@ -319,7 +319,7 @@ func _internal_reorderAddressNames(account: Account, domain: AddressNameDomain, 
                 }
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
-                    return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.filter { $0.flags.contains(.isActive) }.map { $0.username }), automaticFloodWait: false)
+                    return account.network.request(Api.functions.channels.reorderUsernames(channel: inputChannel, order: names.filter { $0.isActive }.map { $0.username }), automaticFloodWait: false)
                     |> mapError { _ -> ReorderAddressNamesError in
                         return .generic
                     }

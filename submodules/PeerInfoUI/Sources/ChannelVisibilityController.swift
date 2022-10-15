@@ -943,14 +943,14 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
             }
         }
         
-        let currentAddressName: String
+        let currentUsername: String
         if let current = state.editingPublicLinkText {
-            currentAddressName = current
+            currentUsername = current
         } else {
-            if let addressName = peer.addressName {
-                currentAddressName = addressName
+            if let username = peer.editableUsername {
+                currentUsername = username
             } else {
-                currentAddressName = ""
+                currentUsername = ""
             }
         }
         
@@ -1019,7 +1019,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
         } else {
             switch selectedType {
                 case .publicChannel:
-                    entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Group_PublicLink_Placeholder, currentAddressName))
+                    entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Group_PublicLink_Placeholder, currentUsername))
                     if let status = state.addressNameValidationStatus {
                         let text: String
                         switch status {
@@ -1055,7 +1055,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                             case let .availability(availability):
                                 switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentUsername).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -1208,11 +1208,11 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         selectedType = .privateChannel
                     }
                     
-                    let currentAddressName: String
+                    let currentUsername: String
                     if let current = state.editingPublicLinkText {
-                        currentAddressName = current
+                        currentUsername = current
                     } else {
-                        currentAddressName = ""
+                        currentUsername = ""
                     }
                     
                     entries.append(.typeHeader(presentationData.theme, presentationData.strings.Group_Setup_TypeHeader.uppercased()))
@@ -1228,7 +1228,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                     
                     switch selectedType {
                         case .publicChannel:
-                            entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentAddressName))
+                            entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, "", currentUsername))
                             if let status = state.addressNameValidationStatus {
                                 let text: String
                                 switch status {
@@ -1248,7 +1248,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                 case let .availability(availability):
                                     switch availability {
                                     case .available:
-                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentAddressName).string
+                                        text = presentationData.strings.Channel_Username_UsernameIsAvailable(currentUsername).string
                                     case .invalid:
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
@@ -1319,38 +1319,38 @@ private func updatedAddressName(mode: ChannelVisibilityControllerMode, state: Ch
     if let peer = peer as? TelegramChannel {
         let selectedType = effectiveChannelType(mode: mode, state: state, peer: peer, cachedData: cachedData)
         
-        let currentAddressName: String
+        let currentUsername: String
         
         switch selectedType {
             case .privateChannel:
-                currentAddressName = ""
+                currentUsername = ""
             case .publicChannel:
                 if let current = state.editingPublicLinkText {
-                    currentAddressName = current
+                    currentUsername = current
                 } else {
-                    if let addressName = peer.addressName {
-                        currentAddressName = addressName
+                    if let username = peer.editableUsername {
+                        currentUsername = username
                     } else {
-                        currentAddressName = ""
+                        currentUsername = ""
                     }
                 }
         }
         
-        if !currentAddressName.isEmpty {
-            if currentAddressName != peer.addressName {
-                return currentAddressName
+        if !currentUsername.isEmpty {
+            if currentUsername != peer.editableUsername {
+                return currentUsername
             } else {
                 return nil
             }
-        } else if peer.addressName != nil {
+        } else if peer.editableUsername != nil {
             return ""
         } else {
             return nil
         }
     } else if let _ = peer as? TelegramGroup {
-        let currentAddressName = state.editingPublicLinkText ?? ""
-        if !currentAddressName.isEmpty {
-            return currentAddressName
+        let currentUsername = state.editingPublicLinkText ?? ""
+        if !currentUsername.isEmpty {
+            return currentUsername
         } else {
             return nil
         }
@@ -2082,7 +2082,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
             switch entry {
             case let .additionalLink(_, link, _):
                 currentUsernames.append(link.username)
-                if !link.flags.contains(.isActive) && maxIndex == nil {
+                if !link.isActive && maxIndex == nil {
                     maxIndex = max(0, i - 1)
                 }
                 i += 1
@@ -2094,7 +2094,7 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
         if toIndex < entries.count {
             switch entries[toIndex] {
                 case let .additionalLink(_, toUsername, _):
-                    if toUsername.flags.contains(.isActive) {
+                    if toUsername.isActive {
                         referenceId = toUsername.username
                     } else {
                         afterAll = true

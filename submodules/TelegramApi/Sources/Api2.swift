@@ -555,7 +555,7 @@ public extension Api {
     }
 }
 public extension Api {
-    indirect enum ChannelAdminLogEvent: TypeConstructorDescription {
+    enum ChannelAdminLogEvent: TypeConstructorDescription {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int64, action: Api.ChannelAdminLogEventAction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -605,7 +605,7 @@ public extension Api {
     }
 }
 public extension Api {
-    indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
+    enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
@@ -615,6 +615,7 @@ public extension Api {
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
+        case channelAdminLogEventActionChangeUsernames(prevValue: [String], newValue: [String])
         case channelAdminLogEventActionDefaultBannedRights(prevBannedRights: Api.ChatBannedRights, newBannedRights: Api.ChatBannedRights)
         case channelAdminLogEventActionDeleteMessage(message: Api.Message)
         case channelAdminLogEventActionDiscardGroupCall(call: Api.InputGroupCall)
@@ -707,6 +708,21 @@ public extension Api {
                     }
                     serializeString(prevValue, buffer: buffer, boxed: false)
                     serializeString(newValue, buffer: buffer, boxed: false)
+                    break
+                case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(-263212119)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prevValue.count))
+                    for item in prevValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newValue.count))
+                    for item in newValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
                     break
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
                     if boxed {
@@ -900,6 +916,8 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeTitle", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
                 case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeUsername", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeUsernames", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
                 return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", String(describing: prevBannedRights)), ("newBannedRights", String(describing: newBannedRights))])
                 case .channelAdminLogEventActionDeleteMessage(let message):
@@ -1094,6 +1112,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsername(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionChangeUsernames(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: [String]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsernames(prevValue: _1!, newValue: _2!)
             }
             else {
                 return nil

@@ -204,6 +204,56 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: text, attributes: attributes, media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
                         return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil), additionalContent: !prev.isEmpty ? .eventLogPreviousLink(prevMessage) : nil)
                 }
+            case let .changeUsernames(prev, new):
+                var peers = SimpleDictionary<PeerId, Peer>()
+                var author: Peer?
+                if let peer = self.entry.peers[self.entry.event.peerId] {
+                    author = peer
+                    peers[peer.id] = peer
+                }
+                
+                switch self.id.contentIndex {
+                    case .header:
+                        var text: String = ""
+                        var entities: [MessageTextEntity] = []
+                        if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedChannelUsername(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                                if index == 0, let author = author {
+                                    return [.TextMention(peerId: author.id)]
+                                }
+                                return []
+                            }, to: &text, entities: &entities)
+                        } else {
+                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedGroupUsername(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                                if index == 0, let author = author {
+                                    return [.TextMention(peerId: author.id)]
+                                }
+                                return []
+                            }, to: &text, entities: &entities)
+                        }
+                        let action: TelegramMediaActionType = TelegramMediaActionType.customText(text: text, entities: entities)
+                        let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 1), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: "", attributes: [], media: [TelegramMediaAction(action: action)], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+                        return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil))
+                    case .content:
+                        var previousAttributes: [MessageAttribute] = []
+                        var attributes: [MessageAttribute] = []
+                        
+                        let prevText = "https://t.me/\(prev.first ?? "")"
+                        previousAttributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< prevText.count, type: .Url)]))
+                        
+                        let text: String
+                        if !new.isEmpty {
+                            text = "https://t.me/\(new.first ?? "")"
+                            attributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< text.count, type: .Url)]))
+                        } else {
+                            text = self.presentationData.strings.Channel_AdminLog_EmptyMessageText
+                            attributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< text.count, type: .Italic)]))
+                        }
+                        
+                        let prevMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 1), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: prevText, attributes: previousAttributes, media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+                        let message = Message(stableId: self.entry.stableId, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(bitPattern: self.entry.stableId)), globallyUniqueId: self.entry.event.id, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: self.entry.event.date, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: author, text: text, attributes: attributes, media: [], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+                        return ChatMessageItem(presentationData: self.presentationData, context: context, chatLocation: .peer(id: peer.id), associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .channel, automaticDownloadNetworkType: .cellular, isRecentActions: true, availableReactions: nil, defaultReaction: nil, isPremium: false, accountPeer: nil), controllerInteraction: controllerInteraction, content: .message(message: message, read: true, selection: .none, attributes: ChatMessageEntryAttributes(), location: nil), additionalContent: !prev.isEmpty ? .eventLogPreviousLink(prevMessage) : nil)
+                }
             case let .changePhoto(_, new):
                 var peers = SimpleDictionary<PeerId, Peer>()
                 var author: Peer?

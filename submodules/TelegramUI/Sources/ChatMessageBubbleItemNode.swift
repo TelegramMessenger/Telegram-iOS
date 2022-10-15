@@ -1412,7 +1412,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         for attribute in firstMessage.attributes {
             if let attribute = attribute as? InlineBotMessageAttribute {
                 if let peerId = attribute.peerId, let bot = firstMessage.peers[peerId] as? TelegramUser {
-                    inlineBotNameString = bot.username
+                    inlineBotNameString = bot.addressName
                 } else {
                     inlineBotNameString = attribute.title
                 }
@@ -3363,7 +3363,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     if let item = self.item, let forwardInfo = item.message.forwardInfo {
                         let performAction: () -> Void = {
                             if let sourceMessageId = forwardInfo.sourceMessageId {
-                                if let channel = forwardInfo.author as? TelegramChannel, channel.username == nil {
+                                if let channel = forwardInfo.author as? TelegramChannel, channel.addressName == nil {
                                     if case let .broadcast(info) = channel.info, info.flags.contains(.hasDiscussionGroup) {
                                     } else if case .member = channel.participationStatus {
                                     } else if !item.message.id.peerId.isReplies {

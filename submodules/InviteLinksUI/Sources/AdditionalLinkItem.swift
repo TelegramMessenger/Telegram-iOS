@@ -203,7 +203,7 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
             
             let iconColor: UIColor
             if let username = item.username {
-                if username.flags.contains(.isEditable) || username.flags.contains(.isActive) {
+                if username.isActive {
                     iconColor = item.presentationData.theme.list.itemAccentColor
                 } else {
                     iconColor = UIColor(rgb: 0xa8b2bb)
@@ -218,7 +218,7 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
             if let username = item.username {
                 titleText = "@\(username.username)"
                 
-                if username.flags.contains(.isEditable) || username.flags.contains(.isActive) {
+                if username.isActive {
                     subtitleText = item.presentationData.strings.Group_Setup_LinkActive
                     subtitleColor = item.presentationData.theme.list.itemAccentColor
                 } else {
@@ -388,13 +388,14 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
                                         
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: contentSize.height + UIScreenPixel + UIScreenPixel))
                     
-                    if strongSelf.reorderControlNode == nil && item.username?.flags.contains(.isActive) == true {
+                    let isReorderable = item.username?.isActive == true
+                    if isReorderable {
                         let reorderControlNode = reorderControlSizeAndApply.1(layout.contentSize.height, false, .immediate)
                         strongSelf.reorderControlNode = reorderControlNode
                         strongSelf.addSubnode(reorderControlNode)
                         reorderControlNode.alpha = 0.0
                         transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
-                    } else if let reorderControlNode = strongSelf.reorderControlNode, item.username?.flags.contains(.isActive) == false {
+                    } else if let reorderControlNode = strongSelf.reorderControlNode, item.username?.isActive == false {
                         strongSelf.reorderControlNode = nil
                         reorderControlNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak reorderControlNode] _ in
                             reorderControlNode?.removeFromSupernode()

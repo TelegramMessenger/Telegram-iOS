@@ -858,7 +858,7 @@ public final class AccountViewTracker {
                                         }
                                         for update in updateList {
                                             switch update {
-                                            case let .updateMessageReactions(peer, msgId, reactions):
+                                            case let .updateMessageReactions(_, peer, msgId, _, reactions):
                                                 transaction.updateMessage(MessageId(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, id: msgId), update: { currentMessage in
                                                     var updatedReactions = ReactionsMessageAttribute(apiReactions: reactions)
                                                     

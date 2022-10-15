@@ -781,7 +781,7 @@ public extension Api {
     }
 }
 public extension Api {
-    indirect enum InputSingleMedia: TypeConstructorDescription {
+    enum InputSingleMedia: TypeConstructorDescription {
         case inputSingleMedia(flags: Int32, media: Api.InputMedia, randomId: Int64, message: String, entities: [Api.MessageEntity]?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {

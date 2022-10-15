@@ -26,7 +26,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                     }
                     for update in updates {
                         switch update {
-                            case let .updateDraftMessage(peer, _):
+                            case let .updateDraftMessage(_, peer, _, _):
                                 peerIds.insert(peer.peerId)
                             default:
                                 break
@@ -42,7 +42,7 @@ func _internal_clearCloudDraftsInteractively(postbox: Postbox, network: Network,
                         _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: nil)
                         
                         if let peer = transaction.getPeer(peerId), let inputPeer = apiInputPeer(peer) {
-                            signals.append(network.request(Api.functions.messages.saveDraft(flags: 0, replyToMsgId: nil, peer: inputPeer, message: "", entities: nil))
+                            signals.append(network.request(Api.functions.messages.saveDraft(flags: 0, replyToMsgId: nil, topMsgId: nil, peer: inputPeer, message: "", entities: nil))
                             |> `catch` { _ -> Signal<Api.Bool, NoError> in
                                 return .single(.boolFalse)
                             }

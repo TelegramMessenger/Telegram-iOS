@@ -230,7 +230,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
             case let .additionalLink(_, link, _):
                 return AdditionalLinkItem(presentationData: presentationData, username: link, sectionId: self.section, style: .blocks, tapAction: {
                     if !link.flags.contains(.isEditable) {
-                        if link.flags.contains(.isActive) {
+                        if link.isActive {
                             arguments.deactivateLink(link.username)
                         } else {
                             arguments.activateLink(link.username)
@@ -291,19 +291,19 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
     var entries: [UsernameSetupEntry] = []
     
     if let peer = view.peers[view.peerId] as? TelegramUser {
-        let currentAddressName: String
+        let currentUsername: String
         if let current = state.editingPublicLinkText {
-            currentAddressName = current
+            currentUsername = current
         } else {
-            if let addressName = peer.addressName {
-                currentAddressName = addressName
+            if let username = peer.editableUsername {
+                currentUsername = username
             } else {
-                currentAddressName = ""
+                currentUsername = ""
             }
         }
         
         entries.append(.publicLinkHeader(presentationData.theme, presentationData.strings.Username_Username))
-        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.addressName, currentAddressName))
+        entries.append(.editablePublicLink(presentationData.theme, presentationData.strings, presentationData.strings.Username_Title, peer.editableUsername, currentUsername))
         if let status = state.addressNameValidationStatus {
             let statusText: String
             switch status {
@@ -323,7 +323,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                 case let .availability(availability):
                     switch availability {
                         case .available:
-                            statusText = presentationData.strings.Username_UsernameIsAvailable(currentAddressName).string
+                            statusText = presentationData.strings.Username_UsernameIsAvailable(currentUsername).string
                         case .invalid:
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .taken:
@@ -332,7 +332,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                 case .checking:
                     statusText = presentationData.strings.Username_CheckingUsername
             }
-            entries.append(.publicLinkStatus(presentationData.theme, currentAddressName, status, statusText))
+            entries.append(.publicLinkStatus(presentationData.theme, currentUsername, status, statusText))
         }
         
         var infoText = presentationData.strings.Username_Help
@@ -341,7 +341,7 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
         
         if otherUsernames.isEmpty {
             infoText += "\n\n"
-            let hintText = presentationData.strings.Username_LinkHint(currentAddressName.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
+            let hintText = presentationData.strings.Username_LinkHint(currentUsername.replacingOccurrences(of: "[", with: "").replacingOccurrences(of: "]", with: "")).string.replacingOccurrences(of: "]", with: "]()")
             infoText += hintText
         }
         entries.append(.publicLinkInfo(presentationData.theme, infoText))
@@ -546,7 +546,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
             switch entry {
             case let .additionalLink(_, link, _):
                 currentUsernames.append(link.username)
-                if !link.flags.contains(.isActive) && maxIndex == nil {
+                if !link.isActive && maxIndex == nil {
                     maxIndex = max(0, i - 1)
                 }
                 i += 1
@@ -558,7 +558,7 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         if toIndex < entries.count {
             switch entries[toIndex] {
                 case let .additionalLink(_, toUsername, _):
-                    if toUsername.flags.contains(.isActive) {
+                    if toUsername.isActive {
                         referenceId = toUsername.username
                     } else {
                         afterAll = true

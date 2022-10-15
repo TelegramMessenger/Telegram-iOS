@@ -1135,7 +1135,7 @@ final class ChatListControllerNode: ASDisplayNode {
     private var containerLayout: (ContainerViewLayout, CGFloat, CGFloat, CGFloat)?
     
     var requestDeactivateSearch: (() -> Void)?
-    var requestOpenPeerFromSearch: ((EnginePeer, Bool) -> Void)?
+    var requestOpenPeerFromSearch: ((EnginePeer, Int64?, Bool) -> Void)?
     var requestOpenRecentPeerOptions: ((EnginePeer) -> Void)?
     var requestOpenMessageFromSearch: ((EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void)?
     var requestAddContact: ((String) -> Void)?
@@ -1311,8 +1311,8 @@ final class ChatListControllerNode: ASDisplayNode {
         
         let filter: ChatListNodePeersFilter = []
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: location, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
-            self?.requestOpenPeerFromSearch?(peer, dismissSearch)
+        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: location, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
+            self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)

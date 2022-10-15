@@ -149,7 +149,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         let context = self.context
         let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
         |> mapToSignal({ peer -> Signal<Peer, NoError> in
-            if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
+            if let peer = peer as? TelegramChannel, let username = peer.addressName, peer.accessHash == nil {
                 return .single(peer) |> then(context.engine.peers.resolvePeerByName(name: username)
                 |> mapToSignal({ updatedPeer -> Signal<Peer, NoError> in
                     if let updatedPeer = updatedPeer {

@@ -56,7 +56,7 @@ public final class ChatListNodeInteraction {
     }
     
     let activateSearch: () -> Void
-    let peerSelected: (EnginePeer, Int64?, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void
+    let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void
     let disabledPeerSelected: (EnginePeer) -> Void
     let togglePeerSelected: (EnginePeer) -> Void
     let togglePeersSelection: ([PeerEntry], Bool) -> Void
@@ -90,7 +90,7 @@ public final class ChatListNodeInteraction {
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
         activateSearch: @escaping () -> Void,
-        peerSelected: @escaping (EnginePeer, Int64?, EnginePeer?, ChatListNodeEntryPromoInfo?) -> Void,
+        peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void,
         disabledPeerSelected: @escaping (EnginePeer) -> Void,
         togglePeerSelected: @escaping (EnginePeer) -> Void,
         togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
@@ -795,7 +795,7 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let activateSearch = strongSelf.activateSearch {
                 activateSearch()
             }
-        }, peerSelected: { [weak self] peer, threadId, _, promoInfo in
+        }, peerSelected: { [weak self] peer, _, threadId, promoInfo in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }

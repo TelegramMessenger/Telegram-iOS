@@ -129,7 +129,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
-        if let username = user.username {
+        if let username = user.addressName {
             label = INPersonHandleLabel(rawValue: "@\(username)")
             type = .unknown
         } else if let phone = user.phone {
@@ -168,7 +168,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
     if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
-        if let username = user.username {
+        if let username = user.addressName {
             label = INPersonHandleLabel(rawValue: "@\(username)")
             type = .unknown
         } else if let phone = user.phone {

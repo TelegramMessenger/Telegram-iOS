@@ -10980,7 +10980,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             canClearForEveryone = nil
                         }
                     } else if let channel = chatPeer as? TelegramChannel {
-                        if let username = channel.username, !username.isEmpty {
+                        if let username = channel.addressName, !username.isEmpty {
                             if isLargeGroupOrChannel {
                                 canClearCache = true
                                 canClearForMyself = nil
@@ -15486,7 +15486,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         self.chatDisplayNode.dismissInput()
         
-        if let peer = peer as? TelegramChannel, let username = peer.username, !username.isEmpty {
+        if let peer = peer as? TelegramChannel, let username = peer.addressName, !username.isEmpty {
             let actionSheet = ActionSheetController(presentationData: self.presentationData)
             
             var items: [ActionSheetItem] = []

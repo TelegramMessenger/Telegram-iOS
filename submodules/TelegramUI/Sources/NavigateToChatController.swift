@@ -228,8 +228,8 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     return false
 }
 
-public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, navigationController: NavigationController, activateInput: ChatControllerActivateInput?) -> Signal<Never, NoError> {
-    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?) -> Signal<Never, NoError> {
+    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: messageId, preload: false)
     |> deliverOnMainQueue
     |> beforeNext { [weak context, weak navigationController] result in
         guard let context = context, let navigationController = navigationController else {
@@ -239,7 +239,11 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
         let chatLocation: ChatLocation = .replyThread(message: result.message)
         
         let subject: ChatControllerSubject?
-        subject = nil
+        if let messageId = messageId {
+            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+        } else {
+            subject = nil
+        }
         
         var actualActivateInput: ChatControllerActivateInput? = result.isEmpty ? .text : nil
         if let activateInput = activateInput {

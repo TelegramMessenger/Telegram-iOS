@@ -956,10 +956,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 interaction.requestLayout(false)
             }))
         }
-        if let username = user.username {
-            let mainUsername = user.usernames.first(where: { $0.flags.contains(.isActive) })?.username ?? username
+        if let mainUsername = user.addressName {
             var additionalUsernames: String?
-            let usernames = user.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
+            let usernames = user.usernames.filter { $0.isActive && $0.username != mainUsername }
             if !usernames.isEmpty {
                 additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
             }
@@ -973,7 +972,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     textColor: .accent,
                     icon: .qrCode,
                     action: { _ in
-                        interaction.openUsername(username)
+                        interaction.openUsername(mainUsername)
                     }, longTapAction: { sourceNode in
                         interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode, nil)
                     }, linkItemAction: { type, item, _, _ in
@@ -1134,11 +1133,9 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 ))
             }
             
-            if let username = channel.username {
+            if let mainUsername = channel.addressName {
                 var additionalUsernames: String?
-                let mainUsername = channel.usernames.first(where: { $0.flags.contains(.isActive) })?.username ?? username
-
-                let usernames = channel.usernames.filter { $0.flags.contains(.isActive) && $0.username != mainUsername }
+                let usernames = channel.usernames.filter { $0.isActive && $0.username != mainUsername }
                 if !usernames.isEmpty {
                     additionalUsernames = presentationData.strings.Profile_AdditionalUsernames(String(usernames.map { "@\($0.username)" }.joined(separator: ", "))).string
                 }
@@ -1152,7 +1149,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                         textColor: .accent,
                         icon: .qrCode,
                         action: { _ in
-                            interaction.openUsername(username)
+                            interaction.openUsername(mainUsername)
                         }, longTapAction: { sourceNode in
                             interaction.openPeerInfoContextMenu(.link(customLink: nil), sourceNode, nil)
                         }, linkItemAction: { type, item, sourceNode, sourceRect in
@@ -1350,7 +1347,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 
                 if isCreator {
                     let linkText: String
-                    if let _ = channel.username {
+                    if let _ = channel.addressName {
                         linkText = presentationData.strings.Channel_Setup_TypePublic
                     } else {
                         linkText = presentationData.strings.Channel_Setup_TypePrivate
@@ -1360,7 +1357,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }))
                 }
                  
-                if (isCreator && (channel.username?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                if (isCreator && (channel.addressName?.isEmpty ?? true)) || (!channel.flags.contains(.isCreator) && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                     let invitesText: String
                     if let count = data.invitations?.count, count > 0 {
                         invitesText = "\(count)"
@@ -1488,7 +1485,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemTopics = 116
                 
                 let isCreator = channel.flags.contains(.isCreator)
-                let isPublic = channel.username != nil
+                let isPublic = channel.addressName != nil
                 
                 if let cachedData = data.cachedData as? CachedChannelData {
                     if isCreator, let location = cachedData.peerGeoLocation {
@@ -1515,7 +1512,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         if cachedData.peerGeoLocation != nil {
                             if isCreator {
                                 let linkText: String
-                                if let username = channel.username {
+                                if let username = channel.addressName {
                                     linkText = "@\(username)"
                                 } else {
                                     linkText = presentationData.strings.GroupInfo_PublicLinkAdd
@@ -1533,7 +1530,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                     }
                     
-                    if (isCreator && (channel.username?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (!isCreator && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
+                    if (isCreator && (channel.addressName?.isEmpty ?? true) && cachedData.peerGeoLocation == nil) || (!isCreator && channel.adminRights?.rights.contains(.canInviteUsers) == true) {
                         let invitesText: String
                         if let count = data.invitations?.count, count > 0 {
                             invitesText = "\(count)"
@@ -3210,7 +3207,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }))
                 }
                 
-                if copyUsername, let username = user.username, !username.isEmpty {
+                if copyUsername, let username = user.addressName, !username.isEmpty {
                     actions.append(ContextMenuAction(content: .text(title: strongSelf.presentationData.strings.Settings_CopyUsername, accessibilityLabel: strongSelf.presentationData.strings.Settings_CopyUsername), action: { [weak self] in
                         UIPasteboard.general.string = "@\(username)"
                         
@@ -4268,7 +4265,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                                         
                     if let _ = user.botInfo {
-                        if user.username != nil {
+                        if user.addressName != nil {
                             items.append(.action(ContextMenuActionItem(text: presentationData.strings.UserInfo_ShareBot, icon: { theme in
                                 generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Forward"), color: theme.contextMenu.primaryColor)
                             }, action: { [weak self] _, f in
@@ -5827,7 +5824,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             guard let strongSelf = self else {
                 return
             }
-            if case let .user(peer) = peer, let username = peer.username {
+            if case let .user(peer) = peer, let username = peer.addressName {
                 let shareController = ShareController(context: strongSelf.context, subject: .url("https://t.me/\(username)"), updatedPresentationData: strongSelf.controller?.updatedPresentationData)
                 shareController.completed = { [weak self] peerIds in
                     guard let strongSelf = self else {
@@ -9585,7 +9582,7 @@ struct ClearPeerHistory {
             var canDeleteLocally = true
             if case .broadcast = channel.info {
                 canDeleteLocally = false
-            } else if channel.username != nil {
+            } else if channel.addressName != nil {
                 canDeleteLocally = false
             }
             

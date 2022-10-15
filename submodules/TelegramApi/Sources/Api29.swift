@@ -5741,11 +5741,12 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func saveDraft(flags: Int32, replyToMsgId: Int32?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                static func saveDraft(flags: Int32, replyToMsgId: Int32?, topMsgId: Int32?, peer: Api.InputPeer, message: String, entities: [Api.MessageEntity]?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-1137057461)
+                    buffer.appendInt32(-1271718337)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     peer.serialize(buffer, true)
                     serializeString(message, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 3) != 0 {buffer.appendInt32(481674261)
@@ -5753,7 +5754,7 @@ public extension Api.functions.messages {
                     for item in entities! {
                         item.serialize(buffer, true)
                     }}
-                    return (FunctionDescription(name: "messages.saveDraft", parameters: [("flags", String(describing: flags)), ("replyToMsgId", String(describing: replyToMsgId)), ("peer", String(describing: peer)), ("message", String(describing: message)), ("entities", String(describing: entities))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                    return (FunctionDescription(name: "messages.saveDraft", parameters: [("flags", String(describing: flags)), ("replyToMsgId", String(describing: replyToMsgId)), ("topMsgId", String(describing: topMsgId)), ("peer", String(describing: peer)), ("message", String(describing: message)), ("entities", String(describing: entities))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
                         let reader = BufferReader(buffer)
                         var result: Api.Bool?
                         if let signature = reader.readInt32() {
