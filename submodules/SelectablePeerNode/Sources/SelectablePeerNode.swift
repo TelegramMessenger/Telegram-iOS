@@ -146,6 +146,11 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         let defaultColor: UIColor = peer.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor
         
+        var isForum = false
+        if let peer = peer.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            isForum = true
+        }
+        
         let text: String
         var overrideImage: AvatarNodeImageOverride?
         if peer.peerId == context.account.peerId {
@@ -162,7 +167,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
         self.textNode.maximumNumberOfLines = numberOfLines
         self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
-        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, synchronousLoad: synchronousLoad)
+        self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
         let (onlineSize, onlineApply) = onlineLayout(online, false)
@@ -182,16 +187,29 @@ public final class SelectablePeerNode: ASDisplayNode {
                 self.textNode.attributedText = NSAttributedString(string: attributedText.string, font: textFont, textColor: selected ? self.theme.selectedTextColor : (self.peer?.peerId.namespace == Namespaces.Peer.SecretChat ? self.theme.secretTextColor : self.theme.textColor), paragraphAlignment: .center)
             }
             
+            var isForum = false
+            if let peer = self.peer?.chatMainPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                isForum = true
+            }
+            
             if selected {
                 self.avatarNode.transform = CATransform3DMakeScale(0.866666, 0.866666, 1.0)
                 self.avatarSelectionNode.alpha = 1.0
                 self.avatarSelectionNode.image = generateImage(CGSize(width: 60.0 + 4.0, height: 60.0 + 4.0), rotatedContext: { size, context in
                     context.clear(CGRect(origin: CGPoint(), size: size))
-                    context.setFillColor(self.theme.selectedTextColor.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-                    context.setBlendMode(.copy)
-                    context.setFillColor(UIColor.clear.cgColor)
-                    context.fillEllipse(in: CGRect(origin: CGPoint(x: 2.0, y: 2.0), size: CGSize(width: size.width - 4.0, height: size.height - 4.0)))
+                    let bounds = CGRect(origin: .zero, size: size)
+                    if isForum {
+                        context.setStrokeColor(self.theme.selectedTextColor.cgColor)
+                        context.setLineWidth(2.0)
+                        context.addPath(UIBezierPath(roundedRect: bounds.insetBy(dx: 1.0, dy: 1.0), cornerRadius: floorToScreenPixels(bounds.size.width * 0.26)).cgPath)
+                        context.strokePath()
+                    } else {
+                        context.setFillColor(self.theme.selectedTextColor.cgColor)
+                        context.fillEllipse(in: bounds)
+                        context.setBlendMode(.copy)
+                        context.setFillColor(UIColor.clear.cgColor)
+                        context.fillEllipse(in: bounds.insetBy(dx: 2.0, dy: 2.0))
+                    }
                 })
                 if animated {
                     self.avatarNode.layer.animateScale(from: 1.0, to: 0.866666, duration: 0.2, timingFunction: kCAMediaTimingFunctionSpring)

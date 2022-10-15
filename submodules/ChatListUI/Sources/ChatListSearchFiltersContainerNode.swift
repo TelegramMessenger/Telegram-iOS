@@ -81,6 +81,9 @@ private final class ItemNode: ASDisplayNode {
             case .chats:
                 title = presentationData.strings.ChatList_Search_FilterChats
                 icon = nil
+            case .topics:
+                title = presentationData.strings.ChatList_Search_FilterTopics
+                icon = nil
             case .media:
                 title = presentationData.strings.ChatList_Search_FilterMedia
                 icon = nil

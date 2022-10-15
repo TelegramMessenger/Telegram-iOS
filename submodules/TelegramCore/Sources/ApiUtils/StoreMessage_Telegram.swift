@@ -64,7 +64,11 @@ public func tagsForStoreMessage(incoming: Bool, attributes: [MessageAttribute], 
                         if isVoice {
                             refinedTag = .voiceOrInstantVideo
                         } else {
-                            refinedTag = .music
+                            if file.isInstantVideo {
+                                refinedTag = .voiceOrInstantVideo
+                            } else {
+                                refinedTag = .music
+                            }
                         }
                         break inner
                     case .Sticker:

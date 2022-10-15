@@ -29,6 +29,7 @@ public enum ChatListSearchItemHeaderType {
     case subscribers
     case downloading
     case recentDownloads
+    case topics
     
     fileprivate func title(strings: PresentationStrings) -> String {
         switch self {
@@ -80,6 +81,8 @@ public enum ChatListSearchItemHeaderType {
                 return strings.DownloadList_DownloadingHeader
             case .recentDownloads:
                 return strings.DownloadList_DownloadedHeader
+            case .topics:
+                return strings.DialogList_SearchSectionTopics
         }
     }
     
@@ -133,6 +136,8 @@ public enum ChatListSearchItemHeaderType {
                 return .downloading
             case .recentDownloads:
                 return .recentDownloads
+            case .topics:
+                return .topics
         }
     }
 }
@@ -166,6 +171,7 @@ private enum ChatListSearchItemHeaderId: Int32 {
     case subscribers
     case downloading
     case recentDownloads
+    case topics
 }
 
 public final class ChatListSearchItemHeader: ListViewItemHeader {

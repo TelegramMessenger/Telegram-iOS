@@ -64,7 +64,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     var requestOpenPeer: ((Peer) -> Void)?
     var requestOpenDisabledPeer: ((Peer) -> Void)?
     var requestOpenPeerFromSearch: ((Peer) -> Void)?
-    var requestOpenMessageFromSearch: ((Peer, MessageId) -> Void)?
+    var requestOpenMessageFromSearch: ((Peer, Int64?, MessageId) -> Void)?
     var requestSend: (([Peer], [PeerId: Peer], NSAttributedString, AttachmentTextInputPanelSendMode, ChatInterfaceForwardOptionsState?) -> Void)?
     
     private var presentationData: PresentationData {
@@ -596,7 +596,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     animationRenderer: self.animationRenderer,
                     updatedPresentationData: self.updatedPresentationData,
                     filter: self.filter,
-                    groupId: EngineChatList.Group(.root),
+                    location: .chatList(groupId: EngineChatList.Group(.root)),
                     displaySearchFilters: false,
                     hasDownloads: false,
                     openPeer: { [weak self] peer, chatPeer, _ in
@@ -650,9 +650,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                     },
                     openRecentPeerOptions: { _ in
                     },
-                    openMessage: { [weak self] peer, messageId, _ in
+                    openMessage: { [weak self] peer, threadId, messageId, _ in
                         if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                            requestOpenMessageFromSearch(peer._asPeer(), messageId)
+                            requestOpenMessageFromSearch(peer._asPeer(), threadId, messageId)
                         }
                     },
                     addContact: nil,

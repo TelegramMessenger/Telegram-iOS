@@ -1127,7 +1127,7 @@ final class ChatListControllerNode: ASDisplayNode {
     var requestDeactivateSearch: (() -> Void)?
     var requestOpenPeerFromSearch: ((EnginePeer, Bool) -> Void)?
     var requestOpenRecentPeerOptions: ((EnginePeer) -> Void)?
-    var requestOpenMessageFromSearch: ((EnginePeer, EngineMessage.Id, Bool) -> Void)?
+    var requestOpenMessageFromSearch: ((EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void)?
     var requestAddContact: ((String) -> Void)?
     var peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var dismissSelfIfCompletedPresentation: (() -> Void)?
@@ -1298,20 +1298,17 @@ final class ChatListControllerNode: ASDisplayNode {
         guard let (containerLayout, _, _, cleanNavigationBarHeight) = self.containerLayout, let navigationBar = self.navigationBar, self.searchDisplayController == nil else {
             return nil
         }
-        guard case let .chatList(groupId) = self.location else {
-            return nil
-        }
         
         let filter: ChatListNodePeersFilter = []
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, groupId: groupId, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: location, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, dismissSearch)
         }, openDisabledPeer: { _ in
         }, openRecentPeerOptions: { [weak self] peer in
             self?.requestOpenRecentPeerOptions?(peer)
-        }, openMessage: { [weak self] peer, messageId, deactivateOnAction in
+        }, openMessage: { [weak self] peer, threadId, messageId, deactivateOnAction in
             if let requestOpenMessageFromSearch = self?.requestOpenMessageFromSearch {
-                requestOpenMessageFromSearch(peer, messageId, deactivateOnAction)
+                requestOpenMessageFromSearch(peer, threadId, messageId, deactivateOnAction)
             }
         }, addContact: { [weak self] phoneNumber in
             if let requestAddContact = self?.requestAddContact {

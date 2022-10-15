@@ -614,6 +614,7 @@ public final class ContactSelectionControllerParams {
 
 public enum ChatListSearchFilter: Equatable {
     case chats
+    case topics
     case media
     case downloads
     case links
@@ -627,18 +628,20 @@ public enum ChatListSearchFilter: Equatable {
         switch self {
             case .chats:
                 return 0
-            case .media:
+            case .topics:
                 return 1
-            case .downloads:
+            case .media:
                 return 2
-            case .links:
-                return 3
-            case .files:
+            case .downloads:
                 return 4
-            case .music:
+            case .links:
                 return 5
-            case .voice:
+            case .files:
                 return 6
+            case .music:
+                return 7
+            case .voice:
+                return 8
             case let .peer(peerId, _, _, _):
                 return peerId.id._internalGetInt64Value()
             case let .date(_, date, _):

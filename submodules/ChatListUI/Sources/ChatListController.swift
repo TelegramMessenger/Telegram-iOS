@@ -840,7 +840,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !previewing {
             let placeholder: String
             let compactPlaceholder: String
+            
+            var isForum = false
             if case .forum = location {
+                isForum = true
                 placeholder = self.presentationData.strings.Common_Search
                 compactPlaceholder = self.presentationData.strings.Common_Search
             } else {
@@ -849,7 +852,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             self.searchContentNode = NavigationBarSearchContentNode(theme: self.presentationData.theme, placeholder: placeholder, compactPlaceholder: compactPlaceholder, activate: { [weak self] in
-                self?.activateSearch()
+                self?.activateSearch(filter: isForum ? .topics : .chats)
             })
             self.searchContentNode?.updateExpansionProgress(0.0)
             self.navigationBar?.setContentNode(self.searchContentNode, animated: false)
@@ -1429,7 +1432,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, messageId, deactivateOnAction in
+        self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, threadId, messageId, deactivateOnAction in
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
                 |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in

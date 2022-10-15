@@ -221,6 +221,8 @@ private enum ContactListNodeEntry: Comparable, Identifiable {
                             }
                         case .deviceContact:
                             break
+                        case .thread:
+                            break
                         }
                     }
                 }

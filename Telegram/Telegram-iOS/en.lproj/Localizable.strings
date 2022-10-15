@@ -8132,3 +8132,7 @@ Sorry for the inconvenience.";
 "ChatList.CloseAction" = "Close";
 
 "Channel.EditAdmin.PermissionCreateTopics" = "Create Topics";
+
+"ChatList.Search.FilterTopics" = "Topics";
+
+"DialogList.SearchSectionTopics" = "Topics";

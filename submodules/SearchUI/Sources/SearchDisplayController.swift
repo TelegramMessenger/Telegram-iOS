@@ -81,7 +81,9 @@ public final class SearchDisplayController {
                 strongSelf.searchBar.tokens = tokens
                 strongSelf.searchBar.text = query
                 if previousTokens.count < tokens.count && !isFirstTime {
-                    strongSelf.searchBar.selectLastToken()
+                    if let lastToken = tokens.last, !lastToken.permanent {
+                        strongSelf.searchBar.selectLastToken()
+                    }
                 }
                 isFirstTime = false
             }
