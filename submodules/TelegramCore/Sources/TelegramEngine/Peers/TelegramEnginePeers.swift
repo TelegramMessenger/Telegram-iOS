@@ -689,6 +689,17 @@ public extension TelegramEngine {
                 )
 
                 if let threadId = threadId {
+                    var currentInputState: SynchronizeableChatInputState?
+                    if let peerChatInterfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId), let data = peerChatInterfaceState.data {
+                        currentInputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
+                    }
+                    let updatedInputState = state.synchronizeableInputState
+
+                    if currentInputState != updatedInputState {
+                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
+                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId, threadId: threadId)
+                        }
+                    }
                     transaction.setPeerChatThreadInterfaceState(peerId, threadId: threadId, state: storedState)
                 } else {
                     var currentInputState: SynchronizeableChatInputState?
@@ -699,7 +710,7 @@ public extension TelegramEngine {
 
                     if currentInputState != updatedInputState {
                         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
-                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId)
+                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId, threadId: nil)
                         }
                     }
                     transaction.setPeerChatInterfaceState(
