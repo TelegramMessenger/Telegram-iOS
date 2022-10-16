@@ -31,7 +31,7 @@ struct ChatRecentActionsEntryId: Hashable, Comparable {
 
 private func eventNeedsHeader(_ event: AdminLogEvent) -> Bool {
     switch event.action {
-        case .changeAbout, .changeUsername, .editMessage, .deleteMessage, .pollStopped, .sendMessage:
+        case .changeAbout, .changeUsername, .changeUsernames, .editMessage, .deleteMessage, .pollStopped, .sendMessage:
             return true
         case let .updatePinned(message):
             if message != nil {
@@ -217,14 +217,14 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                         var text: String = ""
                         var entities: [MessageTextEntity] = []
                         if let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedChannelUsername(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedChannelUsernames(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
                                 if index == 0, let author = author {
                                     return [.TextMention(peerId: author.id)]
                                 }
                                 return []
                             }, to: &text, entities: &entities)
                         } else {
-                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedGroupUsername(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
+                            appendAttributedText(text: self.presentationData.strings.Channel_AdminLog_MessageChangedGroupUsernames(author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""), generateEntities: { index in
                                 if index == 0, let author = author {
                                     return [.TextMention(peerId: author.id)]
                                 }
@@ -237,14 +237,33 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     case .content:
                         var previousAttributes: [MessageAttribute] = []
                         var attributes: [MessageAttribute] = []
-                        
-                        let prevText = "https://t.me/\(prev.first ?? "")"
-                        previousAttributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< prevText.count, type: .Url)]))
-                        
-                        let text: String
+                    
+                        var prevTextEntities: [MessageTextEntity] = []
+                        var textEntities: [MessageTextEntity] = []
+                    
+                        var prevText: String = ""
+                        for username in prev {
+                            let link = "https://t.me/\(username)"
+                            prevTextEntities.append(MessageTextEntity(range: prevText.count ..< prevText.count + link.count, type: .Url))
+                            prevText.append(link)
+                            prevText.append("\n")
+                        }
+                        prevText.removeLast()
+                        if !prevTextEntities.isEmpty {
+                            previousAttributes.append(TextEntitiesMessageAttribute(entities: prevTextEntities))
+                        }
+                        var text: String = ""
                         if !new.isEmpty {
-                            text = "https://t.me/\(new.first ?? "")"
-                            attributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< text.count, type: .Url)]))
+                            for username in new {
+                                let link = "https://t.me/\(username)"
+                                textEntities.append(MessageTextEntity(range: text.count ..< text.count + link.count, type: .Url))
+                                text.append(link)
+                                text.append("\n")
+                            }
+                            text.removeLast()
+                            if !textEntities.isEmpty {
+                                attributes.append(TextEntitiesMessageAttribute(entities: prevTextEntities))
+                            }
                         } else {
                             text = self.presentationData.strings.Channel_AdminLog_EmptyMessageText
                             attributes.append(TextEntitiesMessageAttribute(entities: [MessageTextEntity(range: 0 ..< text.count, type: .Italic)]))

@@ -40,7 +40,7 @@ final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContent
                 }
             }
             
-            let title: String = item.presentationData.strings.Channel_AdminLog_MessagePreviousLink
+            let title: String = item.message.text.contains("\n") ? item.presentationData.strings.Channel_AdminLog_MessagePreviousLinks : item.presentationData.strings.Channel_AdminLog_MessagePreviousLink
             let text: String = item.message.text
             let mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)? = nil
             

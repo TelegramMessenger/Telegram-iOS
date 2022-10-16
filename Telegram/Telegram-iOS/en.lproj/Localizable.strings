@@ -8138,3 +8138,7 @@ Sorry for the inconvenience.";
 
 "ChatListFolderSettings.SubscribeToMoveAll" = "Subscribe to **Telegram Premium** to move the \"All Chats\" folder.";
 "ChatListFolderSettings.SubscribeToMoveAllAction" = "More";
+
+"Channel.AdminLog.MessageChangedGroupUsernames" = "%@ changed group links:";
+"Channel.AdminLog.MessageChangedChannelUsernames" = "%@ changed channel links:";
+"Channel.AdminLog.MessagePreviousLinks" = "Previous links";
