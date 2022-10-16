@@ -947,6 +947,7 @@ public final class MessageHistoryView {
     public let topTaggedMessages: [Message]
     public let additionalData: [AdditionalMessageHistoryViewDataEntry]
     public let isLoading: Bool
+    public let isLoadingEarlier: Bool
     public let isAddedToChatList: Bool
     
     public init(tagMask: MessageTags?, namespaces: MessageIdNamespaces, entries: [MessageHistoryEntry], holeEarlier: Bool, holeLater: Bool, isLoading: Bool) {
@@ -964,6 +965,7 @@ public final class MessageHistoryView {
         self.topTaggedMessages = []
         self.additionalData = []
         self.isLoading = isLoading
+        self.isLoadingEarlier = true
         self.isAddedToChatList = false
     }
     
@@ -981,8 +983,10 @@ public final class MessageHistoryView {
             self.holeLater = true
             self.earlierId = nil
             self.laterId = nil
+            self.isLoadingEarlier = true
         case let .loaded(state):
             var isLoading = false
+            var isLoadingEarlier = false
             switch state.anchor {
             case .lowerBound:
                 self.anchorIndex = .lowerBound
@@ -996,6 +1000,10 @@ public final class MessageHistoryView {
             if state.entries.isEmpty && state.hole != nil {
                 isLoading = true
             }
+            if state.entries.count <= 1 && state.hole != nil {
+                isLoadingEarlier = true
+            }
+            self.isLoadingEarlier = isLoadingEarlier
             entries = []
             if let transientReadStates = mutableView.transientReadStates, case let .peer(states) = transientReadStates {
                 for entry in state.entries {
@@ -1199,6 +1207,7 @@ public final class MessageHistoryView {
         self.topTaggedMessages = base.topTaggedMessages
         self.additionalData = base.additionalData
         self.isLoading = base.isLoading
+        self.isLoadingEarlier = base.isLoadingEarlier
         self.isAddedToChatList = base.isAddedToChatList
         
         if let combinedReadStates = combinedReadStates {

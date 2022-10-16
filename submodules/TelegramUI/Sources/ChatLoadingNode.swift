@@ -7,6 +7,7 @@ import TelegramPresentationData
 import ActivityIndicator
 import WallpaperBackgroundNode
 import ShimmerEffect
+import ChatPresentationInterfaceState
 
 final class ChatLoadingNode: ASDisplayNode {
     private let backgroundNode: NavigationBackgroundNode
@@ -47,10 +48,12 @@ final class ChatLoadingNode: ASDisplayNode {
 }
 
 private let avatarSize = CGSize(width: 38.0, height: 38.0)
+private let avatarImage = generateFilledCircleImage(diameter: avatarSize.width, color: .white)
+private let avatarBorderImage = generateCircleImage(diameter: avatarSize.width, lineWidth: 1.0 - UIScreenPixel, color: .white)
 
 final class ChatLoadingPlaceholderMessageContainer {
-    let avatarNode: ASImageNode?
-    let avatarBorderNode: ASImageNode?
+    var avatarNode: ASImageNode?
+    var avatarBorderNode: ASImageNode?
     
     let bubbleNode: ASImageNode
     let bubbleBorderNode: ASImageNode
@@ -63,20 +66,7 @@ final class ChatLoadingPlaceholderMessageContainer {
         return self.bubbleNode.frame
     }
         
-    init(hasAvatar: Bool, bubbleImage: UIImage?, bubbleBorderImage: UIImage?) {
-        if hasAvatar {
-            self.avatarNode = ASImageNode()
-            self.avatarNode?.displaysAsynchronously = false
-            self.avatarNode?.image = generateFilledCircleImage(diameter: avatarSize.width, color: .white)
-            
-            self.avatarBorderNode = ASImageNode()
-            self.avatarBorderNode?.displaysAsynchronously = false
-            self.avatarBorderNode?.image = generateCircleImage(diameter: avatarSize.width, lineWidth: 1.0 - UIScreenPixel, color: .red)
-        } else {
-            self.avatarNode = nil
-            self.avatarBorderNode = nil
-        }
-        
+    init(bubbleImage: UIImage?, bubbleBorderImage: UIImage?) {
         self.bubbleNode = ASImageNode()
         self.bubbleNode.displaysAsynchronously = false
         self.bubbleNode.image = bubbleImage
@@ -87,38 +77,59 @@ final class ChatLoadingPlaceholderMessageContainer {
     }
     
     func setup(maskNode: ASDisplayNode, borderMaskNode: ASDisplayNode) {
-        if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
-            maskNode.addSubnode(avatarNode)
-            borderMaskNode.addSubnode(avatarBorderNode)
-        }
         maskNode.addSubnode(self.bubbleNode)
         borderMaskNode.addSubnode(self.bubbleBorderNode)
     }
     
-    func animateWith(_ listItemNode: ListViewItemNode, transition: ContainedViewLayoutTransition) {
+    func animateWith(_ listItemNode: ListViewItemNode, delay: Double, transition: ContainedViewLayoutTransition) {
+        listItemNode.allowsGroupOpacity = true
+        listItemNode.alpha = 1.0
+        listItemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: delay, completion: { _ in
+            listItemNode.allowsGroupOpacity = false
+        })
+        
         if let bubbleItemNode = listItemNode as? ChatMessageBubbleItemNode {
-            bubbleItemNode.animateFromLoadingPlaceholder(messageContainer: self, transition: transition)
+            bubbleItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
+        } else if let stickerItemNode = listItemNode as? ChatMessageStickerItemNode {
+            stickerItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
         } else if let stickerItemNode = listItemNode as? ChatMessageAnimatedStickerItemNode {
-            stickerItemNode.animateFromLoadingPlaceholder(messageContainer: self, transition: transition)
+            stickerItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
+        } else if let videoItemNode = listItemNode as? ChatMessageInstantVideoItemNode {
+            videoItemNode.animateFromLoadingPlaceholder(messageContainer: self, delay: delay, transition: transition)
         }
     }
     
     func animateBackgroundFrame(to frame: CGRect, transition: ContainedViewLayoutTransition) {
-        let targetFrame = CGRect(origin: CGPoint(x: self.bubbleNode.frame.minX, y: frame.minY), size: frame.size)
-        
-        transition.updateFrame(node: self.bubbleNode, frame: targetFrame)
-        transition.updateFrame(node: self.bubbleBorderNode, frame: targetFrame)
-        
-        if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
-            let avatarFrame = CGRect(origin: CGPoint(x: 3.0, y: frame.maxY + 1.0 - avatarSize.height), size: avatarSize)
-            
-            transition.updateFrame(node: avatarNode, frame: avatarFrame)
-            transition.updateFrame(node: avatarBorderNode, frame: avatarFrame)
-        }
+//        let targetFrame = CGRect(origin: CGPoint(x: self.bubbleNode.frame.minX, y: frame.minY), size: frame.size)
+//
+//        transition.updateFrame(node: self.bubbleNode, frame: targetFrame)
+//        transition.updateFrame(node: self.bubbleBorderNode, frame: targetFrame)
+//
+//        if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
+//            let avatarFrame = CGRect(origin: CGPoint(x: 3.0, y: frame.maxY + 1.0 - avatarSize.height), size: avatarSize)
+//
+//            transition.updateFrame(node: avatarNode, frame: avatarFrame)
+//            transition.updateFrame(node: avatarBorderNode, frame: avatarFrame)
+//        }
     }
     
-    func update(size: CGSize, rect: CGRect, transition: ContainedViewLayoutTransition) {
+    func update(size: CGSize, hasAvatar: Bool, rect: CGRect, transition: ContainedViewLayoutTransition) {
         var avatarOffset: CGFloat = 0.0
+        
+        if hasAvatar && self.avatarNode == nil {
+            let avatarNode = ASImageNode()
+            avatarNode.displaysAsynchronously = false
+            avatarNode.image = avatarImage
+            self.bubbleNode.supernode?.addSubnode(avatarNode)
+            self.avatarNode = avatarNode
+            
+            let avatarBorderNode = ASImageNode()
+            avatarBorderNode.displaysAsynchronously = false
+            avatarBorderNode.image = avatarBorderImage
+            self.bubbleBorderNode.supernode?.addSubnode(avatarBorderNode)
+            self.avatarBorderNode = avatarBorderNode
+        }
+        
         if let avatarNode = self.avatarNode, let avatarBorderNode = self.avatarBorderNode {
             let avatarFrame = CGRect(origin: CGPoint(x: 3.0, y: rect.maxY + 1.0 - avatarSize.height), size: avatarSize)
 
@@ -140,6 +151,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     private let maskNode: ASDisplayNode
     private let borderMaskNode: ASDisplayNode
     
+    private let scrollingContainer: ASDisplayNode
     private let containerNode: ASDisplayNode
     private var backgroundContent: WallpaperBubbleBackgroundNode?
     private let backgroundColorNode: ASDisplayNode
@@ -154,8 +166,10 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
     
     private var validLayout: (CGSize, UIEdgeInsets)?
     
-    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode, hasAvatar: Bool) {
+    init(theme: PresentationTheme, chatWallpaper: TelegramWallpaper, bubbleCorners: PresentationChatBubbleCorners, backgroundNode: WallpaperBackgroundNode) {
         self.backgroundNode = backgroundNode
+        
+        self.scrollingContainer = ASDisplayNode()
         self.maskNode = ASDisplayNode()
         self.borderMaskNode = ASDisplayNode()
                 
@@ -164,7 +178,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         var messageContainers: [ChatLoadingPlaceholderMessageContainer] = []
         for _ in 0 ..< 8 {
-            let container = ChatLoadingPlaceholderMessageContainer(hasAvatar: hasAvatar, bubbleImage: bubbleImage, bubbleBorderImage: bubbleBorderImage)
+            let container = ChatLoadingPlaceholderMessageContainer(bubbleImage: bubbleImage, bubbleBorderImage: bubbleBorderImage)
             container.setup(maskNode: self.maskNode, borderMaskNode: self.borderMaskNode)
             messageContainers.append(container)
         }
@@ -184,14 +198,14 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         super.init()
         
-        self.addSubnode(self.containerNode)
+        self.addSubnode(self.scrollingContainer)
+        
+        self.scrollingContainer.addSubnode(self.containerNode)
         self.containerNode.addSubnode(self.backgroundColorNode)
         self.containerNode.addSubnode(self.effectNode)
         
-        self.addSubnode(self.borderNode)
+        self.scrollingContainer.addSubnode(self.borderNode)
         self.borderNode.addSubnode(self.borderEffectNode)
-//        self.addSubnode(self.maskNode)
-//        self.addSubnode(self.borderMaskNode)
     }
     
     override func didLoad() {
@@ -200,58 +214,159 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.containerNode.view.mask = self.maskNode.view
         self.borderNode.view.mask = self.borderMaskNode.view
         
-//        self.backgroundNode?.updateIsLooping(true)
+        self.backgroundNode?.updateIsLooping(true)
     }
     
-    func animateOut(_ historyNode: ChatHistoryNode) {
+    private var bottomInset: (Int, CGFloat)?
+    func setup(_ historyNode: ChatHistoryNode) {
+        guard let listNode = historyNode as? ListView else {
+            return
+        }
+        
+        var count = 0
+        var inset: CGFloat = 0.0
+        listNode.forEachVisibleItemNode { itemNode in
+            inset += itemNode.frame.height
+            count += 1
+        }
+        
+        if count > 0 {
+            self.bottomInset = (count, inset)
+        }
+        
+        self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: inset)
+    }
+    
+    func animateOut(_ historyNode: ChatHistoryNode, completion: @escaping () -> Void = {}) {
         guard let listNode = historyNode as? ListView, let (size, _) = self.validLayout else {
             return
         }
         
         self.backgroundNode?.updateIsLooping(false)
         
-        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut)
+        let transition = ContainedViewLayoutTransition.animated(duration: 0.3, curve: .spring)
         
         var lastFrame: CGRect?
         
-        var i = 0
+        let heightNorm = listNode.bounds.height - listNode.insets.top
+        
+        var index = 0
+        var skipCount = self.bottomInset?.0 ?? 0
         listNode.forEachVisibleItemNode { itemNode in
-            guard i < self.messageContainers.count, let listItemNode = itemNode as? ListViewItemNode else {
+            guard index < self.messageContainers.count, let listItemNode = itemNode as? ListViewItemNode else {
+                return
+            }
+        
+            let delayFactor = listItemNode.frame.minY / heightNorm
+            let delay = Double(delayFactor * 0.1)
+            
+            if skipCount > 0 {
+                skipCount -= 1
                 return
             }
             
-            if let bubbleItemNode = itemNode as? ChatMessageBubbleItemNode,
-                bubbleItemNode.contentNodes.contains(where: { $0 is ChatMessageActionBubbleContentNode }) {
+            if let itemNode = itemNode as? ChatUnreadItemNode {
+                itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0.0)
+                return
+            }
+            if let itemNode = itemNode as? ChatReplyCountItemNode {
+                itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: 0.0)
                 return
             }
             
-            let messageContainer = self.messageContainers[i]
-            messageContainer.animateWith(listItemNode, transition: transition)
+            if let bubbleItemNode = listItemNode as? ChatMessageBubbleItemNode, bubbleItemNode.contentNodes.contains(where: { $0 is ChatMessageActionBubbleContentNode }) {
+                return
+            }
+            
+            let messageContainer = self.messageContainers[index]
+            messageContainer.animateWith(listItemNode, delay: delay, transition: transition)
             
             lastFrame = messageContainer.frame
             
-            i += 1
+            index += 1
         }
         
-        if let lastFrame = lastFrame, i < self.messageContainers.count {
+        skipCount = self.bottomInset?.0 ?? 0
+        listNode.forEachItemHeaderNode { itemNode in
+            var animateScale = true
+            if itemNode is ChatMessageAvatarHeaderNode {
+                animateScale = false
+                if skipCount > 0 {
+                    return
+                }
+            }
+            if itemNode is ChatMessageDateHeaderNode {
+                if skipCount > 0 {
+                    skipCount -= 1
+                    return
+                }
+            }
+            
+            let delayFactor = itemNode.frame.minY / heightNorm
+            let delay = Double(delayFactor * 0.2)
+
+            itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
+            if animateScale {
+                itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
+            }
+        }
+        
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false, completion: { _ in
+            completion()
+        })
+        
+        if let lastFrame = lastFrame, index < self.messageContainers.count {
             var offset = lastFrame.minY
-            for k in i ..< self.messageContainers.count {
+            for k in index ..< self.messageContainers.count {
                 let messageContainer = self.messageContainers[k]
                 let messageSize = messageContainer.frame.size
                 
-                messageContainer.update(size: size, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, hasAvatar: self.isGroup, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
                 offset -= messageSize.height
             }
         }
     }
     
-    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+    private var ignoreFirstContentOffset = true
+    func addContentOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
+        guard !self.ignoreFirstContentOffset else {
+            self.ignoreFirstContentOffset = false
+            return
+        }
+        self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: -offset)
+        transition.animateOffsetAdditive(node: self.scrollingContainer, offset: offset)
+        if let (rect, containerSize) = self.absolutePosition {
+            self.update(rect: rect, within: containerSize)
+        }
+    }
+    
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {
             var backgroundFrame = backgroundContent.frame
             backgroundFrame.origin.x += rect.minX
-            backgroundFrame.origin.y += rect.minY
+            backgroundFrame.origin.y += rect.minY - self.scrollingContainer.bounds.minY
             backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
+        }
+    }
+    
+    private var isGroup = false
+    func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
+        var isGroup = false
+        if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
+            if peer is TelegramGroup {
+                isGroup = true
+            } else if let channel = peer as? TelegramChannel, case .group = channel.info {
+                isGroup = true
+            }
+        }
+        
+        if self.isGroup != isGroup {
+            self.isGroup = isGroup
+            if let (size, insets) = self.validLayout {
+                self.updateLayout(size: size, insets: insets, transition: .immediate)
+            }
         }
     }
     
@@ -260,13 +375,13 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         let bounds = CGRect(origin: .zero, size: size)
         
+        transition.updateFrame(node: self.scrollingContainer, frame: bounds)
+        
         transition.updateFrame(node: self.maskNode, frame: bounds)
         transition.updateFrame(node: self.borderMaskNode, frame: bounds)
         transition.updateFrame(node: self.containerNode, frame: bounds)
         transition.updateFrame(node: self.borderNode, frame: bounds)
-        
         transition.updateFrame(node: self.backgroundColorNode, frame: bounds)
-        
         transition.updateFrame(node: self.effectNode, frame: bounds)
         transition.updateFrame(node: self.borderEffectNode, frame: bounds)
         
@@ -291,15 +406,19 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         ]
         
         var offset: CGFloat = 5.0
-        var i = 0
-        for messageContainer in self.messageContainers {
-            let messageSize = dimensions[i % 12]
-            messageContainer.update(size: size, rect: CGRect(origin: CGPoint(x: 0.0, y: size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
-            offset += messageSize.height
-            i += 1
+        var index = 0
+        if let (insetCount, _) = self.bottomInset {
+            index += insetCount
         }
         
-        if backgroundNode?.hasExtraBubbleBackground() == true {
+        for messageContainer in self.messageContainers {
+            let messageSize = dimensions[index % 8]
+            messageContainer.update(size: size, hasAvatar: self.isGroup, rect: CGRect(origin: CGPoint(x: 0.0, y: size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            offset += messageSize.height
+            index += 1
+        }
+        
+        if self.backgroundNode?.hasExtraBubbleBackground() == true {
             self.backgroundColorNode.isHidden = true
         } else {
             self.backgroundColorNode.isHidden = false
@@ -318,10 +437,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         if let backgroundContent = self.backgroundContent {
             transition.updateFrame(node: backgroundContent, frame: bounds)
             if let (rect, containerSize) = self.absolutePosition {
-                var backgroundFrame = backgroundContent.frame
-                backgroundFrame.origin.x += rect.minX
-                backgroundFrame.origin.y += rect.minY
-                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+                self.update(rect: rect, within: containerSize)
             }
         }
     }

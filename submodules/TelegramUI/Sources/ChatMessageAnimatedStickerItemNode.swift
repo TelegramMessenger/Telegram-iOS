@@ -2673,40 +2673,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         }
     }
     
-    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, transition: ContainedViewLayoutTransition) {
-        guard let _ = self.item, let animationNode = self.animationNode else {
+    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, delay: Double, transition: ContainedViewLayoutTransition) {
+        guard let item = self.item else {
             return
         }
         
-        let targetFrame = self.view.convert(animationNode.frame, to: messageContainer.parentView)
-        messageContainer.animateBackgroundFrame(to: targetFrame, transition: transition)
-        
-        var backgroundFrame = messageContainer.frame
-        backgroundFrame.size.width = backgroundFrame.size.height
-        
-//        let localSourceContentFrame = self.contextSourceNode.contentNode.view.convert(backgroundFrame.offsetBy(dx: self.contextSourceNode.contentRect.minX, dy: self.contextSourceNode.contentRect.minY), to: self.contextSourceNode.contentNode.view)
-
-//        let sourceCenter = CGPoint(
-//            x: localSourceContentFrame.minX + 11.2,
-//            y: localSourceContentFrame.midY - 1.8
-//        )
-    
-        let sourceScale: CGFloat = 36.0 / self.imageNode.frame.height
-
-        let offset = CGPoint(x: -90.0, y: 90.0)
-//        let offset = CGPoint(
-//            x: sourceCenter.x - self.imageNode.frame.midX,
-//            y: sourceCenter.y - self.imageNode.frame.midY
-//        )
-
-        transition.animatePositionAdditive(layer: self.imageNode.layer, offset: offset)
-        transition.animateTransformScale(node: self.imageNode, from: sourceScale)
-        if let animationNode = self.animationNode {
-            transition.animatePositionAdditive(layer: animationNode.layer, offset: offset)
-            transition.animateTransformScale(node: animationNode, from: sourceScale)
-        }
-        transition.animatePositionAdditive(layer: self.placeholderNode.layer, offset: offset)
-        transition.animateTransformScale(node: self.placeholderNode, from: sourceScale)
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        transition.animatePositionAdditive(node: self, offset: CGPoint(x: incoming ? 30.0 : -30.0, y: -30.0), delay: delay)
+        transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
     }
     
     override func openMessageContextMenu() {

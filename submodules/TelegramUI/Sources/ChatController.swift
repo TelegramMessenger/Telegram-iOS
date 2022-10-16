@@ -5866,6 +5866,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
+            strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
         

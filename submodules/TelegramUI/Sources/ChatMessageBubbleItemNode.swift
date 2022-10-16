@@ -797,46 +797,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
     
-    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, transition: ContainedViewLayoutTransition) {
-        guard let _ = self.item else {
+    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, delay: Double, transition: ContainedViewLayoutTransition) {
+        guard let item = self.item else {
             return
         }
-        
-        let targetFrame = self.view.convert(self.backgroundNode.frame, to: messageContainer.parentView)
-        messageContainer.animateBackgroundFrame(to: targetFrame, transition: transition)
-        
-//        let backgroundFrame = messageContainer.frame
-////        let widthDifference = self.backgroundNode.frame.width - backgroundFrame.width
-////        let heightDifference = self.backgroundNode.frame.height - backgroundFrame.height
-//
-//        if let type = self.backgroundNode.type {
-//            if case .none = type {
-//            } else {
-//                self.clippingNode.clipsToBounds = true
-//            }
-//        }
-//        transition.animateFrame(layer: self.clippingNode.layer, from: CGRect(origin: CGPoint(x: self.clippingNode.frame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak self] _ in
-//            guard let strongSelf = self else {
-//                return
-//            }
-//            strongSelf.clippingNode.clipsToBounds = false
-//        })
-//        transition.animateOffsetAdditive(layer: self.clippingNode.layer, offset: backgroundFrame.minY - self.clippingNode.frame.minY)
-//        
-//        let combinedTransition = CombinedTransition(horizontal: transition, vertical: transition)
-//        
-//        self.backgroundWallpaperNode.animateFrom(sourceView: messageContainer.bubbleNode.view, mediaBox: item.context.account.postbox.mediaBox, transition: combinedTransition)
-//        self.backgroundNode.animateFrom(sourceView: messageContainer.bubbleNode.view, transition: combinedTransition)
-        
-//        for contentNode in self.contentNodes {
-//            if let contentNode = contentNode as? ChatMessageTextBubbleContentNode {
-//                let localSourceContentFrame = self.mainContextSourceNode.contentNode.view.convert(textInput.contentView.frame.offsetBy(dx: self.mainContextSourceNode.contentRect.minX, dy: self.mainContextSourceNode.contentRect.minY), to: contentNode.view)
-//                textInput.contentView.frame = localSourceContentFrame
-//                contentNode.animateFrom(sourceView: textInput.contentView, scrollOffset: textInput.scrollOffset, widthDifference: widthDifference, transition: transition)
-//            } else if let contentNode = contentNode as? ChatMessageWebpageBubbleContentNode {
-//                transition.animatePositionAdditive(node: contentNode, offset: CGPoint(x: 0.0, y: heightDifference))
-//            }
-//        }
+                        
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        transition.animatePositionAdditive(node: self, offset: CGPoint(x: incoming ? 30.0 : -30.0, y: -30.0), delay: delay)
+        transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
     }
 
     func animateContentFromTextInputField(textInput: ChatMessageTransitionNode.Source.TextInput, transition: CombinedTransition) {
