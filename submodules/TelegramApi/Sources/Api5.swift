@@ -1094,14 +1094,14 @@ public extension Api {
 }
 public extension Api {
     enum ForumTopic: TypeConstructorDescription {
-        case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings)
+        case forumTopic(flags: Int32, id: Int32, date: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, fromId: Api.Peer, notifySettings: Api.PeerNotifySettings, draft: Api.DraftMessage?)
         case forumTopicDeleted(id: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
-                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings):
+                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings, let draft):
                     if boxed {
-                        buffer.appendInt32(1495324380)
+                        buffer.appendInt32(1903173033)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(id, buffer: buffer, boxed: false)
@@ -1117,6 +1117,7 @@ public extension Api {
                     serializeInt32(unreadReactionsCount, buffer: buffer, boxed: false)
                     fromId.serialize(buffer, true)
                     notifySettings.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 4) != 0 {draft!.serialize(buffer, true)}
                     break
                 case .forumTopicDeleted(let id):
                     if boxed {
@@ -1129,8 +1130,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
-                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings):
-                return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("fromId", String(describing: fromId)), ("notifySettings", String(describing: notifySettings))])
+                case .forumTopic(let flags, let id, let date, let title, let iconColor, let iconEmojiId, let topMessage, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let unreadMentionsCount, let unreadReactionsCount, let fromId, let notifySettings, let draft):
+                return ("forumTopic", [("flags", String(describing: flags)), ("id", String(describing: id)), ("date", String(describing: date)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId)), ("topMessage", String(describing: topMessage)), ("readInboxMaxId", String(describing: readInboxMaxId)), ("readOutboxMaxId", String(describing: readOutboxMaxId)), ("unreadCount", String(describing: unreadCount)), ("unreadMentionsCount", String(describing: unreadMentionsCount)), ("unreadReactionsCount", String(describing: unreadReactionsCount)), ("fromId", String(describing: fromId)), ("notifySettings", String(describing: notifySettings)), ("draft", String(describing: draft))])
                 case .forumTopicDeleted(let id):
                 return ("forumTopicDeleted", [("id", String(describing: id))])
     }
@@ -1169,6 +1170,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _14 = Api.parse(reader, signature: signature) as? Api.PeerNotifySettings
             }
+            var _15: Api.DraftMessage?
+            if Int(_1!) & Int(1 << 4) != 0 {if let signature = reader.readInt32() {
+                _15 = Api.parse(reader, signature: signature) as? Api.DraftMessage
+            } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil
@@ -1183,8 +1188,9 @@ public extension Api {
             let _c12 = _12 != nil
             let _c13 = _13 != nil
             let _c14 = _14 != nil
-            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 {
-                return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, title: _4!, iconColor: _5!, iconEmojiId: _6, topMessage: _7!, readInboxMaxId: _8!, readOutboxMaxId: _9!, unreadCount: _10!, unreadMentionsCount: _11!, unreadReactionsCount: _12!, fromId: _13!, notifySettings: _14!)
+            let _c15 = (Int(_1!) & Int(1 << 4) == 0) || _15 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 && _c6 && _c7 && _c8 && _c9 && _c10 && _c11 && _c12 && _c13 && _c14 && _c15 {
+                return Api.ForumTopic.forumTopic(flags: _1!, id: _2!, date: _3!, title: _4!, iconColor: _5!, iconEmojiId: _6, topMessage: _7!, readInboxMaxId: _8!, readOutboxMaxId: _9!, unreadCount: _10!, unreadMentionsCount: _11!, unreadReactionsCount: _12!, fromId: _13!, notifySettings: _14!, draft: _15)
             }
             else {
                 return nil

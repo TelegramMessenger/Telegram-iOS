@@ -521,7 +521,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum Chat: TypeConstructorDescription {
+    indirect enum Chat: TypeConstructorDescription {
         case channel(flags: Int32, flags2: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?, usernames: [Api.Username]?)
         case channelForbidden(flags: Int32, id: Int64, accessHash: Int64, title: String, untilDate: Int32?)
         case chat(flags: Int32, id: Int64, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?)
@@ -1219,7 +1219,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChatInvite: TypeConstructorDescription {
+    indirect enum ChatInvite: TypeConstructorDescription {
         case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?)
         case chatInviteAlready(chat: Api.Chat)
         case chatInvitePeek(chat: Api.Chat, expires: Int32)

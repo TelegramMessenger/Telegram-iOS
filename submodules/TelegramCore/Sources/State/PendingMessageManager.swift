@@ -840,7 +840,13 @@ public final class PendingMessageManager {
                         flags |= Int32(1 << 15)
                     }
                     
-                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    var topMsgId: Int32?
+                    if let threadId = messages[0].0.threadId {
+                        flags |= Int32(1 << 8)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
+                    sendMessageRequest = network.request(Api.functions.messages.sendMultiMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, multiMedia: singleMedias, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                 }
                 
                 return sendMessageRequest
@@ -1068,13 +1074,25 @@ public final class PendingMessageManager {
                             flags |= Int32(1 << 15)
                         }
                     
-                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 8)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
+                        sendMessageRequest = network.requestWithAdditionalInfo(Api.functions.messages.sendMessage(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, message: message.text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), info: .acknowledgement, tag: dependencyTag)
                     case let .media(inputMedia, text):
                         if bubbleUpEmojiOrStickersets {
                             flags |= Int32(1 << 15)
                         }
+                    
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 8)
+                            topMsgId = Int32(clamping: threadId)
+                        }
                         
-                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
@@ -1087,7 +1105,14 @@ public final class PendingMessageManager {
                         if chatContextResult.hideVia {
                             flags |= Int32(1 << 11)
                         }
-                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
+                    
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 8)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
+                        sendMessageRequest = network.request(Api.functions.messages.sendInlineBotResult(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, randomId: uniqueId, queryId: chatContextResult.queryId, id: chatContextResult.id, scheduleDate: scheduleTime, sendAs: sendAsInputPeer))
                         |> map(NetworkRequestResult.result)
                     case .messageScreenshot:
                         sendMessageRequest = network.request(Api.functions.messages.sendScreenshotNotification(peer: inputPeer, replyToMsgId: replyMessageId ?? 0, randomId: uniqueId))

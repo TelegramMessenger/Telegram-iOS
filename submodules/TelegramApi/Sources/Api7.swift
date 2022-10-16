@@ -1,5 +1,5 @@
 public extension Api {
-    enum InputChannel: TypeConstructorDescription {
+    indirect enum InputChannel: TypeConstructorDescription {
         case inputChannel(channelId: Int64, accessHash: Int64)
         case inputChannelEmpty
         case inputChannelFromMessage(peer: Api.InputPeer, msgId: Int32, channelId: Int64)
@@ -311,7 +311,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputDialogPeer: TypeConstructorDescription {
+    indirect enum InputDialogPeer: TypeConstructorDescription {
         case inputDialogPeer(peer: Api.InputPeer)
         case inputDialogPeerFolder(folderId: Int32)
     
@@ -653,7 +653,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputFileLocation: TypeConstructorDescription {
+    indirect enum InputFileLocation: TypeConstructorDescription {
         case inputDocumentFileLocation(id: Int64, accessHash: Int64, fileReference: Buffer, thumbSize: String)
         case inputEncryptedFileLocation(id: Int64, accessHash: Int64)
         case inputFileLocation(volumeId: Int64, localId: Int32, secret: Int64, fileReference: Buffer)
@@ -963,7 +963,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputFolderPeer: TypeConstructorDescription {
+    indirect enum InputFolderPeer: TypeConstructorDescription {
         case inputFolderPeer(peer: Api.InputPeer, folderId: Int32)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {

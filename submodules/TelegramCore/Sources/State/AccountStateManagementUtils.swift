@@ -1697,7 +1697,9 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings, draft):
+                                        let _ = draft
+                                        
                                         state.operations.append(.ResetForumTopic(
                                             topicId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id),
                                             data: StoreMessageHistoryThreadData(
@@ -1797,7 +1799,9 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                                     
                                     for topic in topics {
                                         switch topic {
-                                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings, draft):
+                                            let _ = draft
+                                            
                                             let data = MessageHistoryThreadData(
                                                 creationDate: date,
                                                 isOwnedByMe: (flags & (1 << 1)) != 0,
@@ -1917,7 +1921,9 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                 
                                 for topic in topics {
                                     switch topic {
-                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                                    case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings, draft):
+                                        let _ = draft
+                                        
                                         fetchedChatList.threadInfos[MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)] = StoreMessageHistoryThreadData(
                                             data: MessageHistoryThreadData(
                                                 creationDate: date,

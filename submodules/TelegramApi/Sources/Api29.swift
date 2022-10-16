@@ -5938,18 +5938,19 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendInlineBotResult(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, randomId: Int64, queryId: Int64, id: String, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendInlineBotResult(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, topMsgId: Int32?, randomId: Int64, queryId: Int64, id: String, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(2057376407)
+                    buffer.appendInt32(363928691)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     serializeInt64(queryId, buffer: buffer, boxed: false)
                     serializeString(id, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.sendInlineBotResult", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("randomId", String(describing: randomId)), ("queryId", String(describing: queryId)), ("id", String(describing: id)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.sendInlineBotResult", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("topMsgId", String(describing: topMsgId)), ("randomId", String(describing: randomId)), ("queryId", String(describing: queryId)), ("id", String(describing: id)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -5960,12 +5961,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, media: Api.InputMedia, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, topMsgId: Int32?, media: Api.InputMedia, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-497026848)
+                    buffer.appendInt32(-1561796130)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     media.serialize(buffer, true)
                     serializeString(message, buffer: buffer, boxed: false)
                     serializeInt64(randomId, buffer: buffer, boxed: false)
@@ -5977,7 +5979,7 @@ public extension Api.functions.messages {
                     }}
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.sendMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("media", String(describing: media)), ("message", String(describing: message)), ("randomId", String(describing: randomId)), ("replyMarkup", String(describing: replyMarkup)), ("entities", String(describing: entities)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.sendMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("topMsgId", String(describing: topMsgId)), ("media", String(describing: media)), ("message", String(describing: message)), ("randomId", String(describing: randomId)), ("replyMarkup", String(describing: replyMarkup)), ("entities", String(describing: entities)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -5988,12 +5990,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendMessage(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendMessage(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, topMsgId: Int32?, message: String, randomId: Int64, replyMarkup: Api.ReplyMarkup?, entities: [Api.MessageEntity]?, scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(228423076)
+                    buffer.appendInt32(1684017487)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     serializeString(message, buffer: buffer, boxed: false)
                     serializeInt64(randomId, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {replyMarkup!.serialize(buffer, true)}
@@ -6004,7 +6007,7 @@ public extension Api.functions.messages {
                     }}
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.sendMessage", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("message", String(describing: message)), ("randomId", String(describing: randomId)), ("replyMarkup", String(describing: replyMarkup)), ("entities", String(describing: entities)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.sendMessage", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("topMsgId", String(describing: topMsgId)), ("message", String(describing: message)), ("randomId", String(describing: randomId)), ("replyMarkup", String(describing: replyMarkup)), ("entities", String(describing: entities)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -6015,12 +6018,13 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func sendMultiMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, multiMedia: [Api.InputSingleMedia], scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func sendMultiMedia(flags: Int32, peer: Api.InputPeer, replyToMsgId: Int32?, topMsgId: Int32?, multiMedia: [Api.InputSingleMedia], scheduleDate: Int32?, sendAs: Api.InputPeer?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(-134016113)
+                    buffer.appendInt32(1749432857)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peer.serialize(buffer, true)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt32(replyToMsgId!, buffer: buffer, boxed: false)}
+                    if Int(flags) & Int(1 << 8) != 0 {serializeInt32(topMsgId!, buffer: buffer, boxed: false)}
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(multiMedia.count))
                     for item in multiMedia {
@@ -6028,7 +6032,7 @@ public extension Api.functions.messages {
                     }
                     if Int(flags) & Int(1 << 10) != 0 {serializeInt32(scheduleDate!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 13) != 0 {sendAs!.serialize(buffer, true)}
-                    return (FunctionDescription(name: "messages.sendMultiMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("multiMedia", String(describing: multiMedia)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    return (FunctionDescription(name: "messages.sendMultiMedia", parameters: [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("replyToMsgId", String(describing: replyToMsgId)), ("topMsgId", String(describing: topMsgId)), ("multiMedia", String(describing: multiMedia)), ("scheduleDate", String(describing: scheduleDate)), ("sendAs", String(describing: sendAs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {

@@ -263,7 +263,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputStorePaymentPurpose: TypeConstructorDescription {
+    indirect enum InputStorePaymentPurpose: TypeConstructorDescription {
         case inputStorePaymentGiftPremium(userId: Api.InputUser, currency: String, amount: Int64)
         case inputStorePaymentPremiumSubscription(flags: Int32)
     
@@ -461,7 +461,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputUser: TypeConstructorDescription {
+    indirect enum InputUser: TypeConstructorDescription {
         case inputUser(userId: Int64, accessHash: Int64)
         case inputUserEmpty
         case inputUserFromMessage(peer: Api.InputPeer, msgId: Int32, userId: Int64)

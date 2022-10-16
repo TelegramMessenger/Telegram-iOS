@@ -1,5 +1,5 @@
 public extension Api {
-    enum InputGame: TypeConstructorDescription {
+    indirect enum InputGame: TypeConstructorDescription {
         case inputGameID(id: Int64, accessHash: Int64)
         case inputGameShortName(botId: Api.InputUser, shortName: String)
     
@@ -165,7 +165,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputInvoice: TypeConstructorDescription {
+    indirect enum InputInvoice: TypeConstructorDescription {
         case inputInvoiceMessage(peer: Api.InputPeer, msgId: Int32)
         case inputInvoiceSlug(slug: String)
     
@@ -857,7 +857,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum InputNotifyPeer: TypeConstructorDescription {
+    indirect enum InputNotifyPeer: TypeConstructorDescription {
         case inputNotifyBroadcasts
         case inputNotifyChats
         case inputNotifyForumTopic(peer: Api.InputPeer, topMsgId: Int32)

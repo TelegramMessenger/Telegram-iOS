@@ -479,7 +479,9 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                     
                     for topic in topics {
                         switch topic {
-                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings):
+                        case let .forumTopic(flags, id, date, title, iconColor, iconEmojiId, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, fromId, notifySettings, draft):
+                            let _ = draft
+                            
                             if (flags & (1 << 3)) != 0 {
                                 pinnedId = Int64(id)
                             }
