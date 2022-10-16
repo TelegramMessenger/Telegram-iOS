@@ -1,5 +1,5 @@
 public extension Api {
-    enum Updates: TypeConstructorDescription {
+    indirect enum Updates: TypeConstructorDescription {
         case updateShort(update: Api.Update, date: Int32)
         case updateShortChatMessage(flags: Int32, id: Int32, fromId: Int64, chatId: Int64, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, replyTo: Api.MessageReplyHeader?, entities: [Api.MessageEntity]?, ttlPeriod: Int32?)
         case updateShortMessage(flags: Int32, id: Int32, userId: Int64, message: String, pts: Int32, ptsCount: Int32, date: Int32, fwdFrom: Api.MessageFwdHeader?, viaBotId: Int64?, replyTo: Api.MessageReplyHeader?, entities: [Api.MessageEntity]?, ttlPeriod: Int32?)
