@@ -1641,6 +1641,16 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
         }
     }
     
+    func animateFromLoadingPlaceholder(messageContainer: ChatLoadingPlaceholderMessageContainer, delay: Double, transition: ContainedViewLayoutTransition) {
+        guard let item = self.item else {
+            return
+        }
+        
+        let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+        transition.animatePositionAdditive(node: self, offset: CGPoint(x: incoming ? 30.0 : -30.0, y: -30.0), delay: delay)
+        transition.animateTransformScale(node: self, from: CGPoint(x: 0.85, y: 0.85), delay: delay)
+    }
+    
     override func openMessageContextMenu() {
         guard let item = self.item else {
             return

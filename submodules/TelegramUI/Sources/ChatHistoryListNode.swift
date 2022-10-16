@@ -2559,7 +2559,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             loadState = .empty(emptyType)
                         }
                     } else {
-                        loadState = .messages
+                        if historyView.originalView.isLoadingEarlier && strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser {
+                            loadState = .loading
+                        } else {
+                            loadState = .messages
+                        }
                     }
                 } else {
                     loadState = .loading
@@ -2639,12 +2643,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf._buttonKeyboardMessage.set(.single(transition.keyboardButtonsMessage))
                 }
                 
-                if transition.animateIn || animateIn {
+                if (transition.animateIn || animateIn) && !"".isEmpty {
                     let heightNorm = strongSelf.bounds.height - strongSelf.insets.top
                     strongSelf.forEachVisibleItemNode { itemNode in
                         let delayFactor = itemNode.frame.minY / heightNorm
                         let delay = Double(delayFactor * 0.1)
-                        
+
                         if let itemNode = itemNode as? ChatMessageItemView {
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                             itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
@@ -2657,7 +2661,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.forEachItemHeaderNode { itemNode in
                         let delayFactor = itemNode.frame.minY / heightNorm
                         let delay = Double(delayFactor * 0.2)
-                        
+
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                         itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                     }

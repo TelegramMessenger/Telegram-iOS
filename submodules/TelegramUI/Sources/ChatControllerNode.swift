@@ -92,7 +92,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     var blurredHistoryNode: ASImageNode?
     let historyNodeContainer: ASDisplayNode
     let loadingNode: ChatLoadingNode
-    private var loadingPlaceholderNode: ChatLoadingPlaceholderNode
+    private(set) var loadingPlaceholderNode: ChatLoadingPlaceholderNode?
     
     private var emptyNode: ChatEmptyNode?
     private(set) var emptyType: ChatHistoryNodeLoadState.EmptyType?
@@ -222,49 +222,66 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var isLoadingValue: Bool = false
     private func updateIsLoading(isLoading: Bool, animated: Bool) {
-        loadingPlaceholderNode.isHidden = true
+        let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
+        
         if isLoading != self.isLoadingValue {
             self.isLoadingValue = isLoading
             if isLoading {
-//                self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, belowSubnode: self.historyNodeContainer)
-                self.loadingNode.isHidden = false
-                self.loadingNode.layer.removeAllAnimations()
-                self.loadingNode.alpha = 1.0
-                if animated {
-                    self.loadingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                }
-                
-                self.loadingPlaceholderNode.alpha = 1.0
-                self.loadingPlaceholderNode.isHidden = false
-                self.historyNode.alpha = 0.0
-            } else {
-                self.loadingPlaceholderNode.alpha = 0.0
-                self.loadingPlaceholderNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] completed in
-                    if let strongSelf = self {
-                        strongSelf.loadingPlaceholderNode.layer.removeAllAnimations()
-                        if completed {
-                            strongSelf.loadingPlaceholderNode.isHidden = true
+                if useLoadingPlaceholder {
+                    let loadingPlaceholderNode: ChatLoadingPlaceholderNode
+                    if let current = self.loadingPlaceholderNode {
+                        loadingPlaceholderNode = current
+                    } else {
+                        loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
+                        loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
+                        self.contentContainerNode.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
+                        
+                        self.loadingPlaceholderNode = loadingPlaceholderNode
+                     
+                        loadingPlaceholderNode.setup(self.historyNode)
+                        
+                        if let (layout, navigationHeight) = self.validLayout {
+                            self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate, listViewTransaction: { _, _, _, _ in
+                            }, updateExtraNavigationBarBackgroundHeight: { _, _ in
+                            })
                         }
                     }
-                })
-                self.loadingPlaceholderNode.animateOut(self.historyNode)
-                               
-                self.historyNode.alpha = 1.0
-                self.historyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
-                
-                self.loadingNode.alpha = 0.0
-                if animated {
-                    self.loadingNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
-                    self.loadingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] completed in
-                        if let strongSelf = self {
-                            strongSelf.loadingNode.layer.removeAllAnimations()
-                            if completed {
-                                strongSelf.loadingNode.isHidden = true
-                            }
-                        }
-                    })
+                    loadingPlaceholderNode.alpha = 1.0
+                    loadingPlaceholderNode.isHidden = false
                 } else {
-                    self.loadingNode.isHidden = true
+                    self.historyNodeContainer.supernode?.insertSubnode(self.loadingNode, belowSubnode: self.historyNodeContainer)
+                    self.loadingNode.isHidden = false
+                    self.loadingNode.layer.removeAllAnimations()
+                    self.loadingNode.alpha = 1.0
+                    if animated {
+                        self.loadingNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    }
+                }
+            } else {
+                if useLoadingPlaceholder {
+                    if let loadingPlaceholderNode = self.loadingPlaceholderNode {
+                        loadingPlaceholderNode.animateOut(self.historyNode, completion: { [weak self] in
+                            if let strongSelf = self {
+                                strongSelf.loadingPlaceholderNode?.removeFromSupernode()
+                                strongSelf.loadingPlaceholderNode = nil
+                            }
+                        })
+                    }
+                } else {
+                    self.loadingNode.alpha = 0.0
+                    if animated {
+                        self.loadingNode.layer.animateScale(from: 1.0, to: 0.1, duration: 0.3, removeOnCompletion: false)
+                        self.loadingNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { [weak self] completed in
+                            if let strongSelf = self {
+                                strongSelf.loadingNode.layer.removeAllAnimations()
+                                if completed {
+                                    strongSelf.loadingNode.isHidden = true
+                                }
+                            }
+                        })
+                    } else {
+                        self.loadingNode.isHidden = true
+                    }
                 }
             }
         }
@@ -414,9 +431,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         })
         
         self.loadingNode = ChatLoadingNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners)
-        
-        self.loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode, hasAvatar: chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser)
-
+                
         self.inputPanelContainerNode = ChatInputPanelContainer()
         self.inputPanelOverlayNode = SparseNode()
         self.inputPanelClippingNode = SparseNode()
@@ -490,13 +505,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         assert(Queue.mainQueue().isCurrent())
-        
-//        self.updateIsLoading(isLoading: true, animated: false)
-//
-//        Queue.mainQueue().after(1.0) {
-//            self.updateIsLoading(isLoading: false, animated: true)
-//        }
-        
+                
         self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
             if let strongSelf = self {
                 let wasLoading = strongSelf.isLoadingValue
@@ -561,12 +570,19 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     
         self.addSubnode(self.contentContainerNode)
         self.contentContainerNode.addSubnode(self.backgroundNode)
-        self.contentContainerNode.addSubnode(self.loadingPlaceholderNode)
         self.contentContainerNode.addSubnode(self.historyNodeContainer)
         
         if let navigationBar = self.navigationBar {
             self.contentContainerNode.addSubnode(navigationBar)
         }
+        
+//        Queue.mainQueue().after(0.2) {
+//            self.updateIsLoading(isLoading: true, animated: false)
+//        }
+//
+//        Queue.mainQueue().after(3.0) {
+//            self.updateIsLoading(isLoading: false, animated: true)
+//        }
 
         self.inputPanelContainerNode.expansionUpdated = { [weak self] transition in
             guard let strongSelf = self else {
@@ -1417,7 +1433,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         //transition.updateFrame(node: self.historyScrollingArea, frame: contentBounds)
         
         transition.updateFrame(node: self.loadingNode, frame: contentBounds)
-        transition.updateFrame(node: self.loadingPlaceholderNode, frame: contentBounds)
+        if let loadingPlaceholderNode = self.loadingPlaceholderNode {
+            transition.updateFrame(node: loadingPlaceholderNode, frame: contentBounds)
+        }
         
         if let restrictedNode = self.restrictedNode {
             transition.updateFrame(node: restrictedNode, frame: contentBounds)
@@ -1575,8 +1593,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.visibleAreaInset = visibleAreaInset
         self.loadingNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
         
-        self.loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
-        self.loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
+        if let loadingPlaceholderNode = self.loadingPlaceholderNode {
+            loadingPlaceholderNode.updateLayout(size: contentBounds.size, insets: visibleAreaInset, transition: transition)
+            loadingPlaceholderNode.update(rect: contentBounds, within: contentBounds.size, transition: transition)
+        }
         
         if let containerNode = self.containerNode {
             contentBottomInset += 8.0
@@ -2210,6 +2230,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.backgroundNode.update(wallpaper: chatPresentationInterfaceState.chatWallpaper)
             
             self.historyNode.verticalScrollIndicatorColor = UIColor(white: 0.5, alpha: 0.8)
+            self.loadingPlaceholderNode?.updatePresentationInterfaceState(chatPresentationInterfaceState)
             
             var updatedInputFocus = self.chatPresentationInterfaceStateRequiresInputFocus(self.chatPresentationInterfaceState) != self.chatPresentationInterfaceStateRequiresInputFocus(chatPresentationInterfaceState)
             if self.chatPresentationInterfaceStateInputView(self.chatPresentationInterfaceState) !== self.chatPresentationInterfaceStateInputView(chatPresentationInterfaceState) {
