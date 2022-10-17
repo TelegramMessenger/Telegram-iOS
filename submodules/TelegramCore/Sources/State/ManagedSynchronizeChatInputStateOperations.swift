@@ -100,9 +100,9 @@ func managedSynchronizeChatInputStateOperations(postbox: Postbox, network: Netwo
                     }
                     return .complete()
                 })
-                    |> then(postbox.transaction { transaction -> Void in
-                        let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
-                    })
+                |> then(postbox.transaction { transaction -> Void in
+                    let _ = transaction.operationLogRemoveEntry(peerId: entry.peerId, tag: tag, tagLocalIndex: entry.tagLocalIndex)
+                })
                 
                 disposable.set(signal.start())
             }

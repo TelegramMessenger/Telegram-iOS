@@ -1410,7 +1410,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                 updatedState.addUpdateInstalledStickerPacks(.sync)
             case .updateSavedGifs:
                 updatedState.addUpdateRecentGifs()
-            case let .updateDraftMessage(_, peer, _, draft):
+            case let .updateDraftMessage(_, peer, topMsgId, draft):
                 let inputState: SynchronizeableChatInputState?
                 switch draft {
                     case .draftMessageEmpty:
@@ -1422,7 +1422,11 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
                         }
                         inputState = SynchronizeableChatInputState(replyToMessageId: replyToMessageId, text: message, entities: messageTextEntitiesFromApiEntities(entities ?? []), timestamp: date, textSelection: nil)
                 }
-                updatedState.addUpdateChatInputState(peerId: peer.peerId, state: inputState)
+                var threadId: Int64?
+                if let topMsgId = topMsgId {
+                    threadId = Int64(topMsgId)
+                }
+                updatedState.addUpdateChatInputState(peerId: peer.peerId, threadId: threadId, state: inputState)
             case let .updatePhoneCall(phoneCall):
                 updatedState.addUpdateCall(phoneCall)
             case let .updatePhoneCallSignalingData(phoneCallId, data):
@@ -3737,8 +3741,8 @@ func replayFinalState(
                 stickerPackOperations.append(operation)
             case .UpdateRecentGifs:
                 syncRecentGifs = true
-            case let .UpdateChatInputState(peerId, inputState):
-                _internal_updateChatInputState(transaction: transaction, peerId: peerId, inputState: inputState)
+            case let .UpdateChatInputState(peerId, threadId, inputState):
+                _internal_updateChatInputState(transaction: transaction, peerId: peerId, threadId: threadId, inputState: inputState)
             case let .UpdateCall(call):
                 updatedCalls.append(call)
             case let .AddCallSignalingData(callId, data):

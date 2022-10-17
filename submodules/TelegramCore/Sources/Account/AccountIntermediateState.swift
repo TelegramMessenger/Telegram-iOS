@@ -98,7 +98,7 @@ enum AccountStateMutationOperation {
     case UpdateMessageForwardsCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
     case UpdateRecentGifs
-    case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
+    case UpdateChatInputState(PeerId, Int64?, SynchronizeableChatInputState?)
     case UpdateCall(Api.PhoneCall)
     case AddCallSignalingData(Int64, Data)
     case UpdateLangPack(String, Api.LangPackDifference?)
@@ -489,8 +489,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateRecentGifs)
     }
     
-    mutating func addUpdateChatInputState(peerId: PeerId, state: SynchronizeableChatInputState?) {
-        self.addOperation(.UpdateChatInputState(peerId, state))
+    mutating func addUpdateChatInputState(peerId: PeerId, threadId: Int64?, state: SynchronizeableChatInputState?) {
+        self.addOperation(.UpdateChatInputState(peerId, threadId, state))
     }
     
     mutating func addUpdateCall(_ call: Api.PhoneCall) {

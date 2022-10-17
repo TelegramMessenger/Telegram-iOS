@@ -308,16 +308,19 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         }
                     }
 
-                    if isUnread {
-                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                            f(.default)
-                        })))
+                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                     } else {
-                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                            f(.default)
-                        })))
+                        if isUnread {
+                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                                f(.default)
+                            })))
+                        } else {
+                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                                f(.default)
+                            })))
+                        }
                     }
 
                     let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
@@ -477,5 +480,71 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                 }
             }
         }
+    }
+}
+
+func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool, chatListController: ChatListControllerImpl?, joined: Bool) -> Signal<[ContextMenuItem], NoError> {
+    let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
+    let strings = presentationData.strings
+
+    return combineLatest(
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
+        ),
+        context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
+        )
+    )
+    |> mapToSignal { peer, threadData -> Signal<[ContextMenuItem], NoError> in
+        guard case let .channel(channel) = peer else {
+            return .single([])
+        }
+        guard let threadData = threadData else {
+            return .single([])
+        }
+        
+        var items: [ContextMenuItem] = []
+        
+        var canManage: Bool = false
+        if channel.hasPermission(.pinMessages) {
+            canManage = true
+        }
+        
+        if canManage {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                f(.default)
+                
+                let _ = context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: !isPinned).start()
+            })))
+        }
+        
+        var isMuted = false
+        if case .muted = threadData.notificationSettings.muteState {
+            isMuted = true
+        }
+        items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: threadId)
+            |> deliverOnMainQueue).start(completed: {
+                f(.default)
+            })
+        })))
+        
+        if canManage || threadData.isOwnedByMe {
+            //TODO:localize
+            items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? "Restart" : "Close", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                f(.default)
+                
+                let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
+            })))
+            
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
+                f(.default)
+                
+                chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
+            })))
+        }
+        
+        return .single(items)
     }
 }
