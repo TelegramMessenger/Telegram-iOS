@@ -824,7 +824,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         }
                     }
                 }
-            case let .universal(animation, scale, colors, title, text):
+            case let .universal(animation, scale, colors, title, text, customUndoText):
                 self.avatarNode = nil
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -851,7 +851,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.originalRemainingSeconds = isUserInteractionEnabled ? 5 : 3
             
                 self.textNode.maximumNumberOfLines = 5
-                displayUndo = false
+                
+                if let customUndoText = customUndoText {
+                    undoText = customUndoText
+                    displayUndo = true
+                } else {
+                    displayUndo = false
+                }
             case let .image(image, text):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()

@@ -1792,6 +1792,16 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.askForFilterRemoval(id: id)
             }
         }
+        self.tabContainerNode.presentPremiumTip = { [weak self] in
+            if let strongSelf = self {
+                let context = strongSelf.context
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: true, animateInAsReplacement: false, action: { action in
+                    if case .undo = action {
+                        strongSelf.push(PremiumIntroScreen(context: context, source: .folders))
+                    }
+                    return false }), in: .window(.root))
+            }
+        }
         
         let tabContextGesture: (Int32?, ContextExtractedContentContainingNode, ContextGesture, Bool, Bool) -> Void = { [weak self] id, sourceNode, gesture, keepInPlace, isDisabled in
             guard let strongSelf = self else {

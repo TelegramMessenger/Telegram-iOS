@@ -3903,6 +3903,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         }
     }
     
+    private var playedSwipeToReplyHaptic = false
     @objc func swipeToReplyGesture(_ recognizer: ChatSwipeToReplyRecognizer) {
         var offset: CGFloat = 0.0
         var swipeOffset: CGFloat = 45.0
@@ -3915,6 +3916,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         switch recognizer.state {
             case .began:
+                self.playedSwipeToReplyHaptic = false
                 self.currentSwipeToReplyTranslation = 0.0
                 if self.swipeToReplyFeedback == nil {
                     self.swipeToReplyFeedback = HapticFeedback()
@@ -3924,7 +3926,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             case .changed:
                 var translation = recognizer.translation(in: self.view)
                 translation.x = max(-80.0, min(0.0, translation.x))
-            
             
                 if let item = self.item, self.swipeToReplyNode == nil {
                     let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
@@ -3950,7 +3951,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
                     }
                     
-                    swipeToReplyNode.updateProgress(abs(translation.x) / swipeOffset)
+                    let progress = abs(translation.x) / swipeOffset
+                    swipeToReplyNode.updateProgress(progress)
+                    
+                    if progress == 1.0 && !self.playedSwipeToReplyHaptic {
+                        self.swipeToReplyFeedback?.impact(.heavy)
+                    }
                 }
             case .cancelled, .ended:
                 self.swipeToReplyFeedback = nil
