@@ -209,6 +209,17 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func removeCustomThreadNotificationSettings(peerId: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for threadId in threadIds {
+                    _internal_updatePeerNotificationSoundInteractive(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, sound: .default)
+                    _internal_updatePeerMuteSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, muteInterval: nil)
+                    _internal_updatePeerDisplayPreviewsSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, displayPreviews: .default)
+                }
+            }
+            |> ignoreValues
+        }
 
         public func channelAdminEventLog(peerId: PeerId) -> ChannelAdminEventLogContext {
             return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId)

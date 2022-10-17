@@ -30,6 +30,7 @@ swift_library(
         "//submodules/ItemListPeerItem",
         "//submodules/ItemListPeerActionItem",
         "//submodules/NotificationSoundSelectionUI",
+        "//submodules/SettingsUI",
     ],
     visibility = [
         "//visibility:public",

@@ -14,6 +14,7 @@ import PagerComponent
 import MultilineTextComponent
 import EmojiStatusComponent
 import Postbox
+import PremiumUI
 
 private final class TitleFieldComponent: Component {
     typealias EnvironmentType = Empty
@@ -315,13 +316,15 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     let mode: ForumCreateTopicScreen.Mode
     let titleUpdated: (String) -> Void
     let iconUpdated: (Int64?) -> Void
+    let openPremium: () -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, openPremium: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.titleUpdated = titleUpdated
         self.iconUpdated = iconUpdated
+        self.openPremium = openPremium
     }
     
     static func ==(lhs: ForumCreateTopicScreenComponent, rhs: ForumCreateTopicScreenComponent) -> Bool {
@@ -341,17 +344,26 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         private let context: AccountContext
         private let titleUpdated: (String) -> Void
         private let iconUpdated: (Int64?) -> Void
+        private let openPremium: () -> Void
         
         var emojiContent: EmojiPagerContentComponent?
         private let emojiContentDisposable = MetaDisposable()
         
+        private var isPremiumDisposable: Disposable?
+        
+        private var defaultIconFilesDisposable: Disposable?
+        private var defaultIconFiles = Set<Int64>()
+        
         var title: String
         var fileId: Int64
         
-        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void) {
+        private var hasPremium: Bool = false
+        
+        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, openPremium: @escaping () -> Void) {
             self.context = context
             self.titleUpdated = titleUpdated
             self.iconUpdated = iconUpdated
+            self.openPremium = openPremium
             
             switch mode {
                 case .create:
@@ -384,10 +396,36 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 self?.emojiContent = content
                 self?.updated(transition: .immediate)
             }))
+            
+            self.isPremiumDisposable = (context.engine.data.subscribe(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+            |> map { peer -> Bool in
+                guard case let .user(user) = peer else {
+                    return false
+                }
+                return user.isPremium
+            }
+            |> distinctUntilChanged).start(next: { [weak self] hasPremium in
+                self?.hasPremium = hasPremium
+            })
+            
+            self.defaultIconFilesDisposable = (context.engine.stickers.loadedStickerPack(reference: .iconTopicEmoji, forceActualized: false)
+            |> deliverOnMainQueue).start(next: { [weak self] result in
+                guard let strongSelf = self else {
+                    return
+                }
+                switch result {
+                case let .result(_, items, _):
+                    strongSelf.defaultIconFiles = Set(items.map(\.file.fileId.id))
+                default:
+                    break
+                }
+            })
         }
         
         deinit {
             self.emojiContentDisposable.dispose()
+            self.defaultIconFilesDisposable?.dispose()
+            self.isPremiumDisposable?.dispose()
         }
         
         func updateTitle(_ text: String) {
@@ -423,7 +461,17 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 return
             }
             
-            self.fileId = item.itemFile?.fileId.id ?? 0
+            if let fileId = item.itemFile?.fileId.id {
+                if !self.hasPremium && !self.defaultIconFiles.contains(fileId) {
+                    self.openPremium()
+                    return
+                }
+                
+                self.fileId = fileId
+            } else {
+                self.fileId = 0
+            }
+            
             self.updated(transition: .immediate)
             
             self.iconUpdated(self.fileId != 0 ? self.fileId : nil)
@@ -456,7 +504,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             context: self.context,
             mode: self.mode,
             titleUpdated: self.titleUpdated,
-            iconUpdated: self.iconUpdated
+            iconUpdated: self.iconUpdated,
+            openPremium: self.openPremium
         )
     }
     
@@ -679,10 +728,14 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     public init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode) {
         var titleUpdatedImpl: ((String) -> Void)?
         var iconUpdatedImpl: ((Int64?) -> Void)?
+        var openPremiumImpl: (() -> Void)?
+        
         super.init(context: context, component: ForumCreateTopicScreenComponent(context: context, peerId: peerId, mode: mode, titleUpdated: { title in
             titleUpdatedImpl?(title)
         }, iconUpdated: { fileId in
             iconUpdatedImpl?(fileId)
+        }, openPremium: {
+            openPremiumImpl?()
         }), navigationBarAppearance: .transparent)
         
         //TODO:localize
@@ -725,10 +778,28 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             
             strongSelf.state = (strongSelf.state.0, fileId)
         }
+        
+        openPremiumImpl = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            var replaceImpl: ((ViewController) -> Void)?
+            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
+                let controller = PremiumIntroScreen(context: context, source: .reactions)
+                replaceImpl?(controller)
+            })
+            replaceImpl = { [weak controller] c in
+                controller?.replace(with: c)
+            }
+            strongSelf.push(controller)
+        }
     }
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
+    }
+    
+    deinit {
     }
     
     @objc private func cancelPressed() {

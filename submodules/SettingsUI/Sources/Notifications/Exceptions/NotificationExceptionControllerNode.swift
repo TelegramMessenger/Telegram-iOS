@@ -803,8 +803,11 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
         let presentPeerSettings: (PeerId, @escaping () -> Void) -> Void = { [weak self] peerId, completion in
             (self?.searchDisplayController?.contentNode as? NotificationExceptionsSearchContainerNode)?.listNode.clearHighlightAnimated(true)
             
-            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
-            |> deliverOnMainQueue).start(next: { peer in
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.NotificationSettings.Global()
+            )
+            |> deliverOnMainQueue).start(next: { peer, globalSettings in
                 completion()
                 
                 guard let peer = peer else {
@@ -814,7 +817,20 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                 let mode = stateValue.with { $0.mode }
                 
                 dismissInputImpl?()
-                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), threadId: nil, mode: mode, updatePeerSound: { peerId, sound in
+                
+                let canRemove = mode.peerIds.contains(peerId)
+                
+                let defaultSound: PeerMessageSound
+                switch mode {
+                case .channels:
+                    defaultSound = globalSettings.channels.sound._asMessageSound()
+                case .groups:
+                    defaultSound = globalSettings.groupChats.sound._asMessageSound()
+                case .users:
+                    defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                }
+                
+                presentControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), threadId: nil, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { peerId, sound in
                     _ = updatePeerSound(peer.id, sound).start(next: { _ in
                         updateNotificationsDisposable.set(nil)
                         _ = combineLatest(updatePeerSound(peer.id, sound), context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)) |> deliverOnMainQueue).start(next: { _, peer in
@@ -883,7 +899,7 @@ final class NotificationExceptionsControllerNode: ViewControllerTracingNode {
                     filter.insert(.onlyChannels)
             }
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-            controller.peerSelected = { [weak controller] peer in
+            controller.peerSelected = { [weak controller] peer, _ in
                 let peerId = peer.id
                 
                 presentPeerSettings(peerId, {

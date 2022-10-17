@@ -365,7 +365,7 @@ private struct NotificationExceptionPeerState : Equatable {
     }
 }
 
-public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, threadId: Int64?, mode: NotificationExceptionMode, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
+public func notificationPeerExceptionController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peer: Peer, customTitle: String? = nil, threadId: Int64?, canRemove: Bool, defaultSound: PeerMessageSound, edit: Bool = false, updatePeerSound: @escaping(PeerId, PeerMessageSound) -> Void, updatePeerNotificationInterval: @escaping(PeerId, Int32?) -> Void, updatePeerDisplayPreviews: @escaping(PeerId, PeerNotificationDisplayPreviews) -> Void, removePeerFromExceptions: @escaping () -> Void, modifiedPeer: @escaping () -> Void) -> ViewController {
     let initialState = NotificationExceptionPeerState(canRemove: false)
     let statePromise = Promise(initialState)
     let stateValue = Atomic(value: initialState)
@@ -426,16 +426,8 @@ public func notificationPeerExceptionController(context: AccountContext, updated
     |> map { peerNotificationSettings, threadNotificationSettings, globalNotificationSettings -> NotificationExceptionPeerState in
         let effectiveSettings = threadNotificationSettings ?? peerNotificationSettings
         
-        var state = NotificationExceptionPeerState(canRemove: mode.peerIds.contains(peer.id), notifications: effectiveSettings._asNotificationSettings())
-        let globalSettings = globalNotificationSettings
-        switch mode {
-        case .channels:
-            state.defaultSound = globalSettings.channels.sound._asMessageSound()
-        case .groups:
-            state.defaultSound = globalSettings.groupChats.sound._asMessageSound()
-        case .users:
-            state.defaultSound = globalSettings.privateChats.sound._asMessageSound()
-        }
+        var state = NotificationExceptionPeerState(canRemove: canRemove, notifications: effectiveSettings._asNotificationSettings())
+        state.defaultSound = defaultSound
         let _ = stateValue.swap(state)
         return state
     })
@@ -467,7 +459,14 @@ public func notificationPeerExceptionController(context: AccountContext, updated
             animated = true
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
+        let titleString: String
+        if let customTitle = customTitle {
+            titleString = customTitle
+        } else {
+            titleString = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(titleString), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: notificationPeerExceptionEntries(presentationData: presentationData, notificationSoundList: notificationSoundList, state: state), style: .blocks, animateChanges: animated)
         
         return (controllerState, (listState, arguments))

@@ -313,6 +313,15 @@ final class AuthorizedApplicationContext {
 
             if let strongSelf = self, let (messages, _, notify, threadData) = messageList.last, let firstMessage = messages.first {
                 if UIApplication.shared.applicationState == .active {
+                    let chatLocation: ChatLocation
+                    if let _ = threadData, let threadId = firstMessage.threadId {
+                        chatLocation = .replyThread(message: ChatReplyThreadMessage(
+                            messageId: MessageId(peerId: firstMessage.id.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                        ))
+                    } else {
+                        chatLocation = .peer(id: firstMessage.id.peerId)
+                    }
+                    
                     var chatIsVisible = false
                     if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.traceVisibility() {
                         if topController.chatLocation.peerId == firstMessage.id.peerId {
@@ -326,7 +335,7 @@ final class AuthorizedApplicationContext {
                     
                     if !chatIsVisible {
                         strongSelf.mainWindow.forEachViewController({ controller in
-                            if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
+                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, controller.chatLocation.threadId == chatLocation.threadId {
                                 chatIsVisible = true
                                 return false
                             }
@@ -406,14 +415,14 @@ final class AuthorizedApplicationContext {
                                             return true
                                         }
                                         
-                                        if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = topController.chatLocation {
+                                        if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.chatLocation.peerId == chatLocation.peerId, topController.chatLocation.threadId == chatLocation.threadId {
                                             strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                             
                                             return false
                                         }
                                         
                                         for controller in strongSelf.rootController.viewControllers {
-                                            if let controller = controller as? ChatControllerImpl, case .peer(firstMessage.id.peerId) = controller.chatLocation  {
+                                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, controller.chatLocation.threadId == chatLocation.threadId {
                                                 return true
                                             }
                                         }
@@ -430,13 +439,13 @@ final class AuthorizedApplicationContext {
                                         }
                                         
                                         if !processed {
-                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: .peer(id: firstMessage.id.peerId)))
+                                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: strongSelf.rootController, context: strongSelf.context, chatLocation: chatLocation))
                                         }
                                     }
                                     return false
                                 }, expandAction: { expandData in
                                     if let strongSelf = self {
-                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: firstMessage.id.peerId), mode: .overlay(strongSelf.rootController))
+                                        let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: chatLocation, mode: .overlay(strongSelf.rootController))
                                         chatController.presentationArguments = ChatControllerOverlayPresentationData(expandData: expandData())
                                         (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                                     }

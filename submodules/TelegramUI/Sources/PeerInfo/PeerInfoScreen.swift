@@ -1609,7 +1609,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }))
                     }
                     
-                    if isCreator || (channel.adminRights?.rights.contains(.canChangeInfo) == true) {
+                    if isCreator {
                         //TODO:localize
                         items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/ChatListFilters"), toggled: { value in
                             interaction.toggleForumTopics(value)
@@ -4047,78 +4047,91 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     })))
                 }
                 
+                let context = self.context
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_NotificationsCustomize, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Customize"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak self] _, f in
                     f(.dismissWithoutContent)
                     
-                    guard let strongSelf = self, let peer = strongSelf.data?.peer else {
-                        return
-                    }
-                    let threadId = strongSelf.chatLocation.threadId
-                    
-                    let context = strongSelf.context
-                    let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-                        return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: sound) |> deliverOnMainQueue
-                    }
-                    
-                    let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-                        return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: muteInterval) |> deliverOnMainQueue
-                    }
-                    
-                    let updatePeerDisplayPreviews: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
-                        peerId, displayPreviews in
-                        return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
-                    }
-                    
-                    let mode: NotificationExceptionMode
-                    if let _ = peer as? TelegramUser {
-                        mode = .users([:])
-                    } else if let _ = peer as? TelegramSecretChat {
-                        mode = .users([:])
-                    } else if let channel = peer as? TelegramChannel {
-                        if case .broadcast = channel.info {
-                            mode = .channels([:])
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.NotificationSettings.Global()
+                    )
+                    |> deliverOnMainQueue).start(next: { globalSettings in
+                        guard let strongSelf = self, let peer = strongSelf.data?.peer else {
+                            return
+                        }
+                        let threadId = strongSelf.chatLocation.threadId
+                        
+                        let context = strongSelf.context
+                        let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
+                            return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: sound) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
+                            return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: muteInterval) |> deliverOnMainQueue
+                        }
+                        
+                        let updatePeerDisplayPreviews: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
+                            peerId, displayPreviews in
+                            return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+                        }
+                        
+                        let mode: NotificationExceptionMode
+                        let defaultSound: PeerMessageSound
+                        if let _ = peer as? TelegramUser {
+                            mode = .users([:])
+                            defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                        } else if let _ = peer as? TelegramSecretChat {
+                            mode = .users([:])
+                            defaultSound = globalSettings.privateChats.sound._asMessageSound()
+                        } else if let channel = peer as? TelegramChannel {
+                            if case .broadcast = channel.info {
+                                mode = .channels([:])
+                                defaultSound = globalSettings.channels.sound._asMessageSound()
+                            } else {
+                                mode = .groups([:])
+                                defaultSound = globalSettings.groupChats.sound._asMessageSound()
+                            }
                         } else {
                             mode = .groups([:])
+                            defaultSound = globalSettings.groupChats.sound._asMessageSound()
                         }
-                    } else {
-                        mode = .groups([:])
-                    }
-                    
-                    let exceptionController = notificationPeerExceptionController(context: context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, peer: peer, threadId: threadId, mode: mode, edit: true, updatePeerSound: { peerId, sound in
-                        let _ = (updatePeerSound(peer.id, sound)
-                        |> deliverOnMainQueue).start(next: { _ in
-                          
+                        let _ = mode
+                        
+                        let canRemove = false
+                        
+                        let exceptionController = notificationPeerExceptionController(context: context, updatedPresentationData: strongSelf.controller?.updatedPresentationData, peer: peer, threadId: threadId, canRemove: canRemove, defaultSound: defaultSound, edit: true, updatePeerSound: { peerId, sound in
+                            let _ = (updatePeerSound(peer.id, sound)
+                            |> deliverOnMainQueue).start(next: { _ in
+                            })
+                        }, updatePeerNotificationInterval: { peerId, muteInterval in
+                            let _ = (updatePeerNotificationInterval(peerId, muteInterval)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                if let muteInterval = muteInterval, muteInterval == Int32.max {
+                                    let iconColor: UIColor = .white
+                                    strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
+                                        "Middle.Group 1.Fill 1": iconColor,
+                                        "Top.Group 1.Fill 1": iconColor,
+                                        "Bottom.Group 1.Fill 1": iconColor,
+                                        "EXAMPLE.Group 1.Fill 1": iconColor,
+                                        "Line.Group 1.Stroke 1": iconColor
+                                    ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                                }
+                            })
+                        }, updatePeerDisplayPreviews: { peerId, displayPreviews in
+                            let _ = (updatePeerDisplayPreviews(peerId, displayPreviews)
+                            |> deliverOnMainQueue).start(next: { _ in
+                                
+                            })
+                        }, removePeerFromExceptions: {
+                        }, modifiedPeer: {
                         })
-                    }, updatePeerNotificationInterval: { peerId, muteInterval in
-                        let _ = (updatePeerNotificationInterval(peerId, muteInterval)
-                        |> deliverOnMainQueue).start(next: { _ in
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            if let muteInterval = muteInterval, muteInterval == Int32.max {
-                                let iconColor: UIColor = .white
-                                strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_profilemute", scale: 0.075, colors: [
-                                    "Middle.Group 1.Fill 1": iconColor,
-                                    "Top.Group 1.Fill 1": iconColor,
-                                    "Bottom.Group 1.Fill 1": iconColor,
-                                    "EXAMPLE.Group 1.Fill 1": iconColor,
-                                    "Line.Group 1.Stroke 1": iconColor
-                            ], title: nil, text: strongSelf.presentationData.strings.PeerInfo_TooltipMutedForever, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
-                            }
-                        })
-                    }, updatePeerDisplayPreviews: { peerId, displayPreviews in
-                        let _ = (updatePeerDisplayPreviews(peerId, displayPreviews)
-                        |> deliverOnMainQueue).start(next: { _ in
-
-                        })
-                    }, removePeerFromExceptions: {
-                      
-                    }, modifiedPeer: {
+                        exceptionController.navigationPresentation = .modal
+                        controller.push(exceptionController)
                     })
-                    exceptionController.navigationPresentation = .modal
-                    controller.push(exceptionController)
                 })))
                 
                 items.append(.action(ContextMenuActionItem(text: self.presentationData.strings.PeerInfo_MuteForever, textColor: .destructive, icon: { theme in
@@ -4155,12 +4168,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         guard let self else {
                             return
                         }
-                        self.controller?.present(threadNotificationExceptionsScreen(context: self.context, peerId: self.peerId, notificationExceptions: self.forumTopicNotificationExceptions, updated: { [weak self] value in
+                        self.controller?.push(threadNotificationExceptionsScreen(context: self.context, peerId: self.peerId, notificationExceptions: self.forumTopicNotificationExceptions, updated: { [weak self] value in
                             guard let self else {
                                 return
                             }
                             self.forumTopicNotificationExceptions = value
-                        }), in: .window(.root))
+                        }))
                     })
                 }
                 
@@ -7237,7 +7250,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
                 strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             }
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer, _ in
                 let peerId = peer.id
                 
                 if let strongSelf = self, let _ = peerSelectionController {

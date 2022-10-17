@@ -4039,8 +4039,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
             }
         }
-        self.navigationBar?.allowsCustomTransition = {
-            return true
+        self.navigationBar?.allowsCustomTransition = { [weak self] in
+            guard let strongSelf = self else {
+                return false
+            }
+            return strongSelf.navigationItem.rightBarButtonItem === strongSelf.chatInfoNavigationButton?.buttonItem
         }
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
@@ -4826,7 +4829,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             
                             let avatarContent: EmojiStatusComponent.Content
                             if let fileId = threadInfo.icon {
-                                avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .count(2))
+                                avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: strongSelf.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                             } else {
                                 avatarContent = .topic(title: String(threadInfo.title.prefix(1)), colorIndex: Int(threadInfo.iconColor), size: CGSize(width: 32.0, height: 32.0))
                             }
@@ -14948,7 +14951,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             var attemptSelectionImpl: ((Peer) -> Void)?
-            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, attemptSelection: { peer in
+            let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, attemptSelection: { peer, _ in
                 attemptSelectionImpl?(peer)
             }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }))
             let context = self.context
@@ -15072,7 +15075,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                 }
             }
-            controller.peerSelected = { [weak self, weak controller] peer in
+            controller.peerSelected = { [weak self, weak controller] peer, _ in
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
@@ -15289,7 +15292,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
                                 let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData))
-                                controller.peerSelected = { [weak self, weak controller] peer in
+                                controller.peerSelected = { [weak self, weak controller] peer, _ in
                                     let peerId = peer.id
                                     
                                     if let strongSelf = self, let strongController = controller {
@@ -16946,7 +16949,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func presentTopicDiscardAlert(action: @escaping () -> Void = {}, delay: Bool = false, performAction: Bool = true) -> Bool {
-        if self.chatDisplayNode.emptyType == .topic {
+        if self.chatDisplayNode.emptyType == .topic, !"".isEmpty {
             Queue.mainQueue().after(delay ? 0.2 : 0.0) {
                 self.present(textAlertController(context: self.context, updatedPresentationData: self.updatedPresentationData, title: "Delete Topic", text: "Topic isn't created, because you haven't posted a message.\n\nDo you want to discard this topic?", actions: [TextAlertAction(type: .genericAction, title: self.presentationData.strings.Common_Yes, action: { [weak self] in
                     guard let strongSelf = self else {

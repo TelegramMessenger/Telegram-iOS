@@ -16,6 +16,7 @@ import NotificationSoundSelectionUI
 import TelegramStringFormatting
 import ItemListPeerItem
 import ItemListPeerActionItem
+import SettingsUI
 
 private extension EnginePeer.NotificationSettings.MuteState {
     var timeInterval: Int32? {
@@ -98,7 +99,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
   
     case exceptionsHeader(String)
     case addException(String)
-    case exception(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, EngineMessageHistoryThread.Info, String, TelegramPeerNotificationSettings, Bool, Bool)
+    case exception(Int32, PresentationDateTimeFormat, PresentationPersonNameOrder, EnginePeer, Int64, EngineMessageHistoryThread.Info, String, TelegramPeerNotificationSettings, Bool, Bool)
     case removeAllExceptions(String)
     
     var section: ItemListSectionId {
@@ -126,7 +127,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
             return 4
         case .addException:
             return 5
-        case let .exception(index, _, _, _, _, _, _, _):
+        case let .exception(index, _, _, _, _, _, _, _, _, _):
             return 6 + index
         case .removeAllExceptions:
             return 100000
@@ -184,8 +185,8 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
             } else {
                 return false
             }
-        case let .exception(lhsIndex, lhsDateTimeFormat, lhsDisplayNameOrder, lhsInfo, lhsDescription, lhsSettings, lhsEditing, lhsRevealed):
-            if case let .exception(rhsIndex, rhsDateTimeFormat, rhsDisplayNameOrder, rhsInfo, rhsDescription, rhsSettings, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayNameOrder == rhsDisplayNameOrder, lhsInfo == rhsInfo, lhsDescription == rhsDescription, lhsSettings == rhsSettings, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
+        case let .exception(lhsIndex, lhsDateTimeFormat, lhsDisplayNameOrder, lhsPeer, lhsThreadId, lhsInfo, lhsDescription, lhsSettings, lhsEditing, lhsRevealed):
+            if case let .exception(rhsIndex, rhsDateTimeFormat, rhsDisplayNameOrder, rhsPeer, rhsThreadId, rhsInfo, rhsDescription, rhsSettings, rhsEditing, rhsRevealed) = rhs, lhsIndex == rhsIndex, lhsDateTimeFormat == rhsDateTimeFormat, lhsDisplayNameOrder == rhsDisplayNameOrder, lhsPeer == rhsPeer, lhsThreadId == rhsThreadId, lhsInfo == rhsInfo, lhsDescription == rhsDescription, lhsSettings == rhsSettings, lhsEditing == rhsEditing, lhsRevealed == rhsRevealed {
                 return true
             } else {
                 return false
@@ -226,16 +227,18 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.plusIconImage(presentationData.theme), title: text, sectionId: self.section, height: .peerList, color: .accent, editing: false, action: {
                 arguments.addException()
             })
-        //case let .exception(_, dateTimeFormat, nameDisplayOrder, info, description, _, editing, revealed):
-        case .exception:
-            preconditionFailure()
-            /*return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: nil, text: .text(description, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
-                arguments.openException(peer)
+        case let .exception(_, dateTimeFormat, nameDisplayOrder, peer, threadId, info, description, _, editing, revealed):
+            return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: peer, threadInfo: info, presence: nil, text: .text(description, .secondary), label: .none, editing: ItemListPeerItemEditing(editable: true, editing: editing, revealed: revealed), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: {
+                arguments.openException(threadId)
             }, setPeerIdWithRevealedOptions: { peerId, fromPeerId in
-                arguments.updateRevealedPeerId(peerId)
-            }, removePeer: { peerId in
-                arguments.removePeer(peer)
-            }, hasTopStripe: false, hasTopGroupInset: false, noInsets: false)*/
+                if let _ = peerId {
+                    arguments.updateRevealedThreadId(threadId)
+                } else {
+                    arguments.updateRevealedThreadId(nil)
+                }
+            }, removePeer: { _ in
+                arguments.removeThread(threadId)
+            }, hasTopStripe: false, hasTopGroupInset: false, noInsets: false)
         case let .removeAllExceptions(text):
             return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.deleteIconImage(presentationData.theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                 arguments.removeAllExceptions()
@@ -244,7 +247,7 @@ private enum NotificationsPeerCategoryEntry: ItemListNodeEntry {
     }
 }
 
-private func notificationsPeerCategoryEntries(notificationSettings: EnginePeer.NotificationSettings, state: NotificationExceptionState, presentationData: PresentationData, notificationSoundList: NotificationSoundList?) -> [NotificationsPeerCategoryEntry] {
+private func notificationsPeerCategoryEntries(peerId: EnginePeer.Id, notificationSettings: EnginePeer.NotificationSettings, state: NotificationExceptionState, presentationData: PresentationData, notificationSoundList: NotificationSoundList?) -> [NotificationsPeerCategoryEntry] {
     var entries: [NotificationsPeerCategoryEntry] = []
 
     var notificationsEnabled = true
@@ -328,7 +331,7 @@ private func notificationsPeerCategoryEntries(notificationSettings: EnginePeer.N
             }
         }
         existingThreadIds.insert(value.threadId)
-        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
+        entries.append(.exception(Int32(index), presentationData.dateTimeFormat, presentationData.nameDisplayOrder, .channel(TelegramChannel(id: peerId, accessHash: nil, title: "", username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(TelegramChannelGroupInfo(flags: [])), flags: [.isForum], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: [])), value.threadId, value.info, title, value.notificationSettings._asNotificationSettings(), state.editing, state.revealedThreadId == value.threadId))
         index += 1
     }
     
@@ -339,10 +342,82 @@ private func notificationsPeerCategoryEntries(notificationSettings: EnginePeer.N
     return entries
 }
 
+private extension EnginePeer.NotificationSettings {
+    var isDefault: Bool {
+        switch self.muteState {
+        case .default:
+            break
+        case .muted, .unmuted:
+            return false
+        }
+        
+        switch self.messageSound {
+        case .default:
+            break
+        case .none, .bundledClassic, .bundledModern, .cloud:
+            return false
+        }
+        
+        switch self.displayPreviews {
+        case .default:
+            break
+        case .hide, .show:
+            return false
+        }
+        
+        return true
+    }
+}
+
 private struct NotificationExceptionState: Equatable {
     var revealedThreadId: Int64? = nil
     var editing: Bool = false
     var notificationExceptions: [EngineMessageHistoryThread.NotificationException] = []
+    
+    mutating func updateSound(threadId: Int64, info: EngineMessageHistoryThread.Info, sound: PeerMessageSound) {
+        if let index = self.notificationExceptions.firstIndex(where: { $0.threadId == threadId }) {
+            self.notificationExceptions[index].notificationSettings.messageSound = EnginePeer.NotificationSettings.MessageSound(sound)
+            if self.notificationExceptions[index].notificationSettings.isDefault {
+                self.notificationExceptions.remove(at: index)
+            }
+        } else {
+            var settings = EnginePeer.NotificationSettings(.defaultSettings)
+            settings.messageSound = EnginePeer.NotificationSettings.MessageSound(sound)
+            if !settings.isDefault {
+                notificationExceptions.insert(EngineMessageHistoryThread.NotificationException(threadId: threadId, info: info, notificationSettings: settings), at: 0)
+            }
+        }
+    }
+    
+    mutating func updateMuteInterval(threadId: Int64, info: EngineMessageHistoryThread.Info, muteInterval: Int32?) {
+        if let index = self.notificationExceptions.firstIndex(where: { $0.threadId == threadId }) {
+            self.notificationExceptions[index].notificationSettings.muteState = muteInterval.flatMap { .muted(until: $0) } ?? .unmuted
+            if self.notificationExceptions[index].notificationSettings.isDefault {
+                self.notificationExceptions.remove(at: index)
+            }
+        } else {
+            var settings = EnginePeer.NotificationSettings(.defaultSettings)
+            settings.muteState = muteInterval.flatMap { .muted(until: $0) } ?? .unmuted
+            if !settings.isDefault {
+                notificationExceptions.insert(EngineMessageHistoryThread.NotificationException(threadId: threadId, info: info, notificationSettings: settings), at: 0)
+            }
+        }
+    }
+    
+    mutating func updateDisplayPreviews(threadId: Int64, info: EngineMessageHistoryThread.Info, displayPreviews: PeerNotificationDisplayPreviews) {
+        if let index = self.notificationExceptions.firstIndex(where: { $0.threadId == threadId }) {
+            self.notificationExceptions[index].notificationSettings.displayPreviews = EnginePeer.NotificationSettings.DisplayPreviews(displayPreviews)
+            if self.notificationExceptions[index].notificationSettings.isDefault {
+                self.notificationExceptions.remove(at: index)
+            }
+        } else {
+            var settings = EnginePeer.NotificationSettings(.defaultSettings)
+            settings.displayPreviews = EnginePeer.NotificationSettings.DisplayPreviews(displayPreviews)
+            if !settings.isDefault {
+                notificationExceptions.insert(EngineMessageHistoryThread.NotificationException(threadId: threadId, info: info, notificationSettings: settings), at: 0)
+            }
+        }
+    }
 }
 
 public func threadNotificationExceptionsScreen(context: AccountContext, peerId: EnginePeer.Id, notificationExceptions: [EngineMessageHistoryThread.NotificationException], updated: @escaping ([EngineMessageHistoryThread.NotificationException]) -> Void) -> ViewController {
@@ -358,23 +433,80 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
     let updateState: ((NotificationExceptionState) -> NotificationExceptionState) -> Void = { f in
         let result = stateValue.modify { f($0) }
         statePromise.set(result)
-        //updatedMode(result.mode)
     }
     
-    /*let updatePeerSound: (PeerId, PeerMessageSound) -> Signal<Void, NoError> = { peerId, sound in
-        return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: nil, sound: sound)
+    let updateThreadSound: (Int64, PeerMessageSound) -> Signal<Void, NoError> = { threadId, sound in
+        return context.engine.peers.updatePeerNotificationSoundInteractive(peerId: peerId, threadId: threadId, sound: sound)
         |> deliverOnMainQueue
     }
 
-    let updatePeerNotificationInterval: (PeerId, Int32?) -> Signal<Void, NoError> = { peerId, muteInterval in
-        return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: nil, muteInterval: muteInterval)
+    let updateThreadNotificationInterval: (Int64, Int32?) -> Signal<Void, NoError> = { threadId, muteInterval in
+        return context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: muteInterval)
         |> deliverOnMainQueue
     }
 
-    let updatePeerDisplayPreviews: (PeerId, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
-        peerId, displayPreviews in
-        return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: nil, displayPreviews: displayPreviews) |> deliverOnMainQueue
-    }*/
+    let updateThreadDisplayPreviews: (Int64, PeerNotificationDisplayPreviews) -> Signal<Void, NoError> = {
+        threadId, displayPreviews in
+        return context.engine.peers.updatePeerDisplayPreviewsSetting(peerId: peerId, threadId: threadId, displayPreviews: displayPreviews) |> deliverOnMainQueue
+    }
+    
+    let presentThreadSettings: (EngineMessageHistoryThread.NotificationException, @escaping () -> Void) -> Void = { item, completion in
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+            TelegramEngine.EngineData.Item.NotificationSettings.Global()
+        )
+        |> deliverOnMainQueue).start(next: { peer, globalSettings in
+            completion()
+            
+            guard let peer = peer else {
+                return
+            }
+            
+            let canRemove = true
+            let defaultSound: PeerMessageSound = globalSettings.groupChats.sound._asMessageSound()
+            
+            pushControllerImpl?(notificationPeerExceptionController(context: context, peer: peer._asPeer(), customTitle: item.info.title, threadId: item.threadId, canRemove: canRemove, defaultSound: defaultSound, updatePeerSound: { _, sound in
+                let _ = (updateThreadSound(item.threadId, sound)
+                |> deliverOnMainQueue).start(next: { _ in
+                    updateState { value in
+                        var value = value
+                        value.updateSound(threadId: item.threadId, info: item.info, sound: sound)
+                        return value
+                    }
+                    updated(stateValue.with({ $0 }).notificationExceptions)
+                })
+            }, updatePeerNotificationInterval: { _, muteInterval in
+                let _ = (updateThreadNotificationInterval(item.threadId, muteInterval)
+                |> deliverOnMainQueue).start(next: { _ in
+                    updateState { value in
+                        var value = value
+                        value.updateMuteInterval(threadId: item.threadId, info: item.info, muteInterval: muteInterval)
+                        return value
+                    }
+                    updated(stateValue.with({ $0 }).notificationExceptions)
+                })
+            }, updatePeerDisplayPreviews: { _, displayPreviews in
+                let _ = (updateThreadDisplayPreviews(item.threadId, displayPreviews)
+                |> deliverOnMainQueue).start(next: { _ in
+                    updateState { value in
+                        var value = value
+                        value.updateDisplayPreviews(threadId: item.threadId, info: item.info, displayPreviews: displayPreviews)
+                        return value
+                    }
+                    updated(stateValue.with({ $0 }).notificationExceptions)
+                })
+            }, removePeerFromExceptions: {
+                let _ = context.engine.peers.removeCustomThreadNotificationSettings(peerId: peerId, threadIds: [item.threadId]).start()
+                updateState { current in
+                    var current = current
+                    current.notificationExceptions.removeAll(where: { $0.threadId == item.threadId })
+                    return current
+                }
+                updated(stateValue.with({ $0 }).notificationExceptions)
+            }, modifiedPeer: {
+            }))
+        })
+    }
     
     let _ = presentControllerImpl
     
@@ -388,61 +520,53 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
         })
         pushControllerImpl?(controller)
     }, addException: {
-        /*let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-        var filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
-        switch category {
-            case .privateChat:
-                filter.insert(.onlyPrivateChats)
-                filter.insert(.excludeSavedMessages)
-                filter.insert(.excludeSecretChats)
-            case .group:
-                filter.insert(.onlyGroups)
-            case .channel:
-                filter.insert(.onlyChannels)
-        }
-        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
-        controller.peerSelected = { [weak controller] peer in
-            let peerId = peer.id
-            
-            presentPeerSettings(peerId, {
-                controller?.dismiss()
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let filter: ChatListNodePeersFilter = [.excludeRecent, .doNotSearchMessages, .removeSearchHeader]
+        let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: filter, forumPeerId: peerId, hasContactSelector: false, title: presentationData.strings.Notifications_AddExceptionTitle))
+        controller.peerSelected = { [weak controller] _, threadId in
+            guard let threadId = threadId else {
+                return
+            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId))
+            |> deliverOnMainQueue).start(next: { threadData in
+                guard let threadData = threadData else {
+                    return
+                }
+                
+                presentThreadSettings(EngineMessageHistoryThread.NotificationException(threadId: threadId, info: threadData.info, notificationSettings: EnginePeer.NotificationSettings(.defaultSettings)), {
+                    controller?.dismiss()
+                })
             })
         }
-        pushControllerImpl?(controller)*/
-    }, openException: { peer in
-        //presentPeerSettings(peer.id, {})
+        pushControllerImpl?(controller)
+    }, openException: { threadId in
+        if let item = stateValue.with({ $0 }).notificationExceptions.first(where: { $0.threadId == threadId }) {
+            presentThreadSettings(item, {})
+        }
     }, removeAllExceptions: {
-        /*let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let actionSheet = ActionSheetController(presentationData: presentationData)
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetTextItem(title: presentationData.strings.Notification_Exceptions_DeleteAllConfirmation),
             ActionSheetButtonItem(title: presentationData.strings.Notification_Exceptions_DeleteAll, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
                 
-                let values = stateValue.with { $0.mode.settings.values }
-                
-                let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: values.map { EnginePeer($0.peer) })
-                |> deliverOnMainQueue).start(completed: {
-                    updateNotificationsDisposable.set(nil)
-                    updateState { state in
-                        var state = state
-                        for value in values {
-                            state = state.withUpdatedPeerMuteInterval(value.peer, nil).withUpdatedPeerSound(value.peer, .default).withUpdatedPeerDisplayPreviews(value.peer, .default)
-                        }
-                        return state
-                    }
-                    let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: values.map(\.peer.id))
-                    |> deliverOnMainQueue).start(completed: {
-                        updateNotificationsView({})
-                    })
-                })
+                var threadIds: [Int64] = []
+                updateState { current in
+                    var current = current
+                    threadIds = current.notificationExceptions.map(\.threadId)
+                    current.notificationExceptions.removeAll()
+                    return current
+                }
+                updated(stateValue.with({ $0 }).notificationExceptions)
+                let _ = context.engine.peers.removeCustomThreadNotificationSettings(peerId: peerId, threadIds: threadIds).start()
             })
         ]), ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
             })
         ])])
-        presentControllerImpl?(actionSheet, nil)*/
+        presentControllerImpl?(actionSheet, nil)
     }, updateRevealedThreadId: { threadId in
         updateState { current in
             var current = current
@@ -450,17 +574,13 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
             return current
         }
     }, removeThread: { threadId in
-        /*let _ = (context.engine.peers.ensurePeersAreLocallyAvailable(peers: [EnginePeer(peer)])
-        |> deliverOnMainQueue).start(completed: {
-            updateNotificationsDisposable.set(nil)
-            updateState { value in
-                return value.withUpdatedPeerMuteInterval(peer, nil).withUpdatedPeerSound(peer, .default).withUpdatedPeerDisplayPreviews(peer, .default)
-            }
-            let _ = (context.engine.peers.removeCustomNotificationSettings(peerIds: [peer.id])
-            |> deliverOnMainQueue).start(completed: {
-                updateNotificationsView({})
-            })
-        })*/
+        let _ = context.engine.peers.removeCustomThreadNotificationSettings(peerId: peerId, threadIds: [threadId]).start()
+        updateState { current in
+            var current = current
+            current.notificationExceptions.removeAll(where: { $0.threadId == threadId })
+            return current
+        }
+        updated(stateValue.with({ $0 }).notificationExceptions)
     })
     
     let signal = combineLatest(queue: .mainQueue(),
@@ -471,7 +591,7 @@ public func threadNotificationExceptionsScreen(context: AccountContext, peerId: 
         statePromise.get()
     )
     |> map { presentationData, notificationSoundList, peer, notificationSettings, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
-        let entries = notificationsPeerCategoryEntries(notificationSettings: notificationSettings, state: state, presentationData: presentationData, notificationSoundList: notificationSoundList)
+        let entries = notificationsPeerCategoryEntries(peerId: peerId, notificationSettings: notificationSettings, state: state, presentationData: presentationData, notificationSoundList: notificationSoundList)
         
         var scrollToItem: ListViewScrollToItem?
         scrollToItem = nil

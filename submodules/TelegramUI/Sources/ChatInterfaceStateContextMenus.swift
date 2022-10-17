@@ -703,7 +703,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 f(.dismissWithoutContent)
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peer in
+                                controller.peerSelected = { [weak controller] peer, _ in
                                     let peerId = peer.id
                                     
                                     if let strongController = controller {
