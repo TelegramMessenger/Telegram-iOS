@@ -12,7 +12,6 @@ import PeerAvatarGalleryUI
 import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
-import ForumTopicListScreen
 import ForumCreateTopicScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {

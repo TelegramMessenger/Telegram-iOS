@@ -536,17 +536,44 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
     return signal
 }
 
-func _internal_forumChannelTopicNotificationExceptions(account: Account, id: EnginePeer.Id) -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> {
-    return account.postbox.transaction { transaction -> Api.InputPeer? in
-        return transaction.getPeer(id).flatMap(apiInputPeer)
+public extension EngineMessageHistoryThread {
+    struct NotificationException: Equatable {
+        public var threadId: Int64
+        public var info: EngineMessageHistoryThread.Info
+        public var notificationSettings: EnginePeer.NotificationSettings
+        
+        public init(
+            threadId: Int64,
+            info: EngineMessageHistoryThread.Info,
+            notificationSettings: EnginePeer.NotificationSettings
+        ) {
+            self.threadId = threadId
+            self.info = info
+            self.notificationSettings = notificationSettings
+        }
     }
-    |> mapToSignal { inputPeer -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
-        guard let inputPeer = inputPeer else {
+}
+
+func _internal_forumChannelTopicNotificationExceptions(account: Account, id: EnginePeer.Id) -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> {
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(id)
+    }
+    |> mapToSignal { peer -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> in
+        guard let inputPeer = peer.flatMap(apiInputPeer), let inputChannel = peer.flatMap(apiInputChannel) else {
             return .single([])
         }
+        
         return account.network.request(Api.functions.account.getNotifyExceptions(flags: 1 << 0, peer: Api.InputNotifyPeer.inputNotifyPeer(peer: inputPeer)))
-        |> map { result -> [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] in
-            var list: [(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)] = []
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> map { result -> [(threadId: Int64, notificationSettings: EnginePeer.NotificationSettings)] in
+            guard let result = result else {
+                return []
+            }
+            
+            var list: [(threadId: Int64, notificationSettings: EnginePeer.NotificationSettings)] = []
             for update in result.allUpdates {
                 switch update {
                 case let .updateNotifySettings(peer, notifySettings):
@@ -562,8 +589,34 @@ func _internal_forumChannelTopicNotificationExceptions(account: Account, id: Eng
             }
             return list
         }
-        |> `catch` { _ -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> in
-            return .single([])
+        |> mapToSignal { list -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> in
+            return account.network.request(Api.functions.channels.getForumTopicsByID(channel: inputChannel, topics: list.map { Int32(clamping: $0.threadId) }))
+            |> map { result -> [EngineMessageHistoryThread.NotificationException] in
+                var infoMapping: [Int64: EngineMessageHistoryThread.Info] = [:]
+                
+                switch result {
+                case let .forumTopics(_, _, topics, _, _, _, _):
+                    for topic in topics {
+                        switch topic {
+                        case let .forumTopic(_, id, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
+                            infoMapping[Int64(id)] = EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor)
+                        case .forumTopicDeleted:
+                            break
+                        }
+                    }
+                }
+                
+                return list.compactMap { item -> EngineMessageHistoryThread.NotificationException? in
+                    if let info = infoMapping[item.threadId] {
+                        return EngineMessageHistoryThread.NotificationException(threadId: item.threadId, info: info, notificationSettings: item.notificationSettings)
+                    } else {
+                        return nil
+                    }
+                }
+            }
+            |> `catch` { _ -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> in
+                return .single([])
+            }
         }
     }
 }

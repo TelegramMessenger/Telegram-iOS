@@ -78,6 +78,7 @@ import ComponentFlow
 import EmojiStatusComponent
 import ChatTitleView
 import ForumCreateTopicScreen
+import NotificationExceptionsScreen
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -1874,7 +1875,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
     private weak var copyProtectionTooltipController: TooltipController?
     weak var emojiStatusSelectionController: ViewController?
     
-    private var forumTopicNotificationExceptions: [(threadId: Int64, EnginePeer.NotificationSettings)] = []
+    private var forumTopicNotificationExceptions: [EngineMessageHistoryThread.NotificationException] = []
     private var forumTopicNotificationExceptionsDisposable: Disposable?
     
     private let _ready = Promise<Bool>()
@@ -4148,7 +4149,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     } else {
                         text = "There are \(self.forumTopicNotificationExceptions.count) topics that are listed as exceptions."
                     }
-                    tip = .notificationTopicExceptions(text: text, action: {
+                    tip = .notificationTopicExceptions(text: text, action: { [weak self] in
+                        guard let self else {
+                            return
+                        }
+                        self.controller?.present(threadNotificationExceptionsScreen(context: self.context, peerId: self.peerId, notificationExceptions: self.forumTopicNotificationExceptions, updated: { [weak self] value in
+                            guard let self else {
+                                return
+                            }
+                            self.forumTopicNotificationExceptions = value
+                        }), in: .window(.root))
                     })
                 }
                 
