@@ -1484,6 +1484,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 let ItemDeleteGroup = 114
                 let ItemReactions = 115
                 let ItemTopics = 116
+                let ItemTopicsText = 117
                 
                 let isCreator = channel.flags.contains(.isCreator)
                 let isPublic = channel.addressName != nil
@@ -1613,6 +1614,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/ChatListFilters"), toggled: { value in
                             interaction.toggleForumTopics(value)
                         }))
+                        items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: "The group chat will be divided into topics created by admins or users."))
                     }
                     
                     var canViewAdminsAndBanned = false
