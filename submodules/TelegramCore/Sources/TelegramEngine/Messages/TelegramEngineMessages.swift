@@ -441,7 +441,7 @@ public extension TelegramEngine {
             let account = self.account
             return self.account.postbox.transaction { transaction -> Void in
                 for (groupId, filterPredicate) in items {
-                    _internal_markAllChatsAsReadInteractively(transaction: transaction, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate)
+                    _internal_markAllChatsAsReadInteractively(transaction: transaction, network: self.account.network, viewTracker: account.viewTracker, groupId: groupId._asGroup(), filterPredicate: filterPredicate)
                 }
             }
             |> ignoreValues
@@ -459,7 +459,7 @@ public extension TelegramEngine {
         public func togglePeersUnreadMarkInteractively(peerIds: [EnginePeer.Id], setToValue: Bool?) -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 for peerId in peerIds {
-                    _internal_togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: self.account.viewTracker, peerId: peerId, setToValue: setToValue)
+                    _internal_togglePeerUnreadMarkInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, setToValue: setToValue)
                 }
             }
             |> ignoreValues

@@ -2329,6 +2329,7 @@ final class PostboxImpl {
     fileprivate func setPeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, state: StoredPeerChatInterfaceState?) {
         let updatedState = state
         let _ = self.peerChatThreadInterfaceStateTable.set(PeerChatThreadId(peerId: id, threadId: threadId), state: updatedState)
+        self.currentUpdatedPeerChatListEmbeddedStates.insert(id)
     }
     
     fileprivate func replaceRemoteContactCount(_ count: Int32) {

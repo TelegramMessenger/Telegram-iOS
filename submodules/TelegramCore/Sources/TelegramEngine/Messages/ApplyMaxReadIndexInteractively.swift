@@ -109,13 +109,13 @@ func applySecretOutgoingMessageReadActions(transaction: Transaction, id: Message
     }
 }
 
-func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) -> Signal<Void, NoError> {
+func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) -> Signal<Void, NoError> {
     return postbox.transaction { transaction -> Void in
-        _internal_togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: setToValue)
+        _internal_togglePeerUnreadMarkInteractively(transaction: transaction, network: network, viewTracker: viewTracker, peerId: peerId, setToValue: setToValue)
     }
 }
 
-func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
+func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
     guard let peer = transaction.getPeer(peerId) else {
         return
     }
@@ -135,6 +135,11 @@ func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewT
                 
                 if let entry = StoredMessageHistoryThreadInfo(data) {
                     transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: item.threadId, info: entry)
+                }
+                
+                if let inputPeer = apiInputPeer(channel) {
+                    //TODO:loc
+                    let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: item.threadId), readMaxId: messageIndex.id.id)).start()
                 }
             }
         }
@@ -200,8 +205,8 @@ public func clearPeerUnseenReactionsInteractively(account: Account, peerId: Peer
     |> ignoreValues
 }
 
-func _internal_markAllChatsAsReadInteractively(transaction: Transaction, viewTracker: AccountViewTracker, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) {
+func _internal_markAllChatsAsReadInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, groupId: PeerGroupId, filterPredicate: ChatListFilterPredicate?) {
     for peerId in transaction.getUnreadChatListPeerIds(groupId: groupId, filterPredicate: filterPredicate) {
-        _internal_togglePeerUnreadMarkInteractively(transaction: transaction, viewTracker: viewTracker, peerId: peerId, setToValue: false)
+        _internal_togglePeerUnreadMarkInteractively(transaction: transaction, network: network, viewTracker: viewTracker, peerId: peerId, setToValue: false)
     }
 }

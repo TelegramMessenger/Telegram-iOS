@@ -8,6 +8,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         var info: CodableEntry
         var tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo]
         var topMessage: Message?
+        var embeddedInterfaceState: StoredPeerChatInterfaceState?
         
         init(
             id: Int64,
@@ -15,7 +16,8 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
             index: MessageIndex,
             info: CodableEntry,
             tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo],
-            topMessage: Message?
+            topMessage: Message?,
+            embeddedInterfaceState: StoredPeerChatInterfaceState?
         ) {
             self.id = id
             self.pinnedIndex = pinnedIndex
@@ -23,6 +25,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
             self.info = info
             self.tagSummaryInfo = tagSummaryInfo
             self.topMessage = topMessage
+            self.embeddedInterfaceState = embeddedInterfaceState
         }
     }
     
@@ -81,13 +84,17 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
                     )
                 }
                 
+                var embeddedInterfaceState: StoredPeerChatInterfaceState?
+                embeddedInterfaceState = postbox.peerChatThreadInterfaceStateTable.get(PeerChatThreadId(peerId: self.peerId, threadId: item.threadId))
+                
                 self.items.append(Item(
                     id: item.threadId,
                     pinnedIndex: pinnedIndex,
                     index: item.index,
                     info: item.info.data,
                     tagSummaryInfo: tagSummaryInfo,
-                    topMessage: postbox.getMessage(item.index.id)
+                    topMessage: postbox.getMessage(item.index.id),
+                    embeddedInterfaceState: embeddedInterfaceState
                 ))
             }
             
@@ -110,7 +117,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.updatedPinnedThreads.contains(self.peerId) || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) {
+        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.updatedPinnedThreads.contains(self.peerId) || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedPeerChatListEmbeddedStates.contains(self.peerId) {
             self.reload(postbox: postbox)
             updated = true
         }
@@ -135,6 +142,7 @@ public final class EngineMessageHistoryThread {
         public let info: CodableEntry
         public let tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo]
         public let topMessage: Message?
+        public let embeddedInterfaceState: StoredPeerChatInterfaceState?
         
         public init(
             id: Int64,
@@ -142,7 +150,8 @@ public final class EngineMessageHistoryThread {
             index: MessageIndex,
             info: CodableEntry,
             tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo],
-            topMessage: Message?
+            topMessage: Message?,
+            embeddedInterfaceState: StoredPeerChatInterfaceState?
         ) {
             self.id = id
             self.pinnedIndex = pinnedIndex
@@ -150,6 +159,7 @@ public final class EngineMessageHistoryThread {
             self.info = info
             self.tagSummaryInfo = tagSummaryInfo
             self.topMessage = topMessage
+            self.embeddedInterfaceState = embeddedInterfaceState
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -178,6 +188,9 @@ public final class EngineMessageHistoryThread {
             } else if (lhs.topMessage == nil) != (rhs.topMessage == nil) {
                 return false
             }
+            if lhs.embeddedInterfaceState != rhs.embeddedInterfaceState {
+                return false
+            }
             
             return true
         }
@@ -200,7 +213,8 @@ public final class MessageHistoryThreadIndexView: PostboxView {
                 index: item.index,
                 info: item.info,
                 tagSummaryInfo: item.tagSummaryInfo,
-                topMessage: item.topMessage
+                topMessage: item.topMessage,
+                embeddedInterfaceState: item.embeddedInterfaceState
             ))
         }
         self.items = items

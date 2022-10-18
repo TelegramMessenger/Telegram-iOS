@@ -988,6 +988,9 @@ private final class NotificationServiceHandler {
                             if let threadId = aps["thread-id"] as? String {
                                 content.threadId = threadId
                             }
+                            if let threadIdValue = aps["topic_id"] as? String, let threadId = Int(threadIdValue) {
+                                content.userInfo["threadId"] = Int32(clamping: threadId)
+                            }
 
                             if let ringtoneString = aps["ringtone"] as? String, let fileId = Int64(ringtoneString) {
                                 content.sound = "0.m4a"

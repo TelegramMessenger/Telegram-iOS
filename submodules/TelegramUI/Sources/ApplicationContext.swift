@@ -852,15 +852,24 @@ final class AuthorizedApplicationContext {
         }))
     }
     
-    func openChatWithPeerId(peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
+    func openChatWithPeerId(peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
         var visiblePeerId: PeerId?
-        if let controller = self.rootController.topViewController as? ChatControllerImpl, case let .peer(peerId) = controller.chatLocation {
+        if let controller = self.rootController.topViewController as? ChatControllerImpl, controller.chatLocation.peerId == peerId, controller.chatLocation.threadId == threadId {
             visiblePeerId = peerId
         }
         
         if visiblePeerId != peerId || messageId != nil {
             if self.rootController.rootTabController != nil {
-                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: .peer(id: peerId), subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput ? .text : nil))
+                let chatLocation: ChatLocation
+                if let threadId = threadId {
+                    chatLocation = .replyThread(message: ChatReplyThreadMessage(
+                        messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                    ))
+                } else {
+                    chatLocation = .peer(id: peerId)
+                }
+                
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: self.rootController, context: self.context, chatLocation: chatLocation, subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) }, activateInput: activateInput ? .text : nil))
             } else {
                 self.scheduledOpenChatWithPeerId = (peerId, messageId, activateInput)
             }
