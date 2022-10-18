@@ -8,6 +8,7 @@ private class AdMessagesHistoryContextImpl {
         enum CodingKeys: String, CodingKey {
             case opaqueId
             case messageType
+            case displayAvatar
             case text
             case textEntities
             case media
@@ -65,6 +66,7 @@ private class AdMessagesHistoryContextImpl {
 
         public let opaqueId: Data
         public let messageType: MessageType
+        public let displayAvatar: Bool
         public let text: String
         public let textEntities: [MessageTextEntity]
         public let media: [Media]
@@ -75,6 +77,7 @@ private class AdMessagesHistoryContextImpl {
         public init(
             opaqueId: Data,
             messageType: MessageType,
+            displayAvatar: Bool,
             text: String,
             textEntities: [MessageTextEntity],
             media: [Media],
@@ -84,6 +87,7 @@ private class AdMessagesHistoryContextImpl {
         ) {
             self.opaqueId = opaqueId
             self.messageType = messageType
+            self.displayAvatar = displayAvatar
             self.text = text
             self.textEntities = textEntities
             self.media = media
@@ -103,6 +107,8 @@ private class AdMessagesHistoryContextImpl {
                 self.messageType = .sponsored
             }
             
+            self.displayAvatar = try container.decodeIfPresent(Bool.self, forKey: .displayAvatar) ?? false
+            
             self.text = try container.decode(String.self, forKey: .text)
             self.textEntities = try container.decode([MessageTextEntity].self, forKey: .textEntities)
 
@@ -121,6 +127,7 @@ private class AdMessagesHistoryContextImpl {
 
             try container.encode(self.opaqueId, forKey: .opaqueId)
             try container.encode(self.messageType.rawValue, forKey: .messageType)
+            try container.encode(self.displayAvatar, forKey: .displayAvatar)
             try container.encode(self.text, forKey: .text)
             try container.encode(self.textEntities, forKey: .textEntities)
 
@@ -186,7 +193,7 @@ private class AdMessagesHistoryContextImpl {
             case .recommended:
                 mappedMessageType = .recommended
             }
-            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, target: target))
+            attributes.append(AdMessageAttribute(opaqueId: self.opaqueId, messageType: mappedMessageType, displayAvatar: self.displayAvatar, target: target))
             if !self.textEntities.isEmpty {
                 let attribute = TextEntitiesMessageAttribute(entities: self.textEntities)
                 attributes.append(attribute)
@@ -431,6 +438,7 @@ private class AdMessagesHistoryContextImpl {
                                 }
                                 
                                 let isRecommended = (flags & (1 << 5)) != 0
+                                let displayAvatar = (flags & (1 << 6)) != 0
                                 
                                 let _ = chatInvite
                                 let _ = chatInviteHash
@@ -479,6 +487,7 @@ private class AdMessagesHistoryContextImpl {
                                     parsedMessages.append(CachedMessage(
                                         opaqueId: randomId.makeData(),
                                         messageType: isRecommended ? .recommended : .sponsored,
+                                        displayAvatar: displayAvatar,
                                         text: message,
                                         textEntities: parsedEntities,
                                         media: [],

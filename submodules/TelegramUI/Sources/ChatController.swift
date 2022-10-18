@@ -83,6 +83,7 @@ import TextNodeWithEntities
 import EntityKeyboard
 import ChatTitleView
 import EmojiStatusComponent
+import ChatTimerScreen
 
 #if DEBUG
 import os.signpost

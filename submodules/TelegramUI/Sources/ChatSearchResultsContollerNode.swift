@@ -89,7 +89,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         messages: [EngineMessage(message)],
                         peer: EngineRenderedPeer(peer),
                         threadInfo: nil,
-                        combinedReadState: readState.flatMap(EnginePeerReadCounters.init),
+                        combinedReadState: readState.flatMap { EnginePeerReadCounters(state: $0, isMuted: false) },
                         isRemovedFromTotalUnreadCount: false,
                         presence: nil,
                         hasUnseenMentions: false,

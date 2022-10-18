@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramPresentationData
 import AccountContext
 import SearchUI
+import NotificationPeerExceptionController
 
 public class NotificationExceptionsController: ViewController {
     private let context: AccountContext

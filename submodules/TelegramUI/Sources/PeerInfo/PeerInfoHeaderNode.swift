@@ -454,7 +454,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
-            self.avatarNode.layer.cornerRadius = avatarCornerRadius
+            if self.avatarNode.layer.cornerRadius != 0.0 {
+                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
+            } else {
+                self.avatarNode.layer.cornerRadius = avatarCornerRadius
+            }
             self.avatarNode.layer.masksToBounds = true
             
             self.isFirstAvatarLoading = false
@@ -766,7 +770,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         } else {
             avatarCornerRadius = avatarSize / 2.0
         }
-        self.avatarNode.layer.cornerRadius = avatarCornerRadius
+        if self.avatarNode.layer.cornerRadius != 0.0 {
+            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
+        } else {
+            self.avatarNode.layer.cornerRadius = avatarCornerRadius
+        }
         self.avatarNode.layer.masksToBounds = true
         
         if let item = item {

@@ -232,11 +232,13 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     pinnedIndex = .none
                 }
                 
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
+                
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
                     index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                     messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                    readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
+                    readCounters: readCounters,
                     isMuted: isMuted,
                     draft: nil,
                     threadData: data,

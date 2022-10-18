@@ -346,7 +346,7 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.openGroupsPrivacy()
                 })
             case let .voiceMessagePrivacy(_, text, value, locked):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: locked ? .textWithIcon(UIImage(bundleImageName: "Notification/SecretLock")!.precomposed()) : .text, sectionId: self.section, style: .blocks, action: {
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, labelStyle: locked ? .textWithIcon(UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon")!.precomposed()) : .text, sectionId: self.section, style: .blocks, action: {
                     arguments.openVoiceMessagePrivacy()
                 })
             case let .selectivePrivacyInfo(_, text):

@@ -20,14 +20,22 @@ public extension EngineTotalReadCounters {
 }
 
 public struct EnginePeerReadCounters: Equatable {
-    fileprivate let state: CombinedPeerReadState?
+    fileprivate var state: CombinedPeerReadState?
+    public var isMuted: Bool
 
-    public init(state: CombinedPeerReadState?) {
+    public init(state: CombinedPeerReadState?, isMuted: Bool) {
         self.state = state
+        self.isMuted = isMuted
+    }
+    
+    public init(state: ChatListViewReadState?) {
+        self.state = state?.state
+        self.isMuted = state?.isMuted ?? false
     }
 
     public init() {
         self.state = CombinedPeerReadState(states: [])
+        self.isMuted = false
     }
 
     public var count: Int32 {
@@ -68,7 +76,7 @@ public struct EnginePeerReadCounters: Equatable {
 
 public extension EnginePeerReadCounters {
     init(incomingReadId: EngineMessage.Id.Id, outgoingReadId: EngineMessage.Id.Id, count: Int32, markedUnread: Bool) {
-        self.init(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: incomingReadId, maxOutgoingReadId: outgoingReadId, maxKnownId: max(incomingReadId, outgoingReadId), count: count, markedUnread: markedUnread))]))
+        self.init(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: incomingReadId, maxOutgoingReadId: outgoingReadId, maxKnownId: max(incomingReadId, outgoingReadId), count: count, markedUnread: markedUnread))]), isMuted: false)
     }
     
     func _asReadCounters() -> CombinedPeerReadState? {
@@ -173,7 +181,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
 
-                return EnginePeerReadCounters(state: view.state)
+                return EnginePeerReadCounters(state: view.state, isMuted: false)
             }
         }
 

@@ -116,42 +116,66 @@ func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, viewTracker: 
 }
 
 func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
-    let principalNamespace: MessageId.Namespace
-    if peerId.namespace == Namespaces.Peer.SecretChat {
-        principalNamespace = Namespaces.Message.SecretIncoming
-    } else {
-        principalNamespace = Namespaces.Message.Cloud
+    guard let peer = transaction.getPeer(peerId) else {
+        return
     }
-    var hasUnread = false
-    if let states = transaction.getPeerReadStates(peerId) {
-        for state in states {
-            if state.1.isUnread {
+    
+    if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        for item in transaction.getMessageHistoryThreadIndex(peerId: peerId, limit: 20) {
+            guard var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: item.threadId)?.data.get(MessageHistoryThreadData.self) else {
+                continue
+            }
+            guard let messageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: peerId, threadId: item.threadId, namespaces: Set([Namespaces.Message.Cloud])) else {
+                continue
+            }
+            if data.incomingUnreadCount != 0 {
+                data.incomingUnreadCount = 0
+                data.maxIncomingReadId = max(messageIndex.id.id, data.maxIncomingReadId)
+                data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
+                
+                if let entry = StoredMessageHistoryThreadInfo(data) {
+                    transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: item.threadId, info: entry)
+                }
+            }
+        }
+    } else {
+        let principalNamespace: MessageId.Namespace
+        if peerId.namespace == Namespaces.Peer.SecretChat {
+            principalNamespace = Namespaces.Message.SecretIncoming
+        } else {
+            principalNamespace = Namespaces.Message.Cloud
+        }
+        var hasUnread = false
+        if let states = transaction.getPeerReadStates(peerId) {
+            for state in states {
+                if state.1.isUnread {
+                    hasUnread = true
+                    break
+                }
+            }
+        }
+        
+        if !hasUnread && peerId.namespace == Namespaces.Peer.SecretChat {
+            let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+            let actionSummary = transaction.getPendingMessageActionsSummary(peerId: peerId, type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+            if (unseenSummary?.count ?? 0) - (actionSummary ?? 0) > 0 {
                 hasUnread = true
-                break
             }
         }
-    }
-    
-    if !hasUnread && peerId.namespace == Namespaces.Peer.SecretChat {
-        let unseenSummary = transaction.getMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
-        let actionSummary = transaction.getPendingMessageActionsSummary(peerId: peerId, type: PendingMessageActionType.consumeUnseenPersonalMessage, namespace: Namespaces.Message.Cloud)
-        if (unseenSummary?.count ?? 0) - (actionSummary ?? 0) > 0 {
-            hasUnread = true
-        }
-    }
-    
-    if hasUnread {
-        if setToValue == nil || !(setToValue!) {
-            if let index = transaction.getTopPeerMessageIndex(peerId: peerId) {
-                let _ = transaction.applyInteractiveReadMaxIndex(index)
-            } else {
-                transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: false, interactive: true)
+        
+        if hasUnread {
+            if setToValue == nil || !(setToValue!) {
+                if let index = transaction.getTopPeerMessageIndex(peerId: peerId) {
+                    let _ = transaction.applyInteractiveReadMaxIndex(index)
+                } else {
+                    transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: false, interactive: true)
+                }
+                viewTracker.updateMarkAllMentionsSeen(peerId: peerId, threadId: nil)
             }
-            viewTracker.updateMarkAllMentionsSeen(peerId: peerId, threadId: nil)
-        }
-    } else {
-        if setToValue == nil || setToValue! {
-            transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: true, interactive: true)
+        } else {
+            if setToValue == nil || setToValue! {
+                transaction.applyMarkUnread(peerId: peerId, namespace: principalNamespace, value: true, interactive: true)
+            }
         }
     }
 }

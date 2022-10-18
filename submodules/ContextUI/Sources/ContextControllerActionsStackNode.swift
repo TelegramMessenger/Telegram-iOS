@@ -218,7 +218,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 attributes: MarkdownAttributes(
                     body: MarkdownAttributeSet(font: titleFont, textColor: titleColor),
                     bold: MarkdownAttributeSet(font: titleBoldFont, textColor: titleColor),
-                    link: MarkdownAttributeSet(font: titleFont, textColor: titleColor),
+                    link: MarkdownAttributeSet(font: titleBoldFont, textColor: presentationData.theme.list.itemAccentColor),
                     linkAttribute: { _ in return nil }
                 )
             )

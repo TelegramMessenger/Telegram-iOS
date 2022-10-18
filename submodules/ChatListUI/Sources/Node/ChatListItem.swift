@@ -347,7 +347,7 @@ private func forumRevealOptions(strings: PresentationStrings, theme: Presentatio
             if !isClosed {
                 options.append(ItemListRevealOption(key: RevealOptionKey.close.rawValue, title: strings.ChatList_CloseAction, icon: closeIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.inactive.foregroundColor))
             } else {
-                options.append(ItemListRevealOption(key: RevealOptionKey.open.rawValue, title: strings.ChatList_StartAction, icon: closeIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+                options.append(ItemListRevealOption(key: RevealOptionKey.open.rawValue, title: strings.ChatList_StartAction, icon: startIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             }
         }
     }
@@ -376,7 +376,14 @@ private func leftRevealOptions(strings: PresentationStrings, theme: Presentation
             if isUnread {
                 options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Read, icon: readIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
             } else {
-                options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+                var canMarkUnread = true
+                if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                    canMarkUnread = false
+                }
+                
+                if canMarkUnread {
+                    options.append(ItemListRevealOption(key: RevealOptionKey.toggleMarkedUnread.rawValue, title: strings.DialogList_Unread, icon: unreadIcon, color: theme.list.itemDisclosureActions.accent.fillColor, textColor: theme.list.itemDisclosureActions.accent.foregroundColor))
+                }
             }
             if !isEditing {
                 if isPinned {
@@ -531,6 +538,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var dustNode: InvisibleInkDustNode?
     let inputActivitiesNode: ChatListInputActivitiesNode
     let dateNode: TextNode
+    var dateStatusIconNode: ASImageNode?
     let separatorNode: ASDisplayNode
     let statusNode: ChatListStatusNode
     let badgeNode: ChatListBadgeNode
@@ -997,7 +1005,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             self.highlightedBackgroundNode.layer.removeAllAnimations()
             transition.updateAlpha(layer: self.highlightedBackgroundNode.layer, alpha: highlightProgress)
             
-            if let item = self.item {
+            if let item = self.item, case .chatList = item.index {
                 self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .highlighted, voiceChat: self.onlineIsVoiceChat), color: nil, transition: transition)
             }
         } else {
@@ -1011,9 +1019,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 })
             }
             
-            if let item = self.item {
+            if let item = self.item, case let .chatList(index) = item.index {
                 let onlineIcon: UIImage?
-                if case let .chatList(index) = item.index, index.pinningIndex != nil {
+                if index.pinningIndex != nil {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: self.onlineIsVoiceChat)
                 } else {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: self.onlineIsVoiceChat)
@@ -1094,7 +1102,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
                     if let combinedReadState = combinedReadState, promoInfoValue == nil && !ignoreUnreadBadge {
-                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, isRemovedFromTotalUnreadCountValue, nil)
+                        unreadCount = (combinedReadState.count, combinedReadState.isUnread, isRemovedFromTotalUnreadCountValue || combinedReadState.isMuted, nil)
                     } else {
                         unreadCount = (0, false, false, nil)
                     }
@@ -1652,11 +1660,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 currentMutedIconImage = PresentationResourcesChatList.mutedIcon(item.presentationData.theme)
             }
             
-            let statusWidth: CGFloat
+            var statusWidth: CGFloat
             if case .none = statusState {
                 statusWidth = 0.0
             } else {
                 statusWidth = 24.0
+            }
+            
+            var dateIconImage: UIImage?
+            if let threadInfo, threadInfo.isClosed {
+                dateIconImage = PresentationResourcesChatList.statusLockIcon(item.presentationData.theme)
+            }
+            
+            if let dateIconImage {
+                statusWidth += dateIconImage.size.width + 4.0
             }
             
             var titleIconsWidth: CGFloat = 0.0
@@ -1824,13 +1841,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 online = true
                             }
                             animateOnline = true
-                        } else if case let .channel(channel) = renderedPeer.peer {
+                        } else if case let .channel(channel) = renderedPeer.peer, case .chatList = item.index {
                             onlineIsVoiceChat = true
                             if channel.flags.contains(.hasActiveVoiceChat) && item.interaction.searchTextHighightState == nil {
                                 online = true
                             }
                             animateOnline = true
-                        } else if case let .legacyGroup(group) = renderedPeer.peer {
+                        } else if case let .legacyGroup(group) = renderedPeer.peer, case .chatList = item.index {
                             onlineIsVoiceChat = true
                             if group.flags.contains(.hasActiveVoiceChat) && item.interaction.searchTextHighightState == nil {
                                 online = true
@@ -1984,6 +2001,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             transition.updateAlpha(node: reorderControlNode, alpha: 1.0)
                             
                             transition.updateAlpha(node: strongSelf.dateNode, alpha: 0.0)
+                            if let dateStatusIconNode = strongSelf.dateStatusIconNode {
+                                transition.updateAlpha(node: dateStatusIconNode, alpha: 0.0)
+                            }
                             transition.updateAlpha(node: strongSelf.badgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 0.0)
                             transition.updateAlpha(node: strongSelf.pinnedIconNode, alpha: 0.0)
@@ -1999,6 +2019,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             reorderControlNode?.removeFromSupernode()
                         })
                         transition.updateAlpha(node: strongSelf.dateNode, alpha: 1.0)
+                        if let dateStatusIconNode = strongSelf.dateStatusIconNode {
+                            transition.updateAlpha(node: dateStatusIconNode, alpha: 1.0)
+                        }
                         transition.updateAlpha(node: strongSelf.badgeNode, alpha: 1.0)
                         transition.updateAlpha(node: strongSelf.mentionBadgeNode, alpha: 1.0)
                         transition.updateAlpha(node: strongSelf.pinnedIconNode, alpha: 1.0)
@@ -2093,8 +2116,40 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     transition.updateFrame(node: strongSelf.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width, y: contentRect.origin.y + 2.0), size: dateLayout.size))
                     
+                    var statusOffset: CGFloat = 0.0
+                    if let dateIconImage {
+                        statusOffset += 2.0 + dateIconImage.size.width + 4.0
+                        
+                        let dateStatusIconNode: ASImageNode
+                        if let current = strongSelf.dateStatusIconNode {
+                            dateStatusIconNode = current
+                        } else {
+                            dateStatusIconNode = ASImageNode()
+                            strongSelf.dateStatusIconNode = dateStatusIconNode
+                            strongSelf.contextContainer.addSubnode(dateStatusIconNode)
+                        }
+                        dateStatusIconNode.image = dateIconImage
+                        
+                        var dateStatusX: CGFloat = contentRect.origin.x
+                        dateStatusX += contentRect.size.width
+                        dateStatusX += -dateLayout.size.width - 4.0 - dateIconImage.size.width
+                        
+                        var dateStatusY: CGFloat = contentRect.origin.y + 2.0 + UIScreenPixel
+                        dateStatusY += -UIScreenPixel + floor((dateLayout.size.height - dateIconImage.size.height) / 2.0)
+                        
+                        transition.updateFrame(node: dateStatusIconNode, frame: CGRect(origin: CGPoint(x: dateStatusX, y: dateStatusY), size: dateIconImage.size))
+                    } else if let dateStatusIconNode = strongSelf.dateStatusIconNode {
+                        strongSelf.dateStatusIconNode = nil
+                        dateStatusIconNode.removeFromSupernode()
+                    }
+                    
                     let statusSize = CGSize(width: 24.0, height: 24.0)
-                    strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateLayout.size.width - statusSize.width, y: contentRect.origin.y + 2.0 - UIScreenPixel + floor((dateLayout.size.height - statusSize.height) / 2.0)), size: statusSize)
+                    
+                    var statusX: CGFloat = contentRect.origin.x
+                    statusX += contentRect.size.width
+                    statusX += -dateLayout.size.width - statusSize.width - statusOffset
+                    
+                    strongSelf.statusNode.frame = CGRect(origin: CGPoint(x: statusX, y: contentRect.origin.y + 2.0 - UIScreenPixel + floor((dateLayout.size.height - statusSize.height) / 2.0)), size: statusSize)
                     strongSelf.statusNode.fontSize = item.presentationData.fontSize.itemListBaseFontSize
                     let _ = strongSelf.statusNode.transitionToState(statusState, animated: animateContent)
                     
@@ -2597,7 +2652,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrame(node: self.dateNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width, y: dateFrame.minY), size: dateFrame.size))
             
             let statusFrame = self.statusNode.frame
-            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - statusFrame.size.width, y: statusFrame.minY), size: statusFrame.size))
+            
+            var statusOffset: CGFloat = 0.0
+            if let dateStatusIconNode = self.dateStatusIconNode, let dateIconImage = dateStatusIconNode.image {
+                statusOffset += 2.0 + dateIconImage.size.width + 4.0
+                var dateStatusX: CGFloat = contentRect.origin.x
+                dateStatusX += contentRect.size.width
+                dateStatusX += -dateFrame.size.width - 4.0 - dateIconImage.size.width
+                
+                let dateStatusY: CGFloat = dateStatusIconNode.frame.minY
+                
+                transition.updateFrame(node: dateStatusIconNode, frame: CGRect(origin: CGPoint(x: dateStatusX, y: dateStatusY), size: dateIconImage.size))
+            }
+            
+            transition.updateFrame(node: self.statusNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + contentRect.size.width - dateFrame.size.width - statusFrame.size.width - statusOffset, y: statusFrame.minY), size: statusFrame.size))
             
             var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleFrame.size.width + 3.0 + titleOffset
             

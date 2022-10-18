@@ -354,4 +354,10 @@ public struct PresentationResourcesChatList {
             })
         })
     }
+    
+    public static func statusLockIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListStatusLockIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/StatusLockIcon"), color: theme.chatList.unreadBadgeInactiveBackgroundColor)
+        })
+    }
 }

@@ -105,7 +105,7 @@ private final class ChatSendAsPeerListContextItemNode: ASDisplayNode, ContextMen
             }
             
             let action = ContextMenuActionItem(text: EnginePeer(peer.peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), textLayout: subtitle.flatMap { .secondLineWithValue($0) } ?? .singleLine, icon: { _ in nil }, iconSource: ContextMenuActionItemIconSource(size: isSelected ? extendedAvatarSize : avatarSize, signal: avatarSignal), textIcon: { theme in
-                return !item.isPremium && peer.isPremiumRequired ? generateTintedImage(image: UIImage(bundleImageName: "Notification/SecretLock"), color: theme.contextMenu.badgeInactiveFillColor) : nil
+                return !item.isPremium && peer.isPremiumRequired ? generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.contextMenu.badgeInactiveFillColor) : nil
             }, action: { _, f in
                 f(.default)
 

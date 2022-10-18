@@ -54,7 +54,7 @@ public final class HashtagSearchController: TelegramBaseController {
         |> map { result, presentationData in
             let result = result.0
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
-            return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap(EnginePeerReadCounters.init), nil, chatListPresentationData, result.totalCount, nil, false, .index($0.index), nil, .generic, false) })
+            return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap { EnginePeerReadCounters(state: $0, isMuted: false) }, nil, chatListPresentationData, result.totalCount, nil, false, .index($0.index), nil, .generic, false) })
         }
         let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
         }, peerSelected: { _, _, _, _ in
