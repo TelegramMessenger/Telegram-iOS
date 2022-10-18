@@ -1150,7 +1150,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                     let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                                         transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                                         component: AnyComponent(AudioTranscriptionButtonComponent(
-                                            theme: arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing,
+                                            theme: .bubble(arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing),
                                             transcriptionState: effectiveAudioTranscriptionState,
                                             pressed: {
                                                 guard let strongSelf = self else {
