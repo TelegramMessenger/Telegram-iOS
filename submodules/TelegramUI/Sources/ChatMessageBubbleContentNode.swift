@@ -134,6 +134,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
+    weak var bubbleBackgroundNode: ASDisplayNode?
+    
     var visibility: ListViewItemNodeVisibility = .none
     
     var item: ChatMessageBubbleContentItem?
