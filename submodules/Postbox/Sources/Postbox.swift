@@ -1153,9 +1153,14 @@ public final class Transaction {
         self.postbox?.removePeerTimeoutAttributeEntry(peerId: peerId, timestamp: timestamp)
     }
     
-    public func getMessageHistoryThreadIndex(peerId: PeerId) -> [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] {
+    public func getMessageHistoryThreadIndex(peerId: PeerId, limit: Int) -> [(threadId: Int64, index: MessageIndex, info: StoredMessageHistoryThreadInfo)] {
         assert(!self.disposed)
-        return self.postbox!.messageHistoryThreadIndexTable.getAll(peerId: peerId)
+        return self.postbox!.messageHistoryThreadIndexTable.fetch(peerId: peerId, namespace: 0, start: .upperBound, end: .lowerBound, limit: limit)
+    }
+    
+    public func getMessageHistoryThreadTopMessage(peerId: PeerId, threadId: Int64, namespaces: Set<MessageId.Namespace>) -> MessageIndex? {
+        assert(!self.disposed)
+        return self.postbox!.messageHistoryThreadsTable.getTop(peerId: peerId, threadId: threadId, namespaces: namespaces)
     }
     
     public func getMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64) -> StoredMessageHistoryThreadInfo? {
@@ -2324,6 +2329,7 @@ final class PostboxImpl {
     fileprivate func setPeerChatThreadInterfaceState(_ id: PeerId, threadId: Int64, state: StoredPeerChatInterfaceState?) {
         let updatedState = state
         let _ = self.peerChatThreadInterfaceStateTable.set(PeerChatThreadId(peerId: id, threadId: threadId), state: updatedState)
+        self.currentUpdatedPeerChatListEmbeddedStates.insert(id)
     }
     
     fileprivate func replaceRemoteContactCount(_ count: Int32) {

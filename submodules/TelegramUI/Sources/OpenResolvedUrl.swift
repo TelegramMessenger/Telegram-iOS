@@ -72,7 +72,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             openPeer(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
         case let .groupBotStart(botPeerId, payload, adminRights):
             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyGroupsAndChannels, .onlyManageable, .excludeDisabled, .excludeRecent, .doNotSearchMessages], hasContactSelector: false, title: presentationData.strings.Bot_AddToChat_Title))
-            controller.peerSelected = { [weak controller] peer in
+            controller.peerSelected = { [weak controller] peer, _ in
                 let peerId = peer.id
                 
                 let addMemberImpl = {
@@ -310,7 +310,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                     context.sharedContext.applicationBindings.dismissNativeController()
                 } else {
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peer in
+                    controller.peerSelected = { [weak controller] peer, _ in
                         let peerId = peer.id
                         
                         if let strongController = controller {
@@ -578,7 +578,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         
                         if let navigationController = navigationController {
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
-                            controller.peerSelected = { peer in
+                            controller.peerSelected = { peer, _ in
                                 let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
                             }
                             navigationController.pushViewController(controller)
@@ -621,7 +621,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                     
                                     if let navigationController = navigationController {
                                         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
-                                        controller.peerSelected = { peer in
+                                        controller.peerSelected = { peer, _ in
                                             let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
                                         }
                                         navigationController.pushViewController(controller)

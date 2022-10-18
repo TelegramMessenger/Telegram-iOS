@@ -423,7 +423,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 }
                 let content: EmojiStatusComponent.Content
                 if let iconFileId = threadInfo.icon {
-                    content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
+                    content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .forever)
                 } else {
                     content = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: avatarSize, height: avatarSize))
                 }
@@ -454,7 +454,11 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             } else {
                 avatarCornerRadius = avatarSize / 2.0
             }
-            self.avatarNode.layer.cornerRadius = avatarCornerRadius
+            if self.avatarNode.layer.cornerRadius != 0.0 {
+                ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
+            } else {
+                self.avatarNode.layer.cornerRadius = avatarCornerRadius
+            }
             self.avatarNode.layer.masksToBounds = true
             
             self.isFirstAvatarLoading = false
@@ -766,7 +770,11 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         } else {
             avatarCornerRadius = avatarSize / 2.0
         }
-        self.avatarNode.layer.cornerRadius = avatarCornerRadius
+        if self.avatarNode.layer.cornerRadius != 0.0 {
+            ContainedViewLayoutTransition.animated(duration: 0.3, curve: .easeInOut).updateCornerRadius(layer: self.avatarNode.layer, cornerRadius: avatarCornerRadius)
+        } else {
+            self.avatarNode.layer.cornerRadius = avatarCornerRadius
+        }
         self.avatarNode.layer.masksToBounds = true
         
         if let item = item {

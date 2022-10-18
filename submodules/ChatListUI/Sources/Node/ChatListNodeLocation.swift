@@ -232,13 +232,24 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     pinnedIndex = .none
                 }
                 
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
+                
+                var draft: EngineChatList.Draft?
+                if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
+                }
+                
                 items.append(EngineChatList.Item(
                     id: .forum(item.id),
                     index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                     messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                    readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
+                    readCounters: readCounters,
                     isMuted: isMuted,
-                    draft: nil,
+                    draft: draft,
                     threadData: data,
                     renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
                     presence: nil,

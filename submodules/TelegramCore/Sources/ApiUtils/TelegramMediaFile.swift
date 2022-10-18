@@ -68,6 +68,8 @@ extension StickerPackReference {
             self = .emojiGenericAnimations
         case .inputStickerSetEmojiDefaultStatuses:
             self = .iconStatusEmoji
+        case .inputStickerSetEmojiDefaultTopicIcons:
+            self = .iconTopicEmoji
         }
     }
 }

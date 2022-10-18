@@ -15,6 +15,7 @@ import PresentationDataUtils
 import TelegramNotices
 import NotificationSoundSelectionUI
 import TelegramStringFormatting
+import NotificationPeerExceptionController
 
 private struct CounterTagSettings: OptionSet {
     var rawValue: Int32

@@ -12,7 +12,6 @@ import PeerAvatarGalleryUI
 import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
-import ForumTopicListScreen
 import ForumCreateTopicScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
@@ -259,5 +258,7 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
 }
 
 public func navigateToForumChannelImpl(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController) {
-    navigationController.pushViewController(ChatListControllerImpl(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, enableDebugActions: false))
+    let controller = ChatListControllerImpl(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, enableDebugActions: false)
+    controller.navigationPresentation = .master
+    navigationController.pushViewController(controller)
 }

@@ -904,5 +904,29 @@ public extension TelegramEngine.EngineData.Item {
                 }
             }
         }
+        
+        public struct ThreadData: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = MessageHistoryThreadData?
+
+            fileprivate var id: EnginePeer.Id
+            fileprivate var threadId: Int64
+
+            public init(id: EnginePeer.Id, threadId: Int64) {
+                self.id = id
+                self.threadId = threadId
+            }
+
+            var key: PostboxViewKey {
+                return .messageHistoryThreadInfo(peerId: self.id, threadId: self.threadId)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageHistoryThreadInfoView else {
+                    preconditionFailure()
+                }
+                
+                return view.info?.data.get(MessageHistoryThreadData.self)
+            }
+        }
     }
 }

@@ -89,7 +89,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         messages: [EngineMessage(message)],
                         peer: EngineRenderedPeer(peer),
                         threadInfo: nil,
-                        combinedReadState: readState.flatMap(EnginePeerReadCounters.init),
+                        combinedReadState: readState.flatMap { EnginePeerReadCounters(state: $0, isMuted: false) },
                         isRemovedFromTotalUnreadCount: false,
                         presence: nil,
                         hasUnseenMentions: false,
@@ -209,8 +209,8 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
         
         let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
         }, peerSelected: { _, _, _, _ in
-        }, disabledPeerSelected: { _ in
-        }, togglePeerSelected: { _ in
+        }, disabledPeerSelected: { _, _ in
+        }, togglePeerSelected: { _, _ in
         }, togglePeersSelection: { _, _ in
         }, additionalCategorySelected: { _ in
         }, messageSelected: { [weak self] peer, _, message, _ in

@@ -1,8 +1,8 @@
 load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
 
 swift_library(
-    name = "ForumTopicListScreen",
-    module_name = "ForumTopicListScreen",
+    name = "NotificationExceptionsScreen",
+    module_name = "NotificationExceptionsScreen",
     srcs = glob([
         "Sources/**/*.swift",
     ]),
@@ -26,6 +26,11 @@ swift_library(
         "//submodules/AppBundle:AppBundle",
         "//submodules/TelegramStringFormatting:TelegramStringFormatting",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/ItemListUI",
+        "//submodules/ItemListPeerItem",
+        "//submodules/ItemListPeerActionItem",
+        "//submodules/NotificationSoundSelectionUI",
+        "//submodules/SettingsUI",
     ],
     visibility = [
         "//visibility:public",

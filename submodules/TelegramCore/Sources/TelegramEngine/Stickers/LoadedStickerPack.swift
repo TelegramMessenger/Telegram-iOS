@@ -26,6 +26,8 @@ extension StickerPackReference {
             return .inputStickerSetEmojiGenericAnimations
         case .iconStatusEmoji:
             return .inputStickerSetEmojiDefaultStatuses
+        case .iconTopicEmoji:
+            return .inputStickerSetEmojiDefaultTopicIcons
         }
     }
 }

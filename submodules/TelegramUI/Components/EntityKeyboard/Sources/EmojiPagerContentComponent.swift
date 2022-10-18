@@ -6241,6 +6241,17 @@ public final class EmojiPagerContentComponent: Component {
         } else if isReactionSelection {
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudTopReactions)
             orderedItemListCollectionIds.append(Namespaces.OrderedItemList.CloudRecentReactions)
+        } else if isTopicIconSelection {
+            iconStatusEmoji = context.engine.stickers.loadedStickerPack(reference: .iconTopicEmoji, forceActualized: false)
+            |> map { result -> [TelegramMediaFile] in
+                switch result {
+                case let .result(_, items, _):
+                    return items.map(\.file)
+                default:
+                    return []
+                }
+            }
+            |> take(1)
         }
         
         let availableReactions: Signal<AvailableReactions?, NoError>
@@ -6308,6 +6319,45 @@ public final class EmojiPagerContentComponent: Component {
                 } else {
                     itemGroupIndexById[groupId] = itemGroups.count
                     itemGroups.append(ItemGroup(supergroupId: groupId, id: groupId, title: nil, subtitle: nil, isPremiumLocked: false, isFeatured: false, collapsedLineCount: 5, isClearable: false, headerItem: nil, items: [resultItem]))
+                }
+                
+                var existingIds = Set<MediaId>()
+                
+                for file in iconStatusEmoji {
+                    if existingIds.contains(file.fileId) {
+                        continue
+                    }
+                    existingIds.insert(file.fileId)
+                    
+                    var accentTint = false
+                    for attribute in file.attributes {
+                        if case let .CustomEmoji(_, _, packReference) = attribute {
+                            switch packReference {
+                            case let .id(id, _):
+                                if id == 773947703670341676 || id == 2964141614563343 {
+                                    accentTint = true
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    
+                    let resultItem: EmojiPagerContentComponent.Item
+                    
+                    let animationData = EntityKeyboardAnimationData(file: file)
+                    resultItem = EmojiPagerContentComponent.Item(
+                        animationData: animationData,
+                        content: .animation(animationData),
+                        itemFile: file,
+                        subgroupId: nil,
+                        icon: .none,
+                        accentTint: accentTint
+                    )
+                    
+                    if let groupIndex = itemGroupIndexById[groupId] {
+                        itemGroups[groupIndex].items.append(resultItem)
+                    }
                 }
             } else if isStatusSelection {
                 let resultItem = EmojiPagerContentComponent.Item(

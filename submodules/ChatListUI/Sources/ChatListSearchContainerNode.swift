@@ -44,7 +44,7 @@ private enum ChatListTokenId: Int32 {
 
 final class ChatListSearchInteraction {
     let openPeer: (EnginePeer, EnginePeer?, Int64?, Bool) -> Void
-    let openDisabledPeer: (EnginePeer) -> Void
+    let openDisabledPeer: (EnginePeer, Int64?) -> Void
     let openMessage: (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void
     let openUrl: (String) -> Void
     let clearRecentSearch: () -> Void
@@ -57,7 +57,7 @@ final class ChatListSearchInteraction {
     let dismissInput: () -> Void
     let getSelectedMessageIds: () -> Set<EngineMessage.Id>?
     
-    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
+    init(openPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?) -> Void, openMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, openUrl: @escaping (String) -> Void, clearRecentSearch: @escaping () -> Void, addContact: @escaping (String) -> Void, toggleMessageSelection: @escaping (EngineMessage.Id, Bool) -> Void, messageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?, ChatListSearchPaneKey, (id: String, size: Int64, isFirstInList: Bool)?) -> Void), mediaMessageContextAction: @escaping ((EngineMessage, ASDisplayNode?, CGRect?, UIGestureRecognizer?) -> Void), peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, dismissInput: @escaping () -> Void, getSelectedMessageIds: @escaping () -> Set<EngineMessage.Id>?) {
         self.openPeer = openPeer
         self.openDisabledPeer = openDisabledPeer
         self.openMessage = openMessage
@@ -133,7 +133,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     
     private var validLayout: (ContainerViewLayout, CGFloat)?
     
-    public init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, location: ChatListControllerLocation, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
+    public init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, filter: ChatListNodePeersFilter, location: ChatListControllerLocation, displaySearchFilters: Bool, hasDownloads: Bool, initialFilter: ChatListSearchFilter = .chats, openPeer originalOpenPeer: @escaping (EnginePeer, EnginePeer?, Int64?, Bool) -> Void, openDisabledPeer: @escaping (EnginePeer, Int64?) -> Void, openRecentPeerOptions: @escaping (EnginePeer) -> Void, openMessage originalOpenMessage: @escaping (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void, addContact: ((String) -> Void)?, peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?, present: @escaping (ViewController, Any?) -> Void, presentInGlobalOverlay: @escaping (ViewController, Any?) -> Void, navigationController: NavigationController?) {
         self.context = context
         self.peersFilter = filter
         self.location = location
@@ -164,8 +164,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             if peer.id.namespace != Namespaces.Peer.SecretChat {
                 addAppLogEvent(postbox: context.account.postbox, type: "search_global_open_peer", peerId: peer.id)
             }
-        }, openDisabledPeer: { peer in
-            openDisabledPeer(peer)
+        }, openDisabledPeer: { peer, threadId in
+            openDisabledPeer(peer, threadId)
         }, openMessage: { peer, threadId, messageId, deactivateOnAction in
             originalOpenMessage(peer, threadId, messageId, deactivateOnAction)
             if peer.id.namespace != Namespaces.Peer.SecretChat {
@@ -1320,7 +1320,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
                 (strongSelf.navigationController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             }
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer, _ in
                 let peerId = peer.id
                 if let strongSelf = self, let _ = peerSelectionController {
                     if peerId == strongSelf.context.account.peerId {

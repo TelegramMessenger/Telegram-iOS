@@ -356,7 +356,19 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
             } else if case let .replyThread(replyThreadMessage) = chatLocation, replyThreadMessage.isChannelPost, replyThreadMessage.effectiveTopId == message.id {
                 isBroadcastChannel = true
             }
+            
+            var hasAvatar = false
             if !hasActionMedia && !isBroadcastChannel {
+                hasAvatar = true
+            }
+            
+            if let adAttribute = message.adAttribute {
+                if adAttribute.displayAvatar {
+                    hasAvatar = adAttribute.displayAvatar
+                }
+            }
+            
+            if hasAvatar {
                 if let effectiveAuthor = effectiveAuthor {
                     avatarHeader = ChatMessageAvatarHeader(timestamp: content.index.timestamp, peerId: effectiveAuthor.id, peer: effectiveAuthor, messageReference: MessageReference(message), message: message, presentationData: presentationData, context: context, controllerInteraction: controllerInteraction)
                 }

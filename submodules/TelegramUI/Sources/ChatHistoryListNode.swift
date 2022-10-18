@@ -2617,6 +2617,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 } else if case .empty(.joined) = loadState, let entry = transition.historyView.originalView.entries.first {
                     strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
+                } else if case .empty(.topic) = loadState, let entry = transition.historyView.originalView.entries.first {
+                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
                 }
                 
                 if !strongSelf.didSetInitialData {

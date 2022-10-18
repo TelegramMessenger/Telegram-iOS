@@ -4,6 +4,7 @@ public extension Api {
         case inputStickerSetAnimatedEmojiAnimations
         case inputStickerSetDice(emoticon: String)
         case inputStickerSetEmojiDefaultStatuses
+        case inputStickerSetEmojiDefaultTopicIcons
         case inputStickerSetEmojiGenericAnimations
         case inputStickerSetEmpty
         case inputStickerSetID(id: Int64, accessHash: Int64)
@@ -33,6 +34,12 @@ public extension Api {
                 case .inputStickerSetEmojiDefaultStatuses:
                     if boxed {
                         buffer.appendInt32(701560302)
+                    }
+                    
+                    break
+                case .inputStickerSetEmojiDefaultTopicIcons:
+                    if boxed {
+                        buffer.appendInt32(1153562857)
                     }
                     
                     break
@@ -80,6 +87,8 @@ public extension Api {
                 return ("inputStickerSetDice", [("emoticon", String(describing: emoticon))])
                 case .inputStickerSetEmojiDefaultStatuses:
                 return ("inputStickerSetEmojiDefaultStatuses", [])
+                case .inputStickerSetEmojiDefaultTopicIcons:
+                return ("inputStickerSetEmojiDefaultTopicIcons", [])
                 case .inputStickerSetEmojiGenericAnimations:
                 return ("inputStickerSetEmojiGenericAnimations", [])
                 case .inputStickerSetEmpty:
@@ -112,6 +121,9 @@ public extension Api {
         }
         public static func parse_inputStickerSetEmojiDefaultStatuses(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmojiDefaultStatuses
+        }
+        public static func parse_inputStickerSetEmojiDefaultTopicIcons(_ reader: BufferReader) -> InputStickerSet? {
+            return Api.InputStickerSet.inputStickerSetEmojiDefaultTopicIcons
         }
         public static func parse_inputStickerSetEmojiGenericAnimations(_ reader: BufferReader) -> InputStickerSet? {
             return Api.InputStickerSet.inputStickerSetEmojiGenericAnimations

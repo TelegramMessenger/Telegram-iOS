@@ -93,12 +93,13 @@ enum AccountStateMutationOperation {
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerActivitySpace, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedItemIds(PeerGroupId, AccountStateUpdatePinnedItemIdsOperation)
+    case UpdatePinnedTopic(peerId: PeerId, threadId: Int64?)
     case ReadMessageContents((PeerId?, [Int32]))
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateMessageForwardsCount(MessageId, Int32)
     case UpdateInstalledStickerPacks(AccountStateUpdateStickerPacksOperation)
     case UpdateRecentGifs
-    case UpdateChatInputState(PeerId, SynchronizeableChatInputState?)
+    case UpdateChatInputState(PeerId, Int64?, SynchronizeableChatInputState?)
     case UpdateCall(Api.PhoneCall)
     case AddCallSignalingData(Int64, Data)
     case UpdateLangPack(String, Api.LangPackDifference?)
@@ -469,6 +470,10 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedItemIds(groupId, operation))
     }
     
+    mutating func addUpdatePinnedTopic(peerId: PeerId, threadId: Int64?) {
+        self.addOperation(.UpdatePinnedTopic(peerId: peerId, threadId: threadId))
+    }
+    
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
         self.addOperation(.ReadMessageContents(peerIdsAndMessageIds))
     }
@@ -489,8 +494,8 @@ struct AccountMutableState {
         self.addOperation(.UpdateRecentGifs)
     }
     
-    mutating func addUpdateChatInputState(peerId: PeerId, state: SynchronizeableChatInputState?) {
-        self.addOperation(.UpdateChatInputState(peerId, state))
+    mutating func addUpdateChatInputState(peerId: PeerId, threadId: Int64?, state: SynchronizeableChatInputState?) {
+        self.addOperation(.UpdateChatInputState(peerId, threadId, state))
     }
     
     mutating func addUpdateCall(_ call: Api.PhoneCall) {
@@ -535,7 +540,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {

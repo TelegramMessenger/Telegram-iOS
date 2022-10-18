@@ -133,10 +133,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if firstMessage.id.peerId.isReplies, let _ = firstMessage.sourceReference, let effectiveAuthor = firstMessage.forwardInfo?.author {
                     title = EnginePeer(effectiveAuthor).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                 } else if author.id != peer.id {
+                    let authorString: String
                     if author.id == item.context.account.peerId {
-                        title = presentationData.strings.DialogList_You + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        authorString = presentationData.strings.DialogList_You
                     } else {
-                        title = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        authorString = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    }
+                    
+                    if let threadData = item.threadData {
+                        title = "\(authorString) → \(threadData.info.title)"
+                    } else {
+                        title = authorString + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
                 } else {
                     title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)

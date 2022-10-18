@@ -57,8 +57,8 @@ public final class ChatListNodeInteraction {
     
     let activateSearch: () -> Void
     let peerSelected: (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void
-    let disabledPeerSelected: (EnginePeer) -> Void
-    let togglePeerSelected: (EnginePeer) -> Void
+    let disabledPeerSelected: (EnginePeer, Int64?) -> Void
+    let togglePeerSelected: (EnginePeer, Int64?) -> Void
     let togglePeersSelection: ([PeerEntry], Bool) -> Void
     let additionalCategorySelected: (Int) -> Void
     let messageSelected: (EnginePeer, Int64?, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void
@@ -91,8 +91,8 @@ public final class ChatListNodeInteraction {
         animationRenderer: MultiAnimationRenderer,
         activateSearch: @escaping () -> Void,
         peerSelected: @escaping (EnginePeer, EnginePeer?, Int64?, ChatListNodeEntryPromoInfo?) -> Void,
-        disabledPeerSelected: @escaping (EnginePeer) -> Void,
-        togglePeerSelected: @escaping (EnginePeer) -> Void,
+        disabledPeerSelected: @escaping (EnginePeer, Int64?) -> Void,
+        togglePeerSelected: @escaping (EnginePeer, Int64?) -> Void,
         togglePeersSelection: @escaping ([PeerEntry], Bool) -> Void,
         additionalCategorySelected: @escaping (Int) -> Void,
         messageSelected: @escaping (EnginePeer, Int64?, EngineMessage, ChatListNodeEntryPromoInfo?) -> Void,
@@ -381,6 +381,21 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 status = .none
                             }
                         }
+                    
+                        let peerContent: ContactsPeerItemPeer
+                        if let threadInfo = threadInfo, let itemPeer = itemPeer {
+                            peerContent = .thread(peer: itemPeer, title: threadInfo.info.title, icon: threadInfo.info.icon, color: threadInfo.info.iconColor)
+                        } else {
+                            peerContent = .peer(peer: itemPeer, chatPeer: chatPeer)
+                        }
+                    
+                        var threadId: Int64?
+                        switch index {
+                        case let .forum(_, _, threadIdValue, _, _):
+                            threadId = threadIdValue
+                        case .chatList:
+                            break
+                        }
 
                         return ListViewInsertItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
                             presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
@@ -388,7 +403,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
                             peerMode: .generalSearch,
-                            peer: .peer(peer: itemPeer, chatPeer: chatPeer),
+                            peer: peerContent,
                             status: status,
                             enabled: enabled,
                             selection: editing ? .selectable(selected: selected) : .none,
@@ -398,14 +413,14 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             action: { _ in
                                 if let chatPeer = chatPeer {
                                     if editing {
-                                        nodeInteraction.togglePeerSelected(chatPeer)
+                                        nodeInteraction.togglePeerSelected(chatPeer, threadId)
                                     } else {
-                                        nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
                                     }
                                 }
                             }, disabledAction: { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -525,6 +540,21 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 status = .none
                             }
                         }
+                    
+                        let peerContent: ContactsPeerItemPeer
+                        if let threadInfo = threadInfo, let itemPeer = itemPeer {
+                            peerContent = .thread(peer: itemPeer, title: threadInfo.info.title, icon: threadInfo.info.icon, color: threadInfo.info.iconColor)
+                        } else {
+                            peerContent = .peer(peer: itemPeer, chatPeer: chatPeer)
+                        }
+                    
+                        var threadId: Int64?
+                        switch index {
+                        case let .forum(_, _, threadIdValue, _, _):
+                            threadId = threadIdValue
+                        case .chatList:
+                            break
+                        }
                         
                         return ListViewUpdateItem(index: entry.index, previousIndex: entry.previousIndex, item: ContactsPeerItem(
                             presentationData: ItemListPresentationData(theme: presentationData.theme, fontSize: presentationData.fontSize, strings: presentationData.strings),
@@ -532,7 +562,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             displayOrder: presentationData.nameDisplayOrder,
                             context: context,
                             peerMode: .generalSearch,
-                            peer: .peer(peer: itemPeer, chatPeer: chatPeer),
+                            peer: peerContent,
                             status: status,
                             enabled: enabled,
                             selection: editing ? .selectable(selected: selected) : .none,
@@ -542,14 +572,14 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             action: { _ in
                                 if let chatPeer = chatPeer {
                                     if editing {
-                                        nodeInteraction.togglePeerSelected(chatPeer)
+                                        nodeInteraction.togglePeerSelected(chatPeer, threadId)
                                     } else {
-                                        nodeInteraction.peerSelected(chatPeer, nil, nil, nil)
+                                        nodeInteraction.peerSelected(chatPeer, nil, threadId, nil)
                                     }
                                 }
                             }, disabledAction: { _ in
                                 if let chatPeer = chatPeer {
-                                    nodeInteraction.disabledPeerSelected(chatPeer)
+                                    nodeInteraction.disabledPeerSelected(chatPeer, threadId)
                                 }
                             },
                             animationCache: nodeInteraction.animationCache,
@@ -661,7 +691,7 @@ public final class ChatListNode: ListView {
     }
     
     public var peerSelected: ((EnginePeer, Int64?, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
-    public var disabledPeerSelected: ((EnginePeer) -> Void)?
+    public var disabledPeerSelected: ((EnginePeer, Int64?) -> Void)?
     public var additionalCategorySelected: ((Int) -> Void)?
     public var groupSelected: ((EngineChatList.Group) -> Void)?
     public var addContact: ((String) -> Void)?
@@ -799,11 +829,11 @@ public final class ChatListNode: ListView {
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
                 peerSelected(peer, threadId, true, true, promoInfo)
             }
-        }, disabledPeerSelected: { [weak self] peer in
+        }, disabledPeerSelected: { [weak self] peer, threadId in
             if let strongSelf = self, let disabledPeerSelected = strongSelf.disabledPeerSelected {
-                disabledPeerSelected(peer)
+                disabledPeerSelected(peer, threadId)
             }
-        }, togglePeerSelected: { [weak self] peer in
+        }, togglePeerSelected: { [weak self] peer, _ in
             guard let strongSelf = self else {
                 return
             }

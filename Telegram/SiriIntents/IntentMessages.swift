@@ -44,8 +44,8 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 var hasUnread = false
                 var fixedCombinedReadStates: MessageHistoryViewReadState?
                 if let readState = readState {
-                    hasUnread = readState.count != 0
-                    fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState])
+                    hasUnread = readState.state.count != 0
+                    fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState.state])
                 }
                 
                 if !isMuted && hasUnread {
@@ -56,7 +56,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                         for entry in view.0.entries {
                             var isRead = true
                             if let readState = readState {
-                                isRead = readState.isIncomingMessageIndexRead(entry.message.index)
+                                isRead = readState.state.isIncomingMessageIndexRead(entry.message.index)
                             }
                             
                             if !isRead {

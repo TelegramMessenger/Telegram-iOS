@@ -209,6 +209,17 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func removeCustomThreadNotificationSettings(peerId: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for threadId in threadIds {
+                    _internal_updatePeerNotificationSoundInteractive(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, sound: .default)
+                    _internal_updatePeerMuteSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, muteInterval: nil)
+                    _internal_updatePeerDisplayPreviewsSetting(account: self.account, transaction: transaction, peerId: peerId, threadId: threadId, displayPreviews: .default)
+                }
+            }
+            |> ignoreValues
+        }
 
         public func channelAdminEventLog(peerId: PeerId) -> ChannelAdminEventLogContext {
             return ChannelAdminEventLogContext(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
@@ -689,6 +700,17 @@ public extension TelegramEngine {
                 )
 
                 if let threadId = threadId {
+                    var currentInputState: SynchronizeableChatInputState?
+                    if let peerChatInterfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId), let data = peerChatInterfaceState.data {
+                        currentInputState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))?.synchronizeableInputState
+                    }
+                    let updatedInputState = state.synchronizeableInputState
+
+                    if currentInputState != updatedInputState {
+                        if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
+                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId, threadId: threadId)
+                        }
+                    }
                     transaction.setPeerChatThreadInterfaceState(peerId, threadId: threadId, state: storedState)
                 } else {
                     var currentInputState: SynchronizeableChatInputState?
@@ -699,7 +721,7 @@ public extension TelegramEngine {
 
                     if currentInputState != updatedInputState {
                         if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudChannel || peerId.namespace == Namespaces.Peer.CloudGroup {
-                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId)
+                            addSynchronizeChatInputStateOperation(transaction: transaction, peerId: peerId, threadId: nil)
                         }
                     }
                     transaction.setPeerChatInterfaceState(
@@ -829,7 +851,7 @@ public extension TelegramEngine {
             return _internal_setForumChannelTopicPinned(account: self.account, id: id, threadId: threadId, isPinned: isPinned)
         }
         
-        public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[(threadId: Int64, notificationSettiongs: EnginePeer.NotificationSettings)], NoError> {
+        public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> {
             return _internal_forumChannelTopicNotificationExceptions(account: self.account, id: id)
         }
     }

@@ -913,10 +913,22 @@ private final class ChatListViewSpaceState {
                     
                     var updatedReadState = readState
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.totalUnreadCount ?? 0
-                        updatedReadState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+                        let summary = postbox.peerThreadsSummaryTable.get(peerId: peer.id)
+                        
+                        var count: Int32 = 0
+                        var isMuted: Bool = false
+                        if let summary = summary {
+                            count = summary.totalUnreadCount
+                            if count > 0 {
+                                isMuted = !summary.hasUnmutedUnread
+                            }
+                        }
+                        
+                        updatedReadState = ChatListViewReadState(state: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))]), isMuted: isMuted)
                     } else {
-                        updatedReadState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)
+                        updatedReadState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId).flatMap { state in
+                            return ChatListViewReadState(state: state, isMuted: false)
+                        }
                     }
                     
                     if updatedReadState != readState {
@@ -1514,12 +1526,24 @@ struct ChatListViewState {
                         forumTopicData = postbox.messageHistoryThreadIndexTable.get(peerId: message.id.peerId, threadId: threadId)
                     }
                     
-                    let readState: CombinedPeerReadState?
+                    let readState: ChatListViewReadState?
                     if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
-                        let count = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.totalUnreadCount ?? 0
-                        readState = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))])
+                        let summary = postbox.peerThreadsSummaryTable.get(peerId: peer.id)
+                        
+                        var count: Int32 = 0
+                        var isMuted: Bool = false
+                        if let summary = summary {
+                            count = summary.totalUnreadCount
+                            if count > 0 {
+                                isMuted = !summary.hasUnmutedUnread
+                            }
+                        }
+                        
+                        readState = ChatListViewReadState(state: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))]), isMuted: isMuted)
                     } else {
-                        readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)
+                        readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId).flatMap { state in
+                            return ChatListViewReadState(state: state, isMuted: false)
+                        }
                     }
                     
                     let updatedEntry: MutableChatListEntry = .MessageEntry(index: index, messages: renderedMessages, readState: readState, notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, forumTopicData: forumTopicData, hasFailedMessages: false, isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId))

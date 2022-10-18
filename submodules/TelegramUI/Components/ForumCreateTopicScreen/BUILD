@@ -30,6 +30,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EntityKeyboard:EntityKeyboard",
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/Components/PagerComponent:PagerComponent",
+        "//submodules/PremiumUI",
     ],
     visibility = [
         "//visibility:public",

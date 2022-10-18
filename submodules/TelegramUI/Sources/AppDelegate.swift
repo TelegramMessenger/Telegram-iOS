@@ -802,7 +802,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
-                self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: nil, messageId: messageId)
             }, displayUpgradeProgress: { progress in
                 if let progress = progress {
                     if self.dataImportSplash == nil {
@@ -1839,7 +1839,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let userId = Int64(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), activateInput: true)
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), threadId: nil, activateInput: true)
                     }
                 }
             }
@@ -1880,7 +1880,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if let primary = primary {
                             for context in contexts {
                                 if let context = context, context.account.id == primary {
-                                    self.openChatWhenReady(accountId: nil, peerId: peerId)
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil)
                                     return
                                 }
                             }
@@ -1888,7 +1888,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         
                         for context in contexts {
                             if let context = context {
-                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId)
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil)
                                 return
                             }
                         }
@@ -1921,7 +1921,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                 case .camera:
                                     context.openRootCamera()
                                 case .savedMessages:
-                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil)
                                 case .account:
                                     context.switchAccount()
                             }
@@ -1972,7 +1972,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
-    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue
@@ -1991,7 +1991,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.openChatWithPeerId(peerId: peerId, messageId: messageId, activateInput: activateInput)
+            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput)
         }))
     }
     
@@ -2015,15 +2015,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-                if let peerId = peerIdFromNotification(response.notification) {
+                if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId)
                 }
                 completionHandler()
-            } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
+            } else if response.actionIdentifier == "reply", let (peerId, _) = peerIdFromNotification(response.notification), let accountId = accountId {
                 guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
                     completionHandler()
                     return
@@ -2405,11 +2405,13 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
 }
 
 @available(iOS 10.0, *)
-private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
+private func peerIdFromNotification(_ notification: UNNotification) -> (peerId: PeerId, threadId: Int64?)? {
+    let threadId = notification.request.content.userInfo["threadId"] as? Int64
+    
     if let peerId = notification.request.content.userInfo["peerId"] as? Int64 {
-        return PeerId(peerId)
+        return (PeerId(peerId), threadId)
     } else if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerId = Int64(peerIdString) {
-        return PeerId(peerId)
+        return (PeerId(peerId), threadId)
     } else {
         let payload = notification.request.content.userInfo
         var peerId: PeerId?
@@ -2426,7 +2428,12 @@ private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
             let fromIdValue = fromId as! NSString
             peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         }
-        return peerId
+        
+        if let peerId = peerId {
+            return (peerId, threadId)
+        } else {
+            return nil
+        }
     }
 }
 
