@@ -342,10 +342,16 @@ public enum ChatHistoryNodeHistoryState: Equatable {
 
 public final class ChatPresentationInterfaceState: Equatable {
     public struct ThreadData: Equatable {
+        public var title: String
+        public var icon: Int64?
+        public var iconColor: Int32
         public var isOwn: Bool
         public var isClosed: Bool
         
-        public init(isOwn: Bool, isClosed: Bool) {
+        public init(title: String, icon: Int64?, iconColor: Int32, isOwn: Bool, isClosed: Bool) {
+            self.title = title
+            self.icon = icon
+            self.iconColor = iconColor
             self.isOwn = isOwn
             self.isClosed = isClosed
         }

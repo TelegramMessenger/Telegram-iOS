@@ -367,15 +367,21 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 node = itemNode
             }
         }
-        return node?.frame
+        return node?.frame.offsetBy(dx: 0.0, dy: -10.0)
     }
     
     func generateMaskImage() -> UIImage? {
         return generateImage(CGSize(width: 100.0, height: 100.0), contextGenerator: { size, context in
             context.clear(CGRect(origin: .zero, size: size))
+            
+            let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 16.0, dy: 16.0), cornerRadius: 16.0)
             context.setFillColor(UIColor.white.cgColor)
             context.setShadow(offset: .zero, blur: 40.0, color: UIColor.white.cgColor)
-            context.fill(CGRect(origin: .zero, size: size).insetBy(dx: 16.0, dy: 16.0))
+            
+            for _ in 0 ..< 10 {
+                context.addPath(path.cgPath)
+                context.fillPath()
+            }
         })?.stretchableImage(withLeftCapWidth: 49, topCapHeight: 49)
     }
     
@@ -490,7 +496,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                         let distance = sourceCenter.distance(to: itemNode.position)
                         let newDistance = distance * 2.8
                         let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
-                        snapshotView.layer.animatePosition(from: snapshotView.center, to: newPosition, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        snapshotView.layer.animatePosition(from: snapshotView.center, to: newPosition, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
                     }
                     snapshotView.layer.animateScale(from: 1.0, to: 1.35, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
                 }

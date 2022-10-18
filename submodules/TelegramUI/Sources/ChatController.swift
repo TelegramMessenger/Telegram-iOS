@@ -6168,7 +6168,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     guard let data = view.info?.data.get(MessageHistoryThreadData.self) else {
                         return nil
                     }
-                    return ChatPresentationInterfaceState.ThreadData(isOwn: data.isOwnedByMe, isClosed: data.isClosed)
+                    return ChatPresentationInterfaceState.ThreadData(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor, isOwn: data.isOwnedByMe, isClosed: data.isClosed)
                 }
                 |> distinctUntilChanged
             } else {

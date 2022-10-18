@@ -821,6 +821,8 @@
 
 - (void)viewWillAppear:(BOOL)animated
 {
+    if (_dismissed)
+        return;
     if (![self inFormSheet] && (self.navigationController != nil || self.dontHideStatusBar))
     {
         if (animated)
@@ -849,6 +851,8 @@
 
 - (void)viewDidAppear:(BOOL)animated
 {
+    if (_dismissed)
+        return;
     if (self.navigationController != nil)
     {
         _viewFillingWholeScreen = true;
@@ -875,17 +879,19 @@
         else
             [_context forceSetStatusBarHidden:[self prefersStatusBarHidden] withAnimation:UIStatusBarAnimationNone];
         
-        if (animated)
-        {
-            [UIView animateWithDuration:0.3 animations:^
+        TGDispatchAfter(0.1, dispatch_get_main_queue(), ^{
+            if (animated)
+            {
+                [UIView animateWithDuration:0.3 animations:^
+                {
+                    [_context setApplicationStatusBarAlpha:1.0f];
+                }];
+            }
+            else
             {
                 [_context setApplicationStatusBarAlpha:1.0f];
-            }];
-        }
-        else
-        {
-            [_context setApplicationStatusBarAlpha:1.0f];
-        }
+            }
+        });
         
         self.navigationController.interactivePopGestureRecognizer.enabled = true;
     }
@@ -896,20 +902,6 @@
     }
     
     [super viewWillDisappear:animated];
-}
-
-- (void)viewDidDisappear:(BOOL)animated
-{
-    [super viewDidDisappear:animated];
-    
-    //strange ios6 crashfix
-    if (iosMajorVersion() < 7 && !self.dontHideStatusBar)
-    {
-        TGDispatchAfter(0.5f, dispatch_get_main_queue(), ^
-        {
-            [_context forceSetStatusBarHidden:false withAnimation:UIStatusBarAnimationNone];
-        });
-    }
 }
 
 - (void)updateDoneButtonEnabled:(bool)enabled animated:(bool)animated

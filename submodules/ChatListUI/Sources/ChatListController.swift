@@ -366,6 +366,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
         
+        let groupCallPanelSource: GroupCallPanelSource
         switch self.location {
         case .chatList:
             self.titleView = ChatListTitleView(
@@ -375,8 +376,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 animationCache: self.animationCache,
                 animationRenderer: self.animationRenderer
             )
-        case .forum:
+            groupCallPanelSource = .all
+        case let .forum(peerId):
             self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.context.animationCache, animationRenderer: self.context.animationRenderer)
+            groupCallPanelSource = .peer(peerId)
         }
         
         self.moreBarButton = MoreHeaderButton(color: self.presentationData.theme.rootController.navigationBar.buttonColor)
@@ -386,8 +389,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.moreBarButtonItem = UIBarButtonItem(customDisplayNode: self.moreBarButton)!
         
         self.tabContainerNode = ChatListFilterTabContainerNode()
-        
-        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: .all)
+                
+        super.init(context: context, navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), mediaAccessoryPanelVisibility: .always, locationBroadcastPanelSource: .summary, groupCallPanelSource: groupCallPanelSource)
         
         self.tabBarItemContextActionType = .always
         

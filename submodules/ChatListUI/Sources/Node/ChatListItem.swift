@@ -2067,7 +2067,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             environment: {},
                             containerSize: CGSize(width: 32.0, height: 32.0)
                         )
-                        transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0) + revealOffset, y: contentRect.origin.y + 2.0), size: iconSize))
+                        transition.updateFrame(view: avatarIconView, frame: CGRect(origin: CGPoint(x: editingOffset + params.leftInset + floor((leftInset - params.leftInset - iconSize.width) / 2.0) + revealOffset, y: contentRect.origin.y + 2.0), size: iconSize))
                     } else if let avatarIconView = strongSelf.avatarIconView {
                         strongSelf.avatarIconView = nil
                         avatarIconView.removeFromSuperview()

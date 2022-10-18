@@ -59,7 +59,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     
     var dismiss: ((Bool) -> Void)?
     var cancel: (() -> Void)?
-    var share: ((String, [PeerId], Bool, Bool) -> Signal<ShareState, ShareControllerError>)?
+    var share: ((String, [PeerId], [PeerId: Int64], Bool, Bool) -> Signal<ShareState, ShareControllerError>)?
     var shareExternal: ((Bool) -> Signal<ShareExternalState, NoError>)?
     var switchToAnotherAccount: (() -> Void)?
     var debugAction: (() -> Void)?
@@ -245,7 +245,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         self.controllerInteraction = ShareControllerInteraction(togglePeer: { [weak self] peer, search in
             if let strongSelf = self {
                 var added = false
-                var openedTopic = false
+                var openedTopicList = false
                 if strongSelf.controllerInteraction!.selectedPeerIds.contains(peer.peerId) {
                     strongSelf.controllerInteraction!.selectedTopics[peer.peerId] = nil
                     strongSelf.peersContentNode?.update()
@@ -258,7 +258,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             strongSelf.peersContentNode?.update()
                         } else {
                             strongSelf.transitionToPeerTopics(peer)
-                            openedTopic = true
+                            openedTopicList = true
                         }
                     } else {
                         strongSelf.controllerInteraction!.selectedPeerIds.insert(peer.peerId)
@@ -277,7 +277,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                     strongSelf.peersContentNode?.updateFoundPeers()
                 }
                 
-                if !openedTopic {
+                if !openedTopicList {
                     strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
                     
                     strongSelf.updateButton()
@@ -302,6 +302,9 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 strongSelf.controllerInteraction?.selectedPeerIds.insert(peer.peerId)
                 strongSelf.controllerInteraction?.selectedTopics[peer.peerId] = (threadId, threadData)
                 strongSelf.peersContentNode?.update()
+                
+                strongSelf.setActionNodesHidden(strongSelf.controllerInteraction!.selectedPeers.isEmpty && strongSelf.presetText == nil, inputField: true, actions: strongSelf.defaultAction == nil)
+                
                 strongSelf.peersContentNode?.updateSelectedPeers(animated: false)
                 strongSelf.updateButton()
                 Queue.mainQueue().after(0.01, {
@@ -412,7 +415,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         })
                     
         if let (layout, navigationBarHeight, _) = self.containerLayout {
-            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
+            self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
         }
         
         if let targetFrame = self.peersContentNode?.animateIn(peerId: peerId), let topicsContentNode = self.topicsContentNode {
@@ -731,17 +734,19 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         transition.updateAlpha(node: self.actionsBackgroundNode, alpha: 0.0)
         
         let peerIds: [PeerId]
+        var topicIds: [PeerId: Int64] = [:]
         if let peerId = peerId {
             peerIds = [peerId]
         } else {
             peerIds = self.controllerInteraction!.selectedPeers.map { $0.peerId }
+            topicIds = self.controllerInteraction!.selectedTopics.mapValues { $0.0 }
         }
         
         if let context = self.context {
             donateSendMessageIntent(account: context.account, sharedContext: self.sharedContext, intentContext: .share, peerIds: peerIds)
         }
         
-        if let signal = self.share?(self.inputFieldNode.text, peerIds, showNames, silently) {
+        if let signal = self.share?(self.inputFieldNode.text, peerIds, topicIds, showNames, silently) {
             var wasDone = false
             let timestamp = CACurrentMediaTime()
             let doneImpl: (Bool) -> Void = { [weak self] shouldDelay in
@@ -1231,7 +1236,7 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
                 id: .forum(item.id),
                 index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
                 messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
-                readCounters: EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))])),
+                readCounters: nil,
                 isMuted: false,
                 draft: nil,
                 threadData: data,

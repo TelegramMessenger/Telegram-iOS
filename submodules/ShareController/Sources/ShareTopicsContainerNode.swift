@@ -343,12 +343,12 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.layer.animateScale(from: 1.0, to: 0.85, duration: 0.2)
         
         self.contentGridNode.alpha = 0.0
-        self.contentGridNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+        self.contentGridNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })
         
         self.contentGridNode.forEachItemNode { itemNode in
-            itemNode.layer.animatePosition(from: itemNode.position, to: targetFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
+            itemNode.layer.animatePosition(from: itemNode.position, to: targetFrame.center, duration: 0.45, timingFunction: kCAMediaTimingFunctionSpring)
             itemNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }
     }

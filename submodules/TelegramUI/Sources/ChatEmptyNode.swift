@@ -779,7 +779,6 @@ private final class ChatEmptyNodeCloudChatContent: ASDisplayNode, ChatEmptyNodeC
 
 final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, UIGestureRecognizerDelegate {
     private let context: AccountContext
-    private let fileId: Int64?
     
     private let titleNode: ImmediateTextNode
     private let textNode: ImmediateTextNode
@@ -789,9 +788,8 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
     
     private let iconView: ComponentView<Empty>
             
-    init(context: AccountContext, fileId: Int64?) {
+    init(context: AccountContext) {
         self.context = context
-        self.fileId = fileId
         
         self.titleNode = ImmediateTextNode()
         self.titleNode.maximumNumberOfLines = 0
@@ -833,16 +831,13 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
             inset = 15.0
         }
        
-        let title = ""
         let iconContent: EmojiStatusComponent.Content
-        if let fileId = self.fileId {
-            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 54.0, height: 54.0), placeholderColor: .clear, themeColor: serviceColor.primaryText, loopMode: .count(2))
+        if let fileId = interfaceState.threadData?.icon {
+            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 96.0, height: 96.0), placeholderColor: .clear, themeColor: serviceColor.primaryText, loopMode: .count(2))
         } else {
-            let colorIndex: Int32 = 0
-//            if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation {
-//                colorIndex = Int(clamping: abs(replyThreadMessage.effectiveTopId.id))
-//            }
-            iconContent = .topic(title: String(title.prefix(1)), color: colorIndex, size: CGSize(width: 64.0, height: 64.0))
+            let title = interfaceState.threadData?.title ?? ""
+            let iconColor = interfaceState.threadData?.iconColor ?? 0
+            iconContent = .topic(title: String(title.prefix(1)), color: iconColor, size: CGSize(width: 64.0, height: 64.0))
         }
         
         let insets = UIEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)
@@ -1035,7 +1030,7 @@ final class ChatEmptyNode: ASDisplayNode {
                     node = ChatEmptyNodeGreetingChatContent(context: self.context, interaction: self.interaction)
                     updateGreetingSticker = true
                 case .topic:
-                    node = ChatEmptyNodeTopicChatContent(context: self.context, fileId: nil)
+                    node = ChatEmptyNodeTopicChatContent(context: self.context)
             }
             self.content = (contentType, node)
             self.addSubnode(node)
