@@ -6307,7 +6307,7 @@ public final class EmojiPagerContentComponent: Component {
                 
                 var existingIds = Set<MediaId>()
                 
-                for file in iconStatusEmoji.prefix(7) {
+                for file in iconStatusEmoji {
                     if existingIds.contains(file.fileId) {
                         continue
                     }
