@@ -838,11 +838,11 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
         if let fileId = self.fileId {
             iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 54.0, height: 54.0), placeholderColor: .clear, themeColor: serviceColor.primaryText, loopMode: .count(2))
         } else {
-            var colorIndex: Int = 0
-            if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation {
-                colorIndex = Int(clamping: abs(replyThreadMessage.effectiveTopId.id))
-            }
-            iconContent = .topic(title: String(title.prefix(1)), colorIndex: colorIndex, size: CGSize(width: 64.0, height: 64.0))
+            let colorIndex: Int32 = 0
+//            if case let .replyThread(replyThreadMessage) = interfaceState.chatLocation {
+//                colorIndex = Int(clamping: abs(replyThreadMessage.effectiveTopId.id))
+//            }
+            iconContent = .topic(title: String(title.prefix(1)), color: colorIndex, size: CGSize(width: 64.0, height: 64.0))
         }
         
         let insets = UIEdgeInsets(top: inset, left: inset, bottom: inset, right: inset)

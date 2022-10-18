@@ -733,8 +733,28 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }, forceOrientation: { orientation in
             let value = orientation.rawValue
-            UIDevice.current.setValue(value, forKey: "orientation")
-            UINavigationController.attemptRotationToDeviceOrientation()
+            if #available(iOSApplicationExtension 16.0, iOS 16.0, *) {
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                var interfaceOrientations: UIInterfaceOrientationMask = []
+                switch orientation {
+                case .portrait:
+                    interfaceOrientations = .portrait
+                case .landscapeLeft:
+                    interfaceOrientations = .landscapeLeft
+                case .landscapeRight:
+                    interfaceOrientations = .landscapeRight
+                case .portraitUpsideDown:
+                    interfaceOrientations = .portraitUpsideDown
+                case .unknown:
+                    interfaceOrientations = .portrait
+                @unknown default:
+                    interfaceOrientations = .portrait
+                }
+                windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: interfaceOrientations))
+            } else {
+                UIDevice.current.setValue(value, forKey: "orientation")
+                UINavigationController.attemptRotationToDeviceOrientation()
+            }
         })
         
         let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)

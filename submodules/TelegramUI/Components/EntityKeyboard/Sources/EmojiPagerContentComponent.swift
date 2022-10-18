@@ -2145,7 +2145,7 @@ public final class EmojiPagerContentComponent: Component {
         
         public enum Icon: Equatable, Hashable {
             case premiumStar
-            case topic(String)
+            case topic(String, Int32)
         }
         
         case animation(EntityKeyboardAnimationData)
@@ -2943,8 +2943,9 @@ public final class EmojiPagerContentComponent: Component {
                                 let imageSize = image.size.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
-                        case let .topic(title):
-                            if let image = generateTopicIcon(backgroundColors: [UIColor(rgb: 0x6FB9F0), UIColor(rgb: 0x0261E4)], strokeColors: [UIColor(rgb: 0x026CB5), UIColor(rgb: 0x064BB7)], title: title) {
+                        case let .topic(title, color):
+                            let colors = self.getTopicColors(color)
+                            if let image = generateTopicIcon(backgroundColors: colors.0.map { UIColor(rgb: $0) }, strokeColors: colors.1.map { UIColor(rgb: $0) }, title: title) {
                                 let imageSize = image.size//.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
@@ -2992,16 +2993,30 @@ public final class EmojiPagerContentComponent: Component {
                 return nullAction
             }
             
+            private func getTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
+                let topicColors: [Int32: ([UInt32], [UInt32])] = [
+                    0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+                    0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+                    0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+                    0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+                    0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+                    0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+                ]
+                
+                return topicColors[color] ?? ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
+            }
+            
             func update(content: ItemContent) {
                 if self.content != content {
-                    if case let .icon(icon) = content, case let .topic(title) = icon {
+                    if case let .icon(icon) = content, case let .topic(title, color) = icon {
                         let image = generateImage(self.size, opaque: false, scale: min(UIScreenScale, 3.0), rotatedContext: { size, context in
                             context.clear(CGRect(origin: CGPoint(), size: size))
                             
                             UIGraphicsPushContext(context)
                             
-                            if let image = generateTopicIcon(backgroundColors: [UIColor(rgb: 0x6FB9F0), UIColor(rgb: 0x0261E4)], strokeColors: [UIColor(rgb: 0x026CB5), UIColor(rgb: 0x064BB7)], title: title) {
-                                let imageSize = image.size//.aspectFitted(CGSize(width: size.width - 6.0, height: size.height - 6.0))
+                            let colors = self.getTopicColors(color)
+                            if let image = generateTopicIcon(backgroundColors: colors.0.map { UIColor(rgb: $0) }, strokeColors: colors.1.map { UIColor(rgb: $0) }, title: title) {
+                                let imageSize = image.size
                                 image.draw(in: CGRect(origin: CGPoint(x: floor((size.width - imageSize.width) / 2.0), y: floor((size.height - imageSize.height) / 2.0)), size: imageSize))
                             }
                         
@@ -6195,7 +6210,8 @@ public final class EmojiPagerContentComponent: Component {
         chatPeerId: EnginePeer.Id?,
         selectedItems: Set<MediaId> = Set(),
         topStatusTitle: String? = nil,
-        topicTitle: String? = nil
+        topicTitle: String? = nil,
+        topicColor: Int32? = nil
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -6279,7 +6295,7 @@ public final class EmojiPagerContentComponent: Component {
             if isTopicIconSelection {
                 let resultItem = EmojiPagerContentComponent.Item(
                     animationData: nil,
-                    content: .icon(.topic(String((topicTitle ?? "").prefix(1)))),
+                    content: .icon(.topic(String((topicTitle ?? "").prefix(1)), topicColor ?? 0)),
                     itemFile: nil,
                     subgroupId: nil,
                     icon: .none,

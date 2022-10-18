@@ -4828,7 +4828,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let fileId = threadInfo.icon {
                                 avatarContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: strongSelf.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .count(2))
                             } else {
-                                avatarContent = .topic(title: String(threadInfo.title.prefix(1)), colorIndex: Int(threadInfo.iconColor), size: CGSize(width: 32.0, height: 32.0))
+                                avatarContent = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: 32.0, height: 32.0))
                             }
                             (strongSelf.chatInfoNavigationButton?.buttonItem.customDisplayNode as? ChatAvatarNavigationNode)?.setStatus(context: strongSelf.context, content: avatarContent)
                         } else {

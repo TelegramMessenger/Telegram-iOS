@@ -12,6 +12,8 @@ import ContextUI
 import LocalizedPeerData
 import AccountContext
 import CheckNode
+import ComponentFlow
+import EmojiStatusComponent
 
 private let avatarFont = avatarPlaceholderFont(size: 24.0)
 private let textFont = Font.regular(11.0)
@@ -72,6 +74,8 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let onlineNode: PeerOnlineMarkerNode
     private var checkNode: CheckNode?
     private let textNode: ASTextNode
+    
+    private let iconView: ComponentView<Empty>
 
     public var toggleSelection: (() -> Void)?
     public var contextAction: ((ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? {
@@ -119,6 +123,8 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.onlineNode = PeerOnlineMarkerNode()
         
+        self.iconView = ComponentView<Empty>()
+        
         super.init()
         
         self.addSubnode(self.contextContainer)
@@ -137,7 +143,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         }
     }
     
-    public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
+    public func setup(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EngineRenderedPeer, customTitle: String? = nil, iconId: Int64? = nil, iconColor: Int32? = nil, online: Bool = false, numberOfLines: Int = 2, synchronousLoad: Bool) {
         let isFirstTime = self.peer == nil
         self.peer = peer
         guard let mainPeer = peer.chatMainPeer else {
@@ -166,7 +172,7 @@ public final class SelectablePeerNode: ASDisplayNode {
             }
         }
         self.textNode.maximumNumberOfLines = numberOfLines
-        self.textNode.attributedText = NSAttributedString(string: text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: customTitle ?? text, font: textFont, textColor: self.currentSelected ? self.theme.selectedTextColor : defaultColor, paragraphAlignment: .center)
         self.avatarNode.setPeer(context: context, theme: theme, peer: mainPeer, overrideImage: overrideImage, emptyColor: self.theme.avatarPlaceholderColor, clipStyle: isForum ? .roundedRect : .round, synchronousLoad: synchronousLoad)
         
         let onlineLayout = self.onlineNode.asyncLayout()
@@ -175,6 +181,40 @@ public final class SelectablePeerNode: ASDisplayNode {
         
         self.onlineNode.setImage(PresentationResourcesChatList.recentStatusOnlineIcon(theme, state: .panel), color: nil, transition: .immediate)
         self.onlineNode.frame = CGRect(origin: CGPoint(), size: onlineSize)
+        
+        let iconContent: EmojiStatusComponent.Content?
+        if let fileId = iconId {
+            iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.actionSheet.disabledActionTextColor, themeColor: theme.actionSheet.primaryTextColor, loopMode: .count(2))
+        } else if let customTitle = customTitle {
+            iconContent = .topic(title: String(customTitle.prefix(1)), color: iconColor ?? 0, size: CGSize(width: 18.0, height: 18.0))
+        } else {
+            iconContent = nil
+        }
+                
+        if let iconContent = iconContent {
+            let iconSize = self.iconView.update(
+                transition: .easeInOut(duration: 0.2),
+                component: AnyComponent(EmojiStatusComponent(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    content: iconContent,
+                    isVisibleForAnimations: true,
+                    action: nil
+                )),
+                environment: {},
+                containerSize: CGSize(width: 18.0, height: 18.0)
+            )
+            
+            if let iconComponentView = self.iconView.view {
+                if iconComponentView.superview == nil {
+                    self.view.addSubview(iconComponentView)
+                }
+                iconComponentView.frame = CGRect(origin: .zero, size: iconSize)
+            }
+        } else if let iconComponentView = self.iconView.view {
+            iconComponentView.removeFromSuperview()
+        }
         
         self.setNeedsLayout()
     }
@@ -267,7 +307,18 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.contextContainer.frame = bounds
         
         self.avatarNodeContainer.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
-        self.textNode.frame = CGRect(origin: CGPoint(x: 2.0, y: 4.0 + 60.0 + 4.0), size: CGSize(width: bounds.size.width - 4.0, height: 34.0))
+        
+        let iconSize = CGSize(width: 18.0, height: 18.0)
+        let textSize = self.textNode.calculateSizeThatFits(bounds.size)
+        var totalWidth = textSize.width
+        var leftOrigin = floorToScreenPixels((bounds.width - textSize.width) / 2.0)
+        if let iconView = self.iconView.view, iconView.superview != nil {
+            totalWidth += iconView.frame.width + 2.0
+            leftOrigin = floorToScreenPixels((bounds.width - totalWidth) / 2.0)
+            iconView.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 1.0), size: iconSize)
+            leftOrigin += iconSize.width + 2.0
+        }
+        self.textNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0), size: CGSize(width: textSize.width, height: 34.0))
         
         let avatarFrame = self.avatarNode.frame
         let avatarContainerFrame = self.avatarNodeContainer.frame

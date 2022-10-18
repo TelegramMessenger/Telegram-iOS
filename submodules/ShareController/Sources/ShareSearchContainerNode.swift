@@ -94,7 +94,7 @@ private enum ShareSearchRecentEntry: Comparable, Identifiable {
                     peers[associatedPeer.id] = associatedPeer
                 }
                 let peer = EngineRenderedPeer(RenderedPeer(peerId: peer.id, peers: SimpleDictionary(peers), associatedMedia: [:]))
-                return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
+                return ShareControllerPeerGridItem(context: context, theme: theme, strings: strings, peer: peer, presence: presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, sectionTitle: strings.DialogList_SearchSectionRecent, search: true)
         }
     }
 }
@@ -129,7 +129,7 @@ private struct ShareSearchPeerEntry: Comparable, Identifiable {
     }
     
     func item(context: AccountContext, interfaceInteraction: ShareControllerInteraction) -> GridItem {
-        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, controllerInteraction: interfaceInteraction, search: true)
+        return ShareControllerPeerGridItem(context: context, theme: self.theme, strings: self.strings, peer: self.peer, presence: self.presence, topicId: nil, threadData: nil, controllerInteraction: interfaceInteraction, search: true)
     }
 }
 
@@ -546,7 +546,7 @@ final class ShareSearchContainerNode: ASDisplayNode, ShareContentContainerNode {
     func animateIn() {
     }
     
-    func updateSelectedPeers() {
+    func updateSelectedPeers(animated: Bool) {
         self.contentGridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? ShareControllerPeerGridItemNode {
                 itemNode.updateSelection(animated: true)

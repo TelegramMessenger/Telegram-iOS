@@ -1053,7 +1053,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                 if let fileId = icon, fileId != 0 {
                                     avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                                 } else {
-                                    avatarIconContent = .topic(title: String(title.prefix(1)), colorIndex: Int(clamping: abs(color)), size: CGSize(width: 32.0, height: 32.0))
+                                    avatarIconContent = .topic(title: String(title.prefix(1)), color: color, size: CGSize(width: 32.0, height: 32.0))
                                 }
 
                                 let avatarIconComponent = EmojiStatusComponent(

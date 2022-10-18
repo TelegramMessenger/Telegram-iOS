@@ -2018,7 +2018,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let fileId = threadInfo.info.icon, fileId != 0 {
                             avatarIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                         } else {
-                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), colorIndex: Int(clamping: abs(threadInfo.id)), size: CGSize(width: 32.0, height: 32.0))
+                            avatarIconContent = .topic(title: String(threadInfo.info.title.prefix(1)), color: threadInfo.info.iconColor, size: CGSize(width: 32.0, height: 32.0))
                         }
                         
                         let avatarIconComponent = EmojiStatusComponent(

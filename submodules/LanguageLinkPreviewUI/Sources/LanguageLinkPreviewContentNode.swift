@@ -110,6 +110,6 @@ final class LanguageLinkPreviewContentNode: ASDisplayNode, ShareContentContainer
         self.contentOffsetUpdated?(-size.height + nodeHeight - 64.0, transition)
     }
     
-    func updateSelectedPeers() {
+    func updateSelectedPeers(animated: Bool) {
     }
 }

@@ -173,14 +173,14 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         
         var lineWidth = self.progressLayer.lineWidth
         self.progressLayer.lineWidth = 1.0
-        self.progressLayer.animate(from: lineWidth as NSNumber, to: 1.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.25, completion: { [weak self] _ in
-            self?.progressLayer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.15, removeOnCompletion: false)
+        self.progressLayer.animate(from: lineWidth as NSNumber, to: 1.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2, completion: { [weak self] _ in
+            self?.progressLayer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.1, removeOnCompletion: false)
         })
         
         var path = self.progressLayer.path
         var targetPath = UIBezierPath(arcCenter: CGPoint(x: self.progressLayer.frame.width / 2.0, y: self.progressLayer.frame.height / 2.0), radius: 35.0, startAngle: CGFloat(-0.5 * .pi), endAngle: CGFloat(-0.5 * .pi + 2.0 * .pi), clockwise: true).cgPath
         self.progressLayer.path = targetPath
-        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.2)
         
         self.fillLayer.isHidden = false
         self.fillLayer.path = UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).cgPath

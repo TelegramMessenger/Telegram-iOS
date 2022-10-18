@@ -1011,12 +1011,14 @@ public final class ShareController: ViewController {
                 return (resultPeers, accountPeer)
             }
         })
+        var animatedIn = false
         self.peersDisposable.set((self.peers.get()
         |> deliverOnMainQueue).start(next: { [weak self] next in
             if let strongSelf = self {
                 strongSelf.controllerNode.updatePeers(context: strongSelf.sharedContext.makeTempAccountContext(account: strongSelf.currentAccount), switchableAccounts: strongSelf.switchableAccounts, peers: next.0, accountPeer: next.1, defaultAction: strongSelf.defaultAction)
                 
-                if animateIn {
+                if animateIn && !animatedIn {
+                    animatedIn = true
                     strongSelf.readyDisposable.set((strongSelf.controllerNode.ready.get()
                     |> filter({ $0 })
                     |> take(1)

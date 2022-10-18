@@ -425,7 +425,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 if let iconFileId = threadInfo.icon {
                     content = .animation(content: .customEmoji(fileId: iconFileId), size: CGSize(width: avatarSize, height: avatarSize), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: nil, loopMode: .forever)
                 } else {
-                    content = .topic(title: String(threadInfo.title.prefix(1)), colorIndex: Int(threadInfo.iconColor), size: CGSize(width: avatarSize, height: avatarSize))
+                    content = .topic(title: String(threadInfo.title.prefix(1)), color: threadInfo.iconColor, size: CGSize(width: avatarSize, height: avatarSize))
                 }
                 let _ = iconView.update(
                     transition: .immediate,

@@ -23,6 +23,7 @@ private final class TitleFieldComponent: Component {
     let accentColor: UIColor
     let placeholderColor: UIColor
     let fileId: Int64
+    let iconColor: Int32
     let text: String
     let textUpdated: (String) -> Void
     
@@ -32,6 +33,7 @@ private final class TitleFieldComponent: Component {
         accentColor: UIColor,
         placeholderColor: UIColor,
         fileId: Int64,
+        iconColor: Int32,
         text: String,
         textUpdated: @escaping (String) -> Void
     ) {
@@ -40,6 +42,7 @@ private final class TitleFieldComponent: Component {
         self.accentColor = accentColor
         self.placeholderColor = placeholderColor
         self.fileId = fileId
+        self.iconColor = iconColor
         self.text = text
         self.textUpdated = textUpdated
     }
@@ -58,6 +61,9 @@ private final class TitleFieldComponent: Component {
             return false
         }
         if lhs.fileId != rhs.fileId {
+            return false
+        }
+        if lhs.iconColor != rhs.iconColor {
             return false
         }
         if lhs.text != rhs.text {
@@ -106,7 +112,7 @@ private final class TitleFieldComponent: Component {
             
             let iconContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
-                iconContent = .topic(title: String(component.text.prefix(1)), colorIndex: 0, size: CGSize(width: 32.0, height: 32.0))
+                iconContent = .topic(title: String(component.text.prefix(1)), color: component.iconColor, size: CGSize(width: 32.0, height: 32.0))
             } else {
                 iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
             }
@@ -266,7 +272,7 @@ private final class TopicIconSelectionComponent: Component {
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
                     displayBottomPanel: false,
-                    isExpanded: false
+                    isExpanded: true
                 )),
                 environment: {},
                 containerSize: availableSize
@@ -347,6 +353,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         
         var title: String
         var fileId: Int64
+        var iconColor: Int32
         
         init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void) {
             self.context = context
@@ -354,12 +361,16 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             self.iconUpdated = iconUpdated
             
             switch mode {
-                case .create:
-                    self.title = ""
-                    self.fileId = 0
-                case let .edit(info):
-                    self.title = info.title
-                    self.fileId = info.icon ?? 0
+            case .create:
+                self.title = ""
+                self.fileId = 0
+                
+                let colors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98,0xFF93B2, 0xFB6F5F]
+                self.iconColor = colors.randomElement() ?? 0x0
+            case let .edit(info):
+                self.title = info.title
+                self.fileId = info.icon ?? 0
+                self.iconColor = info.iconColor
             }
             
             super.init()
@@ -378,7 +389,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     areCustomEmojiEnabled: true,
                     chatPeerId: self.context.account.peerId,
                     selectedItems: Set(),
-                    topicTitle: self.title
+                    topicTitle: self.title,
+                    topicColor: self.iconColor
                 )
             |> deliverOnMainQueue).start(next: { [weak self] content in
                 self?.emojiContent = content
@@ -410,7 +422,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     areCustomEmojiEnabled: true,
                     chatPeerId: self.context.account.peerId,
                     selectedItems: Set([MediaId(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
-                    topicTitle: self.title
+                    topicTitle: self.title,
+                    topicColor: self.iconColor
                 )
             |> deliverOnMainQueue).start(next: { [weak self] content in
                 self?.emojiContent = content
@@ -442,7 +455,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     areCustomEmojiEnabled: true,
                     chatPeerId: self.context.account.peerId,
                     selectedItems: Set([MediaId(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
-                    topicTitle: self.title
+                    topicTitle: self.title,
+                    topicColor: self.iconColor
                 )
             |> deliverOnMainQueue).start(next: { [weak self] content in
                 self?.emojiContent = content
@@ -532,6 +546,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     accentColor: environment.theme.list.itemAccentColor,
                     placeholderColor: environment.theme.list.disclosureArrowColor,
                     fileId: state.fileId,
+                    iconColor: state.iconColor,
                     text: state.title,
                     textUpdated: { [weak state] text in
                         state?.updateTitle(text)
@@ -568,6 +583,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             )
             contentHeight += iconHeader.size.height + headerSpacing
             
+            let bottomInset = max(environment.safeInsets.bottom, 12.0)
+            
             let iconBackground = iconBackground.update(
                 component: RoundedRectangle(
                     color: environment.theme.list.itemBlocksBackgroundColor,
@@ -575,7 +592,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 ),
                 availableSize: CGSize(
                     width: context.availableSize.width - sideInset * 2.0,
-                    height: context.availableSize.height - topInset - titleHeader.size.height - titleBackground.size.height
+                    height: context.availableSize.height - contentHeight - bottomInset
                 ),
                 transition: context.transition
             )
@@ -584,7 +601,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             )
             
             if let emojiContent = state.emojiContent {
-                let availableHeight = context.availableSize.height - contentHeight - environment.inputHeight
+                let availableHeight = context.availableSize.height - contentHeight - max(bottomInset, environment.inputHeight)
                 
                 let iconSelector = iconSelector.update(
                     component: TopicIconSelectionComponent(
@@ -592,7 +609,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         strings: environment.strings,
                         deviceMetrics: environment.deviceMetrics,
                         emojiContent: emojiContent,
-                        backgroundColor: .clear,
+                        backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
                         separatorColor: environment.theme.list.blocksBackgroundColor
                     ),
                     environment: {},
@@ -601,6 +618,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 )
                 context.add(iconSelector
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconSelector.size.height / 2.0))
+                    .cornerRadius(10.0)
+                    .clipsToBounds(true)
                 )
                 
                 let accountContext = context.component.context
@@ -736,8 +755,6 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     }
     
     @objc private func createPressed() {
-//        self.dismiss()
-        
         self.completion(self.state.0, self.state.1)
     }
 }

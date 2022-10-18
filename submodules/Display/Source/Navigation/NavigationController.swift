@@ -160,7 +160,7 @@ open class NavigationController: UINavigationController, ContainableController, 
     
     public private(set) var validLayout: ContainerViewLayout?
     private var validStatusBarStyle: NavigationStatusBarStyle?
-    private var validStatusBarHidden: Bool = false
+    private var validStatusBarHidden: Bool?
     
     private var ignoreInputHeight: Bool = false
     private var currentStatusBarExternalHidden: Bool = false

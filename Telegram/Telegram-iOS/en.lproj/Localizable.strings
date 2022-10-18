@@ -8142,3 +8142,5 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessageChangedGroupUsernames" = "%@ changed group links:";
 "Channel.AdminLog.MessageChangedChannelUsernames" = "%@ changed channel links:";
 "Channel.AdminLog.MessagePreviousLinks" = "Previous links";
+
+"ShareMenu.SelectTopic" = "Select topic";
