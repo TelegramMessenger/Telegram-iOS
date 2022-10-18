@@ -20,9 +20,9 @@ final class ShareControllerInteraction {
     var selectedTopics: [EnginePeer.Id: (Int64, MessageHistoryThreadData)] = [:]
     
     let togglePeer: (EngineRenderedPeer, Bool) -> Void
-    let selectTopic: (EnginePeer.Id, Int64, MessageHistoryThreadData) -> Void
+    let selectTopic: (EngineRenderedPeer, Int64, MessageHistoryThreadData) -> Void
 
-    init(togglePeer: @escaping (EngineRenderedPeer, Bool) -> Void, selectTopic: @escaping (EnginePeer.Id, Int64, MessageHistoryThreadData) -> Void) {
+    init(togglePeer: @escaping (EngineRenderedPeer, Bool) -> Void, selectTopic: @escaping (EngineRenderedPeer, Int64, MessageHistoryThreadData) -> Void) {
         self.togglePeer = togglePeer
         self.selectTopic = selectTopic
     }

@@ -298,13 +298,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
         }, selectTopic: { [weak self] peer, threadId, threadData in
             if let strongSelf = self {
-                strongSelf.controllerInteraction?.selectedPeerIds.insert(peer)
-                strongSelf.controllerInteraction?.selectedTopics[peer] = (threadId, threadData)
+                strongSelf.controllerInteraction?.selectedPeers.append(peer)
+                strongSelf.controllerInteraction?.selectedPeerIds.insert(peer.peerId)
+                strongSelf.controllerInteraction?.selectedTopics[peer.peerId] = (threadId, threadData)
                 strongSelf.peersContentNode?.update()
                 strongSelf.peersContentNode?.updateSelectedPeers(animated: false)
                 strongSelf.updateButton()
                 Queue.mainQueue().after(0.01, {
-                    strongSelf.closePeerTopics(peer)
+                    strongSelf.closePeerTopics(peer.peerId)
                 })
             }
         })
@@ -1063,7 +1064,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     private func updateButton() {
-        let count = self.controllerInteraction!.selectedPeerIds.count
+        let count = self.controllerInteraction!.selectedPeers.count
         if count == 0 {
             if self.presetText != nil {
                 self.actionButtonNode.setTitle(self.presentationData.strings.ShareMenu_Send, with: Font.medium(20.0), with: self.presentationData.theme.actionSheet.disabledActionTextColor, for: .normal)

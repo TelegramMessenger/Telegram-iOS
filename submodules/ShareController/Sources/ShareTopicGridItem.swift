@@ -76,8 +76,8 @@ final class ShareTopicGridItemNode: GridItemNode {
     }
                                        
     @objc private func tapped() {
-        if let item = self.currentItem, let peerId = item.peer?.peerId {
-            item.controllerInteraction.selectTopic(peerId, item.id, item.threadInfo)
+        if let item = self.currentItem, let peer = item.peer {
+            item.controllerInteraction.selectTopic(peer, item.id, item.threadInfo)
         }
     }
     

@@ -186,7 +186,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         if let fileId = iconId {
             iconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 18.0, height: 18.0), placeholderColor: theme.actionSheet.disabledActionTextColor, themeColor: theme.actionSheet.primaryTextColor, loopMode: .count(2))
         } else if let customTitle = customTitle {
-            iconContent = .topic(title: String(customTitle.prefix(1)), color: iconColor ?? 0, size: CGSize(width: 18.0, height: 18.0))
+            iconContent = .topic(title: String(customTitle.prefix(1)), color: iconColor ?? 0, size: CGSize(width: 32.0, height: 32.0))
         } else {
             iconContent = nil
         }
