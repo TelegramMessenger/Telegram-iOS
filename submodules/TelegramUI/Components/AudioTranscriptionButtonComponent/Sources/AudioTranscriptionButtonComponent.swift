@@ -11,7 +11,7 @@ public final class AudioTranscriptionButtonComponent: Component {
         public static func == (lhs: AudioTranscriptionButtonComponent.Theme, rhs: AudioTranscriptionButtonComponent.Theme) -> Bool {
             switch lhs {
             case let .bubble(lhsTheme):
-                if case let .bubble(rhsTheme) = lhs {
+                if case let .bubble(rhsTheme) = rhs {
                     return lhsTheme === rhsTheme
                 } else {
                     return false

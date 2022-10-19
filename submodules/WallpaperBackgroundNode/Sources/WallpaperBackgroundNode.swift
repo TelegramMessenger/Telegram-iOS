@@ -1099,11 +1099,17 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
     }
 
+    private var isAnimating = false
     private var isLooping = false
     
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
+        guard !(self.isLooping && self.isAnimating) else {
+            return
+        }
+        self.isAnimating = true
         self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
             if let strongSelf = self {
+                strongSelf.isAnimating = false
                 if strongSelf.isLooping {
                     strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
                 }
@@ -1946,16 +1952,19 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
     private var isLooping = false
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
         if let gradient = self.gradient {
+            guard !(self.isLooping && self.isAnimating) else {
+                return
+            }
             self.isAnimating = true
             self.componentsUpdated()
             gradient.gradientBackground.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
                 guard let strongSelf = self else {
                     return
                 }
+                strongSelf.isAnimating = false
                 if strongSelf.isLooping {
                     strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
                 } else {
-                    strongSelf.isAnimating = false
                     strongSelf.componentsUpdated()
                 }
             })

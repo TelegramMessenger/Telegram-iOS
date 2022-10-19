@@ -1479,13 +1479,17 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
             foregroundNodeColor = .white
         } else {
             backgroundNodeColor = messageTheme.mediaActiveControlColor
-            foregroundNodeColor = .clear
+            if incoming && messageTheme.mediaActiveControlColor.rgb != 0xffffff {
+                foregroundNodeColor = .white
+            } else {
+                foregroundNodeColor = .clear
+            }
         }
 
         if state != .none && self.statusNode == nil {
             var image: Signal<(TransformImageArguments) -> DrawingContext?, NoError>? = nil
                         
-            if file.isMusic {
+            if file.isMusic || file.isInstantVideo {
                 if file.fileName?.lowercased().hasSuffix(".ogg") == true {
                 } else {
                     var title: String?
