@@ -1163,6 +1163,11 @@ public final class Transaction {
         return self.postbox!.messageHistoryThreadsTable.getTop(peerId: peerId, threadId: threadId, namespaces: namespaces)
     }
     
+    public func holeLowerBoundForTopValidRange(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace) -> MessageId.Id {
+        assert(!self.disposed)
+        return self.postbox!.messageHistoryThreadsTable.holeLowerBoundForTopValidRange(peerId: peerId, threadId: threadId, namespace: namespace, space: space, holeIndexTable: self.postbox!.messageHistoryThreadHoleIndexTable)
+    }
+    
     public func getMessageHistoryThreadInfo(peerId: PeerId, threadId: Int64) -> StoredMessageHistoryThreadInfo? {
         assert(!self.disposed)
         return self.postbox!.messageHistoryThreadIndexTable.get(peerId: peerId, threadId: threadId)

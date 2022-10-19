@@ -406,7 +406,9 @@ private class AdMessagesHistoryContextImpl {
 
                 return account.postbox.transaction { transaction -> [Message] in
                     switch result {
-                    case let .sponsoredMessages(messages, chats, users):
+                    case let .sponsoredMessages(_, postsBetween, messages, chats, users):
+                        let _ = postsBetween
+                        
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: Api.User] = [:]
 
@@ -504,6 +506,8 @@ private class AdMessagesHistoryContextImpl {
                         return parsedMessages.compactMap { message -> Message? in
                             return message.toMessage(peerId: peerId, transaction: transaction)
                         }
+                    case .sponsoredMessagesEmpty:
+                        return []
                     }
                 }
             }

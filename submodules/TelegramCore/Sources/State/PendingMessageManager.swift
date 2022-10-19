@@ -737,7 +737,7 @@ public final class PendingMessageManager {
                 let sendMessageRequest: Signal<Api.Updates, MTRpcError>
                 if isForward {
                     if messages.contains(where: { $0.0.groupingKey != nil }) {
-                        flags |= (1 << 9)
+                        flags |= (1 << 8)
                     }
                     if hideSendersNames {
                         flags |= (1 << 11)
@@ -774,6 +774,13 @@ public final class PendingMessageManager {
                             return .complete()
                         }
                     }
+                    
+                    var topMsgId: Int32?
+                    if let threadId = messages[0].0.threadId {
+                        flags |= Int32(1 << 9)
+                        topMsgId = Int32(clamping: threadId)
+                    }
+                    
                     let forwardPeerIds = Set(forwardIds.map { $0.0.peerId })
                     if forwardPeerIds.count != 1 {
                         assertionFailure()
@@ -781,7 +788,7 @@ public final class PendingMessageManager {
                     } else if let inputSourcePeerId = forwardPeerIds.first, let inputSourcePeer = transaction.getPeer(inputSourcePeerId).flatMap(apiInputPeer) {
                         let dependencyTag = PendingMessageRequestDependencyTag(messageId: messages[0].0.id)
 
-                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                        sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: inputSourcePeer, id: forwardIds.map { $0.0.id }, randomId: forwardIds.map { $0.1 }, toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                     } else {
                         assertionFailure()
                         sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "Invalid forward source"))
@@ -842,7 +849,7 @@ public final class PendingMessageManager {
                     
                     var topMsgId: Int32?
                     if let threadId = messages[0].0.threadId {
-                        flags |= Int32(1 << 8)
+                        flags |= Int32(1 << 9)
                         topMsgId = Int32(clamping: threadId)
                     }
                     
@@ -1076,7 +1083,7 @@ public final class PendingMessageManager {
                     
                         var topMsgId: Int32?
                         if let threadId = message.threadId {
-                            flags |= Int32(1 << 8)
+                            flags |= Int32(1 << 9)
                             topMsgId = Int32(clamping: threadId)
                         }
                     
@@ -1088,15 +1095,21 @@ public final class PendingMessageManager {
                     
                         var topMsgId: Int32?
                         if let threadId = message.threadId {
-                            flags |= Int32(1 << 8)
+                            flags |= Int32(1 << 9)
                             topMsgId = Int32(clamping: threadId)
                         }
                         
                         sendMessageRequest = network.request(Api.functions.messages.sendMedia(flags: flags, peer: inputPeer, replyToMsgId: replyMessageId, topMsgId: topMsgId, media: inputMedia, message: text, randomId: uniqueId, replyMarkup: nil, entities: messageEntities, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                         |> map(NetworkRequestResult.result)
                     case let .forward(sourceInfo):
+                        var topMsgId: Int32?
+                        if let threadId = message.threadId {
+                            flags |= Int32(1 << 9)
+                            topMsgId = Int32(clamping: threadId)
+                        }
+                    
                         if let forwardSourceInfoAttribute = forwardSourceInfoAttribute, let sourcePeer = transaction.getPeer(forwardSourceInfoAttribute.messageId.peerId), let sourceInputPeer = apiInputPeer(sourcePeer) {
-                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
+                            sendMessageRequest = network.request(Api.functions.messages.forwardMessages(flags: flags, fromPeer: sourceInputPeer, id: [sourceInfo.messageId.id], randomId: [uniqueId], toPeer: inputPeer, topMsgId: topMsgId, scheduleDate: scheduleTime, sendAs: sendAsInputPeer), tag: dependencyTag)
                             |> map(NetworkRequestResult.result)
                         } else {
                             sendMessageRequest = .fail(MTRpcError(errorCode: 400, errorDescription: "internal"))
@@ -1108,7 +1121,7 @@ public final class PendingMessageManager {
                     
                         var topMsgId: Int32?
                         if let threadId = message.threadId {
-                            flags |= Int32(1 << 8)
+                            flags |= Int32(1 << 9)
                             topMsgId = Int32(clamping: threadId)
                         }
                     
