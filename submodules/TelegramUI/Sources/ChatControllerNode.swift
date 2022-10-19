@@ -576,14 +576,6 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             self.contentContainerNode.addSubnode(navigationBar)
         }
         
-//        Queue.mainQueue().after(0.2) {
-//            self.updateIsLoading(isLoading: true, animated: false)
-//        }
-//
-//        Queue.mainQueue().after(3.0) {
-//            self.updateIsLoading(isLoading: false, animated: true)
-//        }
-
         self.inputPanelContainerNode.expansionUpdated = { [weak self] transition in
             guard let strongSelf = self else {
                 return
@@ -1736,10 +1728,21 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }
         
         if let inputPanelBackgroundContent = self.inputPanelBackgroundContent {
-            var apparentInputBackgroundFrame = apparentInputBackgroundFrame
-            apparentInputBackgroundFrame.size.height += 34.0
-            transition.updateFrame(node: inputPanelBackgroundContent, frame: CGRect(origin: .zero, size: apparentInputBackgroundFrame.size), beginWithCurrentState: true)
-            inputPanelBackgroundContent.update(rect: apparentInputBackgroundFrame, within: layout.size, transition: transition)
+            var extensionValue: CGFloat = 0.0
+            if let inputNode = self.inputNode {
+                extensionValue = inputNode.topBackgroundExtension
+            }
+            let apparentInputBackgroundFrame = CGRect(origin: .zero, size: CGSize(width: apparentInputBackgroundFrame.width, height: apparentInputBackgroundFrame.height + extensionValue))
+            var transition = transition
+            var delay: Double = 0.0
+            if apparentInputBackgroundFrame.height > inputPanelBackgroundContent.frame.height {
+                transition = .immediate
+            } else if case let .animated(_, curve) = transition, case .spring = curve {
+                delay = 0.3
+            }
+            
+            transition.updateFrame(node: inputPanelBackgroundContent, frame: CGRect(origin: .zero, size: apparentInputBackgroundFrame.size), beginWithCurrentState: true, delay: delay)
+            inputPanelBackgroundContent.update(rect: apparentInputBackgroundFrame, within: layout.size, delay: delay, transition: transition)
         }
         
         transition.updateFrame(node: self.contentDimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.size.width, height: apparentInputBackgroundFrame.origin.y)))
