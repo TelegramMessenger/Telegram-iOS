@@ -5844,7 +5844,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.chatDisplayNode.historyNode.voicePlaylistItemChanged(nil, currentItem)
         }
     
-        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode in
+        self.chatDisplayNode.historyNode.didScrollWithOffset = { [weak self] offset, transition, itemNode, isTracking in
             guard let strongSelf = self else {
                 return
             }
@@ -5870,7 +5870,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
+            if isTracking {
+                strongSelf.chatDisplayNode.loadingPlaceholderNode?.addContentOffset(offset: offset, transition: transition)
+            }
             strongSelf.chatDisplayNode.messageTransitionNode.addExternalOffset(offset: offset, transition: transition, itemNode: itemNode)
         }
         

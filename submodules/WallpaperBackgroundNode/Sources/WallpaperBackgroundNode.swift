@@ -45,6 +45,7 @@ public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
     var implicitContentUpdate: Bool { get set }
     
     func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
+    func update(rect: CGRect, within containerSize: CGSize, delay: Double, transition: ContainedViewLayoutTransition)
     func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
     func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator)
     func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
@@ -474,25 +475,29 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.update(rect: rect, within: containerSize)
             }
         }
-
+        
         func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+            self.update(rect: rect, within: containerSize, delay: 0.0, transition: transition)
+        }
+
+        func update(rect: CGRect, within containerSize: CGSize, delay: Double = 0.0, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
 
-            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
-            transition.animateView {
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds, delay: delay)
+            transition.animateView(delay: delay) {
                 self.contentNode.layer.contentsRect = shiftedContentsRect
             }
             if let cleanWallpaperNode = self.cleanWallpaperNode {
-                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
-                transition.animateView {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds, delay: delay)
+                transition.animateView(delay: delay) {
                     cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
             if let gradientWallpaperNode = self.gradientWallpaperNode {
-                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
-                transition.animateView {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, delay: delay)
+                transition.animateView(delay: delay) {
                     gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
@@ -1421,6 +1426,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         }
 
         func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+            self.update(rect: rect, within: containerSize, delay: 0.0, transition: transition)
+        }
+        
+        func update(rect: CGRect, within containerSize: CGSize, delay: Double, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))

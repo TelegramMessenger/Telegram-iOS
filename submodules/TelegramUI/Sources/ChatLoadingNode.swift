@@ -328,12 +328,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    private var ignoreFirstContentOffset = true
     func addContentOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        guard !self.ignoreFirstContentOffset else {
-            self.ignoreFirstContentOffset = false
-            return
-        }
         self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: -offset)
         transition.animateOffsetAdditive(node: self.scrollingContainer, offset: offset)
         if let (rect, containerSize) = self.absolutePosition {
@@ -388,8 +383,8 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         self.effectNode.updateAbsoluteRect(bounds, within: bounds.size)
         self.borderEffectNode.updateAbsoluteRect(bounds, within: bounds.size)
         
-        self.effectNode.update(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.15), horizontal: true, effectSize: 280.0, globalTimeOffset: false, duration: 1.6)
-        self.borderEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.45), horizontal: true, effectSize: 320.0, globalTimeOffset: false, duration: 1.6)
+        self.effectNode.update(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.14), horizontal: true, effectSize: 280.0, globalTimeOffset: false, duration: 1.6)
+        self.borderEffectNode.update(backgroundColor: .clear, foregroundColor: UIColor(rgb: 0xffffff, alpha: 0.35), horizontal: true, effectSize: 320.0, globalTimeOffset: false, duration: 1.6)
         
         let shortHeight: CGFloat = 71.0
         let tallHeight: CGFloat = 93.0
