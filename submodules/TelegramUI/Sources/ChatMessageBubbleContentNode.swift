@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import ChatMessageBackground
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -134,7 +135,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         return false
     }
     
-    weak var bubbleBackgroundNode: ASDisplayNode?
+    weak var bubbleBackgroundNode: ChatMessageBackground?
     
     var visibility: ListViewItemNodeVisibility = .none
     

@@ -76,6 +76,8 @@ class ChatMessageShareButton: HighlightableButtonNode {
         
         super.init(pointerStyle: nil)
         
+        self.allowsGroupOpacity = true
+        
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.iconNode)
     }
@@ -169,7 +171,6 @@ class ChatMessageShareButton: HighlightableButtonNode {
         if controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
             if self.backgroundContent == nil, let backgroundContent = controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
                 backgroundContent.clipsToBounds = true
-                backgroundContent.allowsGroupOpacity = true
                 self.backgroundContent = backgroundContent
                 self.insertSubnode(backgroundContent, at: 0)
             }

@@ -60,6 +60,8 @@ public enum ChatMessageBackgroundType: Equatable {
 }
 
 public class ChatMessageBackground: ASDisplayNode {
+    public weak var backdropNode: ASDisplayNode?
+    
     public private(set) var type: ChatMessageBackgroundType?
     private var currentHighlighted: Bool?
     private var hasWallpaper: Bool?
@@ -116,7 +118,7 @@ public class ChatMessageBackground: ASDisplayNode {
         self.backgroundNode = backgroundNode
         self.hasWallpaper = hasWallpaper
         
-        let image: UIImage?
+        var image: UIImage?
         
         switch type {
         case .none:
@@ -227,7 +229,7 @@ public class ChatMessageBackground: ASDisplayNode {
                 tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
                 tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
                 
-                tempLayer.frame = self.bounds
+                tempLayer.frame = self.imageNode.frame
                 self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
                 transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                     tempLayer?.removeFromSuperlayer()
@@ -246,9 +248,11 @@ public class ChatMessageBackground: ASDisplayNode {
                     tempLayer.rasterizationScale = self.imageNode.layer.rasterizationScale
                     tempLayer.contentsGravity = self.imageNode.layer.contentsGravity
                     tempLayer.contentsCenter = self.imageNode.layer.contentsCenter
+                    tempLayer.compositingFilter = self.imageNode.layer.compositingFilter
                     
-                    tempLayer.frame = self.bounds
-                    self.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
+                    tempLayer.frame = self.imageNode.frame
+                    
+                    self.imageNode.supernode?.layer.insertSublayer(tempLayer, above: self.imageNode.layer)
                     transition.updateAlpha(layer: tempLayer, alpha: 0.0, completion: { [weak tempLayer] _ in
                         tempLayer?.removeFromSuperlayer()
                     })
@@ -257,6 +261,19 @@ public class ChatMessageBackground: ASDisplayNode {
         }
         
         self.imageNode.image = image
+        if highlighted && maskMode, let backdropNode = self.backdropNode {
+            self.imageNode.layer.compositingFilter = "overlayBlendMode"
+            self.imageNode.alpha = 1.0
+            
+            backdropNode.addSubnode(self.imageNode)
+        } else {
+            self.imageNode.layer.compositingFilter = nil
+            self.imageNode.alpha = 1.0
+            
+            if self.imageNode.supernode != self {
+                self.addSubnode(self.imageNode)
+            }
+        }
         self.outlineImageNode.image = outlineImage
     }
 

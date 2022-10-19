@@ -571,6 +571,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.contentContainersWrapperNode = ASDisplayNode()
         
         self.backgroundNode = ChatMessageBackground()
+        self.backgroundNode.backdropNode = self.backgroundWallpaperNode
         self.shadowNode = ChatMessageShadowNode()
 
         self.clippingNode = ChatMessageBubbleClippingNode()
