@@ -116,12 +116,14 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
         let logsPath = rootPath + "/logs/siri-logs"
         let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
         
-        setupSharedLogger(rootPath: rootPath, path: logsPath)
+        setupSharedLogger(rootPath: logsPath, path: logsPath)
         
         let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
         
         initializeAccountManagement()
-        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
+        // MARK: Nicegram DB Changes
+        let hiddenAccountManager = HiddenAccountManagerImpl()
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false, hiddenAccountManager: hiddenAccountManager)
         self.accountManager = accountManager
         
         let deviceSpecificEncryptionParameters = BuildConfig.deviceSpecificEncryptionParameters(rootPath, baseAppBundleId: baseAppBundleId)
@@ -141,6 +143,11 @@ class DefaultIntentHandler: INExtension, INSendMessageIntentHandling, INSearchFo
                     }
                 })
                 if isLoggedOut {
+                    continue
+                }
+                // MARK: Nicegram DB Changes
+                let isHidden = record.attributes.contains(where: { $0.isHiddenAccountAttribute })
+                if isHidden {
                     continue
                 }
                 var backupData: AccountBackupData?
@@ -903,6 +910,11 @@ private final class WidgetIntentHandler {
                 }
             })
             if isLoggedOut {
+                continue
+            }
+            // MARK: Nicegram DB Changes
+            let isHidden = record.attributes.contains(where: { $0.isHiddenAccountAttribute })
+            if isHidden {
                 continue
             }
             var backupData: AccountBackupData?

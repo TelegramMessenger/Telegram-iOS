@@ -52,13 +52,15 @@ extension EcommpayPaymentProvider: PaymentProvider {
         
         let errorMeta = PaymentError.Meta(paymentId: paymentInfo.paymentID)
         
-        signatureProvider.getSignature(params: signatureParams) { result in
+        signatureProvider.getSignature(params: signatureParams) { [weak self] result in
+            guard let self = self else { return }
+            
             switch result {
             case .success(let signature):
                 paymentInfo.setSignature(value: signature)
                 self.ecommpaySDK.presentPayment(at: vc, paymentInfo: paymentInfo) { result in
                     if let error = result.error {
-                        completion(.failure(.underlying(error: error, meta: errorMeta)))
+                        completion(.failure(.provider(error: error, meta: errorMeta)))
                         return
                     }
                     
@@ -80,8 +82,21 @@ extension EcommpayPaymentProvider: PaymentProvider {
                     }
                 }
             case .failure(let error):
-                completion(.failure(.underlying(error: error, meta: errorMeta)))
+                completion(.failure(self.mapSignatureError(error, meta: errorMeta)))
             }
+        }
+    }
+}
+
+private extension EcommpayPaymentProvider {
+    func mapSignatureError(_ error: EcommpaySignatureError, meta: PaymentError.Meta) -> PaymentError {
+        switch error {
+        case .connection(let error):
+            return .connection(error: error, meta: meta)
+        case .underlying(let error):
+            return .underlying(error: error, meta: meta)
+        case .unexpected:
+            return .unknown(meta: meta)
         }
     }
 }

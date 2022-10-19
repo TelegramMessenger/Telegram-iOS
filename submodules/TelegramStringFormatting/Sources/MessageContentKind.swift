@@ -47,6 +47,119 @@ public enum MessageContentKind: Equatable {
     case dice(String)
     case invoice(String)
     
+    public func isSemanticallyEqual(to other: MessageContentKind) -> Bool {
+        switch self {
+        case .text:
+            if case .text = other {
+                return true
+            } else {
+                return false
+            }
+        case .image:
+            if case .image = other {
+                return true
+            } else {
+                return false
+            }
+        case .video:
+            if case .video = other {
+                return true
+            } else {
+                return false
+            }
+        case .videoMessage:
+            if case .videoMessage = other {
+                return true
+            } else {
+                return false
+            }
+        case .audioMessage:
+            if case .audioMessage = other {
+                return true
+            } else {
+                return false
+            }
+        case .sticker:
+            if case .sticker = other {
+                return true
+            } else {
+                return false
+            }
+        case .animation:
+            if case .animation = other {
+                return true
+            } else {
+                return false
+            }
+        case .file:
+            if case .file = other {
+                return true
+            } else {
+                return false
+            }
+        case .contact:
+            if case .contact = other {
+                return true
+            } else {
+                return false
+            }
+        case .game:
+            if case .game = other {
+                return true
+            } else {
+                return false
+            }
+        case .location:
+            if case .location = other {
+                return true
+            } else {
+                return false
+            }
+        case .liveLocation:
+            if case .liveLocation = other {
+                return true
+            } else {
+                return false
+            }
+        case .expiredImage:
+            if case .expiredImage = other {
+                return true
+            } else {
+                return false
+            }
+        case .expiredVideo:
+            if case .expiredVideo = other {
+                return true
+            } else {
+                return false
+            }
+        case .poll:
+            if case .poll = other {
+                return true
+            } else {
+                return false
+            }
+        case .restricted:
+            if case .restricted = other {
+                return true
+            } else {
+                return false
+            }
+        case .dice:
+            if case .dice = other {
+                return true
+            } else {
+                return false
+            }
+        case .invoice:
+            if case .invoice = other {
+                return true
+            } else {
+                return false
+            }
+        }
+    }
+    
     public var key: MessageContentKindKey {
         switch self {
         case .text:
@@ -103,7 +216,7 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
         let updatedString = NSMutableAttributedString(attributedString: attributedText)
         
         for entity in entities.sorted(by: { $0.range.lowerBound > $1.range.lowerBound }) {
-            guard case let .CustomEmoji(stickerPack, fileId) = entity.type else {
+            guard case let .CustomEmoji(_, fileId) = entity.type else {
                 continue
             }
             
@@ -111,8 +224,7 @@ public func messageTextWithAttributes(message: EngineMessage) -> NSAttributedStr
             
             let currentDict = updatedString.attributes(at: range.lowerBound, effectiveRange: nil)
             var updatedAttributes: [NSAttributedString.Key: Any] = currentDict
-            //updatedAttributes[NSAttributedString.Key.foregroundColor] = UIColor.clear.cgColor
-            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
+            updatedAttributes[ChatTextInputAttributes.customEmoji] = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile)
             
             let insertString = NSAttributedString(string: updatedString.attributedSubstring(from: range).string, attributes: updatedAttributes)
             updatedString.replaceCharacters(in: range, with: insertString)
@@ -296,6 +408,7 @@ public func foldLineBreaks(_ text: String) -> String {
             result += " " + line
         }
     }
+    result = result.replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
     return result
 }
 

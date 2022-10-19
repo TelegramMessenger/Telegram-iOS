@@ -3,7 +3,7 @@ import NGModels
 import EsimApiClientDefinition
 import EsimDTO
 import EsimFeatureMyEsims
-import SafeFetcher
+import SafeExecutor
 import NGMappers
 
 public protocol UserEsimsRemoteDataSource: AnyObject {
@@ -69,9 +69,9 @@ private extension UserEsimsRemoteDataSourceImpl {
     
     func mapToFetchUserEsimsError(_ error: EsimApiError) -> FetchUserEsimsError {
         switch error {
-        case .notAuthorized(let string):
+        case .notAuthorized(_):
             return .notAuthorized
-        case .someServerError(_), .underlying(_), .unexpected:
+        case .connection(_), .someServerError(_), .underlying(_), .unexpected:
             return .underlying(error)
         }
     }

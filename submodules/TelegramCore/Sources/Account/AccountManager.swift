@@ -4,17 +4,73 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
+// MARK: Nicegram DB Changes
+public final class HiddenAccountAttribute: Codable, Equatable, AccountRecordAttribute {
+    enum CodingKeys: String, CodingKey {
+        case accessChallengeData = "d"
+    }
+
+    public let accessChallengeData: PostboxAccessChallengeData
+    
+    public init(accessChallengeData: PostboxAccessChallengeData) {
+        self.accessChallengeData = accessChallengeData
+    }
+    
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        self.accessChallengeData = try container.decode(PostboxAccessChallengeData.self, forKey: .accessChallengeData)
+    }
+    
+    public func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+
+        try container.encode(accessChallengeData, forKey: .accessChallengeData)
+    }
+    
+    public init(decoder: PostboxDecoder) {
+        self.accessChallengeData = decoder.decodeObjectForKey("d", decoder: { PostboxAccessChallengeData(decoder: $0) }) as! PostboxAccessChallengeData
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        encoder.encodeObject(accessChallengeData, forKey: "d")
+    }
+    
+    public static func ==(lhs: HiddenAccountAttribute, rhs: HiddenAccountAttribute) -> Bool {
+        return lhs.accessChallengeData == rhs.accessChallengeData
+    }
+    
+    public func isEqual(to: AccountRecordAttribute) -> Bool {
+        return to is HiddenAccountAttribute
+    }
+}
+
+public protocol HiddenAccountManager {
+    var unlockedAccountRecordIdPromise: ValuePromise<AccountRecordId?> { get }
+    var unlockedAccountRecordId: AccountRecordId? { get }
+    var getHiddenAccountsAccessChallengeDataPromise: Promise<[AccountRecordId:PostboxAccessChallengeData]> { get }
+    var accountManagerRecordIdPromise: ValuePromise<AccountRecordId?> { get }
+    var didFinishChangingAccountPromise: Promise<Void> { get }
+    
+    func hasPublicAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<Bool, NoError>
+    func configureAccountsAccessChallengeData<Types: AccountManagerTypes>(accountManager: AccountManager<Types>)
+    func hiddenAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<[AccountRecordId], NoError>
+    func isAccountHidden<Types: AccountManagerTypes>(accountRecordId: AccountRecordId, accountManager: AccountManager<Types>) -> Signal<Bool, NoError>
+}
+
 private enum AccountKind {
     case authorized
     case unauthorized
 }
 
+// MARK: Nicegram DB Changes
 public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
     enum CodingKeys: String, CodingKey {
         case backupData
         case environment
         case sortOrder
         case loggedOut
+        case hiddenDoubleBottom
         case legacyRootObject = "_"
     }
 
@@ -22,6 +78,25 @@ public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
     case environment(AccountEnvironmentAttribute)
     case sortOrder(AccountSortOrderAttribute)
     case loggedOut(LoggedOutAccountAttribute)
+    case hiddenDoubleBottom(HiddenAccountAttribute)
+    
+    public var isHiddenAccountAttribute: Bool {
+        switch self {
+        case .hiddenDoubleBottom:
+            return true
+        default:
+            return false
+        }
+    }
+    
+    public var isLoggedOutAccountAttribute: Bool {
+        switch self {
+        case .loggedOut:
+            return true
+        default:
+            return false
+        }
+    }
 
     public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
@@ -34,6 +109,9 @@ public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
             self = .sortOrder(sortOrder)
         } else if let loggedOut = try? container.decodeIfPresent(LoggedOutAccountAttribute.self, forKey: .loggedOut) {
             self = .loggedOut(loggedOut)
+            // MARK: Nicegram DB Changes
+        } else if let hiddenDoubleBottom = try? container.decodeIfPresent(HiddenAccountAttribute.self, forKey: .hiddenDoubleBottom) {
+            self = .hiddenDoubleBottom(hiddenDoubleBottom)
         } else {
             let legacyRootObjectData = try! container.decode(AdaptedPostboxDecoder.RawObjectData.self, forKey: .legacyRootObject)
             if legacyRootObjectData.typeHash == postboxEncodableTypeHash(AccountBackupDataAttribute.self) {
@@ -44,6 +122,10 @@ public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
                 self = .sortOrder(try! AdaptedPostboxDecoder().decode(AccountSortOrderAttribute.self, from: legacyRootObjectData.data))
             } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(LoggedOutAccountAttribute.self) {
                 self = .loggedOut(try! AdaptedPostboxDecoder().decode(LoggedOutAccountAttribute.self, from: legacyRootObjectData.data))
+                // MARK: Nicegram DB Changes
+            } else if legacyRootObjectData.typeHash == postboxEncodableTypeHash(HiddenAccountAttribute.self) {
+                self = .hiddenDoubleBottom(HiddenAccountAttribute(decoder: PostboxDecoder(buffer: MemoryBuffer(data: legacyRootObjectData.data))))
+
             } else {
                 preconditionFailure()
             }
@@ -62,6 +144,9 @@ public enum TelegramAccountRecordAttribute: AccountRecordAttribute, Equatable {
             try container.encode(sortOrder, forKey: .sortOrder)
         case let .loggedOut(loggedOut):
             try container.encode(loggedOut, forKey: .loggedOut)
+            // MARK: Nicegram DB Changes
+        case let .hiddenDoubleBottom(hiddenDoubleBottom):
+            try container.encode(hiddenDoubleBottom, forKey: .hiddenDoubleBottom)
         }
     }
 
@@ -189,6 +274,7 @@ private var declaredEncodables: Void = {
     declareEncodable(SendAsMessageAttribute.self, f: { SendAsMessageAttribute(decoder: $0) })
     declareEncodable(AudioTranscriptionMessageAttribute.self, f: { AudioTranscriptionMessageAttribute(decoder: $0) })
     declareEncodable(NonPremiumMessageAttribute.self, f: { NonPremiumMessageAttribute(decoder: $0) })
+    declareEncodable(TelegramExtendedMedia.self, f: { TelegramExtendedMedia(decoder: $0) })
     return
 }()
 
@@ -240,6 +326,10 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
     })
     |> mapToSignal { record -> Signal<AccountResult?, NoError> in
         if let record = record {
+            // MARK: Nicegram DB Changes
+            guard !record.1.contains(where: { $0.isHiddenAccountAttribute }) else {
+                return .single(nil)
+            }
             let reload = ValuePromise<Bool>(true, ignoreRepeated: false)
             return reload.get()
             |> mapToSignal { _ -> Signal<AccountResult?, NoError> in
@@ -299,27 +389,45 @@ public func currentAccount(allocateIfNotExists: Bool, networkArguments: NetworkI
 
 public func logoutFromAccount(id: AccountRecordId, accountManager: AccountManager<TelegramAccountManagerTypes>, alreadyLoggedOutRemotely: Bool) -> Signal<Void, NoError> {
     Logger.shared.log("AccountManager", "logoutFromAccount \(id)")
+    // MARK: Nicegram DB Changes
+    if accountManager.hiddenAccountManager.unlockedAccountRecordId == id {
+        accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+    }
     return accountManager.transaction { transaction -> Void in
-        transaction.updateRecord(id, { current in
-            if alreadyLoggedOutRemotely {
-                return nil
-            } else if let current = current {
-                var found = false
-                for attribute in current.attributes {
-                    if case .loggedOut = attribute {
-                        found = true
-                        break
+        for record in transaction.getRecords() {
+            transaction.updateRecord(record.id) { record in
+                guard let record = record, !alreadyLoggedOutRemotely else { return nil }
+                var attributes = record.attributes
+                
+                if transaction.getRecords().count == 2 {
+                    attributes.removeAll { $0.isHiddenAccountAttribute }
+                    UserDefaults.standard.set(false, forKey: "isDoubleBottomOn")
+                    UserDefaults.standard.set(false, forKey: "inDoubleBottom")
+                } else if id == record.id,
+                          attributes.contains(where: { $0.isHiddenAccountAttribute }) {
+                    attributes.removeAll { $0.isHiddenAccountAttribute }
+                    UserDefaults.standard.set(false, forKey: "isDoubleBottomOn")
+                    UserDefaults.standard.set(false, forKey: "inDoubleBottom")
+                }
+                
+                if id == record.id {
+                    var found = false
+                    for attribute in attributes {
+                        if case .loggedOut = attribute {
+                            found = true
+                            break
+                        }
                     }
-                }
-                if found {
-                    return current
+                    if found {
+                        return record
+                    } else {
+                        return AccountRecord(id: record.id, attributes: attributes + [.loggedOut(LoggedOutAccountAttribute())], temporarySessionId: nil)
+                    }
                 } else {
-                    return AccountRecord(id: current.id, attributes: current.attributes + [.loggedOut(LoggedOutAccountAttribute())], temporarySessionId: nil)
+                    return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
                 }
-            } else {
-                return nil
             }
-        })
+        }
     }
 }
 

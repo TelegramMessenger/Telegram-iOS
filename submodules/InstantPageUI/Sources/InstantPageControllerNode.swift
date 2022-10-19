@@ -148,6 +148,41 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .linkCopied(text: presentationData.strings.Conversation_LinkCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                     }
                 }
+                shareController.completed = { [weak self] peerIds in
+                    let _ = (context.engine.data.get(
+                        EngineDataList(
+                            peerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+                        )
+                    )
+                    |> deliverOnMainQueue).start(next: { [weak self] peerList in
+                        if let strongSelf = self {
+                            let peers = peerList.compactMap { $0 }
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            
+                            let text: String
+                            var savedMessages = false
+                            if peerIds.count == 1, let peerId = peerIds.first, peerId == strongSelf.context.account.peerId {
+                                text = presentationData.strings.Conversation_ForwardTooltip_SavedMessages_One
+                                savedMessages = true
+                            } else {
+                                if peers.count == 1, let peer = peers.first {
+                                    let peerName = peer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_Chat_One(peerName).string
+                                } else if peers.count == 2, let firstPeer = peers.first, let secondPeer = peers.last {
+                                    let firstPeerName = firstPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : firstPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    let secondPeerName = secondPeer.id == strongSelf.context.account.peerId ? presentationData.strings.DialogList_SavedMessages : secondPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_TwoChats_One(firstPeerName, secondPeerName).string
+                                } else if let peer = peers.first {
+                                    let peerName = peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                    text = presentationData.strings.Conversation_ForwardTooltip_ManyChats_One(peerName, "\(peers.count - 1)").string
+                                } else {
+                                    text = ""
+                                }
+                            }
+                            strongSelf.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), nil)
+                        }
+                    })
+                }
                 strongSelf.present(shareController, nil)
             }
         }
@@ -1347,7 +1382,11 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let detailsItem = item as? InstantPageDetailsItem {
                 medias.append(contentsOf: mediasFromItems(detailsItem.items))
             } else {
-                medias.append(contentsOf: item.medias)
+                if let item = item as? InstantPageImageItem, item.interactive {
+                    medias.append(contentsOf: item.medias)
+                } else if let item = item as? InstantPagePlayableVideoItem, item.interactive {
+                    medias.append(contentsOf: item.medias)
+                }
             }
         }
         return medias
@@ -1364,7 +1403,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [])
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
             let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
             
             let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)

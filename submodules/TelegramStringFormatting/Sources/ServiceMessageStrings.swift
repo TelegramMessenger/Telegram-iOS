@@ -278,10 +278,10 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                                 let index = ranges.count
                                 ranges.append((ranges.count, NSRange(location: location, length: length)))
                                 attributes[index] = spoilerAttributes(primaryTextColor: primaryTextColor)
-                            case let .CustomEmoji(stickerPack, fileId):
+                            case let .CustomEmoji(_, fileId):
                                 let index = ranges.count
                                 ranges.append((ranges.count, NSRange(location: location, length: length)))
-                                attributes[index] = customEmojiAttributes(primaryTextColor: primaryTextColor, emoji: ChatTextInputTextCustomEmojiAttribute(stickerPack: stickerPack, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile))
+                                attributes[index] = customEmojiAttributes(primaryTextColor: primaryTextColor, emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: fileId, file: message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile))
                             default:
                                 break
                             }

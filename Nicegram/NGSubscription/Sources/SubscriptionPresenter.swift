@@ -24,18 +24,18 @@ final class SubscriptionPresenter: SubscriptionPresenterInput {
     
     //  MARK: - Dependencies
     
-    private let presentationData: PresentationData
+    private let languageCode: String
     
     //  MARK: - Lifecycle
     
-    init(presentationData: PresentationData) {
-        self.presentationData = presentationData
+    init(languageCode: String) {
+        self.languageCode = languageCode
     }
 }
 
 extension SubscriptionPresenter: SubscriptionInteractorOutput {
     func viewDidLoad() {
-        let locale = presentationData.strings.baseLanguageCode
+        let locale = languageCode
         
         output.display(title: l("NicePremium.Title", locale))
         output.display(subscribeInfo: l("NicePremium.Renews", locale))
@@ -64,7 +64,7 @@ extension SubscriptionPresenter: SubscriptionInteractorOutput {
     
     func present(subscription: Subscription) {
         let price = subscription.price
-        let subscribeButtonTitle = presentationData.strings.Premium_SubscribeFor(price).string
+        let subscribeButtonTitle = l("NicePremium.PricePerMonth", languageCode, with: price)
         output.display(subscription: SubscriptionViewModel(
             id: subscription.identifier,
             subscribeButtonTitle: subscribeButtonTitle

@@ -336,6 +336,25 @@ extension AssistantViewController: AssistantViewControllerInput {
         }
     }
     
+    func update(viewItem: PersonalAssistantItem) {
+        switch viewItem.item {
+        case .mobileData:
+            mobileDataView.display(item: viewItem)
+        case .channel:
+            telegramChannelView.display(item: viewItem)
+        case .chat:
+            telegramChatView.display(item: viewItem)
+        case .rateUs:
+            rateView.display(item: viewItem)
+        case .support:
+            supportView.display(item: viewItem)
+        case .logout:
+            logoutView.display(item: viewItem, isArrowHidden: true)
+        default:
+            break
+        }
+    }
+    
     func display(titleText: String?) {
         titleLabel.text = titleText
     }
@@ -435,7 +454,7 @@ extension AssistantViewController: AssistantViewControllerInput {
 
 extension AssistantViewController: LoginListener {
     func onLogin() {
-        handleAnimation(isAuthenificated: true)
+        output.handleAuth(isAnimated: false)
     }
     
     func onOpenTelegamBot(session: String) {

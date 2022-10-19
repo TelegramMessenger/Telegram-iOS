@@ -24,7 +24,6 @@ swift_library(
         "//Nicegram/NGSpecialOffer:NGSpecialOffer",
         "//Nicegram/NGTheme:NGTheme",
         "//Nicegram/NGToast:NGToast",
-        "//Nicegram/NGTransitions:NGTransitions",
     ],
     visibility = ["//visibility:public"],
 

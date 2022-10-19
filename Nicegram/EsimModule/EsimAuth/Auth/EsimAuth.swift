@@ -74,11 +74,16 @@ public final class EsimAuth {
         firebaseAuthenticator.sendPasswordReset(withEmail: email, completion: completion)
     }
     
+    public func hasPendingTelegramSession() -> Bool {
+        return telegramAuthenticator.hasPendingSession()
+    }
+    
     //  MARK: - Private Functions
     
     private func setCurrentUser(_ user: EsimUser?) {
         if let user = user {
             UserDefaults.standard.setValue(try? JSONEncoder().encode(user), forKey: kCurrentUser)
+            telegramAuthenticator.clear()
         } else {
             currentUser?.token = nil
             UserDefaults.standard.setValue(nil, forKey: kCurrentUser)

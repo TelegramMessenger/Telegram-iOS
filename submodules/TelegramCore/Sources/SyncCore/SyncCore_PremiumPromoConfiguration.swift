@@ -4,10 +4,9 @@ import Postbox
 public struct PremiumPromoConfiguration: Codable, Equatable {
     enum CodingKeys: String, CodingKey {
         case status
-        case currency
-        case monthlyAmount
         case statusEntities
         case videos
+        case premiumProductOptions
     }
     
     private struct DictionaryPair: Codable {
@@ -34,23 +33,56 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
         }
     }
     
+    public struct PremiumProductOption: Codable, Equatable {
+        public let months: Int32
+        public let currency: String
+        public let amount: Int64
+        public let botUrl: String
+        public let storeProductId: String?
+        
+        public init(months: Int32, currency: String, amount: Int64, botUrl: String, storeProductId: String?) {
+            self.months = months
+            self.currency = currency
+            self.amount = amount
+            self.botUrl = botUrl
+            self.storeProductId = storeProductId
+        }
+        
+        public init(decoder: PostboxDecoder) {
+            self.months = decoder.decodeInt32ForKey("months", orElse: 0)
+            self.currency = decoder.decodeStringForKey("currency", orElse: "")
+            self.amount = decoder.decodeInt64ForKey("amount", orElse: 0)
+            self.botUrl = decoder.decodeStringForKey("botUrl", orElse: "")
+            self.storeProductId = decoder.decodeOptionalStringForKey("storeProductId")
+        }
+        
+        public func encode(_ encoder: PostboxEncoder) {
+            encoder.encodeInt32(self.months, forKey: "months")
+            encoder.encodeString(self.currency, forKey: "currency")
+            encoder.encodeInt64(self.amount, forKey: "amount")
+            encoder.encodeString(self.botUrl, forKey: "botUrl")
+            if let storeProductId = self.storeProductId {
+                encoder.encodeString(storeProductId, forKey: "storeProductId")
+            } else {
+                encoder.encodeNil(forKey: "storeProductId")
+            }
+        }
+    }
+    
     public var status: String
     public var statusEntities: [MessageTextEntity]
     public var videos: [String: TelegramMediaFile]
-    
-    public var currency: String
-    public var monthlyAmount: Int64
+    public var premiumProductOptions: [PremiumProductOption]
     
     public static var defaultValue: PremiumPromoConfiguration {
-        return PremiumPromoConfiguration(status: "", statusEntities: [], videos: [:], currency: "", monthlyAmount: 0)
+        return PremiumPromoConfiguration(status: "", statusEntities: [], videos: [:], premiumProductOptions: [])
     }
     
-    init(status: String, statusEntities: [MessageTextEntity], videos: [String: TelegramMediaFile], currency: String, monthlyAmount: Int64) {
+    init(status: String, statusEntities: [MessageTextEntity], videos: [String: TelegramMediaFile], premiumProductOptions: [PremiumProductOption]) {
         self.status = status
-        self.currency = currency
-        self.monthlyAmount = monthlyAmount
         self.statusEntities = statusEntities
         self.videos = videos
+        self.premiumProductOptions = premiumProductOptions
     }
     
     public init(from decoder: Decoder) throws {
@@ -66,9 +98,7 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
         }
         self.videos = videos
         
-        self.currency = try container.decode(String.self, forKey: .currency)
-        self.monthlyAmount = try container.decode(Int64.self, forKey: .monthlyAmount)
-
+        self.premiumProductOptions = try container.decode([PremiumProductOption].self, forKey: .premiumProductOptions)
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -76,13 +106,13 @@ public struct PremiumPromoConfiguration: Codable, Equatable {
 
         try container.encode(self.status, forKey: .status)
         try container.encode(self.statusEntities, forKey: .statusEntities)
-        try container.encode(self.currency, forKey: .currency)
-        try container.encode(self.monthlyAmount, forKey: .monthlyAmount)
-        
+    
         var pairs: [DictionaryPair] = []
         for (key, file) in self.videos {
             pairs.append(DictionaryPair(key, value: file))
         }
         try container.encode(pairs, forKey: .videos)
+        
+        try container.encode(self.premiumProductOptions, forKey: .premiumProductOptions)
     }
 }

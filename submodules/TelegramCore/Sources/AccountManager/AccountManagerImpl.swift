@@ -60,6 +60,10 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     private var sharedDataViews = Bag<(MutableAccountSharedDataView<Types>, ValuePipe<AccountSharedDataView<Types>>)>()
     private var noticeEntryViews = Bag<(MutableNoticeEntryView<Types>, ValuePipe<NoticeEntryView<Types>>)>()
     private var accessChallengeDataViews = Bag<(MutableAccessChallengeDataView, ValuePipe<AccessChallengeDataView>)>()
+    // MARK: Nicegram DB Changes
+    private let hiddenAccountManager: HiddenAccountManager
+
+    private var unlockedHiddenAccountRecordIdDisposable: Disposable?
     
     static func getCurrentRecords(basePath: String) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
         let atomicStatePath = "\(basePath)/atomic-state"
@@ -72,14 +76,16 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             preconditionFailure()
         }
     }
-    
-    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool, temporarySessionId: Int64) {
+    // MARK: Nicegram DB Changes
+    fileprivate init?(queue: Queue, basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool, temporarySessionId: Int64, hiddenAccountManager: HiddenAccountManager) {
         let startTime = CFAbsoluteTimeGetCurrent()
         
         self.queue = queue
         self.basePath = basePath
         self.atomicStatePath = "\(basePath)/atomic-state"
         self.loginTokensPath = "\(basePath)/login-tokens"
+        // MARK: Nicegram DB Changes
+        self.hiddenAccountManager = hiddenAccountManager
         self.temporarySessionId = temporarySessionId
         let _ = try? FileManager.default.createDirectory(atPath: basePath, withIntermediateDirectories: true, attributes: nil)
         guard let guardValueBox = SqliteValueBox(basePath: basePath + "/guard_db", queue: queue, isTemporary: isTemporary, isReadOnly: false, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, encryptionParameters: nil, upgradeProgress: { _ in }) else {
@@ -125,6 +131,24 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             self.currentAtomicState.accessChallengeData = tableAccessChallengeData
             self.syncAtomicStateToFile()
         }
+        // MARK: Nicegram DB Changes
+        self.unlockedHiddenAccountRecordIdDisposable = hiddenAccountManager.accountManagerRecordIdPromise.get().start(next: { [weak self] id in
+            guard let strongSelf = self else { return }
+            
+            var metadataOperations = [AccountManagerMetadataOperation<Types.Attribute>]()
+            
+            if let id = id {
+                metadataOperations.append(.updateCurrentAccountId(id))
+            } else if let id = strongSelf.currentAtomicState.currentRecordId {
+                metadataOperations.append(.updateCurrentAccountId(id))
+            }
+            
+            for (view, pipe) in strongSelf.recordsViews.copyItems() {
+                if view.replay(operations: [], metadataOperations: metadataOperations) {
+                    pipe.putNext(AccountRecordsView(view))
+                }
+            }
+        })
         
         postboxLog("AccountManager: currentAccountId = \(String(describing: currentAtomicState.currentRecordId))")
         
@@ -138,6 +162,8 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
     
     deinit {
         assert(self.queue.isCurrent())
+        // MARK: Nicegram DB Changes
+        unlockedHiddenAccountRecordIdDisposable?.dispose()
     }
 
     fileprivate func transactionSync<T>(ignoreDisabled: Bool, _ f: (AccountManagerModifier<Types>) -> T) -> T {
@@ -167,6 +193,8 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             self.currentAtomicState.currentRecordId = id
             self.currentMetadataOperations.append(.updateCurrentAccountId(id))
             self.currentAtomicStateUpdated = true
+            // MARK: Nicegram DB Changes
+            self.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
         }, getCurrentAuth: {
             if let record = self.currentAtomicState.currentAuthRecord {
                 return record
@@ -316,10 +344,10 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             table.beforeCommit()
         }
     }
-    
-    fileprivate func accountRecords() -> Signal<AccountRecordsView<Types>, NoError> {
+    // MARK: Nicegram DB Changes
+    fileprivate func accountRecords(currentRecordId: AccountRecordId?) -> Signal<AccountRecordsView<Types>, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<AccountRecordsView<Types>, NoError> in
-            return self.accountRecordsInternal(transaction: transaction)
+            return self.accountRecordsInternal(transaction: transaction, currentRecordId: currentRecordId)
         })
         |> switchToLatest
     }
@@ -351,12 +379,13 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
         })
         |> switchToLatest
     }
-    
-    private func accountRecordsInternal(transaction: AccountManagerModifier<Types>) -> Signal<AccountRecordsView<Types>, NoError> {
+    // MARK: Nicegram DB Changes
+    private func accountRecordsInternal(transaction: AccountManagerModifier<Types>, currentRecordId: AccountRecordId?) -> Signal<AccountRecordsView<Types>, NoError> {
         assert(self.queue.isCurrent())
         let mutableView = MutableAccountRecordsView<Types>(getRecords: {
             return self.currentAtomicState.records.map { $0.1 }
-        }, currentId: self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
+            // MARK: Nicegram DB Changes
+        }, currentId: currentRecordId ?? self.currentAtomicState.currentRecordId, currentAuth: self.currentAtomicState.currentAuthRecord)
         let pipe = ValuePipe<AccountRecordsView<Types>>()
         let index = self.recordsViews.add((mutableView, pipe))
         
@@ -430,8 +459,8 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             }
         }
     }
-    
-    fileprivate func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
+    // MARK: Nicegram DB Changes
+    fileprivate func currentAccountRecord(allocateIfNotExists: Bool, currentRecordId: AccountRecordId?) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
         return self.transaction(ignoreDisabled: false, { transaction -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> in
             let current = transaction.getCurrent()
             if let _ = current {
@@ -444,8 +473,8 @@ final class AccountManagerImpl<Types: AccountManagerTypes> {
             } else {
                 return .single(nil)
             }
-            
-            let signal = self.accountRecordsInternal(transaction: transaction)
+            // MARK: Nicegram DB Changes
+            let signal = self.accountRecordsInternal(transaction: transaction, currentRecordId: currentRecordId)
             |> map { view -> (AccountRecordId, [Types.Attribute])? in
                 if let currentRecord = view.currentRecord {
                     return (currentRecord.id, currentRecord.attributes)
@@ -505,12 +534,14 @@ public final class AccountManager<Types: AccountManagerTypes> {
     private let queue: Queue
     private let impl: QueueLocalObject<AccountManagerImpl<Types>>
     public let temporarySessionId: Int64
+    // MARK: Nicegram DB Changes
+    public let hiddenAccountManager: HiddenAccountManager
     
     public static func getCurrentRecords(basePath: String) -> (records: [AccountRecord<Types.Attribute>], currentId: AccountRecordId?) {
         return AccountManagerImpl<Types>.getCurrentRecords(basePath: basePath)
     }
-    
-    public init(basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool) {
+    // MARK: Nicegram DB Changes
+    public init(basePath: String, isTemporary: Bool, isReadOnly: Bool, useCaches: Bool, removeDatabaseOnError: Bool, hiddenAccountManager: HiddenAccountManager) {
         self.queue = sharedQueue
         self.basePath = basePath
         var temporarySessionId: Int64 = 0
@@ -518,13 +549,17 @@ public final class AccountManager<Types: AccountManagerTypes> {
         self.temporarySessionId = temporarySessionId
         let queue = self.queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            if let value = AccountManagerImpl<Types>(queue: queue, basePath: basePath, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, temporarySessionId: temporarySessionId) {
+            // MARK: Nicegram DB Changes
+            if let value = AccountManagerImpl<Types>(queue: queue, basePath: basePath, isTemporary: isTemporary, isReadOnly: isReadOnly, useCaches: useCaches, removeDatabaseOnError: removeDatabaseOnError, temporarySessionId: temporarySessionId, hiddenAccountManager: hiddenAccountManager) {
                 return value
             } else {
                 preconditionFailure()
             }
         })
         self.mediaBox = MediaBox(basePath: basePath + "/media")
+        // MARK: Nicegram DB Changes
+        self.hiddenAccountManager = hiddenAccountManager
+        hiddenAccountManager.configureAccountsAccessChallengeData(accountManager: self)
     }
     
     public func transaction<T>(ignoreDisabled: Bool = false, _ f: @escaping (AccountManagerModifier<Types>) -> T) -> Signal<T, NoError> {
@@ -541,17 +576,20 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
     
+    // MARK: Nicegram DB Changes
     public func accountRecords() -> Signal<AccountRecordsView<Types>, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.accountRecords().start(next: { next in
-                    subscriber.putNext(next)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
+        return hiddenAccountManager.accountManagerRecordIdPromise.get() |> mapToSignal { currentHiddenRecordId in
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                self.impl.with { impl in
+                    disposable.set(impl.accountRecords(currentRecordId: currentHiddenRecordId).start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    }))
+                }
+                return disposable
             }
-            return disposable
         }
     }
 
@@ -605,17 +643,20 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
     
+    // MARK: Nicegram DB Changes
     public func currentAccountRecord(allocateIfNotExists: Bool) -> Signal<(AccountRecordId, [Types.Attribute])?, NoError> {
-        return Signal { subscriber in
-            let disposable = MetaDisposable()
-            self.impl.with { impl in
-                disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists).start(next: { next in
-                    subscriber.putNext(next)
-                }, completed: {
-                    subscriber.putCompletion()
-                }))
+        return hiddenAccountManager.accountManagerRecordIdPromise.get() |> mapToSignal { currentHiddenRecordId in
+            return Signal { subscriber in
+                let disposable = MetaDisposable()
+                self.impl.with { impl in
+                    disposable.set(impl.currentAccountRecord(allocateIfNotExists: allocateIfNotExists, currentRecordId: currentHiddenRecordId).start(next: { next in
+                        subscriber.putNext(next)
+                    }, completed: {
+                        subscriber.putCompletion()
+                    }))
+                }
+                return disposable
             }
-            return disposable
         }
     }
     
@@ -633,3 +674,111 @@ public final class AccountManager<Types: AccountManagerTypes> {
         }
     }
 }
+
+// MARK: Nicegram DB Changes
+public final class HiddenAccountManagerImpl: HiddenAccountManager {
+    public let unlockedAccountRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
+    public var unlockedAccountRecordId: AccountRecordId?
+    private var unlockedAccountRecordIdDisposable: Disposable?
+    
+    public let accountManagerRecordIdPromise = ValuePromise<AccountRecordId?>(nil)
+    public let getHiddenAccountsAccessChallengeDataPromise = Promise<[AccountRecordId:PostboxAccessChallengeData]>()
+    public let didFinishChangingAccountPromise = Promise<Void>()
+    
+    public init() {
+        unlockedAccountRecordIdDisposable = (unlockedAccountRecordIdPromise.get()
+            |> deliverOnMainQueue).start(next: { [weak self] value in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.unlockedAccountRecordId = value
+                strongSelf.accountManagerRecordIdPromise.set(value)
+            })
+    }
+    
+    public func configureAccountsAccessChallengeData<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) {
+        self.getHiddenAccountsAccessChallengeDataPromise.set(accountManager.accountRecords()
+            |> map { view in
+                var result = [AccountRecordId:PostboxAccessChallengeData]()
+                var passcodes = Set<PostboxAccessChallengeData>()
+                let recordsWithOrder: [(AccountRecord<Types.Attribute>, Int32)] = view.records.map { record in
+                    var order: Int32 = 0
+                    for attribute in record.attributes {
+                        guard let attribute = attribute as? TelegramAccountRecordAttribute else { continue }
+                        switch attribute {
+                        case .sortOrder(let sortOrderAttribute):
+                            order = sortOrderAttribute.order
+                        default:
+                            continue
+                        }
+                    }
+                    return (record, order)
+                }
+                let records = recordsWithOrder.sorted(by: { $0.1 > $1.1 })
+                    .map { $0.0 }
+                for record in records {
+                    guard !record.attributes.contains(where: {
+                        guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                        return attribute.isLoggedOutAccountAttribute
+                    }) else { continue }
+                    
+                    var accessChallengeData = PostboxAccessChallengeData.none
+                    for attribute in record.attributes {
+                        guard let attribute = attribute as? TelegramAccountRecordAttribute else { continue }
+                        switch attribute {
+                        case .hiddenDoubleBottom(let hiddenAccountAttribute):
+                            accessChallengeData = hiddenAccountAttribute.accessChallengeData
+                        default:
+                            continue
+                        }
+                    }
+                    if accessChallengeData != .none, !passcodes.contains(accessChallengeData) {
+                        result[record.id] = accessChallengeData
+                        passcodes.insert(accessChallengeData)
+                    }
+                }
+                return result
+            }
+            |> distinctUntilChanged(isEqual: ==)
+        )
+    }
+    
+    public func hasPublicAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords().first(where: {
+                !$0.attributes.contains(where: {
+                    guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                    return attribute.isHiddenAccountAttribute && attribute.isLoggedOutAccountAttribute
+                })
+            }) != nil
+        }
+    }
+    
+    public func hiddenAccounts<Types: AccountManagerTypes>(accountManager: AccountManager<Types>) -> Signal<[AccountRecordId], NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+                .filter {
+                    $0.attributes.contains(where: {
+                        guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                        return attribute.isHiddenAccountAttribute
+                    })
+                }
+                .map { $0.id }
+        }
+    }
+    
+    public func isAccountHidden<Types: AccountManagerTypes>(accountRecordId: AccountRecordId, accountManager: AccountManager<Types>) -> Signal<Bool, NoError> {
+        return accountManager.transaction { transaction in
+            return transaction.getRecords()
+            .contains { $0.id == accountRecordId && $0.attributes.contains(where: {
+                    guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+                    return attribute.isHiddenAccountAttribute
+                })
+            }
+        }
+    }
+    
+    deinit {
+        unlockedAccountRecordIdDisposable?.dispose()
+    }
+}
+

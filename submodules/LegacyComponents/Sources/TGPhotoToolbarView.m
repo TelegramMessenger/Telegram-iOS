@@ -54,7 +54,6 @@
         [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
         [_backgroundView addSubview:_cancelButton];
         
-        
         _doneButton = [[TGModernButton alloc] initWithFrame:CGRectMake(0, 0, buttonSize.width, buttonSize.height)];
         _doneButton.exclusiveTouch = true;
         _doneButton.adjustsImageWhenHighlighted = false;
@@ -492,6 +491,40 @@
     {
         if ([button isKindOfClass:[TGPhotoEditorButton class]])
             button.disabled = (buttons & button.tag);
+    }
+}
+
+- (void)setAllButtonsHidden:(bool)hidden animated:(bool)animated
+{
+    CGFloat targetAlpha = hidden ? 0.0f : 1.0f;
+    
+    if (animated)
+    {
+        _buttonsWrapperView.hidden = false;
+        _cancelButton.hidden = false;
+        _doneButton.hidden = false;
+        
+        [UIView animateWithDuration:0.2f
+                         animations:^
+        {
+            _buttonsWrapperView.alpha = targetAlpha;
+            _cancelButton.alpha = targetAlpha;
+            _doneButton.alpha = targetAlpha;
+        } completion:^(__unused BOOL finished)
+        {
+            _buttonsWrapperView.hidden = hidden;
+            _cancelButton.hidden = hidden;
+            _doneButton.hidden = hidden;
+        }];
+    }
+    else
+    {
+        _buttonsWrapperView.alpha = targetAlpha;
+        _cancelButton.alpha = targetAlpha;
+        _doneButton.alpha = targetAlpha;
+        _buttonsWrapperView.hidden = hidden;
+        _cancelButton.hidden = hidden;
+        _doneButton.hidden = hidden;
     }
 }
 

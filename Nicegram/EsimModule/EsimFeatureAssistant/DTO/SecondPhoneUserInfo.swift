@@ -11,6 +11,7 @@ public struct SecondPhoneUserInfoResponseDTO: Decodable {
     public struct UserPhoneDTO: Decodable {
         
         public let phone: String
+        public let customTitle: String?
         public let countryCode: String
         public let numberType: NumberTypeDTO
         @EsimApiBool public var smsEnabled: Bool
@@ -23,6 +24,7 @@ public struct SecondPhoneUserInfoResponseDTO: Decodable {
         
         enum CodingKeys: String, CodingKey {
             case phone
+            case customTitle
             case countryCode
             case numberType
             case smsEnabled = "sms"

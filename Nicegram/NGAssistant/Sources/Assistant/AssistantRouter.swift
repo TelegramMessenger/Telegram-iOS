@@ -6,7 +6,6 @@ import NGModels
 import NGMyEsims
 import NGSpecialOffer
 import NGTheme
-import NGTransitions
 import Postbox
 
 protocol AssistantRouterInput: AnyObject {
@@ -28,8 +27,6 @@ final class AssistantRouter: AssistantRouterInput {
     private let loginBuilder: LoginBuilder
     private let specialOfferBuilder: SpecialOfferBuilder
     
-    private let popupTransition: PopupTransition
-    
     init(assistantListener: AssistantListener?,
          myEsimsBuilder: MyEsimsBuilder,
          loginBuilder: LoginBuilder,
@@ -39,7 +36,6 @@ final class AssistantRouter: AssistantRouterInput {
         self.myEsimsBuilder = myEsimsBuilder
         self.loginBuilder = loginBuilder
         self.specialOfferBuilder = specialOfferBuilder
-        self.popupTransition = PopupTransition(blurStyle: ngTheme.blurStyle)
     }
 
     func dismiss() {
@@ -80,9 +76,6 @@ final class AssistantRouter: AssistantRouterInput {
         let vc = specialOfferBuilder.build(offerId: id) { [weak self] in
             self?.parentViewController?.dismiss(animated: true)
         }
-        
-        vc.modalPresentationStyle = .custom
-        vc.transitioningDelegate = popupTransition
         
         parentViewController?.present(vc, animated: true)
     }

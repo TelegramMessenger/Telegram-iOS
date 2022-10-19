@@ -32,13 +32,13 @@ extension GetFeaturedSpecialOfferUseCaseImpl: GetFeaturedSpecialOfferUseCase {
                 return
             }
             
-            if !specialOffer.shouldAutoshowToPremiumUser, isPremium() {
+            if self.specialOfferService.wasSpecialOfferSeen(id: specialOffer.id) {
                 self.cancelSchedule(forOfferWith: specialOffer.id)
                 completion?(nil)
                 return
             }
             
-            if self.specialOfferService.wasSpecialOfferSeen(id: specialOffer.id) {
+            if !specialOffer.shouldAutoshowToPremiumUser, isPremium() {
                 self.cancelSchedule(forOfferWith: specialOffer.id)
                 completion?(nil)
                 return
@@ -54,18 +54,22 @@ extension GetFeaturedSpecialOfferUseCaseImpl: GetFeaturedSpecialOfferUseCase {
                 
                 if fireDate < Date() {
                     self.cancelSchedule(forOfferWith: specialOffer.id)
-                    
-                    if AppCache.appLaunchCount > 1 {
-                        completion?(specialOffer)
-                    } else {
-                        completion?(nil)
-                    }
+                    completion?(specialOffer)
                 } else {
                     completion?(nil)
                 }
             } else {
-                self.scheduleService.schedule(offer: specialOffer)
-                completion?(nil)
+                if specialOffer.autoshowTimeInterval != nil {
+                    self.scheduleService.schedule(offer: specialOffer)
+                    completion?(nil)
+                } else {
+                    if AppCache.appLaunchCount > 1 {
+                        self.cancelSchedule(forOfferWith: specialOffer.id)
+                        completion?(specialOffer)
+                    } else {
+                        completion?(nil)
+                    }
+                }
             }
         }
     }

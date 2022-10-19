@@ -13,8 +13,10 @@ NGDEPS = [
     "//Nicegram/NGSubscription:NGSubscription",
     "//Nicegram/NGEnv:NGEnv",
     "//Nicegram/NGLocalization:NGLocalization",
+    "//Nicegram/NGOnboarding:NGOnboarding",
     "//Nicegram/NGQuickReplies:NGQuickReplies",
     "//Nicegram/NGRemoteConfig:NGRemoteConfig",
+    "//Nicegram/NGStats:NGStats",
     "//Nicegram/NGModels:NGModels",
 ]
 
@@ -309,6 +311,8 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatInputPanelContainer:ChatInputPanelContainer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
         "//submodules/TelegramUI/Components/EmojiSuggestionsComponent:EmojiSuggestionsComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent:EmojiStatusSelectionComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent:EmojiStatusComponent",
         "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/Media/ConvertOpusToAAC:ConvertOpusToAAC",
         "//submodules/Media/LocalAudioTranscription:LocalAudioTranscription",

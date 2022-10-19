@@ -173,6 +173,14 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
             self.scrollNode.view.contentSize = contentSize
             updated = true
         }
+                
+        var progress = progress ?? 0.0
+        if centralIndex == 0 && progress < 0.0 {
+            progress = 0.0
+        } else if centralIndex == self.itemNodes.count - 1 && progress > 0.0 {
+            progress = 0.0
+        }
+        
         
         if updated || !self.isPanning {
             transition.animateView {
@@ -180,7 +188,6 @@ public final class GalleryThumbnailContainerNode: ASDisplayNode, UIScrollViewDel
             }
         }
         
-        let progress = progress ?? 0.0
         var itemFrames: [CGRect] = []
         var lastTrailingSpacing: CGFloat = 0.0
         var xOffset: CGFloat = -itemBaseSize.width / 2.0

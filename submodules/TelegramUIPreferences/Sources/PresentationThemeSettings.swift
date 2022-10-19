@@ -524,6 +524,18 @@ public struct PresentationThemeAccentColor: PostboxCoding, Equatable {
         }
     }
     
+    public func colorFor(baseTheme: TelegramBaseTheme) -> UIColor {
+        if let value = self.accentColor {
+            return UIColor(rgb: UInt32(bitPattern: value))
+        } else {
+            if baseTheme == .night && self.baseColor == .blue {
+                return UIColor(rgb: 0x3e88f7)
+            } else {
+                return self.baseColor.color
+            }
+        }
+    }
+    
     public var customBubbleColors: [UInt32] {
         return self.bubbleColors
     }

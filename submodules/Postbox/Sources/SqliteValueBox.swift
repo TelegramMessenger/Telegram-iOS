@@ -1,3 +1,6 @@
+// MARK: Nicegram Imports
+import FirebaseAnalytics
+//
 import Foundation
 import sqlcipher
 import SwiftSignalKit
@@ -1181,6 +1184,13 @@ public final class SqliteValueBox: ValueBox {
                 let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
+                    // MARK: Nicegram CrashLogging
+                    Analytics.logEvent("crash", parameters: [
+                        "message": errorText,
+                        "sql_status": status,
+                        "sql_query": "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value"
+                    ])
+                    //
                     preconditionFailure(errorText)
                 }
                 let preparedStatement = SqlitePreparedStatement(statement: statement)
@@ -1195,6 +1205,13 @@ public final class SqliteValueBox: ValueBox {
                 let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
+                    // MARK: Nicegram CrashLogging
+                    Analytics.logEvent("crash", parameters: [
+                        "message": errorText,
+                        "sql_status": status,
+                        "sql_query": "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)"
+                    ])
+                    //
                     preconditionFailure(errorText)
                 }
                 let preparedStatement = SqlitePreparedStatement(statement: statement)

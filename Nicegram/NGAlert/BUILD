@@ -8,11 +8,11 @@ swift_library(
     ]),
     deps = [
         "//Vendor/SnapKit:SnapKit",
+        "//Nicegram/EsimModule/EsimUI:EsimUI",
         "//Nicegram/NGButton:NGButton",
         "//Nicegram/NGExtensions:NGExtensions",
         "//Nicegram/NGLocalization:NGLocalization",
         "//Nicegram/NGTheme:NGTheme",
-        "//Nicegram/NGTransitions:NGTransitions",
     ],
     visibility = ["//visibility:public"],
 

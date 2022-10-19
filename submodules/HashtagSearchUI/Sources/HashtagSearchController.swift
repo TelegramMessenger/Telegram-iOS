@@ -2,12 +2,15 @@ import Foundation
 import UIKit
 import Display
 import TelegramCore
+import Postbox
 import SwiftSignalKit
 import TelegramPresentationData
 import TelegramBaseController
 import AccountContext
 import ChatListUI
 import ListMessageItem
+import AnimationCache
+import MultiAnimationRenderer
 
 public final class HashtagSearchController: TelegramBaseController {
     private let queue = Queue()
@@ -21,6 +24,9 @@ public final class HashtagSearchController: TelegramBaseController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
     private var controllerNode: HashtagSearchControllerNode {
         return self.displayNode as! HashtagSearchControllerNode
     }
@@ -29,6 +35,9 @@ public final class HashtagSearchController: TelegramBaseController {
         self.context = context
         self.peer = peer
         self.query = query
+        
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
@@ -47,7 +56,7 @@ public final class HashtagSearchController: TelegramBaseController {
             let chatListPresentationData = ChatListPresentationData(theme: presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
             return result.messages.map({ .message(EngineMessage($0), EngineRenderedPeer(message: EngineMessage($0)), result.readStates[$0.id.peerId].flatMap(EnginePeerReadCounters.init), chatListPresentationData, result.totalCount, nil, false, .index($0.index), nil, .generic, false) })
         }
-        let interaction = ChatListNodeInteraction(context: context, activateSearch: {
+        let interaction = ChatListNodeInteraction(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {
         }, peerSelected: { _, _, _ in
         }, disabledPeerSelected: { _ in
         }, togglePeerSelected: { _ in

@@ -13,41 +13,6 @@ import TelegramCore
 
 private let sceneVersion: Int = 3
 
-private func deg2rad(_ number: Float) -> Float {
-    return number * .pi / 180
-}
-
-private func rad2deg(_ number: Float) -> Float {
-    return number * 180.0 / .pi
-}
-
-private func generateParticlesTexture() -> UIImage {
-    return UIImage()
-}
-
-private func generateFlecksTexture() -> UIImage {
-    return UIImage()
-}
-
-private func generateShineTexture() -> UIImage {
-    return UIImage()
-}
-
-private func generateDiffuseTexture() -> UIImage {
-    return generateImage(CGSize(width: 256, height: 256), rotatedContext: { size, context in
-        let colorsArray: [CGColor] = [
-            UIColor(rgb: 0x0079ff).cgColor,
-            UIColor(rgb: 0x6a93ff).cgColor,
-            UIColor(rgb: 0x9172fe).cgColor,
-            UIColor(rgb: 0xe46acd).cgColor,
-        ]
-        var locations: [CGFloat] = [0.0, 0.25, 0.5, 0.75, 1.0]
-        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray as CFArray, locations: &locations)!
-
-        context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: size.height), options: CGGradientDrawingOptions())
-    })!
-}
-
 class GiftAvatarComponent: Component {
     let context: AccountContext
     let peer: EnginePeer?
@@ -108,10 +73,7 @@ class GiftAvatarComponent: Component {
             self.addSubview(self.avatarNode.view)
             
             self.setup()
-            
-            let panGestureRecoginzer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(_:)))
-            self.addGestureRecognizer(panGestureRecoginzer)
-            
+                        
             let tapGestureRecoginzer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
             self.addGestureRecognizer(tapGestureRecoginzer)
             
@@ -132,58 +94,6 @@ class GiftAvatarComponent: Component {
         private var delayTapsTill: Double?
         @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
             self.playAppearanceAnimation(velocity: nil, mirror: false, explode: true)
-        }
-        
-        private var previousYaw: Float = 0.0
-        @objc private func handlePan(_ gesture: UIPanGestureRecognizer) {
-            guard let scene = self.sceneView.scene, let node = scene.rootNode.childNode(withName: "star", recursively: false) else {
-                return
-            }
-            
-            self.previousInteractionTimestamp = CACurrentMediaTime()
-            
-            if #available(iOS 11.0, *) {
-                node.removeAnimation(forKey: "rotate", blendOutDuration: 0.1)
-                node.removeAnimation(forKey: "tapRotate", blendOutDuration: 0.1)
-            } else {
-                node.removeAllAnimations()
-            }
-            
-            switch gesture.state {
-                case .began:
-                    self.previousYaw = 0.0
-                case .changed:
-                    let translation = gesture.translation(in: gesture.view)
-                    let yawPan = deg2rad(Float(translation.x))
-                
-                    func rubberBandingOffset(offset: CGFloat, bandingStart: CGFloat) -> CGFloat {
-                        let bandedOffset = offset - bandingStart
-                        let range: CGFloat = 60.0
-                        let coefficient: CGFloat = 0.4
-                        return bandingStart + (1.0 - (1.0 / ((bandedOffset * coefficient / range) + 1.0))) * range
-                    }
-                
-                    var pitchTranslation = rubberBandingOffset(offset: abs(translation.y), bandingStart: 0.0)
-                    if translation.y < 0.0 {
-                        pitchTranslation *= -1.0
-                    }
-                    let pitchPan = deg2rad(Float(pitchTranslation))
-                
-                    self.previousYaw = yawPan
-                    node.eulerAngles = SCNVector3(pitchPan, yawPan, 0.0)
-                case .ended:
-                    let velocity = gesture.velocity(in: gesture.view)
-                    
-                    var smallAngle = false
-                    if (self.previousYaw < .pi / 2 && self.previousYaw > -.pi / 2) && abs(velocity.x) < 200 {
-                        smallAngle = true
-                    }
-                
-                    self.playAppearanceAnimation(velocity: velocity.x, smallAngle: smallAngle, explode: !smallAngle && abs(velocity.x) > 600)
-                    node.eulerAngles = SCNVector3(0.0, 0.0, 0.0)
-                default:
-                    break
-            }
         }
         
         private func setup() {
@@ -210,6 +120,8 @@ class GiftAvatarComponent: Component {
         }
         
         private func onReady() {
+            self.setupScaleAnimation()
+            
             self.playAppearanceAnimation(explode: true)
             
             self.previousInteractionTimestamp = CACurrentMediaTime()
@@ -224,6 +136,18 @@ class GiftAvatarComponent: Component {
             self.timer?.start()
         }
         
+        private func setupScaleAnimation() {
+            let animation = CABasicAnimation(keyPath: "transform.scale")
+            animation.duration = 2.0
+            animation.fromValue = 1.0
+            animation.toValue = 1.15
+            animation.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
+            animation.autoreverses = true
+            animation.repeatCount = .infinity
+
+            self.avatarNode.view.layer.add(animation, forKey: "scale")
+        }
+        
         private func playAppearanceAnimation(velocity: CGFloat? = nil, smallAngle: Bool = false, mirror: Bool = false, explode: Bool = false) {
             guard let scene = self.sceneView.scene else {
                 return
@@ -233,23 +157,50 @@ class GiftAvatarComponent: Component {
             self.previousInteractionTimestamp = currentTime
             self.delayTapsTill = currentTime + 0.85
             
-            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particles = scene.rootNode.childNode(withName: "particles", recursively: false) {
-                if let particleSystem = particles.particleSystems?.first {
-                    particleSystem.particleColorVariation = SCNVector4(0.15, 0.2, 0.15, 0.3)
-                    particleSystem.speedFactor = 2.0
-                    particleSystem.particleVelocity = 2.2
-                    particleSystem.birthRate = 4.0
-                    particleSystem.particleLifeSpan = 2.0
+            if explode, let node = scene.rootNode.childNode(withName: "swirl", recursively: false), let particlesLeft = scene.rootNode.childNode(withName: "particles_left", recursively: false), let particlesRight = scene.rootNode.childNode(withName: "particles_right", recursively: false), let particlesBottomLeft = scene.rootNode.childNode(withName: "particles_left_bottom", recursively: false), let particlesBottomRight = scene.rootNode.childNode(withName: "particles_right_bottom", recursively: false) {
+                if let leftParticleSystem = particlesLeft.particleSystems?.first, let rightParticleSystem = particlesRight.particleSystems?.first, let leftBottomParticleSystem = particlesBottomLeft.particleSystems?.first, let rightBottomParticleSystem = particlesBottomRight.particleSystems?.first {
+                    leftParticleSystem.speedFactor = 2.0
+                    leftParticleSystem.particleVelocity = 1.6
+                    leftParticleSystem.birthRate = 60.0
+                    leftParticleSystem.particleLifeSpan = 4.0
+                    
+                    rightParticleSystem.speedFactor = 2.0
+                    rightParticleSystem.particleVelocity = 1.6
+                    rightParticleSystem.birthRate = 60.0
+                    rightParticleSystem.particleLifeSpan = 4.0
+                    
+//                    leftBottomParticleSystem.speedFactor = 2.0
+                    leftBottomParticleSystem.particleVelocity = 1.6
+                    leftBottomParticleSystem.birthRate = 24.0
+                    leftBottomParticleSystem.particleLifeSpan = 7.0
+                    
+//                    rightBottomParticleSystem.speedFactor = 2.0
+                    rightBottomParticleSystem.particleVelocity = 1.6
+                    rightBottomParticleSystem.birthRate = 24.0
+                    rightBottomParticleSystem.particleLifeSpan = 7.0
                     
                     node.physicsField?.isActive = true
                     Queue.mainQueue().after(1.0) {
                         node.physicsField?.isActive = false
-                        particles.particleSystems?.first?.birthRate = 1.2
-                        particleSystem.particleVelocity = 1.0
-                        particleSystem.particleLifeSpan = 4.0
                         
-                        let animation = POPBasicAnimation()
-                        animation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+                        leftParticleSystem.birthRate = 12.0
+                        leftParticleSystem.particleVelocity = 1.2
+                        leftParticleSystem.particleLifeSpan = 3.0
+                        
+                        rightParticleSystem.birthRate = 12.0
+                        rightParticleSystem.particleVelocity = 1.2
+                        rightParticleSystem.particleLifeSpan = 3.0
+                        
+                        leftBottomParticleSystem.particleVelocity = 1.2
+                        leftBottomParticleSystem.birthRate = 7.0
+                        leftBottomParticleSystem.particleLifeSpan = 5.0
+                        
+                        rightBottomParticleSystem.particleVelocity = 1.2
+                        rightBottomParticleSystem.birthRate = 7.0
+                        rightBottomParticleSystem.particleLifeSpan = 5.0
+                        
+                        let leftAnimation = POPBasicAnimation()
+                        leftAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
                             property?.readBlock = { particleSystem, values in
                                 values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
                             }
@@ -258,11 +209,27 @@ class GiftAvatarComponent: Component {
                             }
                             property?.threshold = 0.01
                         }) as! POPAnimatableProperty)
-                        animation.fromValue = 2.0 as NSNumber
-                        animation.toValue = 1.0 as NSNumber
-                        animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                        animation.duration = 0.5
-                        particleSystem.pop_add(animation, forKey: "speedFactor")
+                        leftAnimation.fromValue = 1.2 as NSNumber
+                        leftAnimation.toValue = 0.85 as NSNumber
+                        leftAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                        leftAnimation.duration = 0.5
+                        leftParticleSystem.pop_add(leftAnimation, forKey: "speedFactor")
+                        
+                        let rightAnimation = POPBasicAnimation()
+                        rightAnimation.property = (POPAnimatableProperty.property(withName: "speedFactor", initializer: { property in
+                            property?.readBlock = { particleSystem, values in
+                                values?.pointee = (particleSystem as! SCNParticleSystem).speedFactor
+                            }
+                            property?.writeBlock = { particleSystem, values in
+                                (particleSystem as! SCNParticleSystem).speedFactor = values!.pointee
+                            }
+                            property?.threshold = 0.01
+                        }) as! POPAnimatableProperty)
+                        rightAnimation.fromValue = 1.2 as NSNumber
+                        rightAnimation.toValue = 0.85 as NSNumber
+                        rightAnimation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
+                        rightAnimation.duration = 0.5
+                        rightParticleSystem.pop_add(rightAnimation, forKey: "speedFactor")
                     }
                 }
             }

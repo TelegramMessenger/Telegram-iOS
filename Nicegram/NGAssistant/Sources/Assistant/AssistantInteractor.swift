@@ -9,7 +9,7 @@ typealias AssistantInteractorInput = AssistantViewControllerOutput
 
 protocol AssistantInteractorOutput {
     func onViewDidAppear()
-    func handleAuth(isAuthorized: Bool, isAnimated: Bool)
+    func handleUser(_: EsimUser?, animated: Bool)
     func handleLoading(isLoading: Bool)
     func handleViewDidLoad() 
     func handleLogout()
@@ -50,8 +50,7 @@ class AssistantInteractor: AssistantInteractorInput {
     }
     
     func handleAuth(isAnimated: Bool) {
-        isAuthorized = esimAuth.isAuthorized
-        output.handleAuth(isAuthorized: isAuthorized, isAnimated: isAnimated)
+        handleUser(esimAuth.currentUser, animated: isAnimated)
     }
     
     func handleDismiss() {
@@ -104,6 +103,11 @@ class AssistantInteractor: AssistantInteractorInput {
 }
 
 private extension AssistantInteractor {
+    func handleUser(_ user: EsimUser?, animated: Bool) {
+        isAuthorized = (user != nil)
+        output.handleUser(user, animated: animated)
+    }
+    
     func trySignInWithTelegram() {
         output.handleLoading(isLoading: true)
         esimAuth.trySignInWithTelegram { [weak self] result in

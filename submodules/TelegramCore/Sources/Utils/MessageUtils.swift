@@ -327,6 +327,17 @@ public extension Message {
         }
         return nil
     }
+    var effectiveReactions: [MessageReaction]? {
+        if !self.hasReactions {
+            return nil
+        }
+        
+        if let result = mergedMessageReactions(attributes: self.attributes) {
+            return result.reactions
+        } else {
+            return nil
+        }
+    }
     var hasReactions: Bool {
         for attribute in self.attributes {
             if let attribute = attribute as? ReactionsMessageAttribute {
@@ -335,7 +346,7 @@ public extension Message {
         }
         for attribute in self.attributes {
             if let attribute = attribute as? PendingReactionsMessageAttribute {
-                return attribute.value != nil
+                return !attribute.reactions.isEmpty
             }
         }
         return false

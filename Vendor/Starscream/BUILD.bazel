@@ -1,0 +1,232 @@
+load('@build_bazel_rules_swift//swift:swift.bzl', 'swift_library')
+load(
+  "//Vendor/rules_pods/BazelExtensions:extensions.bzl",
+  "acknowledged_target",
+  "gen_module_map",
+  "gen_includes",
+  "headermap",
+  "umbrella_header"
+)
+# Add a config setting release for compilation mode
+# Assume that people are using `opt` for release mode
+# see the bazel user manual for more information
+# https://docs.bazel.build/versions/master/be/general.html#config_setting
+config_setting(
+  name = "release",
+  values = {
+    "compilation_mode": "opt"
+  }
+)
+config_setting(
+  name = "osxCase",
+  values = {
+    "apple_platform_type": "macos"
+  }
+)
+config_setting(
+  name = "tvosCase",
+  values = {
+    "apple_platform_type": "tvos"
+  }
+)
+config_setting(
+  name = "watchosCase",
+  values = {
+    "apple_platform_type": "watchos"
+  }
+)
+filegroup(
+  name = "Starscream_package_hdrs",
+  srcs = [
+    "Starscream_direct_hdrs"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+swift_library(
+  name = "Starscream_swift",
+  module_name = "Starscream",
+  srcs = glob(
+    [
+      "Sources/**/*.swift"
+    ]
+  ),
+  deps = [
+    ":Starscream_hmap",
+    ":Starscream_module_map",
+    ":Starscream_umbrella_header"
+  ],
+  data = [],
+  copts = select(
+    {
+      "//conditions:default": [
+        "-enable-testing",
+        "-DDEBUG",
+        "-Xcc",
+        "-DPOD_CONFIGURATION_DEBUG=1",
+        "-Xcc",
+        "-DDEBUG=1"
+      ],
+      ":release": [
+        "-Xcc",
+        "-DPOD_CONFIGURATION_RELEASE=1"
+      ]
+    }
+  ) + [
+    "-DCOCOAPODS",
+    "-Xcc",
+    "-DCOCOAPODS=1",
+    "-Xcc",
+    "-I$(execpath Starscream_hmap)",
+    "-Xcc",
+    "-I.",
+    "-Xcc",
+    "-D__SWIFTC__",
+    "-Xfrontend",
+    "-no-clang-module-breadcrumbs",
+    "-Xcc",
+    "-fmodule-map-file=$(execpath Starscream_module_map)",
+    "-import-underlying-module"
+  ],
+  swiftc_inputs = [
+    ":Starscream_hmap",
+    ":Starscream_module_map",
+    ":Starscream_umbrella_header"
+  ],
+  generated_header_name = "Starscream-Swift.h",
+  generates_header = True,
+  features = [
+    "swift.no_generated_module_map"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "Starscream_direct_hdrs",
+  srcs = glob(
+    [
+      "pod_support/Headers/Public/**/*"
+    ]
+  ),
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "Starscream_public_hdrs",
+  srcs = [],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "Starscream_hdrs",
+  srcs = glob(
+    [
+      "pod_support/Headers/Public/**/*"
+    ]
+  ),
+  visibility = [
+    "//visibility:public"
+  ]
+)
+headermap(
+  name = "Starscream_hmap",
+  namespace = "Starscream",
+  hdrs = [
+    "Starscream_package_hdrs",
+    ":Starscream_hdrs"
+  ],
+  deps = [],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+objc_library(
+  name = "Starscream",
+  enable_modules = 1,
+  module_map = ":Starscream_extended_module_map",
+  hdrs = [
+    ":Starscream_hdrs",
+    ":Starscream_hmap"
+  ],
+  pch = "pod_support/Headers/Private/Starscream-prefix.pch",
+  deps = [
+    ":Starscream_swift",
+    ":Starscream_hmap",
+    ":Starscream_extended_module_map"
+  ],
+  copts = [
+    "-I$(GENDIR)/Vendor/Starscream/",
+    "-fobjc-weak",
+    "-Wno-everything",
+    "-Wnon-modular-include-in-framework-module",
+    "-g",
+    "-stdlib=libc++",
+    "-DCOCOAPODS=1",
+    "-DOBJC_OLD_DISPATCH_PROTOTYPES=0",
+    "-fdiagnostics-show-note-include-stack",
+    "-fno-common",
+    "-fembed-bitcode-marker",
+    "-fmessage-length=0",
+    "-fpascal-strings",
+    "-fstrict-aliasing",
+    "-Wno-error=nonportable-include-path"
+  ] + select(
+    {
+      "//conditions:default": [
+        "-DDEBUG=1",
+        "-DPOD_CONFIGURATION_DEBUG=1"
+      ],
+      ":release": [
+        "-DPOD_CONFIGURATION_RELEASE=1",
+        "-DNS_BLOCK_ASSERTIONS=1"
+      ]
+    }
+  ) + [
+    "-I$(GENDIR)/Vendor/Starscream/Starscream_hmap.hmap",
+    "-I."
+  ] + [
+    "-fmodule-name=Starscream",
+    "-fmodules"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+acknowledged_target(
+  name = "Starscream_acknowledgement",
+  deps = [],
+  value = "//Vendor/Starscream/pod_support_buildable:acknowledgement_fragment"
+)
+gen_module_map(
+  name = "Starscream_module_map",
+  module_name = "Starscream",
+  hdrs = [
+    "Starscream_public_hdrs"
+  ],
+  module_map_name = "Starscream.modulemap",
+  umbrella_hdr = "Starscream_umbrella_header",
+  visibility = [
+    "//visibility:public"
+  ]
+)
+umbrella_header(
+  name = "Starscream_umbrella_header",
+  hdrs = [
+    "Starscream_public_hdrs"
+  ]
+)
+gen_module_map(
+  name = "Starscream_extended_module_map",
+  module_name = "Starscream",
+  hdrs = [
+    "Starscream_public_hdrs"
+  ],
+  swift_hdr = "../Starscream-Swift.h",
+  visibility = [
+    "//visibility:public"
+  ]
+)

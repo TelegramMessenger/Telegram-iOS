@@ -8,6 +8,26 @@ public let maximumNumberOfAccounts = 100
 public let maximumPremiumNumberOfAccounts = 100
 
 public func activeAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> {
+    // MARK: Nicegram DB Changes
+    let hiddenIds = context.sharedContext.accountManager.accountRecords()
+    |> map { view -> [AccountRecordId] in
+        return view.records.filter({ $0.attributes.contains(where: { $0.isHiddenAccountAttribute }) }).map { $0.id }
+    }
+    |> distinctUntilChanged(isEqual: ==)
+    return combineLatest(privatActiveAccountsAndPeers(context: context, includePrimary: includePrimary), hiddenIds) |> map { accountsAndPeers, hiddenIds in
+        let isDoubleBottom = hiddenIds.contains { record in
+            record == context.account.id
+        }
+        
+        if isDoubleBottom && UserDefaults.standard.bool(forKey: "inDoubleBottom") {
+            return (accountsAndPeers.0, accountsAndPeers.1.filter { hiddenIds.contains($0.0.account.id) })
+        } else {
+            return (accountsAndPeers.0, accountsAndPeers.1)
+        }
+    }
+}
+
+private func privatActiveAccountsAndPeers(context: AccountContext, includePrimary: Bool = false) -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> {
     let sharedContext = context.sharedContext
     return context.sharedContext.activeAccountContexts
     |> mapToSignal { primary, activeAccounts, _ -> Signal<((AccountContext, EnginePeer)?, [(AccountContext, EnginePeer, Int32)]), NoError> in

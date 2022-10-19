@@ -2,7 +2,12 @@
 
 #import <MtProtoKit/MTInternalId.h>
 
+#import <libkern/OSAtomic.h>
+
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 MTInternalIdClass(MTMessageTransaction)
+#pragma clang diagnostic pop
 
 @implementation MTMessageTransaction
 

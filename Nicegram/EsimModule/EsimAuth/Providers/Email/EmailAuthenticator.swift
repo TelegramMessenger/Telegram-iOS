@@ -116,7 +116,7 @@ public final class EmailAuthenticator {
         case "ERROR_EMAIL_ALREADY_IN_USE":
             localizationKey = "Auth.ErrorAlreadyInUse"
         default:
-            localizationKey = "Nicegram.Alert.BaseError"
+            return MessageError.defaultError
         }
         
         return MessageError(message: NSLocalizedString(localizationKey, comment: ""))

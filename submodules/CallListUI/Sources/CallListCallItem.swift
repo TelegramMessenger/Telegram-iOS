@@ -649,7 +649,6 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
                                     iconNode.isLayerBacked = true
                                     iconNode.displaysAsynchronously = false
                                     iconNode.displayWithoutProcessing = true
-                                    strongSelf.containerNode.addSubnode(iconNode)
                                     strongSelf.credibilityIconNode = iconNode
                                 }
                                 iconNode.image = currentCredibilityIconImage
@@ -780,7 +779,7 @@ class CallListCallItemNode: ItemListRevealOptionsItemNode {
             transition.updateFrameAdditive(node: self.dateNode, frame: CGRect(origin: CGPoint(x: editingOffset + revealOffset + self.bounds.size.width - dateRightInset - self.dateNode.bounds.size.width, y: self.dateNode.frame.minY), size: self.dateNode.bounds.size))
             
             transition.updateFrameAdditive(node: self.typeIconNode, frame: CGRect(origin: CGPoint(x: revealOffset + leftInset - 81.0, y: self.typeIconNode.frame.minY), size: self.typeIconNode.bounds.size))
-            
+                        
             transition.updateFrameAdditive(node: self.infoButtonNode, frame: CGRect(origin: CGPoint(x: revealOffset + self.bounds.size.width - infoIconRightInset - self.infoButtonNode.bounds.width, y: self.infoButtonNode.frame.minY), size: self.infoButtonNode.bounds.size))
         }
     }

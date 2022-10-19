@@ -34,7 +34,6 @@ public class EsimFirebaseAuthenticator {
     }
 
     public func signIn(with provider: FirebaseAuthProvider, referrerId: Int?, completion: ((Result<EsimUser, EsimAuthError>) -> ())?) {
-        try? Auth.auth().signOut()
         provider.signIn { [weak self] result in
             guard let self = self else { return }
             

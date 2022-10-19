@@ -611,9 +611,11 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages:
+        // MARK: Nicegram NobodyGroupInvitation, add .groupInvitations
+        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages, .groupInvitations:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations, .profilePhoto:
+        // MARK: Nicegram NobodyGroupInvitation, remove .groupInvitations
+        case .profilePhoto:
             break
     }
     let phoneLink = "https://t.me/+\(phoneNumber)"

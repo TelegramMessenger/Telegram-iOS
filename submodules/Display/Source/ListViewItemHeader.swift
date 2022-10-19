@@ -141,4 +141,17 @@ open class ListViewItemHeaderNode: ASDisplayNode {
     
     open func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
     }
+    
+    open func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    }
+    
+    public func updateFrame(_ frame: CGRect, within containerSize: CGSize, updateFrame: Bool = true) {
+        if updateFrame {
+            self.frame = frame
+        }
+        if frame.maxY < 0.0 || frame.minY > containerSize.height {
+        } else {
+            self.updateAbsoluteRect(frame, within: containerSize)
+        }
+    }
 }

@@ -12,6 +12,7 @@ import TelegramUniversalVideoContent
 import UniversalMediaPlayer
 import GalleryUI
 import HierarchyTrackingLayer
+import WallpaperBackgroundNode
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
@@ -30,13 +31,15 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     
     let id: ListViewItemNode.HeaderId
     let presentationData: ChatPresentationData
+    let controllerInteraction: ChatControllerInteraction?
     let context: AccountContext
     let action: ((Int32, Bool) -> Void)?
     
-    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    init(timestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.timestamp = timestamp
         self.scheduled = scheduled
         self.presentationData = presentationData
+        self.controllerInteraction = controllerInteraction
         self.context = context
         self.action = action
         self.roundedTimestamp = dateHeaderTimestampId(timestamp: timestamp)
@@ -57,7 +60,7 @@ final class ChatMessageDateHeader: ListViewItemHeader {
     }
     
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, context: self.context, action: self.action)
+        return ChatMessageDateHeaderNode(localTimestamp: self.roundedTimestamp, scheduled: self.scheduled, presentationData: self.presentationData, controllerInteraction: self.controllerInteraction, context: self.context, action: self.action)
     }
     
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
@@ -115,8 +118,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     let stickBackgroundNode: ASImageNode
     let activateArea: AccessibilityAreaNode
     
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
     private let localTimestamp: Int32
     private var presentationData: ChatPresentationData
+    private let controllerInteraction: ChatControllerInteraction?
     private let context: AccountContext
     private let text: String
     
@@ -124,8 +130,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
     private var stickDistanceFactor: CGFloat = 0.0
     private var action: ((Int32, Bool) -> Void)? = nil
     
-    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
+    private var absolutePosition: (CGRect, CGSize)?
+    
+    init(localTimestamp: Int32, scheduled: Bool, presentationData: ChatPresentationData, controllerInteraction: ChatControllerInteraction?, context: AccountContext, action: ((Int32, Bool) -> Void)? = nil) {
         self.presentationData = presentationData
+        self.controllerInteraction = controllerInteraction
         self.context = context
         
         self.localTimestamp = localTimestamp
@@ -135,6 +144,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.labelNode.isUserInteractionEnabled = false
         self.labelNode.displaysAsynchronously = !presentationData.isPreview
         
+        if controllerInteraction?.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true, let backgroundContent = controllerInteraction?.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
+            backgroundContent.clipsToBounds = true
+            self.backgroundContent = backgroundContent
+        }
+                
         self.backgroundNode = NavigationBackgroundNode(color: .clear)
         self.backgroundNode.isUserInteractionEnabled = false
         
@@ -188,7 +202,11 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.stickBackgroundNode.image = graphics.dateFloatingBackground
         self.stickBackgroundNode.alpha = 0.0
 
-        self.addSubnode(self.backgroundNode)
+        if let backgroundContent = self.backgroundContent {
+            self.addSubnode(backgroundContent)
+        } else {
+            self.addSubnode(self.backgroundNode)
+        }
         self.addSubnode(self.labelNode)
         
         self.addSubnode(self.activateArea)
@@ -239,6 +257,16 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.backgroundNode.updateColor(color: color, enableBlur: enableBlur, transition: .immediate)
     }
     
+    override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += containerSize.height - rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+        }
+    }
+    
     override func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat) {
         let chatDateSize: CGFloat = 20.0
         let chatDateInset: CGFloat = 6.0
@@ -253,6 +281,20 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         self.labelNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.origin.x + chatDateInset, y: backgroundFrame.origin.y + floorToScreenPixels((backgroundSize.height - labelSize.height) / 2.0)), size: labelSize)
         
         self.activateArea.frame = backgroundFrame
+        
+        if let backgroundContent = self.backgroundContent {
+            backgroundContent.allowsGroupOpacity = true
+            self.backgroundNode.isHidden = true
+            backgroundContent.frame = self.backgroundNode.frame
+            backgroundContent.cornerRadius = backgroundFrame.size.height / 2.0
+            
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += containerSize.height - rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+            }
+        }
     }
     
     override func updateStickDistanceFactor(_ factor: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -285,10 +327,12 @@ final class ChatMessageDateHeaderNode: ListViewItemHeaderNode {
         let previousAlpha = self.backgroundNode.alpha
         
         if !previousAlpha.isEqual(to: alpha) {
+            self.backgroundContent?.alpha = alpha
             self.backgroundNode.alpha = alpha
             self.labelNode.alpha = alpha
             if animated {
                 let duration: Double = flashing ? 0.3 : 0.4
+                self.backgroundContent?.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
                 self.backgroundNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
                 self.labelNode.layer.animateAlpha(from: previousAlpha, to: alpha, duration: duration)
             }
@@ -395,7 +439,6 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let containerNode: ContextControllerSourceNode
     private let avatarNode: AvatarNode
     private var videoNode: UniversalVideoNode?
-    private var credibilityIconNode: ASImageNode?
     
     private var videoContent: NativeVideoContent?
     private let playbackStartDisposable = MetaDisposable()
@@ -520,22 +563,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     let _ = context.engine.peers.fetchAndUpdateCachedPeerData(peerId: peer.id).start()
                 }
             }))
-            
-            let credibilityIconNode: ASImageNode
-            if let current = self.credibilityIconNode {
-                credibilityIconNode = current
-            } else {
-                credibilityIconNode = ASImageNode()
-                credibilityIconNode.displaysAsynchronously = false
-                credibilityIconNode.displayWithoutProcessing = true
-                credibilityIconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerPremiumIcon"), color: .white)
-                self.containerNode.addSubnode(credibilityIconNode)
-            }
-            credibilityIconNode.frame = CGRect(origin: CGPoint(x: 29.0 - UIScreenPixel, y: 29.0 - UIScreenPixel), size: CGSize(width: 10.0, height: 10.0))
-        } else {
-            self.credibilityIconNode?.removeFromSupernode()
-            self.credibilityIconNode = nil
-            
+        } else {            
             self.cachedDataDisposable.set(nil)
             self.videoContent = nil
             
@@ -609,9 +637,9 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else {
                 if let channel = self.peer as? TelegramChannel, case .broadcast = channel.info {
-                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, nil)
+                    self.controllerInteraction.openPeer(self.peerId, .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false, nil)
                 } else {
-                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, nil)
+                    self.controllerInteraction.openPeer(self.peerId, .info, self.messageReference, false, nil)
                 }
             }
         }

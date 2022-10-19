@@ -55,14 +55,17 @@ public func getQuickReplies(query: String, context: AccountContext) -> [String] 
         quickRepliesRepository: quickRepliesrepository
     )
     
-    let replies = getUseCase.getQuickReplies().map { $0.text.normalized() }
+    let allReplies = getUseCase.getQuickReplies()
     let normalizedQuery = query.normalized()
     
+    let filteredReplies: [QuickReply]
     if normalizedQuery.isEmpty {
-        return replies
+        filteredReplies = allReplies
+    } else {
+        filteredReplies = allReplies.filter { $0.text.normalized().contains(normalizedQuery) }
     }
     
-    return replies.filter({ $0.contains(normalizedQuery) })
+    return filteredReplies.map(\.text)
 }
 
 private extension String {

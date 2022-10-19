@@ -11,3 +11,10 @@ public extension Locale {
         return appLocale
     }
 }
+
+public extension Locale {
+    var langCode: String {
+        let code = identifier.components(separatedBy: "-").dropLast().joined(separator: "-").lowercased()
+        return code.isEmpty ? identifier : code
+    }
+}

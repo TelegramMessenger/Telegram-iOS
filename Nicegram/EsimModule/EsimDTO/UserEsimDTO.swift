@@ -8,6 +8,7 @@ public struct UserEsimDTO: Decodable {
     public let lpaDisplay: String
     public let phoneNumber: String?
     public let title: String?
+    public let customTitle: String?
     public let regionId: Int
     public let isoName2: String
     public let balance: Double?

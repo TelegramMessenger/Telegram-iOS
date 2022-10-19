@@ -27,8 +27,11 @@ import NGEnv
 import NGWebUtils
 import NGAppCache
 import NGLoadingIndicator
+import NGDoubleBottom
 import NGQuickReplies
 import NGRemoteConfig
+import NGSecretMenu
+import NGStats
 
 fileprivate let LOGTAG = extractNameFromPath(#file)
 
@@ -55,6 +58,7 @@ private final class NicegramSettingsControllerArguments {
 // MARK: Sections
 
 private enum NicegramSettingsControllerSection: Int32 {
+    case SecretMenu
     case Unblock
     case Tabs
     case Folders
@@ -62,6 +66,7 @@ private enum NicegramSettingsControllerSection: Int32 {
     case Account
     case Other
     case QuickReplies
+    case ShareChannelsInfo
 }
 
 
@@ -103,6 +108,12 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
     case unblock(String, URL)
     
     case quickReplies(String)
+    
+    case secretMenu(String)
+    
+    case shareChannelsInfoToggle(String, Bool)
+    case shareChannelsInfoNote(String)
+    
 
     // MARK: Section
 
@@ -122,6 +133,10 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             return NicegramSettingsControllerSection.Unblock.rawValue
         case .Account, .restorePremium, .doubleBottom:
             return NicegramSettingsControllerSection.Account.rawValue
+        case .secretMenu:
+            return NicegramSettingsControllerSection.SecretMenu.rawValue
+        case .shareChannelsInfoToggle, .shareChannelsInfoNote:
+            return NicegramSettingsControllerSection.ShareChannelsInfo.rawValue
         }
     }
 
@@ -129,6 +144,9 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
 
     var stableId: Int32 {
         switch self {
+        case .secretMenu:
+            return 700
+            
         case .unblockHeader:
             return 800
             
@@ -188,6 +206,11 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             
         case let .easyToggle(index, _, _, _):
             return 5000 + Int32(index)
+            
+        case .shareChannelsInfoToggle:
+            return 6000
+        case .shareChannelsInfoNote:
+            return 6001
         }
     }
 
@@ -323,6 +346,24 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             }
         case let .quickReplies(lhsText):
             if case let .quickReplies(rhsText) = rhs, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .secretMenu(lhsText):
+            if case let .secretMenu(rhsText) = rhs, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
+        case let .shareChannelsInfoToggle(lhsText, lhsValue):
+            if case let .shareChannelsInfoToggle(rhsText, rhsValue) = rhs, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .shareChannelsInfoNote(lhsText):
+            if case let .shareChannelsInfoNote(rhsText) = rhs, lhsText == rhsText {
                 return true
             } else {
                 return false
@@ -508,12 +549,22 @@ private enum NicegramSettingsControllerEntry: ItemListNodeEntry {
             }
         case let .doubleBottom(text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .neutral, alignment: .natural, sectionId: section, style: .blocks) {
-//                arguments.pushController(doubleBottomListController(context: arguments.context, presentationData: arguments.context.sharedContext.currentPresentationData.with { $0 }, accountsContexts: arguments.accountsContexts))
+                arguments.pushController(doubleBottomListController(context: arguments.context, presentationData: arguments.context.sharedContext.currentPresentationData.with { $0 }, accountsContexts: arguments.accountsContexts))
             }
         case let .quickReplies(text):
             return ItemListActionItem(presentationData: presentationData, title: text, kind: .neutral, alignment: .natural, sectionId: section, style: .blocks) {
                 arguments.pushController(quickRepliesController(context: arguments.context))
             }
+        case let .secretMenu(text):
+            return ItemListActionItem(presentationData: presentationData, title: text, kind: .neutral, alignment: .natural, sectionId: section, style: .blocks) {
+                arguments.pushController(secretMenuController(context: arguments.context))
+            }
+        case let .shareChannelsInfoToggle(text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: true, sectionId: section, style: .blocks, updated: { value in
+                setShareChannelsInfo(enabled: value)
+            })
+        case let .shareChannelsInfoNote(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: section)
         }
     }
 }
@@ -524,6 +575,10 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     var entries: [NicegramSettingsControllerEntry] = []
 
     let locale = presentationData.strings.baseLanguageCode
+    
+    if canOpenSecretMenu(context: context) {
+        entries.append(.secretMenu("Secret Menu"))
+    }
     
     if !hideUnblock,
        let url = URL(string: "https://my.nicegram.app") {
@@ -584,9 +639,9 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     
     entries.append(.Account(l("NiceFeatures.Account.Header", locale)))
     entries.append(.restorePremium(l("TelegramPremium.Title", locale), "\(context.account.peerId.id._internalGetInt64Value())"))
-//    if !context.account.isHidden {
-//        entries.append(.doubleBottom(l("DoubleBottom.Title", locale)))
-//    }
+    if !context.account.isHidden || !VarSystemNGSettings.inDoubleBottom {
+        entries.append(.doubleBottom(l("DoubleBottom.Title", locale)))
+    }
     
     var toggleIndex: Int32 = 1
     // MARK: Other Toggles (Easy)
@@ -601,6 +656,9 @@ private func nicegramSettingsControllerEntries(presentationData: PresentationDat
     
     entries.append(.easyToggle(toggleIndex, .hideReactions, l("NicegramSettings.Other.hideReactions", locale), VarSystemNGSettings.hideReactions))
     toggleIndex += 1
+    
+    entries.append(.shareChannelsInfoToggle(l("NicegramSettings.ShareChannelsInfoToggle", locale), shouldShareChannelsInfo()))
+    entries.append(.shareChannelsInfoNote(l("NicegramSettings.ShareChannelsInfoToggle.Note", locale)))
     
     return entries
 }

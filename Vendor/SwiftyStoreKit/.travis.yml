@@ -1,0 +1,15 @@
+language: objective-c
+osx_image: xcode11.5
+
+before_install:
+  - gem install xcpretty
+# - rvm get stable
+
+install:
+  - ./scripts/install_swiftlint.sh
+  - bundle install --path vendor/bundle
+
+script:
+  - swiftlint
+  - ./scripts/build.sh
+  - bundle exec danger --verbose

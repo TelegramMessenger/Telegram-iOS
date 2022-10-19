@@ -83,6 +83,9 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
     private let queue = Queue()
     
     override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let buttonResult = self.buttonsContainer.hitTest(point.offsetBy(dx: -self.buttonsContainer.frame.minX, dy: -self.buttonsContainer.frame.minY), with: event) {
+            return buttonResult
+        }
         let containerResult = self.contentTextContainer.hitTest(point.offsetBy(dx: -self.contentTextContainer.frame.minX, dy: -self.contentTextContainer.frame.minY), with: event)
         if containerResult?.asyncdisplaykit_node === self.dustNode, self.dustNode?.isRevealed == false {
             return containerResult
@@ -848,7 +851,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .setupPoll:
                         break
                     case let .openUserProfile(peerId):
-                        controllerInteraction.openPeer(peerId, .info, nil, nil)
+                        controllerInteraction.openPeer(peerId, .info, nil, false, nil)
                     case let .openWebView(url, simple):
                         controllerInteraction.openWebView(button.title, url, simple, false)
                     }

@@ -1,0 +1,44 @@
+PODS:
+  - BaseAPI (0.2.0)
+  - CrowdinSDK (1.4.1):
+    - CrowdinSDK/Core (= 1.4.1)
+    - CrowdinSDK/CrowdinProvider (= 1.4.1)
+  - CrowdinSDK/Core (1.4.1)
+  - CrowdinSDK/Core_Tests (1.4.1)
+  - CrowdinSDK/CrowdinAPI (1.4.1):
+    - BaseAPI (~> 0.2.0)
+    - CrowdinSDK/Core
+  - CrowdinSDK/CrowdinAPI_Tests (1.4.1)
+  - CrowdinSDK/CrowdinProvider (1.4.1):
+    - CrowdinSDK/Core
+    - CrowdinSDK/CrowdinAPI
+  - CrowdinSDK/CrowdinProvider_Tests (1.4.1)
+  - CrowdinSDK/LoginFeature (1.4.1):
+    - BaseAPI (~> 0.2.0)
+    - CrowdinSDK/Core
+    - CrowdinSDK/CrowdinAPI
+    - CrowdinSDK/CrowdinProvider
+
+DEPENDENCIES:
+  - CrowdinSDK (from `../`)
+  - CrowdinSDK/Core_Tests (from `../`)
+  - CrowdinSDK/CrowdinAPI_Tests (from `../`)
+  - CrowdinSDK/CrowdinProvider (from `../`)
+  - CrowdinSDK/CrowdinProvider_Tests (from `../`)
+  - CrowdinSDK/LoginFeature (from `../`)
+
+SPEC REPOS:
+  trunk:
+    - BaseAPI
+
+EXTERNAL SOURCES:
+  CrowdinSDK:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  BaseAPI: 4f0d1ef6d80428f75d54fdc716f6f02103c04eb1
+  CrowdinSDK: 00c53864cb2f3e3f9e09ef82704361a4d6e85ae4
+
+PODFILE CHECKSUM: fceddbe439fbdf6f01a1c0846d9a124b7a7e4b56
+
+COCOAPODS: 1.11.2

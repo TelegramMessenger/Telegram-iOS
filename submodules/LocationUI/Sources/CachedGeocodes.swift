@@ -57,7 +57,7 @@ public func geocodeAddress(engine: TelegramEngine, address: DeviceContactAddress
         if let cached = cached {
             return .single((cached.latitude, cached.longitude))
         } else {
-            return geocodeLocation(dictionary: address.dictionary)
+            return geocodeLocation(address: address.asPostalAddress)
             |> mapToSignal { coordinate in
                 if let (latitude, longitude) = coordinate  {
                     return updateCachedGeocode(engine: engine, address: address, latitude: latitude, longitude: longitude)

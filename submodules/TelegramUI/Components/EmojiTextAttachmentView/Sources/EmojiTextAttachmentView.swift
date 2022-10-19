@@ -83,7 +83,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     private let emoji: ChatTextInputTextCustomEmojiAttribute
     private let cache: AnimationCache
     private let renderer: MultiAnimationRenderer
+    private let unique: Bool
     private let placeholderColor: UIColor
+    private let loopCount: Int?
     
     private let pointSize: CGSize
     private let pixelSize: CGSize
@@ -96,6 +98,16 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     private var fetchDisposable: Disposable?
     private var loadDisposable: Disposable?
     
+    public var contentTintColor: UIColor? {
+        didSet {
+            if self.contentTintColor != oldValue {
+                self.updateTintColor()
+            }
+        }
+    }
+    
+    private var currentLoopCount: Int = 0
+    
     private var isInHierarchyValue: Bool = false
     public var isVisibleForAnimations: Bool = false {
         didSet {
@@ -105,12 +117,14 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
-    public init(context: AccountContext, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
+    public init(context: AccountContext, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, unique: Bool = false, placeholderColor: UIColor, pointSize: CGSize, loopCount: Int? = nil) {
         self.context = context
         self.emoji = emoji
         self.cache = cache
         self.renderer = renderer
+        self.unique = unique
         self.placeholderColor = placeholderColor
+        self.loopCount = loopCount
         
         let scale = min(2.0, UIScreenScale)
         self.pointSize = pointSize
@@ -159,10 +173,28 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         return nullAction
     }
     
+    private func updateTintColor() {
+        if !self.isDisplayingPlaceholder {
+            self.layerTintColor = self.contentTintColor?.cgColor
+        } else {
+            self.layerTintColor = nil
+        }
+    }
+    
     private func updatePlayback() {
-        let shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
+        var shouldBePlaying = self.isInHierarchyValue && self.isVisibleForAnimations
         
-        self.shouldBeAnimating = shouldBePlaying
+        if shouldBePlaying, let loopCount = self.loopCount, self.currentLoopCount >= loopCount {
+            shouldBePlaying = false
+        }
+        
+        if self.shouldBeAnimating != shouldBePlaying {
+            self.shouldBeAnimating = shouldBePlaying
+            
+            if !shouldBePlaying {
+                self.currentLoopCount = 0
+            }
+        }
     }
     
     private func updateFile(file: TelegramMediaFile, attemptSynchronousLoad: Bool) {
@@ -177,7 +209,10 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                 if let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: self.pointSize, imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: self.placeholderColor) {
                     self.contents = image.cgImage
                     self.isDisplayingPlaceholder = true
+                    self.updateTintColor()
                 }
+            } else {
+                self.updateTintColor()
             }
             
             self.loadAnimation()
@@ -197,6 +232,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                             if let image = image {
                                 strongSelf.contents = image.cgImage
                                 strongSelf.isDisplayingPlaceholder = true
+                                strongSelf.updateTintColor()
                             }
                             
                             if isFinal {
@@ -224,9 +260,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         if file.isAnimatedSticker || file.isVideoEmoji {
             let keyframeOnly = self.pixelSize.width >= 120.0
             
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly))
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly))
         } else {
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: { options in
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: { options in
                 let dataDisposable = context.account.postbox.mediaBox.resourceData(file.resource).start(next: { result in
                     guard result.complete else {
                         return
@@ -250,11 +286,13 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             return
         }
         self.isDisplayingPlaceholder = displayPlaceholder
+        self.updateTintColor()
     }
     
-    override public func transitionToContents(_ contents: AnyObject) {
+    override public func transitionToContents(_ contents: AnyObject, didLoop: Bool) {
         if self.isDisplayingPlaceholder {
             self.isDisplayingPlaceholder = false
+            self.updateTintColor()
             
             if let current = self.contents {
                 let previousLayer = SimpleLayer()
@@ -274,6 +312,13 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             }
         } else {
             self.contents = contents
+        }
+        
+        if didLoop {
+            self.currentLoopCount += 1
+            if let loopCount = self.loopCount, self.currentLoopCount >= loopCount {
+                self.updatePlayback()
+            }
         }
     }
 }

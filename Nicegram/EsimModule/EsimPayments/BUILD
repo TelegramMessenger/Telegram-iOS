@@ -8,6 +8,7 @@ swift_library(
     ]),
     deps = [
 		"//third-party/EcommpaySDK:ecommpaySDK",
+		"//Nicegram/EsimModule/EsimModels:EsimModels",
     ],
     visibility = ["//visibility:public"],
 )

@@ -1,3 +1,7 @@
+// MARK: Nicegram SaveAvatar
+import ShareController
+import UndoUI
+//
 import Foundation
 import UIKit
 import AsyncDisplayKit
@@ -157,7 +161,6 @@ public enum PeerInfoAvatarListItem: Equatable {
                 return representations
         }
     }
-    
     
     var videoRepresentations: [VideoRepresentationWithReference] {
         switch self {
@@ -531,6 +534,12 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let activeStripImage: UIImage
     private var appliedStripNodeCurrentIndex: Int?
     var currentIndex: Int = 0
+    // MARK: Nicegram SaveAvatar
+    private var currentItem: PeerInfoAvatarListItem? {
+        return items.indices.contains(currentIndex) ? items[currentIndex] : nil
+    }
+    public var presentController: ((ViewController) -> Void)?
+    //
     private var transitionFraction: CGFloat = 0.0
     
     private var validLayout: CGSize?
@@ -766,6 +775,39 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             return strongSelf.currentIndex != 0
         }
         self.view.addGestureRecognizer(UIPanGestureRecognizer(target: self, action: #selector(self.panGesture(_:))))
+        
+        // MARK: Nicegram SaveAvatar, copied from PeerAvatarImageGalleryItemNode
+        let avatarListLongTapGesture = ContextGesture()
+        avatarListLongTapGesture.activated = { [weak self] _, _ in
+            guard let self = self,
+                  let item = self.currentItem else { return }
+            
+            let presentationData = self.context.sharedContext.currentPresentationData.with{$0}
+            
+            let representations = item.representations
+            let videoRepresentations = item.videoRepresentations
+            
+            let subject: ShareControllerSubject
+            var actionCompletionText: String?
+            if let video = videoRepresentations.last, let peer = self.peer, let peerReference = PeerReference(peer) {
+                let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
+                subject = .media(videoFileReference.abstract)
+                actionCompletionText = presentationData.strings.Gallery_VideoSaved
+            } else {
+                subject = .image(representations)
+                actionCompletionText = presentationData.strings.Gallery_ImageSaved
+            }
+            let shareController = ShareController(context: self.context, subject: subject, preferredAction: .saveToCameraRoll)
+            shareController.actionCompleted = { [weak self] in
+                if let self = self, let actionCompletionText = actionCompletionText {
+                    let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                    self.presentController?(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }))
+                }
+            }
+            self.presentController?(shareController)
+        }
+        self.view.addGestureRecognizer(avatarListLongTapGesture)
+        //
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
         recognizer.tapActionAtPoint = { _ in

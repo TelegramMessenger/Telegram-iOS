@@ -3,7 +3,9 @@ import AccountContext
 import Display
 import NGExtensions
 import NGModels
+import NGOnboarding
 import NGSubscription
+import TelegramPresentationData
 
 class NGDeeplinkHandler {
     
@@ -60,6 +62,8 @@ class NGDeeplinkHandler {
             return handleAssistant(url: url)
         case "getEsim":
             return handlePurchaseEsim(url: url)
+        case "onboarding":
+            return handleOnboarding(url: url)
         default:
             return false
         }
@@ -67,11 +71,11 @@ class NGDeeplinkHandler {
 }
 
 //  MARK: - Child Handlers
-// TODO: Extract each handler to separate class
+// TODO: Nicegram Extract each handler to separate class
 
 private extension NGDeeplinkHandler {
     func handleNicegramPremium(url: URL) -> Bool {
-        let presentationData = tgAccountContext.sharedContext.currentPresentationData.with({ $0 })
+        let presentationData = getCurrentPresentationData()
         
         let c = SubscriptionBuilderImpl(presentationData: presentationData).build()
         c.modalPresentationStyle = .fullScreen
@@ -98,16 +102,39 @@ private extension NGDeeplinkHandler {
         
         return true
     }
+    
+    func handleOnboarding(url: URL) -> Bool {
+        let presentationData = getCurrentPresentationData()
+        
+        var dismissImpl: (() -> Void)?
+        
+        let c = onboardingController(languageCode: presentationData.strings.baseLanguageCode) {
+            dismissImpl?()
+        }
+        c.modalPresentationStyle = .fullScreen
+        
+        dismissImpl = { [weak c] in
+            c?.presentingViewController?.dismiss(animated: true)
+        }
+        
+        navigationController?.topViewController?.present(c, animated: true)
+        
+        return true
+    }
 }
 
 //  MARK: - Helpers
 
 private extension NGDeeplinkHandler {
-    private func showNicegramAssistant(deeplink: Deeplink) {
+    func showNicegramAssistant(deeplink: Deeplink) {
         guard let rootController = navigationController as? TelegramRootController else { return }
         rootController.openChatsController(activateSearch: false)
         rootController.popToRoot(animated: true)
         rootController.chatListController?.showNicegramAssistant(deeplink: deeplink)
+    }
+    
+    func getCurrentPresentationData() -> PresentationData {
+        return tgAccountContext.sharedContext.currentPresentationData.with({ $0 })
     }
 }
 

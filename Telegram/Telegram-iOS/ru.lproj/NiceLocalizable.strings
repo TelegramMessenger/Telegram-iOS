@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "ВИДЕОСООБЩЕНИЯ";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Запись сразу с задней камеры";
 
+"NiceFeatures.InstantLock" = "Немедленно";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Сохранить в Избранное";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "На язык";
 "Messages.ToLanguage.WithCode" = "На язык: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "Нам не удалось определить язык, на который вы хотите перевести текст. Выберите его вручную и повторите попытку.";
+"Messages.ReplyPrivately" = "Ответить конфиденциально";
+"Messages.DeleteAllSystemMessages" = "Удалить все";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Узнать дату регистрации";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "Руководство по разблокировке";
 "NicegramSettings.Other.hideReactions" = "Скрыть реакции";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Скачивать видео в галерею";
-"Premium.OnetapTranslate.LowPower" = "Распознавание в режиме энергосбережения";
-"Premium.OnetapTranslate.LowPower.Notice" = "Приложение определяет язык для каждого сообщения на Вашем устройстве. Поскольку это высокопроизводительная задача, время работы аккумулятора может уменьшиться.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Игнорировать языки";
+"NicegramSettings.ShareChannelsInfoToggle" = "Поделиться информацией канала";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Внесите свой вклад в самую полную Википедию каналов и групп Telegram, автоматически отправляя информацию о каналах и ссылки в нашу базу данных. Мы не связываем ваш телеграм-профиль и канал, а также никому не передаем ваши личные данные.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "Приложение определяет язык для каждого сообщения на Вашем устройстве. Поскольку это высокопроизводительная задача, время работы аккумулятора может уменьшиться.";
 "Premium.rememberFolderOnExit" = "Запомнить текущую папку при выходе";
 
 /*Registration Date*/
@@ -188,16 +194,31 @@
 "DoubleBottom.Enabled.Title" = "Двойное дно включено";
 "DoubleBottom.Enabled.Description" = "Пожалуйста, запомните код доступа, который вы только что установили, и перезапустите приложение, чтобы «Двойное дно» работало правильно";
 "DoubleBottom.Enabled.OK" = "Ок";
+"DoubleBottom.Passcode.Error" = "Установите другой код доступа, отличающийся от того, который Вы используете для Блокировки кодом доступа.";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**Премиум-функции**";
 
 "NicePremium.Translator" = "Встроенный переводчик";
-"NicePremium.Translator.Desc" = "Мгновенно переводите любое сообщение в приложении, не переключаясь на переводчики";
+"NicePremium.Translator.Desc" = "Мгновенно переводите любые сообщения прямо в приложении";
 
-"NicePremium.SpeechToText.Desc" = "Расшифруйте любое голосовое сообщение за считанные секунды и сэкономьте кучу времени";
+"NicePremium.SpeechToText.Desc" = "Переводите любые голосовые сообщения в текст за считанные секунды";
 
 "NicePremium.MentionAll" = "@MentionAll";
-"NicePremium.MentionAll.Desc" = "Быстро проинформировать всех членов группы и убедится, что все прочитают ваше сообщение";
+"NicePremium.MentionAll.Desc" = "Используйте возможность упомянуть всех участников группы в одно касание";
 
 "NicePremium.Renews" = "Подписка продлевается автоматически";
+"NicePremium.PricePerMonth" = "Подпишитесь за %@ в месяц";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Продолжить";
+"NicegramOnboarding.1.Title" = "Клиент №1 для мессенджера Telegram";
+"NicegramOnboarding.1.Desc" = "Присоединяйтесь к более чем 2 миллионам пользователей Nicegram и получите доступ к самому мощному и безопасному клиенту Telegram для бизнеса.";
+"NicegramOnboarding.2.Title" = "Улучшенный обмен сообщениями";
+"NicegramOnboarding.2.Desc" = "Ускорьте общение благодаря таким уникальным функциям, как встроенный переводчик, перевод речи в текст, пересылка сообщений без указания автора и быстрое сохранение в избранное.";
+"NicegramOnboarding.3.Title" = "Расширенные профили пользователей";
+"NicegramOnboarding.3.Desc" = "Создавайте сколько угодно аккаунтов Telegram совершенно бесплатно, а также просматривайте расширенные профили пользователей с идентификаторами, датами регистрации и интерактивными ссылками.";
+"NicegramOnboarding.4.Title" = "Уникальные бизнес-расширения";
+"NicegramOnboarding.4.Desc" = "Воспользуйтесь инновациями от команды Nicegram и получите eSIM с доступом в интернет в 133 странах. Вы также можете зарегистрировать новые аккаунты Telegram на номер телефона тарифного плана eSIM.";
+"NicegramOnboarding.5.Title" = "Самый безопасный мессенджер";
+"NicegramOnboarding.5.Desc" = "Безопасный мессенджер с надежным шифрованием, групповыми аудио- и видеозвонками, общедоступными каналами, группами и ботами, неограниченным облачным хранилищем для чатов, а также возможностью обмена медиафайлами и документами.";

@@ -233,7 +233,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                             }
                         }))
                     ])
-                    return ContextController.Items(content: .list(items))
+                    return ContextController.Items(content: .list(items), animationCache: nil)
                 }
                 let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ShareContextReferenceContentSource(sourceNode: node, customPosition: CGPoint(x: 0.0, y: -116.0))), items: items, gesture: gesture)
                 contextController.immediateItemsTransitionAnimation = true

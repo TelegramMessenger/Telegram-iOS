@@ -814,6 +814,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
 
+        self.clipsToBounds = true
+        
         self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
         
         self.footerContentNode.interacting = { [weak self] value in
@@ -966,6 +968,12 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
         return self._ready.get()
     }
     
+    
+    override func screenFrameUpdated(_ frame: CGRect) {
+        let center = frame.midX - self.frame.width / 2.0
+        self.subnodeTransform = CATransform3DMakeTranslation(-center * 0.16, 0.0, 0.0)
+    }
+    
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         if let _ = self.customUnembedWhenPortrait, layout.size.width < layout.size.height {
             self.expandIntoCustomPiP()
@@ -1006,11 +1014,15 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     func setupItem(_ item: UniversalVideoGalleryItem) {
         if self.item?.content.id != item.content.id {
             func parseChapters(_ string: NSAttributedString) -> [MediaPlayerScrubbingChapter] {
+                var existingTimecodes = Set<Double>()
                 var timecodeRanges: [(NSRange, TelegramTimecode)] = []
                 var lineRanges: [NSRange] = []
                 string.enumerateAttributes(in: NSMakeRange(0, string.length), options: [], using: { attributes, range, _ in
                     if let timecode = attributes[NSAttributedString.Key(TelegramTextAttributes.Timecode)] as? TelegramTimecode {
-                        timecodeRanges.append((range, timecode))
+                        if !existingTimecodes.contains(timecode.time) {
+                            timecodeRanges.append((range, timecode))
+                            existingTimecodes.insert(timecode.time)
+                        }
                     }
                 })
                 (string.string as NSString).enumerateSubstrings(in: NSMakeRange(0, string.length), options: .byLines, using: { _, range, _, _ in
@@ -1021,7 +1033,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 for (timecodeRange, timecode) in timecodeRanges {
                     inner: for lineRange in lineRanges {
                         if lineRange.contains(timecodeRange.location) {
-                            if lineRange.length > timecodeRange.length {
+                            if lineRange.length > timecodeRange.length && timecodeRange.location < lineRange.location + 4 {
                                 var title = ((string.string as NSString).substring(with: lineRange) as NSString).replacingCharacters(in: NSMakeRange(timecodeRange.location - lineRange.location, timecodeRange.length), with: "")
                                 title = title.trimmingCharacters(in: .whitespacesAndNewlines).trimmingCharacters(in: .punctuationCharacters)
                                 chapters.append(MediaPlayerScrubbingChapter(title: title, start: timecode.time))
@@ -1030,6 +1042,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                         }
                     }
                 }
+                
                 return chapters
             }
             
@@ -1406,7 +1419,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     
                     if isAnimated || disablePlayerControls {
                         strongSelf.footerContentNode.content = .info
-                    } else if isPaused && !strongSelf.ignorePauseStatus {
+                    } else if isPaused && !strongSelf.ignorePauseStatus && strongSelf.isCentral == true {
                         if hasStarted || strongSelf.didPause {
                             strongSelf.footerContentNode.content = .playback(paused: true, seekable: seekable)
                         } else if let fetchStatus = fetchStatus, !strongSelf.requiresDownload {

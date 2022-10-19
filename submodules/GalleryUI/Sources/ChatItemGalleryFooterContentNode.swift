@@ -356,10 +356,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
         self.statusNode = RadialStatusNode(backgroundNodeColor: .clear)
         self.statusNode.isUserInteractionEnabled = false
         
-        self.animationCache = AnimationCacheImpl(basePath: context.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
-            return TempBox.shared.tempFile(fileName: "file").path
-        })
-        self.animationRenderer = MultiAnimationRendererImpl()
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         super.init()
         
@@ -617,9 +615,11 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
             if media is TelegramMediaImage {
                 canEdit = true
             } else if let media = media as? TelegramMediaFile, !media.isAnimated {
+                var isVideo = false
                 for attribute in media.attributes {
                     switch attribute {
                     case let .Video(_, dimensions, _):
+                        isVideo = true
                         if dimensions.height > 0 {
                             if CGFloat(dimensions.width) / CGFloat(dimensions.height) > 1.33 {
                                 canFullscreen = true
@@ -628,6 +628,10 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     default:
                         break
                     }
+                }
+                
+                if !isVideo {
+                    canEdit = true
                 }
             } else if let media = media as? TelegramMediaWebpage, case let .Loaded(content) = media.content {
                 let type = webEmbedType(content: content)
@@ -694,6 +698,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                 hasCaption = true
             } else if let file = media as? TelegramMediaFile {
                 hasCaption = file.mimeType.hasPrefix("image/")
+            } else if media is TelegramMediaInvoice {
+                hasCaption = true
             }
         }
         if hasCaption {
@@ -1200,7 +1206,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                     
                     for message in messages {
                         let currentKind = messageContentKind(contentSettings: strongSelf.context.currentContentSettings.with { $0 }, message: message, strings: presentationData.strings, nameDisplayOrder: presentationData.nameDisplayOrder, dateTimeFormat: presentationData.dateTimeFormat, accountPeerId: strongSelf.context.account.peerId)
-                        if beganContentKindScanning && currentKind != generalMessageContentKind {
+                        if beganContentKindScanning, let messageContentKind = generalMessageContentKind, !messageContentKind.isSemanticallyEqual(to: currentKind) {
                             generalMessageContentKind = nil
                         } else if !beganContentKindScanning || currentKind == generalMessageContentKind {
                             beganContentKindScanning = true
@@ -1219,6 +1225,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                             case .video:
                                 preferredAction = .saveToCameraRoll
                                 actionCompletionText = strongSelf.presentationData.strings.Gallery_VideoSaved
+                            case .file:
+                                preferredAction = .saveToCameraRoll
                             default:
                                 break
                         }
@@ -1307,7 +1315,16 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, UIScroll
                                 }
                             }
                         }
-                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, forceTheme: forceTheme)
+                        
+                        var hasExternalShare = true
+                        for media in currentMessage.media {
+                            if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                                hasExternalShare = false
+                                break
+                            }
+                        }
+                        
+                        let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: preferredAction, externalShare: hasExternalShare, forceTheme: forceTheme)
                         shareController.dismissed = { [weak self] _ in
                             self?.interacting?(false)
                         }

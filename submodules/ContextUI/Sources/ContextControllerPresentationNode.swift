@@ -17,6 +17,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
     func replaceItems(items: ContextController.Items, animated: Bool)
     func pushItems(items: ContextController.Items)
     func popItems()
+    func wantsDisplayBelowKeyboard() -> Bool
     
     func update(
         presentationData: PresentationData,
@@ -25,7 +26,7 @@ protocol ContextControllerPresentationNode: ASDisplayNode {
         stateTransition: ContextControllerPresentationNodeStateTransition?
     )
     
-    func animateOutToReaction(value: String, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, completion: @escaping () -> Void)
+    func animateOutToReaction(value: MessageReaction.Reaction, targetView: UIView, hideNode: Bool, animateTargetContainer: UIView?, addStandaloneReactionAnimation: ((StandaloneReactionAnimation) -> Void)?, reducedCurve: Bool, completion: @escaping () -> Void)
     func cancelReactionAnimation()
     
     func highlightGestureMoved(location: CGPoint, hover: Bool)

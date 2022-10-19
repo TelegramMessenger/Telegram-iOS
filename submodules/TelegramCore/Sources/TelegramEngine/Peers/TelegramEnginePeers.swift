@@ -160,7 +160,11 @@ public extension TelegramEngine {
         }
 
         public func reportPeerMessages(messageIds: [MessageId], reason: ReportReason, message: String) -> Signal<Void, NoError> {
-            return _internal_reportPeerMessages(account: account, messageIds: messageIds, reason: reason, message: message)
+            return _internal_reportPeerMessages(account: self.account, messageIds: messageIds, reason: reason, message: message)
+        }
+        
+        public func reportPeerReaction(authorId: PeerId, messageId: MessageId) -> Signal<Never, NoError> {
+            return _internal_reportPeerReaction(account: self.account, authorId: authorId, messageId: messageId)
         }
 
         public func dismissPeerStatusOptions(peerId: PeerId) -> Signal<Void, NoError> {
@@ -238,8 +242,11 @@ public extension TelegramEngine {
             return _internal_updateChannelOwnership(account: self.account, accountStateManager: self.account.stateManager, channelId: channelId, memberId: memberId, password: password)
         }
 
-        public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[Peer], NoError> {
+        public func searchGroupMembers(peerId: PeerId, query: String) -> Signal<[EnginePeer], NoError> {
             return _internal_searchGroupMembers(postbox: self.account.postbox, network: self.account.network, accountPeerId: self.account.peerId, peerId: peerId, query: query)
+            |> map { peers -> [EnginePeer] in
+                return peers.map { EnginePeer($0) }
+            }
         }
 
         public func toggleShouldChannelMessagesSignatures(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
@@ -686,7 +693,7 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[FoundPeer], NoError> {
+        public func sendAsAvailablePeers(peerId: PeerId) -> Signal<[SendAsPeer], NoError> {
             return _internal_cachedPeerSendAsAvailablePeers(account: self.account, peerId: peerId)
         }
         
@@ -694,7 +701,7 @@ public extension TelegramEngine {
             return _internal_updatePeerSendAsPeer(account: self.account, peerId: peerId, sendAs: sendAs)
         }
         
-        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: [String]) -> Signal<Never, UpdatePeerAllowedReactionsError> {
+        public func updatePeerAllowedReactions(peerId: PeerId, allowedReactions: PeerAllowedReactions) -> Signal<Never, UpdatePeerAllowedReactionsError> {
             return _internal_updatePeerAllowedReactions(account: account, peerId: peerId, allowedReactions: allowedReactions)
         }
         

@@ -53,6 +53,7 @@ private final class BotCheckoutPassworInputFieldNode: ASDisplayNode, UITextField
         self.textInputNode.textField.returnKeyType = .done
         self.textInputNode.textField.isSecureTextEntry = true
         self.textInputNode.textField.tintColor = theme.actionSheet.controlAccentColor
+        self.textInputNode.textField.textColor = theme.actionSheet.inputTextColor
         
         self.placeholderNode = ASTextNode()
         self.placeholderNode.isUserInteractionEnabled = false
@@ -77,6 +78,7 @@ private final class BotCheckoutPassworInputFieldNode: ASDisplayNode, UITextField
         self.placeholderNode.attributedText = NSAttributedString(string: self.placeholderNode.attributedText?.string ?? "", font: Font.regular(17.0), textColor: self.theme.actionSheet.inputPlaceholderColor)
         self.textInputNode.textField.tintColor = self.theme.actionSheet.controlAccentColor
         self.textInputNode.textField.typingAttributes = [NSAttributedString.Key.font: Font.regular(17.0), NSAttributedString.Key.foregroundColor: theme.actionSheet.inputTextColor]
+        self.textInputNode.textField.textColor = self.theme.actionSheet.inputTextColor
     }
     
     func updateLayout(width: CGFloat, transition: ContainedViewLayoutTransition) -> CGFloat {

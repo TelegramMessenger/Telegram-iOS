@@ -2,8 +2,18 @@ import Foundation
 
 //  MARK: Nicegram CopyProtectedContent
 
+private let bypassCopyProtectionKey = "ng:bypassCopyProtection"
+
+public func getBypassCopyProtection() -> Bool {
+    return UserDefaults.standard.bool(forKey: bypassCopyProtectionKey)
+}
+
+public func setBypassCopyProtection(_ value: Bool) {
+    UserDefaults.standard.set(value, forKey: bypassCopyProtectionKey)
+}
+
 func canCopyProtectedContent() -> Bool {
-    return false
+    return getBypassCopyProtection()
 }
 
 //  MARK: Nicegram Translate

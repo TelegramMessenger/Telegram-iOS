@@ -29,6 +29,8 @@ import InAppPurchaseManager
 import PremiumUI
 import StickerPackPreviewUI
 
+import NGData
+
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
     let tokens = Bag<Void>()
@@ -166,10 +168,21 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var spotlightDataContext: SpotlightDataContext?
     private var widgetDataContext: WidgetDataContext?
     
-    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }) {
+    // MARK: Nicegram DB Changes
+    private let networkArguments: NetworkInitializationArguments
+    private let encryptionParameters: ValueBoxEncryptionParameters
+    private let rootPath: String
+    
+    public let openDoubleBottomFlow: (AccountContext) -> Void
+    private var activeAccountsSettingsDisposable: Disposable?
+    
+    private var applicationInForeground = true
+    private var applicationInForegroundDisposable: Disposable?
+    
+    public init(mainWindow: Window1?, sharedContainerPath: String, basePath: String, encryptionParameters: ValueBoxEncryptionParameters, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, applicationBindings: TelegramApplicationBindings, initialPresentationDataAndSettings: InitialPresentationDataAndSettings, networkArguments: NetworkInitializationArguments, hasInAppPurchases: Bool, rootPath: String, legacyBasePath: String?, apsNotificationToken: Signal<Data?, NoError>, voipNotificationToken: Signal<Data?, NoError>, setNotificationCall: @escaping (PresentationCall?) -> Void, navigateToChat: @escaping (AccountRecordId, PeerId, MessageId?) -> Void, displayUpgradeProgress: @escaping (Float?) -> Void = { _ in }, openDoubleBottomFlow: @escaping (AccountContext) -> Void) {
         assert(Queue.mainQueue().isCurrent())
         
-        precondition(!testHasInstance)
+    precondition(!testHasInstance)
         testHasInstance = true
         
         self.mainWindow = mainWindow
@@ -185,6 +198,12 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.accountManager.mediaBox.fetchCachedResourceRepresentation = { (resource, representation) -> Signal<CachedMediaResourceRepresentationResult, NoError> in
             return fetchCachedSharedResourceRepresentation(accountManager: accountManager, resource: resource, representation: representation)
         }
+        // MARK: Nicegram DB Changes
+        self.networkArguments = networkArguments
+        self.encryptionParameters = encryptionParameters
+        self.rootPath = rootPath
+        
+        self.openDoubleBottomFlow = openDoubleBottomFlow
         
         self.apsNotificationToken = apsNotificationToken
         self.voipNotificationToken = voipNotificationToken
@@ -497,11 +516,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 for accountRecord in addedAccounts {
                     if let account = accountRecord.1 {
                         if existingAccountPeerKeys.contains(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment)) {
-                            let _ = accountManager.transaction({ transaction in
-                                transaction.updateRecord(accountRecord.0, { _ in
-                                    return nil
-                                })
-                            }).start()
+                            // MARK: Nicegram DB Changes
+                            let context = AccountContextImpl(sharedContext: self, account: account, limitsConfiguration: accountRecord.3 ?? .defaultValue, contentSettings: accountRecord.4 ?? .default, appConfiguration: accountRecord.5 ?? .defaultValue)
+                            self.activeAccountsValue?.accounts.append((account.id, context, accountRecord.2))
+
                         } else {
                             existingAccountPeerKeys.insert(AccountPeerKey(peerId: account.peerId, isTestingEnvironment: account.testingEnvironment))
                             if let index = self.activeAccountsValue?.accounts.firstIndex(where: { $0.0 == account.id }) {
@@ -789,7 +807,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         if applicationBindings.isMainApp {
             self.widgetDataContext = WidgetDataContext(basePath: self.basePath, inForeground: self.applicationBindings.applicationInForeground, activeAccounts: self.activeAccountContexts
             |> map { _, accounts, _ in
-                return accounts.map { $0.1.account }
+                // MARK: Nicegram DB Changes
+                return accounts.map { $0.1.account }//.filter { !$0.isHidden }
             }, presentationData: self.presentationData, appLockContext: self.appLockContext as! AppLockContextImpl)
             
             let enableSpotlight = accountManager.sharedData(keys: Set([ApplicationSpecificSharedDataKeys.intentsSettings]))
@@ -802,7 +821,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             |> map { _, accounts, _ in
                 return accounts.map { _, account, _ in
                     return account.account
-                }
+                    // MARK: Nicegram DB Changes
+                }.filter { !$0.isHidden }
             }) |> map { enableSpotlight, accounts in
                 if enableSpotlight {
                     return accounts
@@ -811,6 +831,44 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 }
             })
         }
+        // MARK: Nicegram DB Changes
+        let hasChallengeDataSignal = accountManager.accessChallengeData()
+        |> map { $0.data }
+        |> distinctUntilChanged (isEqual: { lhs, rhs in
+            if (lhs == .none) != (rhs == .none) {
+                return false
+            }
+            return true
+        })
+        |> map { $0 != .none }
+        
+        self.activeAccountsSettingsDisposable = (combineLatest(self.activeAccountContexts, hasChallengeDataSignal) |> delay(1.0, queue: .mainQueue())).start(next:{ [weak self] _, hasChallengeData -> Void in
+            guard let strongSelf = self, let accounts = strongSelf.activeAccountsValue else { return }
+            
+            let hiddenAccounts = accounts.accounts.map { $0.1.account }.filter { $0.isHidden }
+            if strongSelf.applicationInForeground {
+                for account in hiddenAccounts {
+                    account.temporarilyKeepActive()
+                    account.shouldBeServiceTaskMaster.set(.single(.always))
+                }
+            }
+            
+            if accounts.accounts.contains(where: { !$0.1.account.isHidden }) {
+                if hasChallengeData {
+                    for account in hiddenAccounts {
+                        restoreCachedPhoneCallsPrivacyState(account: account)
+                    }
+                } else {
+                    for account in hiddenAccounts {
+                        disablePhoneCallsAndCachePrivacyState(account: account)
+                    }
+                }
+            } else {
+                for account in hiddenAccounts {
+                    disablePhoneCallsAndCachePrivacyState(account: account)
+                }
+            }
+        })
     }
     
     deinit {
@@ -824,6 +882,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callDisposable?.dispose()
         self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
+        // MARK: Nicegram DB Changes
+        self.activeAccountsSettingsDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {
@@ -859,10 +920,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         #else
         sandbox = false
         #endif
-        
+        // MARK: Nicegram DB Changes
         let settings = self.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.inAppNotificationSettings])
         |> map { sharedData -> (allAccounts: Bool, includeMuted: Bool) in
             let settings = sharedData.entries[ApplicationSpecificSharedDataKeys.inAppNotificationSettings]?.get(InAppNotificationSettings.self) ?? InAppNotificationSettings.defaultSettings
+            // MARK: Nicegram DB Changes
             return (settings.displayNotificationsFromAllAccounts, false)
         }
         |> distinctUntilChanged(isEqual: { lhs, rhs in
@@ -872,6 +934,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             if lhs.includeMuted != rhs.includeMuted {
                 return false
             }
+//            // MARK: Nicegram DB Changes
+//            if lhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() != rhs.disabledNotificationsAccountRecords.map({ $0.int64 }).sorted() {
+//                return false
+//            }
             return true
         })
         
@@ -879,13 +945,22 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         |> mapToSignal { settings, activeAccountsAndInfo -> Signal<Never, NoError> in
             let (primary, activeAccounts, _) = activeAccountsAndInfo
             var applied: [Signal<Never, NoError>] = []
-            var activeProductionUserIds = activeAccounts.map({ $0.1 }).filter({ !$0.account.testingEnvironment }).map({ $0.account.peerId.id })
-            var activeTestingUserIds = activeAccounts.map({ $0.1 }).filter({ $0.account.testingEnvironment }).map({ $0.account.peerId.id })
+            // MARK: Nicegram DB Changes
+            var activeProductionUserIds = activeAccounts.map({ $0.1.account }).filter({ !$0.testingEnvironment }).map({ $0.peerId.id })
+            var activeTestingUserIds = activeAccounts.map({ $0.1.account }).filter({ $0.testingEnvironment }).map({ $0.peerId.id })
             
             let allProductionUserIds = activeProductionUserIds
             let allTestingUserIds = activeTestingUserIds
-            
-            if !settings.allAccounts {
+            let isDoubleBottom = VarSystemNGSettings.isDoubleBottomOn
+            let inDoubleBottom = VarSystemNGSettings.inDoubleBottom
+
+            if let primary = primary,
+               primary.account.isHidden,
+               isDoubleBottom,
+               inDoubleBottom {
+                activeProductionUserIds = []
+                activeTestingUserIds = []
+            } else if !settings.allAccounts {
                 if let primary = primary {
                     if !primary.account.testingEnvironment {
                         activeProductionUserIds = [primary.account.peerId.id]
@@ -899,12 +974,51 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                     activeTestingUserIds = []
                 }
             }
-            
             for (_, account, _) in activeAccounts {
                 let appliedAps: Signal<Never, NoError>
                 let appliedVoip: Signal<Never, NoError>
-                
-                if !activeProductionUserIds.contains(account.account.peerId.id) && !activeTestingUserIds.contains(account.account.peerId.id) {
+                print(account.account.peerId.id)
+                if let primary = primary, isDoubleBottom, primary.account.isHidden, account.account.peerId == primary.account.peerId, inDoubleBottom {
+                    appliedAps = self.apsNotificationToken
+                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+                    |> mapToSignal { token -> Signal<Never, NoError> in
+                        guard let token = token else {
+                            return .complete()
+                        }
+                        let encrypt: Bool
+                        if #available(iOS 10.0, *) {
+                            encrypt = true
+                        } else {
+                            encrypt = false
+                        }
+                        return account.engine.accountData.registerNotificationToken(token: token, type: .aps(encrypt: encrypt), sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                    }
+                    appliedVoip = self.voipNotificationToken
+                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+                    |> mapToSignal { token -> Signal<Never, NoError> in
+                        guard let token = token else {
+                            return .complete()
+                        }
+                        return account.engine.accountData.registerNotificationToken(token: token, type: .voip, sandbox: sandbox, otherAccountUserIds: (account.account.testingEnvironment ? activeTestingUserIds : activeProductionUserIds).filter({ $0 != account.account.peerId.id }), excludeMutedChats: !settings.includeMuted)
+                    }
+                } else if let primary = primary, isDoubleBottom, primary.account.isHidden, account.account.peerId != primary.account.peerId, inDoubleBottom {
+                    appliedAps = self.apsNotificationToken
+                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+                    |> mapToSignal { token -> Signal<Never, NoError> in
+                        guard let token = token else {
+                            return .complete()
+                        }
+                        return account.engine.accountData.unregisterNotificationToken(token: token, type: .aps(encrypt: false), otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
+                    }
+                    appliedVoip = self.voipNotificationToken
+                    |> distinctUntilChanged(isEqual: { $0 == $1 })
+                    |> mapToSignal { token -> Signal<Never, NoError> in
+                        guard let token = token else {
+                            return .complete()
+                        }
+                        return account.engine.accountData.unregisterNotificationToken(token: token, type: .voip, otherAccountUserIds: (account.account.testingEnvironment ? allTestingUserIds : allProductionUserIds).filter({ $0 != account.account.peerId.id }))
+                    }
+                } else if (!activeProductionUserIds.contains(account.account.peerId.id) && !activeTestingUserIds.contains(account.account.peerId.id)) {
                     appliedAps = self.apsNotificationToken
                     |> distinctUntilChanged(isEqual: { $0 == $1 })
                     |> mapToSignal { token -> Signal<Never, NoError> in
@@ -961,6 +1075,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     
     public func switchToAccount(id: AccountRecordId, fromSettingsController settingsController: ViewController? = nil, withChatListController chatListController: ViewController? = nil) {
+        // MARK: Nicegram DB Changes
+        if UserDefaults.standard.bool(forKey: "inDoubleBottom") {
+            UserDefaults.standard.set(false, forKey: "inDoubleBottom")
+        }
+        if let unlockedAccountRecordId = accountManager.hiddenAccountManager.unlockedAccountRecordId, unlockedAccountRecordId != id {
+            self.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+        }
+        
         if self.activeAccountsValue?.primary?.account.id == id {
             return
         }
@@ -986,18 +1108,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }
         self.switchingData = (settingsController as? (ViewController & SettingsController), chatListController as? ChatListController, chatsBadge)
         
-        let _ = self.accountManager.transaction({ transaction -> Bool in
-            if transaction.getCurrent()?.0 != id {
-                transaction.setCurrentId(id)
-                return true
-            } else {
-                return false
-            }
-        }).start(next: { value in
-            if !value {
-                self.switchingData = (nil, nil, nil)
-            }
-        })
+        // MARK: Nicegram DB Changes
+        let _ = self.accountManager.transaction({ transaction in
+            transaction.setCurrentId(id)
+        }).start()
     }
     
     public func openSearch(filter: ChatListSearchFilter, query: String?) {
@@ -1275,14 +1389,14 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         let controllerInteraction: ChatControllerInteraction
 
         controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
-            return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
+            return false }, openPeer: { _, _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
             }, tapMessage: { message in
                 tapMessage?(message)
         }, clickThroughMessage: {
             clickThroughMessage?()
-        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
+        }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in
             return false
         }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
@@ -1352,11 +1466,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             chatLocation = .peer(id: messages.first!.id.peerId)
         }
         
-        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
+        return ChatMessageItem(presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context, chatLocation: chatLocation, associatedData: ChatMessageItemAssociatedData(automaticDownloadPeerType: .contact, automaticDownloadNetworkType: .cellular, isRecentActions: false, subject: nil, contactsPeerIds: Set(), animatedEmojiStickers: [:], forcedResourceStatus: forcedResourceStatus, availableReactions: availableReactions, defaultReaction: nil, isPremium: false, accountPeer: nil, forceInlineReactions: true), controllerInteraction: controllerInteraction, content: content, disableDate: true, additionalContent: nil)
     }
     
     public func makeChatMessageDateHeaderItem(context: AccountContext, timestamp: Int32, theme: PresentationTheme, strings: PresentationStrings, wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, chatBubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameOrder: PresentationPersonNameOrder) -> ListViewItemHeader {
-        return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), context: context)
+        return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
     }
     
     #if ENABLE_WALLET
@@ -1502,22 +1616,29 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .deeplink(reference)
             case let .profile(peerId):
                 mappedSource = .profile(peerId)
+            case let .emojiStatus(peerId, fileId, file, packTitle):
+                mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }
     
-    public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
-        return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
+    public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {
+        return StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: mainStickerPack, stickerPacks: stickerPacks, loadedStickerPacks: loadedStickerPacks, parentNavigationController: parentNavigationController, sendSticker: sendSticker)
+    }
+    
+    public func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController {
+        return proxySettingsController(accountManager: sharedContext.accountManager, postbox: account.postbox, network: account.network, mode: .modal, presentationData: sharedContext.currentPresentationData.with { $0 }, updatedPresentationData: sharedContext.presentationData)
     }
 }
 
 private func peerInfoControllerImpl(context: AccountContext, updatedPresentationData: (PresentationData, Signal<PresentationData, NoError>)?, peer: Peer, mode: PeerInfoControllerMode, avatarInitiallyExpanded: Bool, isOpenedFromChat: Bool, requestsContext: PeerInvitationImportersContext? = nil) -> ViewController? {
     if let _ = peer as? TelegramGroup {
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     } else if let _ = peer as? TelegramChannel {
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     } else if peer is TelegramUser {
         var nearbyPeerDistance: Int32?
+        var reactionSourceMessageId: MessageId?
         var callMessages: [Message] = []
         var hintGroupInCommon: PeerId?
         switch mode {
@@ -1529,10 +1650,12 @@ private func peerInfoControllerImpl(context: AccountContext, updatedPresentation
             break
         case let .group(id):
             hintGroupInCommon = id
+        case let .reaction(messageId):
+            reactionSourceMessageId = messageId
         }
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nearbyPeerDistance, reactionSourceMessageId: reactionSourceMessageId, callMessages: callMessages, hintGroupInCommon: hintGroupInCommon)
     } else if peer is TelegramSecretChat {
-        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, callMessages: [])
+        return PeerInfoScreenImpl(context: context, updatedPresentationData: updatedPresentationData, peerId: peer.id, avatarInitiallyExpanded: avatarInitiallyExpanded, isOpenedFromChat: isOpenedFromChat, nearbyPeerDistance: nil, reactionSourceMessageId: nil, callMessages: [])
     }
     return nil
 }

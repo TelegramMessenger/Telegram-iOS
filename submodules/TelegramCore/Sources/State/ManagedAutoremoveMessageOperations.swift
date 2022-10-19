@@ -4,7 +4,6 @@ import SwiftSignalKit
 import TelegramApi
 import MtProtoKit
 
-
 private typealias SignalKitTimer = SwiftSignalKit.Timer
 
 private final class ManagedAutoremoveMessageOperationsHelper {

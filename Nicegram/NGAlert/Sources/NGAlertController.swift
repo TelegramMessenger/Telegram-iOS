@@ -1,5 +1,6 @@
 import UIKit
 import SnapKit
+import EsimUI
 import NGButton
 import NGTheme
 
@@ -22,12 +23,18 @@ open class NGAlertController: UIViewController {
     private let contentView = UIView()
     private let buttonsStack = UIStackView()
     
+    private let popupTransition: PopupTransition
+    
     //  MARK: - Lifecycle
     
     public init(ngTheme: NGThemeColors) {
         self.ngTheme = ngTheme
+        self.popupTransition = PopupTransition(blurStyle: ngTheme.blurStyle)
         
         super.init(nibName: nil, bundle: nil)
+        
+        self.modalPresentationStyle = .custom
+        self.transitioningDelegate = popupTransition
     }
     
     required public init?(coder: NSCoder) {

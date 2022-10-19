@@ -11,40 +11,205 @@ import UIKit
 import AnimatedAvatarSetNode
 import ReactionImageComponent
 import WebPBinding
+import AnimationCache
+import MultiAnimationRenderer
+import EmojiTextAttachmentView
+import TextFormat
 
 public final class ReactionIconView: PortalSourceView {
-    public let imageView: UIImageView
+    private var animationLayer: InlineStickerItemLayer?
+    
+    private var context: AccountContext?
+    private var fileId: Int64?
+    private var file: TelegramMediaFile?
+    private var animationCache: AnimationCache?
+    private var animationRenderer: MultiAnimationRenderer?
+    private var placeholderColor: UIColor?
+    private var size: CGSize?
+    private var animateIdle: Bool?
+    private var reaction: MessageReaction.Reaction?
+    
+    private var isAnimationHidden: Bool = false
+    
+    private var disposable: Disposable?
+    
+    public var iconFrame: CGRect? {
+        if let animationLayer = self.animationLayer {
+            return animationLayer.frame
+        }
+        return nil
+    }
     
     override public init(frame: CGRect) {
-        self.imageView = UIImageView()
-        
         super.init(frame: frame)
-        
-        self.addSubview(self.imageView)
     }
     
     required public init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    public func update(size: CGSize, transition: ContainedViewLayoutTransition) {
-        transition.updateFrame(view: self.imageView, frame: CGRect(origin: CGPoint(), size: size))
+    deinit {
+        self.disposable?.dispose()
+    }
+    
+    public func update(
+        size: CGSize,
+        context: AccountContext,
+        file: TelegramMediaFile?,
+        fileId: Int64,
+        animationCache: AnimationCache,
+        animationRenderer: MultiAnimationRenderer,
+        placeholderColor: UIColor,
+        animateIdle: Bool,
+        reaction: MessageReaction.Reaction,
+        transition: ContainedViewLayoutTransition
+    ) {
+        self.context = context
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
+        self.placeholderColor = placeholderColor
+        self.size = size
+        self.animateIdle = animateIdle
+        self.reaction = reaction
+        
+        if self.fileId != fileId {
+            self.fileId = fileId
+            self.file = file
+            
+            self.animationLayer?.removeFromSuperlayer()
+            self.animationLayer = nil
+            
+            if let _ = file {
+                self.disposable?.dispose()
+                self.disposable = nil
+                
+                self.reloadFile()
+            } else {
+                self.disposable?.dispose()
+                
+                self.disposable = (context.engine.stickers.resolveInlineStickers(fileIds: [fileId])
+                |> deliverOnMainQueue).start(next: { [weak self] files in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.file = files[fileId]
+                    strongSelf.reloadFile()
+                })
+            }
+        }
+        
+        if let animationLayer = self.animationLayer {
+            let iconSize: CGSize
+            switch reaction {
+            case .builtin:
+                iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+                animationLayer.masksToBounds = false
+                animationLayer.cornerRadius = 0.0
+            case .custom:
+                iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
+                animationLayer.masksToBounds = true
+                animationLayer.cornerRadius = floor(size.width * 0.2)
+            }
+            
+            transition.updateFrame(layer: animationLayer, frame: CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize))
+        }
+    }
+    
+    public func updateIsAnimationHidden(isAnimationHidden: Bool, transition: ContainedViewLayoutTransition) {
+        if self.isAnimationHidden != isAnimationHidden {
+            self.isAnimationHidden = isAnimationHidden
+            
+            if let animationLayer = self.animationLayer {
+                transition.updateAlpha(layer: animationLayer, alpha: isAnimationHidden ? 0.0 : 1.0)
+            }
+        }
+    }
+    
+    private func reloadFile() {
+        guard let context = self.context, let file = self.file, let animationCache = self.animationCache, let animationRenderer = self.animationRenderer, let placeholderColor = self.placeholderColor, let size = self.size, let animateIdle = self.animateIdle, let reaction = self.reaction else {
+            return
+        }
+        
+        self.animationLayer?.removeFromSuperlayer()
+        self.animationLayer = nil
+        
+        let iconSize: CGSize
+        switch reaction {
+        case .builtin:
+            iconSize = CGSize(width: floor(size.width * 2.0), height: floor(size.height * 2.0))
+        case .custom:
+            iconSize = CGSize(width: floor(size.width * 1.25), height: floor(size.height * 1.25))
+        }
+        
+        let animationLayer = InlineStickerItemLayer(
+            context: context,
+            attemptSynchronousLoad: false,
+            emoji: ChatTextInputTextCustomEmojiAttribute(
+                interactivelySelectedFromPackId: nil,
+                fileId: file.fileId.id,
+                file: file
+            ),
+            file: file,
+            cache: animationCache,
+            renderer: animationRenderer,
+            placeholderColor: placeholderColor,
+            pointSize: CGSize(width: iconSize.width * 2.0, height: iconSize.height * 2.0)
+        )
+        self.animationLayer = animationLayer
+        self.layer.addSublayer(animationLayer)
+        
+        switch reaction {
+        case .builtin:
+            animationLayer.masksToBounds = false
+            animationLayer.cornerRadius = 0.0
+        case .custom:
+            animationLayer.masksToBounds = true
+            animationLayer.cornerRadius = floor(size.width * 0.3)
+        }
+        
+        animationLayer.frame = CGRect(origin: CGPoint(x: floor((size.width - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
+        
+        animationLayer.isVisibleForAnimations = animateIdle
+    }
+    
+    func reset() {
+        if let animationLayer = self.animationLayer {
+            self.animationLayer = nil
+            
+            animationLayer.removeFromSuperlayer()
+        }
+        if let disposable = self.disposable {
+            self.disposable = nil
+            disposable.dispose()
+        }
+        
+        self.context = nil
+        self.fileId = nil
+        self.file = nil
+        self.animationCache = nil
+        self.animationRenderer = nil
+        self.placeholderColor = nil
+        self.size = nil
+        self.animateIdle = nil
+        self.reaction = nil
+        
+        self.isAnimationHidden = false
     }
 }
 
 private final class ReactionImageCache {
     static let shared = ReactionImageCache()
     
-    private var images: [String: UIImage] = [:]
+    private var images: [MessageReaction.Reaction: UIImage] = [:]
     
     init() {
     }
     
-    func get(reaction: String) -> UIImage? {
+    func get(reaction: MessageReaction.Reaction) -> UIImage? {
         return self.images[reaction]
     }
     
-    func put(reaction: String, image: UIImage) {
+    func put(reaction: MessageReaction.Reaction, image: UIImage) {
         self.images[reaction] = image
     }
 }
@@ -411,15 +576,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             let spacing: CGFloat = 2.0
             
             let boundingImageSize = CGSize(width: 20.0, height: 20.0)
-            let imageSize: CGSize
-            if let file = spec.component.reaction.centerAnimation {
+            let imageSize: CGSize = boundingImageSize
+            /*if let file = spec.component.reaction.centerAnimation {
                 let defaultImageSize = CGSize(width: boundingImageSize.width + floor(boundingImageSize.width * 0.5 * 2.0), height: boundingImageSize.height + floor(boundingImageSize.height * 0.5 * 2.0))
                 imageSize = file.dimensions?.cgSize.aspectFitted(defaultImageSize) ?? defaultImageSize
-            } else if let file = spec.component.reaction.legacyIcon {
-                imageSize = file.dimensions?.cgSize.aspectFitted(boundingImageSize) ?? boundingImageSize
             } else {
                 imageSize = boundingImageSize
-            }
+            }*/
             
             var counterComponents: [String] = []
             for character in countString(Int64(spec.component.count)) {
@@ -435,7 +598,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             }
             #endif*/
             
-            let backgroundColor = spec.component.isSelected ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
+            let backgroundColor = spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground
             
             let imageFrame = CGRect(origin: CGPoint(x: sideInsets + floorToScreenPixels((boundingImageSize.width - imageSize.width) / 2.0), y: floorToScreenPixels((height - imageSize.height) / 2.0)), size: imageSize)
             
@@ -467,11 +630,11 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
             }
             
             let backgroundColors = ReactionButtonAsyncNode.ContainerButtonNode.Colors(
-                background: spec.component.isSelected ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
-                foreground: spec.component.isSelected ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
+                background: spec.component.chosenOrder != nil ? spec.component.colors.selectedBackground : spec.component.colors.deselectedBackground,
+                foreground: spec.component.chosenOrder != nil ? spec.component.colors.selectedForeground : spec.component.colors.deselectedForeground,
                 extractedBackground: spec.component.colors.extractedBackground,
                 extractedForeground: spec.component.colors.extractedForeground,
-                isSelected: spec.component.isSelected
+                isSelected: spec.component.chosenOrder != nil
             )
             var backgroundCounter: ReactionButtonAsyncNode.ContainerButtonNode.Counter?
             if let counterLayout = counterLayout {
@@ -510,8 +673,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     public var activateAfterCompletion: Bool = false {
         didSet {
             if self.activateAfterCompletion {
-                self.contextGesture?.activatedAfterCompletion = { [weak self] in
-                    self?.pressed()
+                self.contextGesture?.activatedAfterCompletion = { [weak self] point, _ in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    if strongSelf.buttonNode.bounds.contains(point) {
+                        strongSelf.pressed()
+                    }
                 }
             } else {
                 self.contextGesture?.activatedAfterCompletion = nil
@@ -549,8 +717,13 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         }
         
         if self.activateAfterCompletion {
-            self.contextGesture?.activatedAfterCompletion = { [weak self] in
-                self?.pressed()
+            self.contextGesture?.activatedAfterCompletion = { [weak self] point, _ in
+                guard let strongSelf = self else {
+                    return
+                }
+                if strongSelf.buttonNode.bounds.contains(point) {
+                    strongSelf.pressed()
+                }
             }
         }
     }
@@ -564,7 +737,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
     }
     
     func reset() {
-        self.iconView?.imageView.image = nil
+        self.iconView?.reset()
         self.layout = nil
         
         self.buttonNode.reset()
@@ -577,7 +750,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         layout.spec.component.action(layout.spec.component.reaction.value)
     }
     
-    fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation) {
+    fileprivate func apply(layout: Layout, animation: ListViewItemUpdateAnimation, arguments: ReactionButtonsAsyncLayoutContainer.Arguments) {
         self.containerView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.containerView.contentView.frame = CGRect(origin: CGPoint(), size: layout.size)
         self.containerView.contentRect = CGRect(origin: CGPoint(), size: layout.size)
@@ -587,14 +760,36 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         
         if let iconView = self.iconView {
             animation.animator.updateFrame(layer: iconView.layer, frame: layout.imageFrame, completion: nil)
-            iconView.update(size: layout.imageFrame.size, transition: animation.transition)
             
-            if self.layout?.spec.component.reaction != layout.spec.component.reaction {
+            if let fileId = layout.spec.component.reaction.animationFileId ?? layout.spec.component.reaction.centerAnimation?.fileId.id {
+                let animateIdle: Bool
+                if case .custom = layout.spec.component.reaction.value {
+                    animateIdle = true
+                } else {
+                    animateIdle = false
+                }
+                
+                iconView.update(
+                    size: layout.imageFrame.size,
+                    context: layout.spec.component.context,
+                    file: layout.spec.component.reaction.centerAnimation,
+                    fileId: fileId,
+                    animationCache: arguments.animationCache,
+                    animationRenderer: arguments.animationRenderer,
+                    placeholderColor: layout.spec.component.chosenOrder != nil ? UIColor(argb: layout.spec.component.colors.selectedMediaPlaceholder) : UIColor(argb: layout.spec.component.colors.deselectedMediaPlaceholder),
+                    animateIdle: animateIdle,
+                    reaction: layout.spec.component.reaction.value,
+                    transition: animation.transition
+                )
+            }
+            
+            /*if self.layout?.spec.component.reaction != layout.spec.component.reaction {
                 if let file = layout.spec.component.reaction.centerAnimation {
+                    
                     if let image = ReactionImageCache.shared.get(reaction: layout.spec.component.reaction.value) {
                         iconView.imageView.image = image
                     } else {
-                        self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 32.0 * UIScreenScale, height: 32.0 * UIScreenScale))
+                        self.iconImageDisposable.set((reactionStaticImage(context: layout.spec.component.context, animation: file, pixelSize: CGSize(width: 32.0 * UIScreenScale, height: 32.0 * UIScreenScale), queue: sharedReactionStaticImage)
                         |> filter { data in
                             return data.isComplete
                         }
@@ -645,7 +840,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                         strongSelf.iconView?.imageView.image = image
                     }))
                 }
-            }
+            }*/
         }
         
         if !layout.spec.component.avatarPeers.isEmpty {
@@ -683,7 +878,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
         self.layout = layout
     }
     
-    public static func asyncLayout(_ item: ReactionNodePool.Item?) -> (ReactionButtonComponent) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionNodePool.Item) {
+    public static func asyncLayout(_ item: ReactionNodePool.Item?) -> (ReactionButtonComponent) -> (size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation, _ arguments: ReactionButtonsAsyncLayoutContainer.Arguments) -> ReactionNodePool.Item) {
         let currentLayout = item?.view.layout
         
         return { component in
@@ -696,7 +891,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                 layout = Layout.calculate(spec: spec, currentLayout: currentLayout)
             }
             
-            return (size: layout.size, apply: { animation in
+            return (size: layout.size, apply: { animation, arguments in
                 var animation = animation
                 let updatedItem: ReactionNodePool.Item
                 if let item = item {
@@ -706,7 +901,7 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
                     animation = .None
                 }
                 
-                updatedItem.view.apply(layout: layout, animation: animation)
+                updatedItem.view.apply(layout: layout, animation: animation, arguments: arguments)
                 
                 return updatedItem
             })
@@ -716,14 +911,14 @@ public final class ReactionButtonAsyncNode: ContextControllerSourceView {
 
 public final class ReactionButtonComponent: Equatable {
     public struct Reaction: Equatable {
-        public var value: String
+        public var value: MessageReaction.Reaction
         public var centerAnimation: TelegramMediaFile?
-        public var legacyIcon: TelegramMediaFile?
+        public var animationFileId: Int64?
         
-        public init(value: String, centerAnimation: TelegramMediaFile?, legacyIcon: TelegramMediaFile?) {
+        public init(value: MessageReaction.Reaction, centerAnimation: TelegramMediaFile?, animationFileId: Int64?) {
             self.value = value
             self.centerAnimation = centerAnimation
-            self.legacyIcon = legacyIcon
+            self.animationFileId = animationFileId
         }
         
         public static func ==(lhs: Reaction, rhs: Reaction) -> Bool {
@@ -733,7 +928,7 @@ public final class ReactionButtonComponent: Equatable {
             if lhs.centerAnimation?.fileId != rhs.centerAnimation?.fileId {
                 return false
             }
-            if lhs.legacyIcon?.fileId != rhs.legacyIcon?.fileId {
+            if lhs.animationFileId != rhs.animationFileId {
                 return false
             }
             return true
@@ -747,6 +942,8 @@ public final class ReactionButtonComponent: Equatable {
         public var selectedForeground: UInt32
         public var extractedBackground: UInt32
         public var extractedForeground: UInt32
+        public var deselectedMediaPlaceholder: UInt32
+        public var selectedMediaPlaceholder: UInt32
         
         public init(
             deselectedBackground: UInt32,
@@ -754,7 +951,9 @@ public final class ReactionButtonComponent: Equatable {
             deselectedForeground: UInt32,
             selectedForeground: UInt32,
             extractedBackground: UInt32,
-            extractedForeground: UInt32
+            extractedForeground: UInt32,
+            deselectedMediaPlaceholder: UInt32,
+            selectedMediaPlaceholder: UInt32
         ) {
             self.deselectedBackground = deselectedBackground
             self.selectedBackground = selectedBackground
@@ -762,6 +961,8 @@ public final class ReactionButtonComponent: Equatable {
             self.selectedForeground = selectedForeground
             self.extractedBackground = extractedBackground
             self.extractedForeground = extractedForeground
+            self.deselectedMediaPlaceholder = deselectedMediaPlaceholder
+            self.selectedMediaPlaceholder = selectedMediaPlaceholder
         }
     }
     
@@ -770,8 +971,8 @@ public final class ReactionButtonComponent: Equatable {
     public let reaction: Reaction
     public let avatarPeers: [EnginePeer]
     public let count: Int
-    public let isSelected: Bool
-    public let action: (String) -> Void
+    public let chosenOrder: Int?
+    public let action: (MessageReaction.Reaction) -> Void
 
     public init(
         context: AccountContext,
@@ -779,15 +980,15 @@ public final class ReactionButtonComponent: Equatable {
         reaction: Reaction,
         avatarPeers: [EnginePeer],
         count: Int,
-        isSelected: Bool,
-        action: @escaping (String) -> Void
+        chosenOrder: Int?,
+        action: @escaping (MessageReaction.Reaction) -> Void
     ) {
         self.context = context
         self.colors = colors
         self.reaction = reaction
         self.avatarPeers = avatarPeers
         self.count = count
-        self.isSelected = isSelected
+        self.chosenOrder = chosenOrder
         self.action = action
     }
 
@@ -807,7 +1008,7 @@ public final class ReactionButtonComponent: Equatable {
         if lhs.count != rhs.count {
             return false
         }
-        if lhs.isSelected != rhs.isSelected {
+        if lhs.chosenOrder != rhs.chosenOrder {
             return false
         }
         return true
@@ -858,22 +1059,35 @@ public final class ReactionNodePool {
 }
 
 public final class ReactionButtonsAsyncLayoutContainer {
+    public final class Arguments {
+        public let animationCache: AnimationCache
+        public let animationRenderer: MultiAnimationRenderer
+        
+        public init(
+            animationCache: AnimationCache,
+            animationRenderer: MultiAnimationRenderer
+        ) {
+            self.animationCache = animationCache
+            self.animationRenderer = animationRenderer
+        }
+    }
+    
     public struct Reaction {
         public var reaction: ReactionButtonComponent.Reaction
         public var count: Int
         public var peers: [EnginePeer]
-        public var isSelected: Bool
+        public var chosenOrder: Int?
         
         public init(
             reaction: ReactionButtonComponent.Reaction,
             count: Int,
             peers: [EnginePeer],
-            isSelected: Bool
+            chosenOrder: Int?
         ) {
             self.reaction = reaction
             self.count = count
             self.peers = peers
-            self.isSelected = isSelected
+            self.chosenOrder = chosenOrder
         }
     }
     
@@ -883,12 +1097,12 @@ public final class ReactionButtonsAsyncLayoutContainer {
         }
         
         public var items: [Item]
-        public var apply: (ListViewItemUpdateAnimation) -> ApplyResult
+        public var apply: (ListViewItemUpdateAnimation, Arguments) -> ApplyResult
     }
     
     public struct ApplyResult {
         public struct Item {
-            public var value: String
+            public var value: MessageReaction.Reaction
             public var node: ReactionNodePool.Item
             public var size: CGSize
         }
@@ -897,7 +1111,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
         public var removedNodes: [ReactionNodePool.Item]
     }
     
-    public private(set) var buttons: [String: ReactionNodePool.Item] = [:]
+    public private(set) var buttons: [MessageReaction.Reaction: ReactionNodePool.Item] = [:]
     
     public init() {
     }
@@ -910,28 +1124,39 @@ public final class ReactionButtonsAsyncLayoutContainer {
     
     public func update(
         context: AccountContext,
-        action: @escaping (String) -> Void,
+        action: @escaping (MessageReaction.Reaction) -> Void,
         reactions: [ReactionButtonsAsyncLayoutContainer.Reaction],
         colors: ReactionButtonComponent.Colors,
         constrainedWidth: CGFloat
     ) -> Result {
         var items: [Result.Item] = []
-        var applyItems: [(key: String, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation) -> ReactionNodePool.Item)] = []
+        var applyItems: [(key: MessageReaction.Reaction, size: CGSize, apply: (_ animation: ListViewItemUpdateAnimation, _ arguments: Arguments) -> ReactionNodePool.Item)] = []
         
-        var validIds = Set<String>()
+        var validIds = Set<MessageReaction.Reaction>()
         for reaction in reactions.sorted(by: { lhs, rhs in
             var lhsCount = lhs.count
-            if lhs.isSelected {
+            if lhs.chosenOrder != nil {
                 lhsCount -= 1
             }
             var rhsCount = rhs.count
-            if rhs.isSelected {
+            if rhs.chosenOrder != nil {
                 rhsCount -= 1
             }
             if lhsCount != rhsCount {
                 return lhsCount > rhsCount
             }
-            return lhs.reaction.value < rhs.reaction.value
+            
+            if (lhs.chosenOrder != nil) != (rhs.chosenOrder != nil) {
+                if lhs.chosenOrder != nil {
+                    return true
+                } else {
+                    return false
+                }
+            } else if let lhsIndex = lhs.chosenOrder, let rhsIndex = rhs.chosenOrder {
+                return lhsIndex < rhsIndex
+            }
+            
+            return false
         }) {
             validIds.insert(reaction.reaction.value)
             
@@ -952,7 +1177,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
                 reaction: reaction.reaction,
                 avatarPeers: avatarPeers,
                 count: reaction.count,
-                isSelected: reaction.isSelected,
+                chosenOrder: reaction.chosenOrder,
                 action: action
             ))
             
@@ -962,7 +1187,7 @@ public final class ReactionButtonsAsyncLayoutContainer {
             applyItems.append((reaction.reaction.value, size, apply))
         }
         
-        var removeIds: [String] = []
+        var removeIds: [MessageReaction.Reaction] = []
         for (id, _) in self.buttons {
             if !validIds.contains(id) {
                 removeIds.append(id)
@@ -977,10 +1202,10 @@ public final class ReactionButtonsAsyncLayoutContainer {
         
         return Result(
             items: items,
-            apply: { animation in
+            apply: { animation, arguments in
                 var items: [ApplyResult.Item] = []
                 for (key, size, apply) in applyItems {
-                    let nodeItem = apply(animation)
+                    let nodeItem = apply(animation, arguments)
                     items.append(ApplyResult.Item(value: key, node: nodeItem, size: size))
                     
                     if let current = self.buttons[key] {

@@ -37,6 +37,29 @@ private func isLocked(passcodeSettings: PresentationPasscodeSettings, state: Loc
     return false
 }
 
+// MARK: Nicegram DB Changes
+private func getPublicCoveringViewSnapshot(window: Window1) -> UIImage? {
+    let scale: CGFloat = 0.5
+    let unscaledSize = window.hostView.containerView.frame.size
+    
+    return generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        context.scaleBy(x: scale, y: scale)
+        UIGraphicsPushContext(context)
+        window.forEachViewController { controller in
+            if let tabBarController = controller as? TabBarController {
+                tabBarController.controllers.forEach { controller in
+                    if let controller = controller as? ChatListController {
+                        controller.view.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
+                    }
+                }
+            }
+            return true
+        }
+        UIGraphicsPopContext()
+    }).flatMap(applyScreenshotEffectToImage)
+}
+
 private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
     let scale: CGFloat = 0.5
     let unscaledSize = window.hostView.containerView.frame.size
@@ -74,7 +97,8 @@ public final class AppLockContextImpl: AppLockContext {
     private let presentationDataSignal: Signal<PresentationData, NoError>
     private let window: Window1?
     private let rootController: UIViewController?
-    
+    // MARK: Nicegram DB Changes
+    private var snapshotView: LockedWindowCoveringView?
     private var coveringView: LockedWindowCoveringView?
     private var passcodeController: PasscodeEntryController?
     
@@ -94,6 +118,34 @@ public final class AppLockContextImpl: AppLockContext {
     
     private var lastActiveTimestamp: Double?
     private var lastActiveValue: Bool = false
+    // MARK: Nicegram DB Changes
+    private var isCurrentAccountHidden = false
+    
+    private let checkCurrentAccountDisposable = MetaDisposable()
+    private var hiddenAccountsAccessChallengeDataDisposable: Disposable?
+    public private(set) var hiddenAccountsAccessChallengeData = [AccountRecordId:PostboxAccessChallengeData]()
+
+    private var applicationInForegroundDisposable: Disposable?
+    
+    public var lockingIsCompletePromise = Promise<Bool>()
+    public var onUnlockedDismiss = ValuePipe<Void>()
+    public var isUnlockedAndReady: Signal<Void, NoError> {
+        return self.isCurrentlyLockedPromise.get()
+        |> filter { !$0 }
+        |> distinctUntilChanged(isEqual: ==)
+        |> mapToSignal { [weak self] _ in
+            guard let strongSelf = self else { return .never() }
+            
+            return strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.get()
+            |> mapToSignal { unlockedAccountRecordId in
+                if unlockedAccountRecordId == nil {
+                    return .single(())
+                } else {
+                    return strongSelf.accountManager.hiddenAccountManager.didFinishChangingAccountPromise.get() |> delay(0.1, queue: .mainQueue())
+                }
+            }
+        }
+    }
     
     public init(rootPath: String, window: Window1?, rootController: UIViewController?, applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, presentationDataSignal: Signal<PresentationData, NoError>, lockIconInitialFrame: @escaping () -> CGRect?) {
         assert(Queue.mainQueue().isCurrent())
@@ -111,6 +163,14 @@ public final class AppLockContextImpl: AppLockContext {
             self.currentStateValue = LockState()
         }
         self.autolockTimeout.set(self.currentStateValue.autolockTimeout)
+        // MARK: Nicegram DB Changes
+        self.hiddenAccountsAccessChallengeDataDisposable = (accountManager.hiddenAccountManager.getHiddenAccountsAccessChallengeDataPromise.get() |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.hiddenAccountsAccessChallengeData = value
+        })
         
         let _ = (combineLatest(queue: .mainQueue(),
             accountManager.accessChallengeData(),
@@ -132,6 +192,10 @@ public final class AppLockContextImpl: AppLockContext {
                 if !strongSelf.lastActiveValue {
                     strongSelf.lastActiveValue = true
                     strongSelf.lastActiveTimestamp = timestamp
+                    
+                    if let data = try? Data(contentsOf: URL(fileURLWithPath: appLockStatePath(rootPath: strongSelf.rootPath))), let current = try? JSONDecoder().decode(LockState.self, from: data) {
+                        strongSelf.currentStateValue = current
+                    }
                 }
                 
                 if let lastActiveTimestamp = strongSelf.lastActiveTimestamp {
@@ -142,7 +206,8 @@ public final class AppLockContextImpl: AppLockContext {
             } else {
                 strongSelf.lastActiveValue = false
             }
-            
+            // MARK: Nicegram DB Changes
+            strongSelf.checkCurrentAccountDisposable.set(strongSelf.updateIsCurrentAccountHiddenProperty())
             var shouldDisplayCoveringView = false
             var isCurrentlyLocked = false
             
@@ -189,19 +254,36 @@ public final class AppLockContextImpl: AppLockContext {
                         }
                         passcodeController.ensureInputFocused()
                     } else {
+                        // MARK: Nicegram DB Changes
+                        strongSelf.lockingIsCompletePromise.set(.single(false))
+
                         let passcodeController = PasscodeEntryController(applicationBindings: strongSelf.applicationBindings, accountManager: strongSelf.accountManager, appLockContext: strongSelf, presentationData: presentationData, presentationDataSignal: strongSelf.presentationDataSignal, statusBarHost: window?.statusBarHost, challengeData: accessChallengeData.data, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: !becameActiveRecently, lockIconInitialFrame: {
                             if let lockViewFrame = lockIconInitialFrame() {
                                 return lockViewFrame
                             } else {
                                 return CGRect()
                             }
-                        }))
+                            // MARK: Nicegram DB Changes
+                        }), hiddenAccountsAccessChallengeData: strongSelf.hiddenAccountsAccessChallengeData, hasPublicAccountsSignal: accountManager.hiddenAccountManager.hasPublicAccounts(accountManager: accountManager))
                         if becameActiveRecently, appInForeground {
-                            passcodeController.presentationCompleted = { [weak passcodeController] in
+                            // MARK: Nicegram DB Changes
+                            passcodeController.presentationCompleted = { [weak passcodeController, weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+                                    strongSelf.lockingIsCompletePromise.set(.single(true))
+                                }
                                 if case .enabled = biometrics {
                                     passcodeController?.requestBiometrics()
                                 }
                                 passcodeController?.ensureInputFocused()
+                            }
+                            // MARK: Nicegram DB Changes
+                        } else {
+                            passcodeController.presentationCompleted = { [weak self] in
+                                if let strongSelf = self {
+                                    strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+                                    strongSelf.lockingIsCompletePromise.set(.single(true))
+                                }
                             }
                         }
                         passcodeController.presentedOverCoveringView = true
@@ -214,16 +296,28 @@ public final class AppLockContextImpl: AppLockContext {
                                 rootViewController.dismiss(animated: false, completion: nil)
                             }
                         }
+                        // MARK: Nicegram DB Changes
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            if let window = strongSelf.window {
+                                let coveringView = LockedWindowCoveringView(theme: presentationData.theme)
+                                coveringView.updateSnapshot(getPublicCoveringViewSnapshot(window: window))
+                                strongSelf.snapshotView = coveringView
+                            }
+                        }
                         strongSelf.window?.present(passcodeController, on: .passcode)
                     }
                 } else if let passcodeController = strongSelf.passcodeController {
                     strongSelf.passcodeController = nil
-                    passcodeController.dismiss()
+                    // MARK: Nicegram DB Changes
+                    passcodeController.dismiss() { [weak self] in
+                        self?.onUnlockedDismiss.putNext(())
+                    }
                 }
             }
             
             strongSelf.updateTimestampRenewTimer(shouldRun: appInForeground && !isCurrentlyLocked)
-            strongSelf.isCurrentlyLockedPromise.set(.single(!appInForeground || isCurrentlyLocked))
+            // MARK: Nicegram DB Changes
+            strongSelf.isCurrentlyLockedPromise.set(.single(isCurrentlyLocked))
             
             if shouldDisplayCoveringView {
                 if strongSelf.coveringView == nil, let window = strongSelf.window {
@@ -236,7 +330,10 @@ public final class AppLockContextImpl: AppLockContext {
                         if let _ = rootViewController.presentedViewController as? UIActivityViewController {
                         } else if let _ = rootViewController.presentedViewController as? PKPaymentAuthorizationViewController {
                         } else {
-                            rootViewController.dismiss(animated: false, completion: nil)
+                            // MARK: Nicegram, change dismiss to alpha=0
+                            // (assistant hides when app enters background)
+                            rootViewController.presentedViewController?.view.alpha = 0
+//                            rootViewController.dismiss(animated: false, completion: nil)
                         }
                     }
                 }
@@ -245,10 +342,26 @@ public final class AppLockContextImpl: AppLockContext {
                     strongSelf.coveringView = nil
                     strongSelf.window?.coveringView = nil
                 }
+                // MARK: Nicegram, restore presentedViewController alpha
+                strongSelf.rootController?.presentedViewController?.view.alpha = 1
             }
         })
         
         self.currentState.set(.single(self.currentStateValue))
+        // MARK: Nicegram DB Changes
+        self.applicationInForegroundDisposable = (applicationBindings.applicationInForeground
+            |> distinctUntilChanged(isEqual: ==)
+            |> filter { !$0 }
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                guard let strongSelf = self else { return }
+                
+                if strongSelf.isCurrentAccountHidden {
+                    strongSelf.coveringView = strongSelf.snapshotView
+                    strongSelf.window?.coveringView = strongSelf.snapshotView
+                }
+                
+            strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+        })
         
         let _ = (self.autolockTimeout.get()
         |> deliverOnMainQueue).start(next: { [weak self] autolockTimeout in
@@ -258,6 +371,18 @@ public final class AppLockContextImpl: AppLockContext {
                 return state
             }
         })
+    }
+    // MARK: Nicegram DB Changes
+    private func updateIsCurrentAccountHiddenProperty() -> Disposable {
+        (accountManager.currentAccountRecord(allocateIfNotExists: false)
+            |> mapToQueue { [weak self] accountRecord -> Signal<Bool, NoError> in
+                guard let strongSelf = self,
+                      let accountRecord = accountRecord else { return .never() }
+                let accountRecordId = accountRecord.0
+                return strongSelf.accountManager.hiddenAccountManager.isAccountHidden(accountRecordId: accountRecordId, accountManager: strongSelf.accountManager)
+            }).start() { [weak self] isAccountHidden in
+                self?.isCurrentAccountHidden = isAccountHidden
+            }
     }
     
     private func updateTimestampRenewTimer(shouldRun: Bool) {
@@ -370,5 +495,10 @@ public final class AppLockContextImpl: AppLockContext {
             state.unlockAttemts = unlockAttemts
             return state
         }
+    }
+    // MARK: Nicegram DB Changes
+    deinit {
+        self.hiddenAccountsAccessChallengeDataDisposable?.dispose()
+        self.applicationInForegroundDisposable?.dispose()
     }
 }

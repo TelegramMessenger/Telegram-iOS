@@ -11,32 +11,57 @@ import UIKit
 import WebPBinding
 import RLottieBinding
 import GZip
+import AnimationCache
+import EmojiTextAttachmentView
 
-public func reactionStaticImage(context: AccountContext, animation: TelegramMediaFile, pixelSize: CGSize) -> Signal<EngineMediaResource.ResourceData, NoError> {
+public let sharedReactionStaticImage = Queue(name: "SharedReactionStaticImage", qos: .default)
+
+public func reactionStaticImage(context: AccountContext, animation: TelegramMediaFile, pixelSize: CGSize, queue: Queue) -> Signal<EngineMediaResource.ResourceData, NoError> {
     return context.engine.resources.custom(id: "\(animation.resource.id.stringRepresentation):reaction-static-\(pixelSize.width)x\(pixelSize.height)-v10", fetch: EngineMediaResource.Fetch {
         return Signal { subscriber in
             let fetchDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: MediaResourceReference.standalone(resource: animation.resource)).start()
-            let dataDisposable = context.account.postbox.mediaBox.resourceData(animation.resource).start(next: { data in
-                if !data.complete {
-                    return
-                }
-                guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
-                    return
-                }
-                guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
-                    return
-                }
-                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
-                    return
+            
+            let type: AnimationCacheAnimationType
+            if animation.isVideoSticker || animation.isVideoEmoji {
+                type = .video
+            } else if animation.isAnimatedSticker {
+                type = .lottie
+            } else {
+                type = .still
+            }
+            let fetchFrame = animationCacheFetchFile(context: context, resource: MediaResourceReference.standalone(resource: animation.resource), type: type, keyframeOnly: true)
+            
+            class AnimationCacheItemWriterImpl: AnimationCacheItemWriter {
+                let queue: Queue
+                private let frameReceived: (UIImage) -> Void
+                
+                init(queue: Queue, frameReceived: @escaping (UIImage) -> Void) {
+                    self.queue = queue
+                    self.frameReceived = frameReceived
                 }
                 
-                let renderContext = DrawingContext(size: pixelSize, scale: 1.0, clear: true)
-
-                instance.renderFrame(with: Int32(instance.frameCount - 1), into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
-                
-                guard let image = renderContext.generateImage() else {
-                    return
+                var isCancelled: Bool {
+                    return false
                 }
+                
+                func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int, insertKeyframe: Bool) {
+                    let renderContext = DrawingContext(size: CGSize(width: proposedWidth, height: proposedHeight), scale: 1.0, clear: true)
+                    let _ = drawingBlock(AnimationCacheItemDrawingSurface(
+                        argb: renderContext.bytes.assumingMemoryBound(to: UInt8.self),
+                        width: Int(renderContext.scaledSize.width),
+                        height: Int(renderContext.scaledSize.height),
+                        bytesPerRow: renderContext.bytesPerRow,
+                        length: renderContext.length
+                    ))
+                    if let image = renderContext.generateImage() {
+                        self.frameReceived(image)
+                    }
+                }
+                
+                func finish() {
+                }
+            }
+            let innerWriter = AnimationCacheItemWriterImpl(queue: queue, frameReceived: { image in
                 guard let pngData = image.pngData() else {
                     return
                 }
@@ -49,6 +74,36 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                 subscriber.putNext(.moveTempFile(file: tempFile))
                 subscriber.putCompletion()
             })
+            
+            let dataDisposable = fetchFrame(AnimationCacheFetchOptions(
+                size: pixelSize,
+                writer: innerWriter,
+                firstFrameOnly: true
+            ))
+            
+            /*let dataDisposable = context.account.postbox.mediaBox.resourceData(animation.resource).start(next: { data in
+                if !data.complete {
+                    return
+                }
+                
+               
+                
+                guard let data = try? Data(contentsOf: URL(fileURLWithPath: data.path)) else {
+                    return
+                }
+                guard let unpackedData = TGGUnzipData(data, 5 * 1024 * 1024) else {
+                    return
+                }
+                guard let instance = LottieInstance(data: unpackedData, fitzModifier: .none, colorReplacements: nil, cacheKey: "") else {
+                    return
+                }
+                
+                
+
+                instance.renderFrame(with: Int32(instance.frameCount - 1), into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
+                
+                
+            })*/
             
             return ActionDisposable {
                 fetchDisposable.dispose()
@@ -65,7 +120,7 @@ public final class ReactionImageNode: ASDisplayNode {
     
     private let iconNode: ASImageNode
     
-    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: String, displayPixelSize: CGSize) {
+    public init(context: AccountContext, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction, displayPixelSize: CGSize) {
         self.iconNode = ASImageNode()
         
         var file: TelegramMediaFile?
@@ -88,7 +143,7 @@ public final class ReactionImageNode: ASDisplayNode {
             
             super.init()
             
-            self.disposable = (reactionStaticImage(context: context, animation: animationFile, pixelSize: CGSize(width: displaySize.width * UIScreenScale, height: displaySize.height * UIScreenScale))
+            self.disposable = (reactionStaticImage(context: context, animation: animationFile, pixelSize: CGSize(width: displaySize.width * UIScreenScale, height: displaySize.height * UIScreenScale), queue: sharedReactionStaticImage)
             |> deliverOnMainQueue).start(next: { [weak self] data in
                 guard let strongSelf = self else {
                     return

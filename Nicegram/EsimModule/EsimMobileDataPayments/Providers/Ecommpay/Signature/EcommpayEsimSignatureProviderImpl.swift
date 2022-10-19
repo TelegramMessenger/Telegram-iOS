@@ -1,4 +1,5 @@
 import EsimApiClientDefinition
+import EsimPayments
 
 public class EcommpayEsimSignatureProviderImpl  {
     
@@ -14,13 +15,13 @@ public class EcommpayEsimSignatureProviderImpl  {
 }
 
 extension EcommpayEsimSignatureProviderImpl: EcommpayEsimSignatureProvider {
-    public func getSignature(signatureParams: String, regionId: Int, bundleId: Int, icc: String?, completion: @escaping (Result<String, Error>) -> ()) {
+    public func getSignature(signatureParams: String, regionId: Int, bundleId: Int, icc: String?, completion: @escaping (Result<String, EcommpaySignatureError>) -> ()) {
         apiClient.send(.getSignature(signatureParams: signatureParams, regionId: regionId, bundleId: bundleId, icc: icc)) { result in
             switch result {
             case .success(let dto):
                 completion(.success(dto.data))
             case .failure(let esimApiError):
-                completion(.failure(esimApiError))
+                completion(.failure(.underlying(esimApiError)))
             }
         }
     }

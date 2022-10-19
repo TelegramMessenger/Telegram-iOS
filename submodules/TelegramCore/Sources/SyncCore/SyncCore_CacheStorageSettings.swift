@@ -18,7 +18,15 @@ public struct CacheStorageSettings: Codable, Equatable {
         let container = try decoder.container(keyedBy: StringCodingKey.self)
 
         self.defaultCacheStorageTimeout = (try? container.decode(Int32.self, forKey: "dt")) ?? Int32.max
-        self.defaultCacheStorageLimitGigabytes = (try? container.decode(Int32.self, forKey: "dl")) ?? Int32.max
+        
+        if let legacyValue = try container.decodeIfPresent(Int32.self, forKey: "dl") {
+            self.defaultCacheStorageLimitGigabytes = legacyValue
+        } else if let value = try container.decodeIfPresent(Int32.self, forKey: "sizeLimit") {
+            self.defaultCacheStorageLimitGigabytes = value
+        } else {
+            // MARK: Nicegram CacheSettings, change default value to 2 GB
+            self.defaultCacheStorageLimitGigabytes = 2 * 1024 * 1024
+        }
     }
     
     public func encode(to encoder: Encoder) throws {

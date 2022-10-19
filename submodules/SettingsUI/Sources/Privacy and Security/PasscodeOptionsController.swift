@@ -16,6 +16,14 @@ import PasscodeUI
 import TelegramStringFormatting
 import TelegramIntents
 
+// MARK: Nicegram import
+import NGData
+import NGStrings
+
+// MARK: Nicegram InstantLock
+private let instantLockTimeout: Int32 = 2
+//
+
 private final class PasscodeOptionsControllerArguments {
     let turnPasscodeOff: () -> Void
     let changePasscode: () -> Void
@@ -163,6 +171,12 @@ private struct PasscodeOptionsData: Equatable {
 
 private func autolockStringForTimeout(strings: PresentationStrings, timeout: Int32?) -> String {
     if let timeout = timeout {
+        // MARK: Nicegram InstantLock
+        let locale = strings.baseLanguageCode
+        if timeout == instantLockTimeout {
+            return l("NiceFeatures.InstantLock", locale)
+        }
+        //
         if timeout == 10 {
             return "If away for 10 seconds"
         } else if timeout == 1 * 60 {
@@ -233,11 +247,24 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
         actionSheet.setItemGroups([ActionSheetItemGroup(items: [
             ActionSheetButtonItem(title: presentationData.strings.PasscodeSettings_TurnPasscodeOff, color: .destructive, action: { [weak actionSheet] in
                 actionSheet?.dismissAnimated()
+                // MARK: Nicegram DB Changes
+                VarSystemNGSettings.isDoubleBottomOn = false
+                VarSystemNGSettings.inDoubleBottom = false
                 
                 let challenge = PostboxAccessChallengeData.none
                 let _ = context.sharedContext.accountManager.transaction({ transaction -> Void in
                     transaction.setAccessChallengeData(challenge)
+                    // MARK: Nicegram DB Changes
+                    for record in transaction.getRecords() {
+                        transaction.updateRecord(record.id) { record in
+                            guard let record = record else { return nil }
+                            var attributes = record.attributes
+                            attributes.removeAll { $0.isHiddenAccountAttribute }
+                            return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
+                        }
+                    }
                 }).start()
+                // MARK: Nicegram DB Changes
                 
                 let _ = (passcodeOptionsDataPromise.get() |> take(1)).start(next: { [weak passcodeOptionsDataPromise] data in
                     passcodeOptionsDataPromise?.set(.single(data.withUpdatedAccessChallenge(challenge)))
@@ -245,7 +272,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 
                 var innerReplaceTopControllerImpl: ((ViewController, Bool) -> Void)?
                 let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                    let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
+                    // MARK: Nicegram DB Changes
+                    let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                     setupController.complete = { passcode, numerical in
                         let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                             var data = transaction.getAccessChallengeData()
@@ -289,7 +317,7 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
             }
         })
         |> deliverOnMainQueue).start(next: { isSimple in
-            let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, .digits6))
+            let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: true, .digits6))
             setupController.complete = { passcode, numerical in
                 let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                     var data = transaction.getAccessChallengeData()
@@ -298,6 +326,16 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                     } else {
                         data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
                     }
+                    for record in transaction.getRecords() {
+                        transaction.updateRecord(record.id) { record in
+                            guard let record = record else { return nil }
+                            var attributes = record.attributes
+                            attributes.removeAll { $0.isHiddenAccountAttribute }
+                            return AccountRecord(id: record.id, attributes: attributes, temporarySessionId: record.temporarySessionId)
+                        }
+                    }
+                    VarSystemNGSettings.isDoubleBottomOn = false
+                    VarSystemNGSettings.inDoubleBottom = false
                     transaction.setAccessChallengeData(data)
                 }) |> deliverOnMainQueue).start(next: { _ in
                 }, error: { _ in
@@ -321,7 +359,8 @@ func passcodeOptionsController(context: AccountContext) -> ViewController {
                 }).start()
             })
         }
-        var values: [Int32] = [0, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
+        // MARK: Nicegram InstantLock, instantLockTimeout added
+        var values: [Int32] = [0, instantLockTimeout, 1 * 60, 5 * 60, 1 * 60 * 60, 5 * 60 * 60]
         
         #if DEBUG
             values.append(10)
@@ -394,7 +433,8 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
     |> map { challenge -> ViewController? in
         if case .none = challenge {
             let controller = PrivacyIntroController(context: context, mode: .passcode, proceedAction: {
-                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits6))
+                // MARK: Nicegram DB Changes
+                let setupController = PasscodeSetupController(context: context.sharedContext, mode: .setup(change: false, .digits6))
                 setupController.complete = { passcode, numerical in
                     let _ = (context.sharedContext.accountManager.transaction({ transaction -> Void in
                         var data = transaction.getAccessChallengeData()
@@ -417,7 +457,8 @@ public func passcodeOptionsAccessController(context: AccountContext, animateIn: 
             })
             return controller
         } else {
-            let controller = PasscodeSetupController(context: context, mode: .entry(challenge))
+            // MARK: Nicegram DB Changes
+            let controller = PasscodeSetupController(context: context.sharedContext, mode: .entry(challenge))
             controller.check = { passcode in
                 var succeed = false
                 switch challenge {
@@ -466,7 +507,8 @@ public func passcodeEntryController(context: AccountContext, animateIn: Bool = t
             #endif
             let controller = PasscodeEntryController(applicationBindings: context.sharedContext.applicationBindings, accountManager: context.sharedContext.accountManager, appLockContext: context.sharedContext.appLockContext, presentationData: context.sharedContext.currentPresentationData.with { $0 }, presentationDataSignal: context.sharedContext.presentationData, statusBarHost: context.sharedContext.mainWindow?.statusBarHost, challengeData: challenge, biometrics: biometrics, arguments: PasscodeEntryControllerPresentationArguments(animated: false, fadeIn: true, cancel: {
                 completion(false)
-            }, modalPresentation: modalPresentation))
+                // MARK: Nicegram DB Changes
+            }, modalPresentation: modalPresentation), hiddenAccountsAccessChallengeData: context.sharedContext.appLockContext.hiddenAccountsAccessChallengeData)
             controller.presentationCompleted = { [weak controller] in
                 Queue.mainQueue().after(0.5, { [weak controller] in
                     controller?.requestBiometrics()

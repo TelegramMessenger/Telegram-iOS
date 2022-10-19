@@ -294,7 +294,10 @@ open class ManagedAnimationNode: ASDisplayNode {
         }
     }
     
-    public func trackTo(item: ManagedAnimationItem) {
+    public func trackTo(item: ManagedAnimationItem, immediately: Bool = false) {
+        if immediately {
+            self.trackStack.removeAll()
+        }
         self.trackStack.append(item)
         self.didTryAdvancingState = false
         self.updateAnimation()

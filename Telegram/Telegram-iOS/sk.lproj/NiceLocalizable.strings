@@ -56,3 +56,8 @@
 "NGLab.RegDate.Btn" = "Dátum registrácie";
 "NGLab.RegDate.Title" = "Dátum registrácie";
 "NGLab.RegDate.MenuItem" = "zaregistrovaný";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Starší než";
+"NiceFeatures.RegDate.Approximately" = "Približne";
+"NiceFeatures.RegDate.NewerThan" = "Novší než";

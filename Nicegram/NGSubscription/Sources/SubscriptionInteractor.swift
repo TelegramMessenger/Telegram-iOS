@@ -3,6 +3,18 @@ import UIKit
 import NGEnv
 import NGIAP
 
+public struct SubscriptionHandlers {
+    let onSuccessPurchase: () -> Void
+    let onSuccessRestore: () -> Void
+    let onClose: () -> Void
+    
+    public init(onSuccessPurchase: @escaping () -> Void, onSuccessRestore: @escaping () -> Void, onClose: @escaping () -> Void) {
+        self.onSuccessPurchase = onSuccessRestore
+        self.onSuccessRestore = onSuccessRestore
+        self.onClose = onClose
+    }
+}
+
 typealias SubscriptionInteractorInput = SubscriptionViewControllerOutput
 
 protocol SubscriptionInteractorOutput {
@@ -22,10 +34,15 @@ final class SubscriptionInteractor {
     
     private let subscriptionService: SubscriptionService
     
+    //  MARK: - Logic
+    
+    private let handlers: SubscriptionHandlers
+    
     //  MARK: - Lifecycle
     
-    init(subscriptionService: SubscriptionService) {
+    init(subscriptionService: SubscriptionService, handlers: SubscriptionHandlers) {
         self.subscriptionService = subscriptionService
+        self.handlers = handlers
     }
     
     //  MARK: - Private Functions
@@ -41,7 +58,7 @@ final class SubscriptionInteractor {
                 if let error = error {
                     print(error)
                 } else {
-                    self.router.dismiss()
+                    self.handlers.onSuccessPurchase()
                 }
             }
         }
@@ -58,7 +75,7 @@ final class SubscriptionInteractor {
                 if let error = error, !error.isEmpty {
                     print(error)
                 } else {
-                    self.router.dismiss()
+                    self.handlers.onSuccessRestore()
                 }
             }
         }
@@ -75,7 +92,7 @@ extension SubscriptionInteractor: SubscriptionInteractorInput {
     }
     
     func requestClose() {
-        router.dismiss()
+        self.handlers.onClose()
     }
     
     func requestPurchase(id: String) {

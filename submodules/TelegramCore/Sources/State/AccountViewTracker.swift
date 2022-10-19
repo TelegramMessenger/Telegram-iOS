@@ -105,7 +105,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                 
                 return account.postbox.transaction { transaction -> Void in
                     var peers: [Peer] = []
-                    var peerPresences: [PeerId: PeerPresence] = [:]
+                    var peerPresences: [PeerId: Api.User] = [:]
                     for chat in chats {
                         if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
                             peers.append(groupOrChannel)
@@ -114,9 +114,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     for apiUser in users {
                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                             peers.append(user)
-                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                peerPresences[user.id] = presence
-                            }
+                            peerPresences[user.id] = apiUser
                         }
                     }
                     
@@ -302,6 +300,10 @@ public final class AccountViewTracker {
     private var updatedSeenLiveLocationMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var nextSeenLiveLocationDisposableId: Int32 = 0
     private var seenLiveLocationDisposables = DisposableDict<Int32>()
+    
+    private var updatedExtendedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
+    private var nextUpdatedExtendedMediaDisposableId: Int32 = 0
+    private var updatedExtendedMediaDisposables = DisposableDict<Int32>()
     
     private var updatedUnsupportedMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
     private var refreshSecretChatMediaMessageIdsAndTimestamps: [MessageId: Int32] = [:]
@@ -692,16 +694,14 @@ public final class AccountViewTracker {
                                 
                                 return account.postbox.transaction { transaction -> [MessageId: ViewCountContextState] in
                                     var peers: [Peer] = []
-                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    var peerPresences: [PeerId: Api.User] = [:]
                                     
                                     var resultStates: [MessageId: ViewCountContextState] = [:]
                                     
                                     for apiUser in users {
                                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                                             peers.append(user)
-                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                                peerPresences[user.id] = presence
-                                            }
+                                            peerPresences[user.id] = apiUser
                                         }
                                     }
                                     for chat in chats {
@@ -966,6 +966,59 @@ public final class AccountViewTracker {
         }
     }
     
+    public func updatedExtendedMediaForMessageIds(messageIds: Set<MessageId>) {
+        self.queue.async {
+            var addedMessageIds: [MessageId] = []
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent())
+            for messageId in messageIds {
+                let messageTimestamp = self.updatedExtendedMediaMessageIdsAndTimestamps[messageId]
+                if messageTimestamp == nil || messageTimestamp! < timestamp - 30 {
+                    self.updatedExtendedMediaMessageIdsAndTimestamps[messageId] = timestamp
+                    addedMessageIds.append(messageId)
+                }
+            }
+            
+            if !addedMessageIds.isEmpty {
+                for (peerId, messageIds) in messagesIdsGroupedByPeerId(Set(addedMessageIds)) {
+                    let disposableId = self.nextUpdatedExtendedMediaDisposableId
+                    self.nextUpdatedExtendedMediaDisposableId += 1
+                    
+                    if let account = self.account {
+                        let signal = account.postbox.transaction { transaction -> Peer? in
+                            if let peer = transaction.getPeer(peerId) {
+                                return peer
+                            } else {
+                                return nil
+                            }
+                        }
+                        |> mapToSignal { peer -> Signal<Void, NoError> in
+                            guard let peer = peer, let inputPeer = apiInputPeer(peer) else {
+                                return .complete()
+                            }
+                            return account.network.request(Api.functions.messages.getExtendedMedia(peer: inputPeer, id: messageIds.map { $0.id }))
+                            |> map(Optional.init)
+                            |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+                                return .single(nil)
+                            }
+                            |> mapToSignal { updates -> Signal<Void, NoError> in
+                                if let updates = updates {
+                                    account.stateManager.addUpdates(updates)
+                                }
+                                return .complete()
+                            }
+                        }
+                        |> afterDisposed { [weak self] in
+                            self?.queue.async {
+                                self?.updatedExtendedMediaDisposables.set(nil, forKey: disposableId)
+                            }
+                        }
+                        self.updatedExtendedMediaDisposables.set(signal.start(), forKey: disposableId)
+                    }
+                }
+            }
+        }
+    }
+    
     public func updateUnsupportedMediaForMessageIds(messageIds: Set<MessageId>) {
         self.queue.async {
             var addedMessageIds: [MessageId] = []
@@ -1029,7 +1082,7 @@ public final class AccountViewTracker {
                             |> mapToSignal { messages, chats, users -> Signal<Void, NoError> in
                                 return account.postbox.transaction { transaction -> Void in
                                     var peers: [Peer] = []
-                                    var peerPresences: [PeerId: PeerPresence] = [:]
+                                    var peerPresences: [PeerId: Api.User] = [:]
                                     
                                     for chat in chats {
                                         if let groupOrChannel = mergeGroupOrChannel(lhs: transaction.getPeer(chat.peerId), rhs: chat) {
@@ -1039,9 +1092,7 @@ public final class AccountViewTracker {
                                     for apiUser in users {
                                         if let user = TelegramUser.merge(transaction.getPeer(apiUser.peerId) as? TelegramUser, rhs: apiUser) {
                                             peers.append(user)
-                                            if let presence = TelegramUserPresence(apiUser: apiUser) {
-                                                peerPresences[user.id] = presence
-                                            }
+                                            peerPresences[user.id] = apiUser
                                         }
                                     }
                                     
@@ -1142,7 +1193,7 @@ public final class AccountViewTracker {
                                 return account.postbox.transaction { transaction -> Void in
                                     for result in results {
                                         switch result {
-                                        case let .stickerSet(_, _, documents)?:
+                                        case let .stickerSet(_, _, _, documents)?:
                                             for document in documents {
                                                 if let file = telegramMediaFileFromApiDocument(document) {
                                                     if transaction.getMedia(file.fileId) != nil {

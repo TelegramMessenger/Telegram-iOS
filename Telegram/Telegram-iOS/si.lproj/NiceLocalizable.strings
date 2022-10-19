@@ -1,0 +1,34 @@
+"AppName" = "නයිස්ග්‍රෑම්";
+"ChatFilter.Channels" = "නාලිකා";
+"ChatFilter.Private" = "පරිශිලකයින්";
+"ChatFilter.Groups" = "සමූහ";
+"ChatFilter.Unread" = "නොකියවූ";
+"ChatFilter.Favourites" = "ප්‍රියතමයන්";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "නයිස්ග්‍රෑම්";
+"NiceFeatures.Tabs.Header" = "පටිති";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "චලන ඇඳිරූප";
+
+"NiceFeatures.Folders.Header" = "බහාලුම්";
+"NiceFeatures.Account.Header" = "ගිණුමේ සැකසුම්";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "මේඝයට සුරකින්න";
+"ChatFilter.Admin" = "පරිපාලක";
+
+/*Common*/
+"Common.ExitNow" = "දැන් පිටවන්න";
+"Common.Later" = "පසුව";
+
+/*Folder*/
+"Folder.DefaultName" = "බහාලුම";
+"Folder.New" = "නව බහාලුම";
+"NiceFeatures.Browser.Header" = "ඒ.ස.නි.";
+
+/*Premium*/
+"Premium.Title" = "ආධික්‍යය";
+"IAP.Premium.Title" = "ආධික්‍යය";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "ඉදිරියට";

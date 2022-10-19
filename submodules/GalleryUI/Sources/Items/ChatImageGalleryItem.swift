@@ -130,7 +130,9 @@ class ChatImageGalleryItem: GalleryItem {
         
         node.setMessage(self.message, displayInfo: !self.displayInfoOnTop)
         for media in self.message.media {
-            if let image = media as? TelegramMediaImage {
+            if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case let .full(fullMedia) = extendedMedia, let image = fullMedia as? TelegramMediaImage {
+                node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
+            } else if let image = media as? TelegramMediaImage {
                 node.setImage(imageReference: .message(message: MessageReference(self.message), media: image))
                 break
             } else if let file = media as? TelegramMediaFile, file.mimeType.hasPrefix("image/") {
@@ -238,6 +240,8 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
         
         super.init()
         
+        self.clipsToBounds = true
+        
         self.imageNode.imageUpdated = { [weak self] _ in
             self?._ready.set(.single(Void()))
         }
@@ -286,6 +290,11 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
     
     override func ready() -> Signal<Void, NoError> {
         return self._ready.get()
+    }
+    
+    override func screenFrameUpdated(_ frame: CGRect) {
+        let center = frame.midX - self.frame.width / 2.0
+        self.subnodeTransform = CATransform3DMakeTranslation(-center * 0.16, 0.0, 0.0)
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {

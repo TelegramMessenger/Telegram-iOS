@@ -5,10 +5,11 @@ NGDEPS = [
     "//Nicegram/NGAssistant:NGAssistant",
     "//Nicegram/NGSpecialOffer:NGSpecialOffer",
     "//Nicegram/NGTheme:NGTheme",
-    "//Nicegram/NGTransitions:NGTransitions",
     "//Nicegram/NGEnv:NGEnv",
     # Delete later
-    "//Nicegram/NGAuth:NGAuth"
+    "//Nicegram/NGAuth:NGAuth",
+    # Nicegram downloading feature
+    "//submodules/SaveToCameraRoll:SaveToCameraRoll",
 ]
 
 swift_library(
@@ -82,11 +83,13 @@ swift_library(
         "//submodules/PremiumUI:PremiumUI",
         "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
         "//submodules/Components/HierarchyTrackingLayer:HierarchyTrackingLayer",
+        "//submodules/Components/ComponentDisplayAdapters:ComponentDisplayAdapters",
         "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
         "//submodules/TelegramUI/Components/MultiAnimationRenderer",
         "//submodules/TelegramUI/Components/TextNodeWithEntities",
-        # Nicegram downloading feature
-        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
+        "//submodules/TelegramUI/Components/EmojiStatusSelectionComponent",
+        "//submodules/TelegramUI/Components/EntityKeyboard",
     ] + NGDEPS,
     visibility = [
         "//visibility:public",

@@ -1,0 +1,6 @@
+framework module Pods_CocoaPodsVerification {
+  umbrella header "Pods-CocoaPodsVerification-umbrella.h"
+
+  export *
+  module * { export * }
+}

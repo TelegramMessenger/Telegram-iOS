@@ -12,4 +12,14 @@ extension MessageError: LocalizedError {
     public var errorDescription: String? { message }
 }
 
+public var defaultErrorMessage: String {
+    return NSLocalizedString("Error.Default", comment: "")
+}
+
+public extension MessageError {
+    static var defaultError: Error {
+        return MessageError(message: defaultErrorMessage)
+    }
+}
+
 

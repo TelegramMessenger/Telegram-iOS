@@ -38,7 +38,10 @@ swift_library(
         "//Nicegram/NGLoadingIndicator:NGLoadingIndicator",
         "//Nicegram/NGWebUtils:NGWebUtils",
         "//Nicegram/NGEnv:NGEnv",
+        "//Nicegram/NGDoubleBottom:NGDoubleBottom",
         "//Nicegram/NGQuickReplies:NGQuickReplies",
+        "//Nicegram/NGSecretMenu:NGSecretMenu",
+        "//Nicegram/NGStats:NGStats",
     ],
     visibility = [
         "//visibility:public",

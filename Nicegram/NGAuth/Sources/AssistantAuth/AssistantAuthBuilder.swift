@@ -1,6 +1,5 @@
 import UIKit
 import AccountContext
-import NGAuth
 import EsimAuth
 import EsimApiClient
 import NGTheme

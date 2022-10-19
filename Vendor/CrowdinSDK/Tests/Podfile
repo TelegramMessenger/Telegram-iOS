@@ -1,0 +1,17 @@
+platform :ios, '9.0'
+
+target 'Tests' do
+  use_frameworks!
+
+  pod 'CrowdinSDK', :path => '../', :testspecs => ['Core_Tests', 'CrowdinProvider_Tests', 'CrowdinAPI_Tests']
+  pod 'CrowdinSDK/CrowdinProvider', :path => '../'
+  pod 'CrowdinSDK/LoginFeature', :path => '../'
+  
+  target 'TestsTests' do
+    inherit! :search_paths
+  end
+
+  target 'TestsUITests' do
+    inherit! :search_paths
+  end
+end

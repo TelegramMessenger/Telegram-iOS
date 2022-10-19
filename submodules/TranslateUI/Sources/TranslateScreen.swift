@@ -98,15 +98,15 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.availableSpeakLanguages = supportedSpeakLanguages()
             
             super.init()
-            
-            self.translationDisposable.set((translateText(context: context, text: text, from: fromLanguage, to: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] result in
+                        
+            self.translationDisposable.set((context.engine.messages.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = result.text
-                if strongSelf.fromLanguage == nil {
-                    strongSelf.fromLanguage = result.detectedLanguage
-                }
+                strongSelf.translatedText = text
+//                if strongSelf.fromLanguage == nil {
+//                    strongSelf.fromLanguage = result.detectedLanguage
+//                }
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 
@@ -127,14 +127,14 @@ private final class TranslateScreenComponent: CombinedComponent {
             self.translatedText = nil
             self.updated(transition: .immediate)
             
-            self.translationDisposable.set((translateText(context: self.context, text: text, from: fromLanguage, to: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] result in
+            self.translationDisposable.set((self.context.engine.messages.translate(text: text, fromLang: fromLanguage, toLang: toLanguage) |> deliverOnMainQueue).start(next: { [weak self] text in
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.translatedText = result.text
-                if strongSelf.fromLanguage == nil {
-                    strongSelf.fromLanguage = result.detectedLanguage
-                }
+                strongSelf.translatedText = text
+//                if strongSelf.fromLanguage == nil {
+//                    strongSelf.fromLanguage = result.detectedLanguage
+//                }
                 strongSelf.updated(transition: .immediate)
             }, error: { error in
                 

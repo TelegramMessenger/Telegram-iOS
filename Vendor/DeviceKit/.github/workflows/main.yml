@@ -1,0 +1,61 @@
+name: CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+  workflow_dispatch:
+
+jobs:
+  danger:
+    runs-on: macos-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.6.3
+
+      - uses: MeilCli/danger-action@v5
+        with:
+          plugins_file: Gemfile
+          install_path: vendor/bundle
+          danger_file: Dangerfile
+          danger_id: danger-pr
+        env:
+          DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  test:
+    runs-on: macos-latest
+
+    strategy:
+      matrix:
+        platform:
+          - platform=iOS Simulator,name=iPhone 12 Pro Max
+          - platform=iOS Simulator,name=iPhone 12 Pro
+          - platform=iOS Simulator,name=iPhone 12
+          - platform=iOS Simulator,name=iPhone 12 mini
+          - platform=iOS Simulator,name=iPhone 11 Pro Max
+          - platform=iOS Simulator,name=iPhone 11 Pro
+          - platform=iOS Simulator,name=iPhone 11
+          - platform=iOS Simulator,name=iPhone 8 Plus
+          - platform=iOS Simulator,name=iPhone 8
+          - platform=iOS Simulator,name=iPhone SE (2nd generation)
+          - platform=iOS Simulator,name=iPod touch (7th generation)
+          - platform=tvOS Simulator,name=Apple TV
+          - platform=tvOS Simulator,name=Apple TV 4K
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - uses: ruby/setup-ruby@v1
+        with:
+          bundler-cache: true
+          ruby-version: 2.6.3
+
+      - name: xcodebuild
+        run: set -o pipefail && xcodebuild -scheme DeviceKit -destination "${{ matrix.platform }}" -configuration Debug ONLY_ACTIVE_ARCH=YES -enableCodeCoverage YES test

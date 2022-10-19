@@ -13,6 +13,17 @@ public struct NGEnvObj: Decodable {
     public let privacy_url: String
     public let terms_url: String
     public let restore_url: String
+    public let reg_date_url: String
+    public let reg_date_key: String
+    public let esim_api_url: String
+    public let esim_api_key: String
+    public let google_client_id: String
+    public let ecommpay_merchant_id: String
+    public let ecommpay_project_id: Int
+    public let crowdin_hash: String
+    public let remote_config_cache_duration_seconds: Double
+    public let telegram_auth_bot: String
+    public let google_cloud_api_key: String
 }
 
 func parseNGEnv() -> NGEnvObj {

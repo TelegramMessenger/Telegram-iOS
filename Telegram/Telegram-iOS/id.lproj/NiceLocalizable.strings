@@ -1,0 +1,54 @@
+"AppName" = "Nicegram";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Kebijakan pribadi";
+"Nicegram.EULA" = "EULA";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Bots";
+"ChatFilter.Channels" = "Saluran";
+"ChatFilter.Private" = "Pengguna";
+"ChatFilter.Groups" = "Grup";
+"ChatFilter.Unread" = "Belum dibaca";
+"ChatFilter.Unmuted" = "Bersuara";
+"ChatFilter.Favourites" = "Favorit";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "TABS";
+"NiceFeatures.Tabs.ShowContacts" = "Tampilkan Tab Kontak";
+"NiceFeatures.ChatScreen.Header" = "LAYAR CHAT";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Stiker Animasi";
+"NiceFeatures.useBackCam" = "Gunakan kamera Belakang (Video Bulat)";
+
+"NiceFeatures.Folders.Header" = "FOLDER";
+"NiceFeatures.Account.Header" = "PENGATURAN AKUN";
+"NiceFeatures.Folders.TgFolders" = "Folder di bawah";
+"NiceFeatures.Folders.TgFolders.Notice" = "daftar folder bergaya iOS";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"IAP.Premium.Title" = "Premium";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Lebih tua dari";
+"NiceFeatures.RegDate.Approximately" = "Sekitar";
+"NiceFeatures.RegDate.NewerThan" = "Lebih baru dari";
+
+"NicePremium.Translator" = "Penerjemah bawaan";
+"NicePremium.Translator.Desc" = "Terjemahkan pesan apa pun secara instan di aplikasi tanpa beralih ke penerjemah pihak ketiga";
+
+"NicePremium.SpeechToText.Desc" = "Dapatkan pesan suara apa pun yang ditranskripsi dalam hitungan detik dan hemat banyak waktu luang anda ";
+"NicePremium.MentionAll.Desc" = "Sangat cepat memberitahu anggota grup dan pastikan semua orang akan membaca pesan anda";
+
+"NicePremium.Renews" = "Berlangganan Memperbarui Secara Otomatis";
+"NicegramOnboarding.1.Title" = "Klien №1 untuk Telegram Messenger";
+"NicegramOnboarding.1.Desc" = "Bergabunglah dengan lebih dari 2 juta pengguna Nicegram dan dapatkan akses ke klien Telegram paling ampuh dan aman untuk bisnis.";
+"NicegramOnboarding.2.Title" = "Pengalaman Perpesanan Tingkat Lanjut";
+"NicegramOnboarding.2.Desc" = "Percepat komunikasi dengan fitur unik seperti Penerjemah Bawaan, Teks ke Ucapan, Meneruskan pesan tanpa menyebut penulis dan Menyimpan cepat ke favorit.";
+"NicegramOnboarding.3.Title" = "Profil Pengguna Diperluas";
+"NicegramOnboarding.3.Desc" = "Buat akun Telegram sebanyak yang Anda butuhkan secara gratis sepenuhnya, serta lihat profil pengguna tingkat lanjut dengan ID, tanggal pendaftaran, dan tautan yang dapat diklik.";
+"NicegramOnboarding.4.Title" = "Ekstensi Bisnis yang Unik";
+"NicegramOnboarding.4.Desc" = "Manfaatkan inovasi dari tim Nicegram dan dapatkan eSIM dengan akses internet di 133 negara. Anda juga dapat mendaftarkan akun Telegram baru dengan nomor telepon dari paket data eSIM.";
+"NicegramOnboarding.5.Title" = "Perpesanan yang Paling Aman";
+"NicegramOnboarding.5.Desc" = "Perpesanan aman dengan Enkripsi yang Kuat, Panggilan Audio dan Video Grup, Saluran Publik, Grup dan Bot, Penyimpanan Cloud Tanpa Batas untuk Obrolan, Berbagi Media dan Dokumen.";

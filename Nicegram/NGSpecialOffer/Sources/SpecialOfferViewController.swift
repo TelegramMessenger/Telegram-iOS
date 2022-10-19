@@ -2,6 +2,7 @@ import UIKit
 import WebKit
 import SnapKit
 import Lottie
+import EsimUI
 import NGButton
 import NGCustomViews
 import NGTheme
@@ -29,13 +30,19 @@ final class SpecialOfferViewController: UIViewController, SpecialOfferViewContro
     private let webViewWrapper = PlaceholderableView(wrappedView: WKWebView())
     private var webView: WKWebView { webViewWrapper.wrappedView }
     private let closeButton = CustomButton()
+    
+    private let popupTransition: PopupTransition
 
     //  MARK: - Lifecycle
     
     init(ngTheme: NGThemeColors) {
         self.ngTheme = ngTheme
+        self.popupTransition = PopupTransition(blurStyle: ngTheme.blurStyle)
         
         super.init(nibName: nil, bundle: nil)
+        
+        self.modalPresentationStyle = .custom
+        self.transitioningDelegate = popupTransition
     }
     
     required init?(coder: NSCoder) {

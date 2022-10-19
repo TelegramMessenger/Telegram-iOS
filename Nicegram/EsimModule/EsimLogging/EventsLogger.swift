@@ -28,13 +28,15 @@ extension EventsLoggerImpl: EventsLogger {
     
     public func logErrorEvent(name: String, error: Error, params: [String : Encodable]) {
         var params = params
-        params["error"] = AnyEncodable(errorInfo(error))
+        let (userInfo, mostUnderlyingError) = errorInfo(error)
+        params["error"] = AnyEncodable(userInfo)
+        params["mostUnderlyingError"] = AnyEncodable(errorInfo(mostUnderlyingError).0)
         logEvent(name: name, params: params)
     }
 }
 
 private extension EventsLoggerImpl {
-    func errorInfo(_ error: Error) -> [String: AnyEncodable] {
+    func errorInfo(_ error: Error) -> ([String: AnyEncodable], Error) {
         let nsError = error as NSError
 
         var info = [String: AnyEncodable]()
@@ -42,10 +44,16 @@ private extension EventsLoggerImpl {
         info["message"] = AnyEncodable(nsError.localizedDescription)
         info["reason"] = AnyEncodable(nsError.localizedFailureReason)
         
+        let mostUnderlyingError: Error
+        
         if let underlyingError = nsError.userInfo["NSUnderlyingError"] as? Error {
-            info["underlyingError"] = AnyEncodable(errorInfo(underlyingError))
+            let errorInfo = self.errorInfo(underlyingError)
+            mostUnderlyingError = errorInfo.1
+            info["underlyingError"] = AnyEncodable(errorInfo.0)
+        } else {
+            mostUnderlyingError = error
         }
         
-        return info
+        return (info, mostUnderlyingError)
     }
 }

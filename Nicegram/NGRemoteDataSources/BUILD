@@ -8,7 +8,7 @@ swift_library(
     ]),
     deps = [
         "//Nicegram/EsimModule/EsimApiClientDefinition:EsimApiClientDefinition",
-        "//Nicegram/EsimModule/SafeFetcher:SafeFetcher",
+        "//Nicegram/EsimModule/SafeExecutor:SafeExecutor",
         "//Nicegram/EsimModule/EsimFeatureAssistant:EsimFeatureAssistant",
         "//Nicegram/EsimModule/EsimFeatureMyEsims:EsimFeatureMyEsims",
         "//Nicegram/EsimModule/EsimFeatureSimOffers:EsimFeatureSimOffers",

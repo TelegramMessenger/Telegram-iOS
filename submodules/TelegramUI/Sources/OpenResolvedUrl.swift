@@ -579,13 +579,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         if let navigationController = navigationController {
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
                             controller.peerSelected = { peer in
-                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload), useExisting: true))
+                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
                             }
                             navigationController.pushViewController(controller)
                         }
                     } else {
                         if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload), useExisting: true))
+                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
                         } else {
                             presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
                         }
@@ -622,13 +622,13 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                     if let navigationController = navigationController {
                                         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
                                         controller.peerSelected = { peer in
-                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload), useExisting: true))
+                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
                                         }
                                         navigationController.pushViewController(controller)
                                     }
                                 } else {
                                     if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload), useExisting: true))
+                                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
                                     }
                                 }
                             })

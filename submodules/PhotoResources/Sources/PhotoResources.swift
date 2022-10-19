@@ -256,6 +256,8 @@ public func chatMessagePhotoDatas(postbox: Postbox, photoReference: ImageMediaRe
         })
         
         return signal
+    } else if let decodedThumbnailData = photoReference.media.immediateThumbnailData.flatMap(decodeTinyThumbnail) {
+        return .single(Tuple(decodedThumbnailData, nil, .blurred, false))
     } else {
         return .never()
     }

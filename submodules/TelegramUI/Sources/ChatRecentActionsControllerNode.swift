@@ -225,7 +225,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, callPeer: { peerId, isVideo in
                     self?.controllerInteraction?.callPeer(peerId, isVideo)
                 }, enqueueMessage: { _ in
-                }, sendSticker: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
+                }, sendSticker: nil, sendEmoji: nil, setupTemporaryHiddenMedia: { _, _, _ in }, chatAvatarHiddenMedia: {  signal, media in
                     if let strongSelf = self {
                         strongSelf.temporaryHiddenGalleryMediaDisposable.set((signal |> deliverOnMainQueue).start(next: { messageId in
                             if let strongSelf = self, let controllerInteraction = strongSelf.controllerInteraction {
@@ -248,7 +248,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                 }, gallerySource: gallerySource))
             }
             return false
-        }, openPeer: { [weak self] peerId, _, message, peer in
+        }, openPeer: { [weak self] peerId, _, message, _, peer in
             if let peerId = peerId, peerId != context.account.peerId {
                 self?.openPeer(peerId: peerId, peer: peer)
             }
@@ -261,7 +261,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, activateMessagePinch: { _ in
         }, openMessageContextActions: { _, _, _, _ in
         }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
-        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _ in return false }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
+        }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { _, _, _, _, _, _, _, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { [weak self] url, _, _, _ in
             self?.openUrl(url)
         }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { [weak self] message, associatedData in
             if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
@@ -659,7 +659,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
-        self.emptyNode.updateLayout(size: emptyFrame.size, transition: transition)
+        self.emptyNode.update(rect: emptyFrame, within: layout.size)
+        self.emptyNode.updateLayout(backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
         
         let contentBottomInset: CGFloat = panelHeight + 4.0
         let listInsets = UIEdgeInsets(top: contentBottomInset, left: layout.safeInsets.right, bottom: insets.top, right: layout.safeInsets.left)

@@ -11,6 +11,7 @@ import LocalizedPeerData
 import TelegramStringFormatting
 import AccountContext
 import ChatPresentationInterfaceState
+import WallpaperBackgroundNode
 
 private protocol ChatEmptyNodeContent {
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize
@@ -134,7 +135,7 @@ final class ChatEmptyNodeGreetingChatContent: ASDisplayNode, ChatEmptyNodeSticke
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -303,7 +304,7 @@ final class ChatEmptyNodeNearbyChatContent: ASDisplayNode, ChatEmptyNodeStickerC
         guard let stickerItem = self.stickerItem else {
             return
         }
-        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil)
+        let _ = self.interaction?.sendSticker(.standalone(media: stickerItem.stickerItem.file), false, self.view, self.stickerNode.bounds, nil, [])
     }
     
     func updateLayout(interfaceState: ChatPresentationInterfaceState, size: CGSize, transition: ContainedViewLayoutTransition) -> CGSize {
@@ -789,6 +790,11 @@ final class ChatEmptyNode: ASDisplayNode {
     
     private let backgroundNode: NavigationBackgroundNode
     
+    private var wallpaperBackgroundNode: WallpaperBackgroundNode?
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
+    
+    private var absolutePosition: (CGRect, CGSize)?
+    
     private var currentTheme: PresentationTheme?
     private var currentStrings: PresentationStrings?
     
@@ -820,18 +826,29 @@ final class ChatEmptyNode: ASDisplayNode {
         let targetFrame = self.backgroundNode.frame
         let initialFrame = loadingNode.convert(loadingNode.progressFrame, to: self)
         
+        let transition = ContainedViewLayoutTransition.animated(duration: duration, curve: .easeInOut)
         self.backgroundNode.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration)
         self.backgroundNode.update(size: initialFrame.size, cornerRadius: initialFrame.size.width / 2.0, transition: .immediate)
-        self.backgroundNode.update(size: targetFrame.size, cornerRadius: targetCornerRadius, transition: .animated(duration: duration, curve: .easeInOut))
+        self.backgroundNode.update(size: targetFrame.size, cornerRadius: targetCornerRadius, transition: transition)
+        
+        if let backgroundContent = self.backgroundContent {
+            backgroundContent.layer.animateFrame(from: initialFrame, to: targetFrame, duration: duration)
+            backgroundContent.cornerRadius = initialFrame.size.width / 2.0
+            transition.updateCornerRadius(layer: backgroundContent.layer, cornerRadius: targetCornerRadius)
+        }
     }
     
-    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, loadingNode: ChatLoadingNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+    func updateLayout(interfaceState: ChatPresentationInterfaceState, emptyType: ChatHistoryNodeLoadState.EmptyType, loadingNode: ChatLoadingNode?, backgroundNode: WallpaperBackgroundNode?, size: CGSize, insets: UIEdgeInsets, transition: ContainedViewLayoutTransition) {
+        self.wallpaperBackgroundNode = backgroundNode
+        
         if self.currentTheme !== interfaceState.theme || self.currentStrings !== interfaceState.strings {
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
 
             self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), enableBlur: dateFillNeedsBlur(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), transition: .immediate)
         }
+        
+
         
         var isScheduledMessages = false
         if case .scheduledMessages = interfaceState.subject {
@@ -923,8 +940,46 @@ final class ChatEmptyNode: ASDisplayNode {
         transition.updateFrame(node: self.backgroundNode, frame: contentFrame)
         self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(20.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
         
+        if backgroundNode?.hasExtraBubbleBackground() == true {
+            if self.backgroundContent == nil, let backgroundContent = backgroundNode?.makeBubbleBackground(for: .free) {
+                backgroundContent.clipsToBounds = true
+
+                self.backgroundContent = backgroundContent
+                self.insertSubnode(backgroundContent, at: 0)
+            }
+        } else {
+            self.backgroundContent?.removeFromSupernode()
+            self.backgroundContent = nil
+        }
+        
+        if let backgroundContent = self.backgroundContent {
+            self.backgroundNode.isHidden = true
+            backgroundContent.cornerRadius = min(20.0, self.backgroundNode.bounds.height / 2.0)            
+            transition.updateFrame(node: backgroundContent, frame: contentFrame)
+
+            if let (rect, containerSize) = self.absolutePosition {
+                var backgroundFrame = backgroundContent.frame
+                backgroundFrame.origin.x += rect.minX
+                backgroundFrame.origin.y += rect.minY
+                backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+            }
+        } else {
+            self.backgroundNode.isHidden = false
+        }
+        
         if let loadingNode = loadingNode {
             self.animateFromLoadingNode(loadingNode)
+        }
+    }
+    
+    
+    public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+        self.absolutePosition = (rect, containerSize)
+        if let backgroundContent = self.backgroundContent {
+            var backgroundFrame = backgroundContent.frame
+            backgroundFrame.origin.x += rect.minX
+            backgroundFrame.origin.y += rect.minY
+            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: transition)
         }
     }
 }

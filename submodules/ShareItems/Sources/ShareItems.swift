@@ -459,11 +459,11 @@ public func sentShareItems(account: Account, to peerIds: [PeerId], items: [Prepa
     for item in items {
         switch item {
             case let .text(text):
-                messages.append(.message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil))
+                messages.append(.message(text: text, attributes: attributes, inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
             case let .media(media):
                 switch media {
                     case let .media(reference):
-                        let message: EnqueueMessage = .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil)
+                        let message: EnqueueMessage = .message(text: "", attributes: attributes, inlineStickers: [:], mediaReference: reference, replyToMessageId: nil, localGroupingKey: groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                         messages.append(message)
                         mediaMessages.append(message)
                         

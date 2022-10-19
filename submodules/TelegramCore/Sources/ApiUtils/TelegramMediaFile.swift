@@ -50,20 +50,24 @@ public extension TelegramMediaFile {
 extension StickerPackReference {
     init?(apiInputSet: Api.InputStickerSet) {
         switch apiInputSet {
-            case .inputStickerSetEmpty:
-                return nil
-            case let .inputStickerSetID(id, accessHash):
-                self = .id(id: id, accessHash: accessHash)
-            case let .inputStickerSetShortName(shortName):
-                self = .name(shortName)
-            case .inputStickerSetAnimatedEmoji:
-                self = .animatedEmoji
-            case let .inputStickerSetDice(emoticon):
-                self = .dice(emoticon)
-            case .inputStickerSetAnimatedEmojiAnimations:
-                self = .animatedEmojiAnimations
-            case .inputStickerSetPremiumGifts:
-                self = .premiumGifts
+        case .inputStickerSetEmpty:
+            return nil
+        case let .inputStickerSetID(id, accessHash):
+            self = .id(id: id, accessHash: accessHash)
+        case let .inputStickerSetShortName(shortName):
+            self = .name(shortName)
+        case .inputStickerSetAnimatedEmoji:
+            self = .animatedEmoji
+        case let .inputStickerSetDice(emoticon):
+            self = .dice(emoticon)
+        case .inputStickerSetAnimatedEmojiAnimations:
+            self = .animatedEmojiAnimations
+        case .inputStickerSetPremiumGifts:
+            self = .premiumGifts
+        case .inputStickerSetEmojiGenericAnimations:
+            self = .emojiGenericAnimations
+        case .inputStickerSetEmojiDefaultStatuses:
+            self = .iconStatusEmoji
         }
     }
 }

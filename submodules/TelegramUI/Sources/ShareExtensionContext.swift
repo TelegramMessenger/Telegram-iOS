@@ -211,12 +211,15 @@ public class ShareRootControllerImpl {
             
             let internalContext: InternalContext
             
-            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false)
+            // MARK: Nicegram DB Changes
+            initializeAccountManagement()
+            let hiddenAccountManager = HiddenAccountManagerImpl()
+            let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: true, isReadOnly: false, useCaches: false, removeDatabaseOnError: false, hiddenAccountManager: hiddenAccountManager)
             
             if let globalInternalContext = globalInternalContext {
                 internalContext = globalInternalContext
             } else {
-                initializeAccountManagement()
+                // MARK: Nicegram DB Changes
                 var initialPresentationDataAndSettings: InitialPresentationDataAndSettings?
                 let semaphore = DispatchSemaphore(value: 0)
                 let systemUserInterfaceStyle: WindowUserInterfaceStyle
@@ -236,8 +239,8 @@ public class ShareRootControllerImpl {
                 let appLockContext = AppLockContextImpl(rootPath: rootPath, window: nil, rootController: nil, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                     return nil
                 })
-                
-                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in })
+                // MARK: Nicegram DB Changes
+                let sharedContext = SharedAccountContextImpl(mainWindow: nil, sharedContainerPath: self.initializationData.appGroupPath, basePath: rootPath, encryptionParameters: ValueBoxEncryptionParameters(forceEncryptionIfNoSet: false, key: ValueBoxEncryptionParameters.Key(data: self.initializationData.encryptionParameters.0)!, salt: ValueBoxEncryptionParameters.Salt(data: self.initializationData.encryptionParameters.1)!), accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings!, networkArguments: NetworkInitializationArguments(apiId: self.initializationData.apiId, apiHash: self.initializationData.apiHash, languagesCategory: self.initializationData.languagesCategory, appVersion: self.initializationData.appVersion, voipMaxLayer: 0, voipVersions: [], appData: .single(self.initializationData.bundleData), autolockDeadine: .single(nil), encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil), hasInAppPurchases: false, rootPath: rootPath, legacyBasePath: nil, apsNotificationToken: .never(), voipNotificationToken: .never(), setNotificationCall: { _ in }, navigateToChat: { _, _, _ in }, openDoubleBottomFlow: { _ in })
                 presentationDataPromise.set(sharedContext.presentationData)
                 internalContext = InternalContext(sharedContext: sharedContext)
                 globalInternalContext = internalContext
@@ -329,6 +332,14 @@ public class ShareRootControllerImpl {
                     var cancelImpl: (() -> Void)?
                     
                     let beginShare: () -> Void = {
+                        // MARK: Nicegram DB Changes
+                        let filteredAccounts: [AccountWithInfo]
+                        if let unlockedHiddenAccountRecordId = context.sharedContext.accountManager.hiddenAccountManager.unlockedAccountRecordId {
+                            filteredAccounts = otherAccounts.filter { $0.account.id == unlockedHiddenAccountRecordId }
+                        } else {
+                            filteredAccounts = otherAccounts.filter { !$0.account.isHidden }
+                        }
+                        
                         let requestUserInteraction: ([UnpreparedShareItemContent]) -> Signal<[PreparedShareItemContent], NoError> = { content in
                             return Signal { [weak self] subscriber in
                                 switch content[0] {
@@ -403,7 +414,8 @@ public class ShareRootControllerImpl {
                             } else {
                                 return .single(.done)
                             }
-                        }), fromForeignApp: true, externalShare: false, switchableAccounts: otherAccounts, immediatePeerId: immediatePeerId)
+                            // MARK: Nicegram DB Changes
+                        }), fromForeignApp: true, externalShare: false, switchableAccounts: filteredAccounts, immediatePeerId: immediatePeerId)
                         shareController.presentationArguments = ViewControllerPresentationArguments(presentationAnimation: .modalSheet)
                         shareController.dismissed = { _ in
                             self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)

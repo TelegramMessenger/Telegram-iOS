@@ -290,8 +290,8 @@ public final class AvatarNode: ASDisplayNode {
         self.imageNode.isHidden = true
     }
     
-    // MARK: Nicegram changes
-    public func setPeer(context: AccountContext, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false, nicegramImage: UIImage? = nil) {
+    // MARK: Nicegram
+    public func setPeer(context genericContext: AccountContext, account: Account? = nil, theme: PresentationTheme, peer: EnginePeer?, authorOfMessage: MessageReference? = nil, overrideImage: AvatarNodeImageOverride? = nil, emptyColor: UIColor? = nil, clipStyle: AvatarNodeClipStyle = .round, synchronousLoad: Bool = false, displayDimensions: CGSize = CGSize(width: 60.0, height: 60.0), storeUnrounded: Bool = false, nicegramImage: UIImage? = nil) {
         var synchronousLoad = synchronousLoad
         var representation: TelegramMediaImageRepresentation?
         var icon = AvatarNodeIcon.none
@@ -323,7 +323,7 @@ public final class AvatarNode: ASDisplayNode {
             }
         }
         // MARK: Nicegram (isAllowedChat)
-        else if peer?.restrictionText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer?._asPeer(), contentSettings: context.currentContentSettings.with { $0 }) {
+        else if peer?.restrictionText(platform: "ios", contentSettings: genericContext.currentContentSettings.with { $0 }) == nil || isAllowedChat(peer: peer?._asPeer(), contentSettings: genericContext.currentContentSettings.with { $0 }) {
             representation = peer?.smallProfileImage
         }
         let updatedState: AvatarNodeState = .peerAvatar(peer?.id ?? EnginePeer.Id(0), peer?.displayLetters ?? [], representation)
@@ -334,7 +334,9 @@ public final class AvatarNode: ASDisplayNode {
             
             let parameters: AvatarNodeParameters
             
-            if let peer = peer, let signal = peerAvatarImage(account: context.account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, round: clipStyle == .round, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
+            let account = account ?? genericContext.account
+            
+            if let peer = peer, let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: authorOfMessage, representation: representation, displayDimensions: displayDimensions, round: clipStyle == .round, emptyColor: emptyColor, synchronousLoad: synchronousLoad, provideUnrounded: storeUnrounded) {
                 self.contents = nil
                 self.displaySuspended = true
                 self.imageReady.set(self.imageNode.contentReady)
@@ -361,7 +363,7 @@ public final class AvatarNode: ASDisplayNode {
                     self.editOverlayNode?.isHidden = true
                 }
                 
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer.id, letters: peer.displayLetters, font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
                 // MARK: Nicegram changes
             } else if let signal = nicegramAvatarImage(nicegramImage: nicegramImage) {
                 self.contents = nil
@@ -376,7 +378,7 @@ public final class AvatarNode: ASDisplayNode {
                     return next?.0
                 })
                 
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: true, clipStyle: clipStyle)
             } else {
                 self.imageReady.set(.single(true))
                 self.displaySuspended = false
@@ -385,7 +387,7 @@ public final class AvatarNode: ASDisplayNode {
                 }
                 
                 self.editOverlayNode?.isHidden = true
-                parameters = AvatarNodeParameters(theme: theme, accountPeerId: context.account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
+                parameters = AvatarNodeParameters(theme: theme, accountPeerId: account.peerId, peerId: peer?.id ?? EnginePeer.Id(0), letters: peer?.displayLetters ?? [], font: self.font, icon: icon, explicitColorIndex: nil, hasImage: false, clipStyle: clipStyle)
             }
             if self.parameters == nil || self.parameters != parameters {
                 self.parameters = parameters

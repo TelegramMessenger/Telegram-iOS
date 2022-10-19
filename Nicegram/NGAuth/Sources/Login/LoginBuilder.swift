@@ -1,7 +1,7 @@
 import UIKit
 import AccountContext
-import EsimApiClient
 import EsimAuth
+import NGApiClient
 import NGTheme
 
 public protocol LoginBuilder {
@@ -43,7 +43,9 @@ public class LoginBuilderImpl: LoginBuilder {
         let presenter = LoginPresenter()
         presenter.output = controller
         
-        let telegramAuthenticator = TelegramAuthenticator(apiClient: EsimApiClient.nicegramClient(auth: esimAuth))
+        let telegramAuthenticator = TelegramAuthenticator(
+            apiClient: createNicegramApiClient(auth: esimAuth)
+        )
 
         let interactor = LoginInteractor(
             tgAccountContext: tgAccountContext,

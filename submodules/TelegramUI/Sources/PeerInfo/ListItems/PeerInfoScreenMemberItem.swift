@@ -221,6 +221,8 @@ private final class PeerInfoScreenMemberItemNode: PeerInfoScreenItemNode {
             self.addSubnode(itemNode)
         }
         
+        itemNode.visibility = .visible(1.0, .infinite)
+        
         let height = itemNode.contentSize.height
         
         transition.updateFrame(node: itemNode, frame: CGRect(origin: CGPoint(), size: itemNode.bounds.size))

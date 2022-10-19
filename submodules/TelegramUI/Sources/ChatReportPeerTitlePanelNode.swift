@@ -10,6 +10,10 @@ import TelegramStringFormatting
 import TextFormat
 import Markdown
 import ChatPresentationInterfaceState
+import TextNodeWithEntities
+import AnimationCache
+import MultiAnimationRenderer
+import AccountContext
 
 private enum ChatReportPeerTitleButton: Equatable {
     case block
@@ -301,11 +305,16 @@ private final class ChatInfoTitlePanelPeerNearbyInfoNode: ASDisplayNode {
 }
 
 final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
+    private let context: AccountContext
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
     private let separatorNode: ASDisplayNode
     
     private let closeButton: HighlightableButtonNode
     private var buttons: [(ChatReportPeerTitleButton, UIButton)] = []
     private let textNode: ImmediateTextNode
+    private var emojiStatusTextNode: TextNodeWithEntities?
     
     private var theme: PresentationTheme?
     
@@ -314,7 +323,11 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
     
     private var tapGestureRecognizer: UITapGestureRecognizer?
     
-    override init() {
+    init(context: AccountContext, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) {
+        self.context = context
+        self.animationCache = animationCache
+        self.animationRenderer = animationRenderer
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -481,9 +494,73 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
             self.tapGestureRecognizer?.isEnabled = false
         }
         
-        
         let closeButtonSize = self.closeButton.measure(CGSize(width: 100.0, height: 100.0))
         transition.updateFrame(node: self.closeButton, frame: CGRect(origin: CGPoint(x: width - contentRightInset - closeButtonSize.width, y: floorToScreenPixels((panelHeight - closeButtonSize.height) / 2.0)), size: closeButtonSize))
+        
+        var emojiStatus: PeerEmojiStatus?
+        if let user = interfaceState.renderedPeer?.peer as? TelegramUser, let emojiStatusValue = user.emojiStatus {
+            if user.isFake || user.isScam {
+            } else {
+                emojiStatus = emojiStatusValue
+            }
+        }
+        
+        /*#if DEBUG
+        emojiStatus = PeerEmojiStatus(fileId: 5062172592505356289, expirationDate: nil)
+        #endif*/
+        
+        if let emojiStatus = emojiStatus {
+            let emojiStatusTextNode: TextNodeWithEntities
+            if let current = self.emojiStatusTextNode {
+                emojiStatusTextNode = current
+            } else {
+                emojiStatusTextNode = TextNodeWithEntities()
+                self.emojiStatusTextNode = emojiStatusTextNode
+                self.addSubnode(emojiStatusTextNode.textNode)
+            }
+            
+            let plainText = interfaceState.strings.Chat_PanelCustomStatusInfo(".")
+            let attributedText = NSMutableAttributedString(attributedString: NSAttributedString(string: plainText.string, font: Font.regular(13.0), textColor: interfaceState.theme.rootController.navigationBar.secondaryTextColor, paragraphAlignment: .center))
+            for range in plainText.ranges {
+                attributedText.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiStatus.fileId, file: nil), range: range.range)
+            }
+            
+            let makeEmojiStatusLayout = TextNodeWithEntities.asyncLayout(emojiStatusTextNode)
+            let (emojiStatusLayout, emojiStatusApply) = makeEmojiStatusLayout(TextNodeLayoutArguments(
+                attributedString: attributedText,
+                backgroundColor: nil,
+                minimumNumberOfLines: 0,
+                maximumNumberOfLines: 0,
+                truncationType: .end,
+                constrainedSize: CGSize(width: width - leftInset * 2.0 - 8.0 * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                alignment: .center,
+                verticalAlignment: .top,
+                lineSpacing: 0.0,
+                cutout: nil,
+                insets: UIEdgeInsets(),
+                lineColor: nil,
+                textShadowColor: nil,
+                textStroke: nil,
+                displaySpoilers: false,
+                displayEmbeddedItemsUnderSpoilers: false
+            ))
+            let _ = emojiStatusApply(TextNodeWithEntities.Arguments(
+                context: self.context,
+                cache: self.animationCache,
+                renderer: self.animationRenderer,
+                placeholderColor: interfaceState.theme.list.mediaPlaceholderColor,
+                attemptSynchronous: false
+            ))
+            transition.updateFrame(node: emojiStatusTextNode.textNode, frame: CGRect(origin: CGPoint(x: floor((width - emojiStatusLayout.size.width) / 2.0), y: panelHeight), size: emojiStatusLayout.size))
+            panelHeight += emojiStatusLayout.size.height + 8.0
+            
+            emojiStatusTextNode.visibilityRect = .infinite
+        } else {
+            if let emojiStatusTextNode = self.emojiStatusTextNode {
+                self.emojiStatusTextNode = nil
+                emojiStatusTextNode.textNode.removeFromSupernode()
+            }
+        }
 
         let initialPanelHeight = panelHeight
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: width, height: UIScreenPixel)))

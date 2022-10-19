@@ -19,4 +19,7 @@ public protocol ChatListController: ViewController {
     
     //  MARK: - Nicegram
     func showNicegramAssistant(deeplink: Deeplink?)
+    //
+    
+    func playSignUpCompletedAnimation()
 }

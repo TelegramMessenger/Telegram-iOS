@@ -163,6 +163,7 @@ private enum ApplicationSpecificGlobalNotice: Int32 {
     case sharedMediaScrollingTooltip = 29
     case sharedMediaFastScrollingTooltip = 30
     case forcedPasswordSetup = 31
+    case emojiTooltip = 32
     
     var key: ValueBoxKey {
         let v = ValueBoxKey(length: 4)
@@ -338,6 +339,10 @@ private struct ApplicationSpecificNoticeKeys {
 
     static func sharedMediaFastScrollingTooltip() -> NoticeEntryKey {
         return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.sharedMediaFastScrollingTooltip.key)
+    }
+    
+    static func emojiTooltip() -> NoticeEntryKey {
+        return NoticeEntryKey(namespace: noticeNamespace(namespace: globalNamespace), key: ApplicationSpecificGlobalNotice.emojiTooltip.key)
     }
 }
 
@@ -949,6 +954,30 @@ public struct ApplicationSpecificNotice {
 
             if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
                 transaction.setNotice(ApplicationSpecificNoticeKeys.sharedMediaFastScrollingTooltip(), entry)
+            }
+        }
+    }
+    
+    public static func getEmojiTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>) -> Signal<Int32, NoError> {
+        return accountManager.transaction { transaction -> Int32 in
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.emojiTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                return value.value
+            } else {
+                return 0
+            }
+        }
+    }
+
+    public static func incrementEmojiTooltip(accountManager: AccountManager<TelegramAccountManagerTypes>, count: Int32 = 1) -> Signal<Void, NoError> {
+        return accountManager.transaction { transaction -> Void in
+            var currentValue: Int32 = 0
+            if let value = transaction.getNotice(ApplicationSpecificNoticeKeys.emojiTooltip())?.get(ApplicationSpecificCounterNotice.self) {
+                currentValue = value.value
+            }
+            currentValue += count
+
+            if let entry = CodableEntry(ApplicationSpecificCounterNotice(value: currentValue)) {
+                transaction.setNotice(ApplicationSpecificNoticeKeys.emojiTooltip(), entry)
             }
         }
     }

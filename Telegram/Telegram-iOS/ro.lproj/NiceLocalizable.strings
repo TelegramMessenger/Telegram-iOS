@@ -110,3 +110,8 @@
 "NiceFeatures.RestoreSettings.Confirm" = "Sigur doriți să restaurați folderele și setările din fișier?\n⚠️ Va anula datele actuale";
 "NiceFeatures.RestoreSettings.Done" = "Dosare & Setarile restaurat cu succes";
 "NiceFeatures.RestoreSettings.Error" = "Eroare restabilire setări. Fișierle pot fi corupte";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Mai vechi de";
+"NiceFeatures.RegDate.Approximately" = "Aproximativ";
+"NiceFeatures.RegDate.NewerThan" = "Mai noi de";

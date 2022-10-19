@@ -1,4 +1,5 @@
 import UIKit
+import EsimAuth
 import NGLocalization
 import NGRemoteConfig
 import NGSpecialOffer
@@ -10,6 +11,7 @@ protocol AssistantPresenterOutput: AnyObject {
     func display(isLoading: Bool)
     
     func display(viewItem: PersonalAssistantItem)
+    func update(viewItem: PersonalAssistantItem)
     func display(titleText: String?)
     func display(comunityText: String?)
     func display(loginTitleText: String?)
@@ -29,6 +31,13 @@ final class AssistantPresenter: AssistantPresenterInput {
         viewDidAppear = true
     }
     
+    func handleUser(_ user: EsimUser?, animated: Bool) {
+        let isAuthorized = (user != nil)
+        output?.display(isAuthorized: isAuthorized, isAnimated: animated)
+        
+        output?.update(viewItem: makeSupportItem(currentUser: user))
+    }
+    
     func handleAuth(isAuthorized: Bool, isAnimated: Bool) {
         output?.display(isAuthorized: isAuthorized, isAnimated: isAnimated)
     }
@@ -38,6 +47,7 @@ final class AssistantPresenter: AssistantPresenterInput {
     }
     
     func handleLogout() {
+        output?.update(viewItem: makeSupportItem(currentUser: nil))
         output?.onLogout()
     }
     
@@ -69,14 +79,7 @@ final class AssistantPresenter: AssistantPresenterInput {
         )
         output?.display(viewItem: telegramChatItem)
         
-        let supportItem = PersonalAssistantItem(
-            image: UIImage(named: "PAMessageQuestion"),
-            title: ngLocalized("Nicegram.Assistant.Support"), 
-            subtitle: nil, 
-            description: nil, 
-            item: .support
-        )
-        output?.display(viewItem: supportItem)
+        output?.display(viewItem: makeSupportItem(currentUser: nil))
         
         let rateUsItem = PersonalAssistantItem(
             image: UIImage(named: "PARate"),
@@ -120,6 +123,24 @@ private extension AssistantPresenter {
             id: specialOffer.id,
             image: UIImage(named: "ng.ticket.discount"),
             title: ngLocalized("Nicegram.Assistant.SpecialOffer")
+        )
+    }
+}
+
+//  MARK: - Private Functions
+
+private extension AssistantPresenter {
+    func makeSupportItem(currentUser: EsimUser?) -> PersonalAssistantItem {
+        var title = ngLocalized("Nicegram.Assistant.Support")
+        if let currentUser {
+            title += " (id: \(currentUser.id))"
+        }
+        return PersonalAssistantItem(
+            image: UIImage(named: "PAMessageQuestion"),
+            title: title,
+            subtitle: nil,
+            description: nil,
+            item: .support
         )
     }
 }

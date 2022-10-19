@@ -9,9 +9,9 @@ swift_library(
     deps = [
         "//submodules/AccountContext:AccountContext",
         "//Nicegram/EsimModule/EsimAuth:EsimAuth",
-        "//Nicegram/EsimModule/EsimApiClient:EsimApiClient",
         "//Vendor/SnapKit:SnapKit",
         "//Nicegram/NGTextFields:NGTextFields",
+        "//Nicegram/NGApiClient:NGApiClient",
         "//Nicegram/NGButton:NGButton",
         "//Nicegram/NGExtensions:NGExtensions",
         "//Nicegram/NGCustomViews:NGCustomViews",

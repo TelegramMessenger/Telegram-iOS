@@ -261,7 +261,7 @@ public extension RenderedPeer {
                 }
             }
         }
-        self.init(peerId: message.id.peerId, peers: peers)
+        self.init(peerId: message.id.peerId, peers: peers, associatedMedia: [:])
     }
     
     var chatMainPeer: Peer? {

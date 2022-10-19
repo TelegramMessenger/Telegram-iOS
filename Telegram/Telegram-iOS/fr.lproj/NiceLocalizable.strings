@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "VIDÉOS RONDES";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Commencer avec la caméra arrière";
 
+"NiceFeatures.InstantLock" = "Immédiatement";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Sauvegarder dans le cloud";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "Vers la langue";
 "Messages.ToLanguage.WithCode" = "Vers la langue : %@";
 "Messages.TranslateError.ToLanguageNotFound" = "Nous n'avons pas pu déterminer la langue dans laquelle vous souhaitez traduire le texte. Veuillez la sélectionner manuellement et réessayer.";
+"Messages.ReplyPrivately" = "Répondre en privé";
+"Messages.DeleteAllSystemMessages" = "Tout supprimer";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Obtenir la date d'inscription";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "Guide de déblocage";
 "NicegramSettings.Other.hideReactions" = "Masquer les réactions";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Télécharger des vidéos dans la galerie";
-"Premium.OnetapTranslate.LowPower" = "Reconnaissance à faible puissance";
-"Premium.OnetapTranslate.LowPower.Notice" = "L'application détecte la langue de chaque message sur votre appareil. C'est une tâche de haute performance qui peut affecter l'autonomie de votre batterie.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Ignorer les langues";
+"NicegramSettings.ShareChannelsInfoToggle" = "Partager les informations du canal";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Contribuez au Wikipédia le plus complet de chaînes et de groupes Telegram en soumettant automatiquement des informations sur les chaînes et un lien vers notre base de données. Nous ne connectons pas votre profil de télégramme et votre canal et ne partageons pas vos données personnelles.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "L'application détecte la langue de chaque message sur votre appareil. C'est une tâche de haute performance qui peut affecter l'autonomie de votre batterie.";
 "Premium.rememberFolderOnExit" = "Mémoriser le dossier actuel en quittant";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "Le double fond est activé";
 "DoubleBottom.Enabled.Description" = "N'oubliez pas le mot de passe que vous venez de définir et redémarrez l'application pour que le double fond fonctionne correctement";
 "DoubleBottom.Enabled.OK" = "D'ACCORD";
+"DoubleBottom.Passcode.Error" = "Veuillez définir un autre code d'accès différent de celui que vous utilisez pour le verrouillage par code d'accès";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**Fonctionnalités premium**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "Informez rapidement tous les membres du groupe et assurez-vous que tout le monde lira votre message";
 
 "NicePremium.Renews" = "Renouvellement automatique de l'abonnement";
+"NicePremium.PricePerMonth" = "Abonnez-vous à %@ par mois";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Continuer";
+"NicegramOnboarding.1.Title" = "Le client nº 1 pour Telegram Messenger";
+"NicegramOnboarding.1.Desc" = "Rejoignez plus de 2 millions d'utilisateurs Nicegram et accédez au client Telegram le plus puissant et le plus sécurisé pour les entreprises.";
+"NicegramOnboarding.2.Title" = "Expérience de messagerie avancée";
+"NicegramOnboarding.2.Desc" = "Accélérez votre communication avec des fonctionnalités uniques telles qu'un Traducteur intégré, Speech 2 Text, le Transfert de messages sans spécifier l'auteur et l'Enregistrement rapide dans les favoris.";
+"NicegramOnboarding.3.Title" = "Profil utilisateur étendu";
+"NicegramOnboarding.3.Desc" = "Créez gratuitement autant de comptes Telegram que vous le souhaitez et visualisez un profil d'utilisateur avancé avec identifiant, date d'enregistrement et liens cliquables.";
+"NicegramOnboarding.4.Title" = "Extensions commerciales uniques";
+"NicegramOnboarding.4.Desc" = "Profitez des innovations de l'équipe Nicegram et obtenez une eSIM avec un accès internet dans 133 pays. Vous pouvez également enregistrer de nouveaux comptes Telegram sur le numéro de téléphone du forfait de données eSIM.";
+"NicegramOnboarding.5.Title" = "La messagerie la plus sécurisée";
+"NicegramOnboarding.5.Desc" = "Messagerie sécurisée avec cryptage fort, appels audio et vidéo de groupe, chaînes publiques, groupes et bots, stockage illimité dans le cloud pour les discussions, partage de médias et de documents.";

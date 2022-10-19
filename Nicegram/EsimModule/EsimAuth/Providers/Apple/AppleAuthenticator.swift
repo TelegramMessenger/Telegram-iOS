@@ -22,6 +22,8 @@ public final class AppleAuthenticator: NSObject, RequiringPresentation {
     
     //  MARK: - Public Properties
     
+    public var credential: ASAuthorizationAppleIDCredential?
+    
     public weak var presentationDelegate: RequiringPresentationDelegate?
     
     //  MARK: - Private Properties
@@ -139,8 +141,9 @@ extension AppleAuthenticator: ASAuthorizationControllerDelegate {
             }
             
             let metadata = AppleAuthResponse.Metadata(email: email, fullname: fullName)
-            
             let response = AppleAuthResponse(credential: appleIDCredential, nonce: nonce, metadata: metadata)
+            
+            self.credential = appleIDCredential
             
             completion?(.success(response))
             completion = nil

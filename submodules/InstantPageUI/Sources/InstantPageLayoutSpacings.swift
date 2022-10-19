@@ -5,7 +5,7 @@ import TelegramCore
 func spacingBetweenBlocks(upper: InstantPageBlock?, lower: InstantPageBlock?) -> CGFloat {
     if let upper = upper, let lower = lower {
         switch (upper, lower) {
-            case (_, .cover), (_, .channelBanner), (.details, .details), (.relatedArticles, nil), (_, .anchor):
+            case (_, .cover), (_, .channelBanner), (.details, .details), (.relatedArticles, _), (_, .anchor):
                 return 0.0
             case (.divider, _), (_, .divider):
                 return 25.0

@@ -479,7 +479,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     private var percentageImage: UIImage?
     private var titleNode: TextNode?
     private let buttonNode: HighlightTrackingButtonNode
-    private let separatorNode: ASDisplayNode
+    let separatorNode: ASDisplayNode
     private let resultBarNode: ASImageNode
     private let resultBarIconNode: ASImageNode
     var option: TelegramMediaPollOption?
@@ -488,6 +488,8 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
     var pressed: (() -> Void)?
     var selectionUpdated: (() -> Void)?
     private var theme: PresentationTheme?
+    
+    weak var previousOptionNode: ChatMessagePollOptionNode?
     
     override init() {
         self.highlightedBackgroundNode = ASDisplayNode()
@@ -524,9 +526,21 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                 if highlighted {
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
+                    
+                    strongSelf.separatorNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.separatorNode.alpha = 0.0
+                    
+                    strongSelf.previousOptionNode?.separatorNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
                     strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    
+                    strongSelf.separatorNode.alpha = 1.0
+                    strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                    
+                    strongSelf.previousOptionNode?.separatorNode.alpha = 1.0
+                    strongSelf.previousOptionNode?.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 }
             }
         }
@@ -1025,7 +1039,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(message: item.message)
+                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden
@@ -1073,15 +1087,18 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                         impressionCount: viewCount,
                         dateText: dateText,
                         type: statusType,
-                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
+                        layoutInput: .trailingContent(contentWidth: 1000.0, reactionSettings: shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) ? ChatMessageDateAndStatusNode.TrailingReactionSettings(displayInline: true, preferAdditionalInset: false) : nil),
                         constrainedSize: textConstrainedSize,
                         availableReactions: item.associatedData.availableReactions,
                         reactions: dateReactionsAndPeers.reactions,
                         reactionPeers: dateReactionsAndPeers.peers,
+                        displayAllReactionPeers: item.message.id.peerId.namespace == Namespaces.Peer.CloudUser,
                         replyCount: dateReplies,
                         isPinned: item.message.tags.contains(.pinned) && !item.associatedData.isInPinnedListMode && !isReplyThread,
                         hasAutoremove: item.message.isSelfExpiring,
-                        canViewReactionList: canViewMessageReactionList(message: item.message)
+                        canViewReactionList: canViewMessageReactionList(message: item.message),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
                     ))
                 }
                 
@@ -1370,6 +1387,10 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
                                 verticalOffset += size.height
                                 updatedOptionNodes.append(optionNode)
                                 optionNode.isUserInteractionEnabled = canVote && item.controllerInteraction.pollActionState.pollMessageIdsInProgress[item.message.id] == nil
+                                
+                                if i > 0 {
+                                    optionNode.previousOptionNode = updatedOptionNodes[i - 1]
+                                }
                             }
                             for optionNode in strongSelf.optionNodes {
                                 if !updatedOptionNodes.contains(where: { $0 === optionNode }) {
@@ -1754,7 +1775,7 @@ class ChatMessagePollBubbleContentNode: ChatMessageBubbleContentNode {
         }
     }
     
-    override func reactionTargetView(value: String) -> UIView? {
+    override func reactionTargetView(value: MessageReaction.Reaction) -> UIView? {
         if !self.statusNode.isHidden {
             return self.statusNode.reactionView(value: value)
         }

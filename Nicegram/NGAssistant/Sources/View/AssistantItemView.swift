@@ -91,7 +91,7 @@ open class AssistantItemView: UIView {
         fatalError("init(coder:) has not been implemented")
     }
 
-    func display(item: PersonalAssistantItem, isArrowHidden: Bool) {
+    func display(item: PersonalAssistantItem, isArrowHidden: Bool = false) {
         itemImageView.image = item.image
         itemDescriptionLabel.text = item.description
         itemTag = item.item

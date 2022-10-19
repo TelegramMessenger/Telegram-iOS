@@ -185,15 +185,18 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
             case .error:
                 return .single(.upgrading(0.0))
             case let .postbox(postbox):
-                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?) in
+            // MARK: Nicegram DB Changes
+                return accountManager.transaction { transaction -> (LocalizationSettings?, ProxySettings?, Bool) in
                     var localizationSettings: LocalizationSettings?
                     if !supplementary {
                         localizationSettings = transaction.getSharedData(SharedDataKeys.localizationSettings)?.get(LocalizationSettings.self)
                     }
-                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self))
+                    // MARK: Nicegram DB Changes
+                    return (localizationSettings, transaction.getSharedData(SharedDataKeys.proxySettings)?.get(ProxySettings.self), transaction.getRecords().first(where: { $0.id == id })?.attributes.contains(where: { $0.isHiddenAccountAttribute }) ?? false)
                 }
-                |> mapToSignal { localizationSettings, proxySettings -> Signal<AccountResult, NoError> in
-                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?) in
+            // MARK: Nicegram DB Changes
+                |> mapToSignal { localizationSettings, proxySettings, isHidden -> Signal<AccountResult, NoError> in
+                    return postbox.transaction { transaction -> (PostboxCoding?, LocalizationSettings?, ProxySettings?, NetworkSettings?, Bool) in
                         var state = transaction.getState()
                         if state == nil, let backupData = backupData {
                             let backupState = AuthorizedAccountState(isTestingEnvironment: beginWithTestingEnvironment, masterDatacenterId: backupData.masterDatacenterId, peerId: PeerId(backupData.peerId), state: nil)
@@ -214,10 +217,11 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                             transaction.setState(backupState)
                             transaction.setKeychainEntry(data, forKey: "persistent:datacenterAuthInfoById")
                         }
-                        
-                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self))
+                        // MARK: Nicegram DB Changes
+                        return (state, localizationSettings, proxySettings, transaction.getPreferencesEntry(key: PreferencesKeys.networkSettings)?.get(NetworkSettings.self), isHidden)
                     }
-                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings) -> Signal<AccountResult, NoError> in
+                    // MARK: Nicegram DB Changes
+                    |> mapToSignal { (accountState, localizationSettings, proxySettings, networkSettings, isHidden) -> Signal<AccountResult, NoError> in
                         let keychain = makeExclusiveKeychain(id: id, postbox: postbox)
                         
                         if let accountState = accountState {
@@ -234,7 +238,8 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                                     |> mapToSignal { phoneNumber in
                                         return initializedNetwork(accountId: id, arguments: networkArguments, supplementary: supplementary, datacenterId: Int(authorizedState.masterDatacenterId), keychain: keychain, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, languageCode: localizationSettings?.primaryComponent.languageCode, proxySettings: proxySettings, networkSettings: networkSettings, phoneNumber: phoneNumber)
                                         |> map { network -> AccountResult in
-                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary))
+                                            // MARK: Nicegram DB Changes
+                                            return .authorized(Account(accountManager: accountManager, id: id, basePath: path, testingEnvironment: authorizedState.isTestingEnvironment, postbox: postbox, network: network, networkArguments: networkArguments, peerId: authorizedState.peerId, auxiliaryMethods: auxiliaryMethods, supplementary: supplementary, isHidden: isHidden))
                                         }
                                     }
                                 case _:
@@ -249,6 +254,32 @@ public func accountWithId(accountManager: AccountManager<TelegramAccountManagerT
                     }
                 }
         }
+    }
+}
+
+// MARK: Nicegram DB Changes
+public func setAccountRecordAccessChallengeData(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, id: AccountRecordId, accessChallengeData: PostboxAccessChallengeData) {
+    transaction.updateRecord(id) { record in
+        guard let record = record else { return nil }
+        
+        var attributes = record.attributes
+        let isHidden = accessChallengeData != .none
+        let wasHidden = attributes.contains { $0.isHiddenAccountAttribute }
+        if wasHidden, !isHidden {
+            attributes.removeAll { $0.isHiddenAccountAttribute }
+        } else if !wasHidden, isHidden {
+            attributes.append(.hiddenDoubleBottom(HiddenAccountAttribute(accessChallengeData: accessChallengeData)))
+        }
+        return AccountRecord(id: id, attributes: attributes, temporarySessionId: record.temporarySessionId)
+    }
+}
+
+public func disableDoubleBottom(transaction: AccountManagerModifier<TelegramAccountManagerTypes>, id: AccountRecordId) {
+    transaction.updateRecord(id) { record in
+        guard let record = record else { return nil }
+        var attributes = record.attributes
+        attributes.removeAll { $0.isHiddenAccountAttribute }
+        return AccountRecord(id: id, attributes: attributes, temporarySessionId: record.temporarySessionId)
     }
 }
 
@@ -321,13 +352,14 @@ public struct TwoStepAuthData {
     public let secretRandom: Data
     public let nextSecurePasswordDerivation: TwoStepSecurePasswordDerivation
     public let pendingResetTimestamp: Int32?
+    public let loginEmailPattern: String?
 }
 
 func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MTRpcError> {
     return network.request(Api.functions.account.getPassword())
     |> map { config -> TwoStepAuthData in
         switch config {
-            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate):
+            case let .password(flags, currentAlgo, srpB, srpId, hint, emailUnconfirmedPattern, newAlgo, newSecureAlgo, secureRandom, pendingResetDate, loginEmailPattern):
                 let hasRecovery = (flags & (1 << 0)) != 0
                 let hasSecureValues = (flags & (1 << 1)) != 0
                 
@@ -349,7 +381,7 @@ func _internal_twoStepAuthData(_ network: Network) -> Signal<TwoStepAuthData, MT
                     srpSessionData = TwoStepSRPSessionData(id: srpId, B: srpB.makeData())
                 }
                 
-                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation, pendingResetTimestamp: pendingResetDate)
+                return TwoStepAuthData(nextPasswordDerivation: nextDerivation, currentPasswordDerivation: currentDerivation, srpSessionData: srpSessionData, hasRecovery: hasRecovery, hasSecretValues: hasSecureValues, currentHint: hint, unconfirmedEmailPattern: emailUnconfirmedPattern, secretRandom: secureRandom.makeData(), nextSecurePasswordDerivation: nextSecureDerivation, pendingResetTimestamp: pendingResetDate, loginEmailPattern: loginEmailPattern)
         }
     }
 }
@@ -893,6 +925,7 @@ public class Account {
     private let becomeMasterDisposable = MetaDisposable()
     private let managedServiceViewsDisposable = MetaDisposable()
     private let managedOperationsDisposable = DisposableSet()
+    private let managedTopReactionsDisposable = MetaDisposable()
     private var storageSettingsDisposable: Disposable?
     
     public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
@@ -928,6 +961,9 @@ public class Account {
         return self._importantTasksRunning.get()
     }
     
+    // MARK: Nicegram DB Changes
+    public var isHidden: Bool
+    private var isHiddenDisposable: Disposable?
     fileprivate let masterNotificationKey = Atomic<MasterNotificationKey?>(value: nil)
     
     var transformOutgoingMessageMedia: TransformOutgoingMessageMedia?
@@ -935,7 +971,11 @@ public class Account {
     private var lastSmallLogPostTimestamp: Double?
     private let smallLogPostDisposable = MetaDisposable()
     
-    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool) {
+    // MARK: Nicegram DB Changes
+    public private(set) var keepServiceTaskMasterActiveState = false
+    private var keepServiceTaskMasterActiveStateTimer: SwiftSignalKit.Timer?
+    
+    public init(accountManager: AccountManager<TelegramAccountManagerTypes>, id: AccountRecordId, basePath: String, testingEnvironment: Bool, postbox: Postbox, network: Network, networkArguments: NetworkInitializationArguments, peerId: PeerId, auxiliaryMethods: AccountAuxiliaryMethods, supplementary: Bool, isHidden: Bool) {
         self.accountManager = accountManager
         self.id = id
         self.basePath = basePath
@@ -944,6 +984,8 @@ public class Account {
         self.network = network
         self.networkArguments = networkArguments
         self.peerId = peerId
+        // MARK: Nicegram DB Changes
+        self.isHidden = isHidden
         
         self.auxiliaryMethods = auxiliaryMethods
         self.supplementary = supplementary
@@ -986,6 +1028,17 @@ public class Account {
         }
         
         let networkStateQueue = Queue()
+        // MARK: Nicegram DB Changes
+        self.isHiddenDisposable = (accountManager.accountRecords()
+        |> map { view -> Bool in
+            return view.records.first(where: { $0.id == id })?.attributes.contains(where: { $0.isHiddenAccountAttribute }) ?? false
+        }
+        |> distinctUntilChanged(isEqual: ==)
+        |> deliverOnMainQueue).start(next: { [weak self] isHidden in
+            guard let strongSelf = self else { return }
+            
+            strongSelf.isHidden = isHidden
+        })
         
         let networkStateSignal = combineLatest(queue: networkStateQueue, self.stateManager.isUpdating, network.connectionStatus)
         |> map { isUpdating, connectionStatus -> AccountNetworkState in
@@ -1072,6 +1125,7 @@ public class Account {
         self.managedOperationsDisposable.add(managedCloudChatRemoveMessagesOperations(postbox: self.postbox, network: self.network, stateManager: self.stateManager).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: true).start())
         self.managedOperationsDisposable.add(managedAutoremoveMessageOperations(network: self.network, postbox: self.postbox, isRemove: false).start())
+        self.managedOperationsDisposable.add(managedPeerTimestampAttributeOperations(network: self.network, postbox: self.postbox).start())
         self.managedOperationsDisposable.add(managedGlobalNotificationSettings(postbox: self.postbox, network: self.network).start())
         self.managedOperationsDisposable.add(managedSynchronizePinnedChatsOperations(postbox: self.postbox, network: self.network, accountPeerId: self.peerId, stateManager: self.stateManager).start())
         
@@ -1170,10 +1224,19 @@ public class Account {
         if !self.supplementary {
             self.managedOperationsDisposable.add(managedAnimatedEmojiUpdates(postbox: self.postbox, network: self.network).start())
             self.managedOperationsDisposable.add(managedAnimatedEmojiAnimationsUpdates(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedGenericEmojiEffects(postbox: self.postbox, network: self.network).start())
+            
+            self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedPremiumStickers(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedAllPremiumStickers(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedRecentStatusEmoji(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedFeaturedStatusEmoji(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(managedRecentReactions(postbox: self.postbox, network: self.network).start())
+            self.managedTopReactionsDisposable.set(managedTopReactions(postbox: self.postbox, network: self.network).start())
+            self.managedOperationsDisposable.add(self.managedTopReactionsDisposable)
+            
+            self.managedOperationsDisposable.add(_internal_loadedStickerPack(postbox: self.postbox, network: self.network, reference: .iconStatusEmoji, forceActualized: true).start())
         }
-        self.managedOperationsDisposable.add(managedGreetingStickers(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedPremiumStickers(postbox: self.postbox, network: self.network).start())
-        self.managedOperationsDisposable.add(managedAllPremiumStickers(postbox: self.postbox, network: self.network).start())
 
         if !supplementary {
             let mediaBox = postbox.mediaBox
@@ -1198,6 +1261,13 @@ public class Account {
         }
         self.restartConfigurationUpdates()
         
+        self.stateManager.isPremiumUpdated = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.managedTopReactionsDisposable.set(managedTopReactions(postbox: strongSelf.postbox, network: strongSelf.network).start())
+        }
+        
         /*#if DEBUG
         self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {
             print("debugFetchAllStickers done")
@@ -1205,6 +1275,7 @@ public class Account {
         #endif*/
     }
     
+    // MARK: Nicegram DB Changes
     deinit {
         self.managedContactsDisposable.dispose()
         self.managedStickerPacksDisposable.dispose()
@@ -1213,6 +1284,20 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.isHiddenDisposable?.dispose()
+    }
+    
+    public func temporarilyKeepActive() {
+        Queue.mainQueue().async {
+            self.keepServiceTaskMasterActiveState = true
+            self.keepServiceTaskMasterActiveStateTimer?.invalidate()
+            self.keepServiceTaskMasterActiveStateTimer = Timer(timeout: 10.0, repeat: false, completion: { [weak self] in
+                guard let strongSelf = self else { return }
+                
+                strongSelf.keepServiceTaskMasterActiveState = false
+            }, queue: .mainQueue())
+            self.keepServiceTaskMasterActiveStateTimer?.start()
+        }
     }
     
     private func restartConfigurationUpdates() {

@@ -1,9 +1,23 @@
+import Foundation
 import EsimApiClientDefinition
+import EsimModels
 
 public enum TelegramSignInBySessionError: Error {
     case sessionMissed
+    case sessionNotApproved
     case sessionExpired
     case underlying(Error)
+}
+
+extension TelegramSignInBySessionError: LocalizedError {
+    public var errorDescription: String? {
+        switch self {
+        case .sessionMissed, .sessionExpired, .sessionNotApproved:
+            return defaultErrorMessage
+        case .underlying(let error):
+            return error.localizedDescription
+        }
+    }
 }
 
 public protocol TelegramSignInBySessionProvider {
@@ -47,7 +61,9 @@ extension TelegramSignInBySessionProviderImpl: TelegramSignInBySessionProvider {
 private extension TelegramSignInBySessionProviderImpl{
     func mapApiError(_ apiError: EsimApiError) -> TelegramSignInBySessionError {
         switch apiError {
-        case .notAuthorized(_), .underlying(_), .unexpected:
+        case .notAuthorized(_):
+            return .sessionNotApproved
+        case .underlying(_), .connection(_), .unexpected:
             return .underlying(apiError)
         case .someServerError(let serverError):
             return mapSomeServerError(serverError)

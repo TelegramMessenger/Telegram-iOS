@@ -1,16 +1,16 @@
 public extension Api {
     enum MessagePeerReaction: TypeConstructorDescription {
-        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: String)
+        case messagePeerReaction(flags: Int32, peerId: Api.Peer, reaction: Api.Reaction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .messagePeerReaction(let flags, let peerId, let reaction):
                     if boxed {
-                        buffer.appendInt32(1370914559)
+                        buffer.appendInt32(-1319698788)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     peerId.serialize(buffer, true)
-                    serializeString(reaction, buffer: buffer, boxed: false)
+                    reaction.serialize(buffer, true)
                     break
     }
     }
@@ -29,8 +29,10 @@ public extension Api {
             if let signature = reader.readInt32() {
                 _2 = Api.parse(reader, signature: signature) as? Api.Peer
             }
-            var _3: String?
-            _3 = parseString(reader)
+            var _3: Api.Reaction?
+            if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.Reaction
+            }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
             let _c3 = _3 != nil

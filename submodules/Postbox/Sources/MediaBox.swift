@@ -140,6 +140,7 @@ public final class MediaBox {
     private let statusQueue = Queue()
     private let concurrentQueue = Queue.concurrentDefaultQueue()
     private let dataQueue = Queue()
+    private let dataFileManager: MediaBoxFileManager
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
@@ -193,6 +194,8 @@ public final class MediaBox {
         ], shortLivedPaths: [
             self.basePath + "/short-cache"
         ])
+        
+        self.dataFileManager = MediaBoxFileManager(queue: self.dataQueue)
         
         let _ = self.ensureDirectoryCreated
     }
@@ -540,7 +543,7 @@ public final class MediaBox {
                 paths.partial,
                 paths.partial + ".meta"
             ])
-            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
+            if let fileContext = MediaBoxFileContext(queue: self.dataQueue, manager: self.dataFileManager, path: paths.complete, partialPath: paths.partial, metaPath: paths.partial + ".meta") {
                 context = fileContext
                 self.fileContexts[resourceId] = fileContext
             } else {
@@ -571,6 +574,12 @@ public final class MediaBox {
             let disposable = MetaDisposable()
             
             self.dataQueue.async {
+                let paths = self.storePathsForId(resource.id)
+                if let _ = fileSize(paths.complete) {
+                    subscriber.putCompletion()
+                    return
+                }
+                
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
                     subscriber.putCompletion()
                     return
@@ -633,7 +642,11 @@ public final class MediaBox {
                         subscriber.putCompletion()
                         return EmptyDisposable
                     } else {
-                        if let data = MediaBoxPartialFile.extractPartialData(path: paths.partial, metaPath: paths.partial + ".meta", range: range) {
+                        let tempManager = MediaBoxFileManager(queue: nil)
+                        let data = withExtendedLifetime(tempManager, {
+                            return MediaBoxPartialFile.extractPartialData(manager: tempManager, path: paths.partial, metaPath: paths.partial + ".meta", range: range)
+                        })
+                        if let data = data {
                             subscriber.putNext((data, true))
                             subscriber.putCompletion()
                             return EmptyDisposable
@@ -673,6 +686,15 @@ public final class MediaBox {
                                 case .partial:
                                     subscriber.putNext((Data(), false))
                             }
+                        }
+                    } else {
+                        switch mode {
+                            case .complete, .incremental:
+                                if notifyAboutIncomplete {
+                                    subscriber.putNext((Data(), false))
+                                }
+                            case .partial:
+                                subscriber.putNext((Data(), false))
                         }
                     }
                 })

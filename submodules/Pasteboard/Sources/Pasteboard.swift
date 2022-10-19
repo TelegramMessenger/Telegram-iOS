@@ -83,7 +83,7 @@ public func chatInputStateStringFromRTF(_ data: Data, type: NSAttributedString.D
                 }
                 if let emojiId = emojiId {
                     updatedString.removeAttribute(NSAttributedString.Key.link, range: range)
-                    updatedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(stickerPack: nil, fileId: emojiId, file: nil), range: range)
+                    updatedString.addAttribute(ChatTextInputAttributes.customEmoji, value: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiId, file: nil), range: range)
                 }
             }
         })

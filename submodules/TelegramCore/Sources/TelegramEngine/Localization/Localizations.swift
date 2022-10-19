@@ -9,7 +9,7 @@ func _internal_currentlySuggestedLocalization(network: Network, extractKeys: [St
         |> retryRequest
         |> mapToSignal { result -> Signal<SuggestedLocalizationInfo?, NoError> in
             switch result {
-                case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _, _):
+                case let .config(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, suggestedLangCode, _, _, _):
                     if let suggestedLangCode = suggestedLangCode {
                         return _internal_suggestedLocalizationInfo(network: network, languageCode: suggestedLangCode, extractKeys: extractKeys) |> map(Optional.init)
                     } else {
@@ -125,7 +125,8 @@ func _internal_downloadAndApplyLocalization(accountManager: AccountManager<Teleg
                 secondaryComponent = LocalizationComponent(languageCode: secondaryCode, localizedName: "", localization: components[1], customPluralizationCode: nil)
             }
             // MARK: Nicegram Translate
-            setSavedTranslationTargetLanguage(code: languageCode)
+            let baseLanguageCode = preview.baseLanguageCode ?? languageCode
+            setSavedTranslationTargetLanguage(code: baseLanguageCode)
             //
             return accountManager.transaction { transaction -> Signal<Void, DownloadAndApplyLocalizationError> in
                 transaction.updateSharedData(SharedDataKeys.localizationSettings, { _ in

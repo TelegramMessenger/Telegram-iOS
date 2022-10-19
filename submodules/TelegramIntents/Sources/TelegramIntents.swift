@@ -193,12 +193,14 @@ public func donateSendMessageIntent(account: Account, sharedContext: SharedAccou
                     nameComponents.givenName = displayTitle
                 }
                 
-                let recipient = INPerson(personHandle: recipientHandle, nameComponents: nameComponents, displayName: displayTitle, image: nil, contactIdentifier: nil, customIdentifier: "tg\(peer.id.toInt64())")
+                var personImage: INImage?
+                if let avatarImage = avatarImage, let avatarImageData = avatarImage.jpegData(compressionQuality: 0.8) {
+                    personImage = INImage(imageData: avatarImageData)
+                }
+                
+                let recipient = INPerson(personHandle: recipientHandle, nameComponents: nameComponents, displayName: displayTitle, image: personImage, contactIdentifier: nil, customIdentifier: "tg\(peer.id.toInt64())")
                
                 let intent = INSendMessageIntent(recipients: [recipient], content: nil, speakableGroupName: INSpeakableString(spokenPhrase: displayTitle), conversationIdentifier: "tg\(peer.id.toInt64())", serviceName: nil, sender: nil)
-                if let avatarImage = avatarImage, let avatarImageData = avatarImage.jpegData(compressionQuality: 0.8) {
-                    intent.setImage(INImage(imageData: avatarImageData), forParameterNamed: \.groupName)
-                }
                 let interaction = INInteraction(intent: intent, response: nil)
                 interaction.direction = .outgoing
                 interaction.groupIdentifier = "sendMessage_\(peer.id.toInt64())"

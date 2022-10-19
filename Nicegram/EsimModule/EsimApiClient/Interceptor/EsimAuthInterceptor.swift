@@ -42,6 +42,7 @@ extension EsimAuthInterceptor: EsimApiClientInterceptor {
            let currentUser = auth.currentUser {
             if let telegramToken = currentUser.telegramToken {
                 logTelegramUserNotAuthorized(request: urlRequest, telegramToken: telegramToken)
+                completion(.doNotRetry)
             } else {
                 logFirebaseUserNotAuthorized(request: urlRequest, firebaseToken: currentUser.token)
                 currentUser.refreshToken(forceRefresh: true) { [weak self] result in

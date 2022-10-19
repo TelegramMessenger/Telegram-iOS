@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "圓形影片";
 "NiceFeatures.RoundVideos.UseRearCamera" = "開啟後置鏡頭";
 
+"NiceFeatures.InstantLock" = "立即";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "轉傳到儲存的訊息";
 
@@ -108,13 +110,15 @@
 "Messages.Translate" = "翻譯";
 "Messages.UndoTranslate" = "取消翻譯";
 "Messages.TranslateError" = "抱歉，無法翻譯。";
-"Messages.SpeechToText" = "نص البيان2";
-"Messages.UndoSpeechToText" = "Undo Speech2Text";
+"Messages.SpeechToText" = "語音轉文字";
+"Messages.UndoSpeechToText" = "取消語音轉文字";
 "Messages.SpeechToText.LowAccuracyError" = "語音辨識失敗。\n\n這可能是由於錄音品質不好，或應用程式和錄音語言之間的差異。";
 "Messages.SelectAllFromUser" = "選擇來自這位使用者的所有訊息";
 "Messages.ToLanguage" = "翻譯為";
 "Messages.ToLanguage.WithCode" = "翻譯為：%@";
 "Messages.TranslateError.ToLanguageNotFound" = "我們無法確定您希望將文字翻譯成何種語言。請手動選擇語言並再試一次。";
+"Messages.ReplyPrivately" = "私下回覆";
+"Messages.DeleteAllSystemMessages" = "全部刪除";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "取得註冊日期";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "解除封鎖說明";
 "NicegramSettings.Other.hideReactions" = "隱藏心情回應";
 "NicegramSettings.RoundVideos.DownloadVideos" = "將影片下載至圖片庫";
-"Premium.OnetapTranslate.LowPower" = "低電量偵測";
-"Premium.OnetapTranslate.LowPower.Notice" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "忽略語言";
+"NicegramSettings.ShareChannelsInfoToggle" = "分享頻道資訊";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "將頻道資訊與連結自動提交給我們的資料庫，來為最全面的 Telegram 頻道與群組維基百科做出貢獻。我們不會連接您的 Telegram 個人檔案與頻道，也不會分享您的個人資料。";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";
 "Premium.rememberFolderOnExit" = "記下應用程式關閉時所在的資料夾";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "Double Bottom 已啟用";
 "DoubleBottom.Enabled.Description" = "為了使 Double Bottom正常運作，請記住您剛才設定的密碼並重新開啟應用程式 ";
 "DoubleBottom.Enabled.OK" = "好";
+"DoubleBottom.Passcode.Error" = "請設定另一個與你的密碼鎖不同的密碼。";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**進階功能**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "立刻通知所有小組成員，並確保每個人都會閱讀您的訊息";
 
 "NicePremium.Renews" = "自動續訂";
+"NicePremium.PricePerMonth" = "訂閱費用每月 %@";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "繼續";
+"NicegramOnboarding.1.Title" = "第一名的 Telegram 即時通訊用戶端";
+"NicegramOnboarding.1.Desc" = "加入超過 200 萬名 Nicegram 用戶的行列，並獲得使用最強大與最安全的商用 Telegram 用戶端的機會。";
+"NicegramOnboarding.2.Title" = "進階的即時通訊體驗";
+"NicegramOnboarding.2.Desc" = "使用獨特功能如內建翻譯器、語音轉文本、不需指定作者即可轉傳訊息以及快速儲存到我的最愛等來提升您的溝通速度。";
+"NicegramOnboarding.3.Title" = "擴充的使用者檔案";
+"NicegramOnboarding.3.Desc" = "創建 Telegram 帳戶，要多少設多少且完全免費，並瀏覽具有 ID、註冊日期以及可點擊連結之進階用戶資料。";
+"NicegramOnboarding.4.Title" = "獨特的商用擴充元件";
+"NicegramOnboarding.4.Desc" = "利用 Nicegram 團隊的創新技術並取得可在 133 個國家上網的 eSIM。您還可以用 eSIM 數據方案的電話號碼註冊新的 Telegram 帳戶。";
+"NicegramOnboarding.5.Title" = "最安全的即時通訊程式";
+"NicegramOnboarding.5.Desc" = "具有高強度加密、群組語音及視訊通話、公用頻道、群組和機器人、可用於聊天、媒體和文件共享的無限雲端儲存之安全即時通訊程式。";

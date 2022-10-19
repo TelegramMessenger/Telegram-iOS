@@ -14,6 +14,10 @@ public struct SomeEsimServerError: Error {
     }
 }
 
+extension SomeEsimServerError: CustomNSError {
+    public var errorCode: Int { code }
+}
+
 extension SomeEsimServerError: LocalizedError {
     public var errorDescription: String? { return message }
 }
@@ -21,10 +25,48 @@ extension SomeEsimServerError: LocalizedError {
 //  MARK: - EsimApiError
 
 public enum EsimApiError: Error {
+    case connection(Error)
     case notAuthorized(String)
     case someServerError(SomeEsimServerError)
     case underlying(Error)
     case unexpected
+}
+
+extension EsimApiError: CustomNSError {
+    public var errorCode: Int {
+        switch self {
+        case .notAuthorized(_):
+            return 401
+        case .connection(_):
+            return 0
+        case .someServerError(_):
+            return 0
+        case .underlying(_):
+            return 0
+        case .unexpected:
+            return 0
+        }
+    }
+    
+    public var errorUserInfo: [String : Any] {
+        let underlyingError: Error?
+        switch self {
+        case .notAuthorized(_), .unexpected:
+            underlyingError = nil
+        case .someServerError(let error):
+            underlyingError = error
+        case .underlying(let error), .connection(let error):
+            underlyingError = error
+        }
+        
+        var userInfo = [String: Any]()
+        
+        if let underlyingError = underlyingError {
+            userInfo["NSUnderlyingError"] = underlyingError
+        }
+        
+        return userInfo
+    }
 }
 
 extension EsimApiError: LocalizedError {
@@ -34,7 +76,7 @@ extension EsimApiError: LocalizedError {
             return string
         case .someServerError(let someEsimServerError):
             return someEsimServerError.localizedDescription
-        case .underlying(let error):
+        case .underlying(let error), .connection(let error):
             return error.localizedDescription
         case .unexpected:
             return nil

@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "ROUND VIDEOS";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Start with rear camera";
 
+"NiceFeatures.InstantLock" = "Immediately";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Save to Cloud";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "To Language";
 "Messages.ToLanguage.WithCode" = "To Language: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "We were unable to determine the language you wish to translate the text into. Please select it manually and try again.";
+"Messages.ReplyPrivately" = "Reply Privately";
+"Messages.DeleteAllSystemMessages" = "Delete All";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Get Registration Date";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "Unblock Guide";
 "NicegramSettings.Other.hideReactions" = "Hide Reactions";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Download videos to Gallery";
-"Premium.OnetapTranslate.LowPower" = "Recognition on Low Power";
-"Premium.OnetapTranslate.LowPower.Notice" = "App detects language of each message on your device. It's a high-performance task which can affect your battery life.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Ignore Languages";
+"NicegramSettings.ShareChannelsInfoToggle" = "Share channel information";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Contribute to the most comprehensive wikipedia of Telegram channels and groups by automatically submitting channel information and link to our database. We do not connect your telegram profile and channel and do not share your personal data.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "App detects language of each message on your device. It's a high-performance task which can affect your battery life.";
 "Premium.rememberFolderOnExit" = "Remember current folder on exit";
 
 /*Registration Date*/
@@ -180,7 +186,7 @@
 "TelegramPremium.Failure.Description" = "Something went wrong. Please, use Nicegram Bot to restore your Premium Lifetime Subscription";
 "TelegramPremium.Failure.Pending" = "Your request is pending. Please, wait until Nicegram Bot approves it";
 "TelegramPremium.Success.Title" = "Success";
-"TelegramPremium.Success.Description" = "Your Premium Lifetime Subscription has been successfully restored!" ;
+"TelegramPremium.Success.Description" = "Your Premium Lifetime Subscription has been successfully restored!";
 
 /*Double Bottom*/
 "DoubleBottom.Title" = "Double bottom";
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "Double Bottom is enabled";
 "DoubleBottom.Enabled.Description" = "Please remember the passcode you’ve just set and restart the app for Double Bottom to work well";
 "DoubleBottom.Enabled.OK" = "OK";
+"DoubleBottom.Passcode.Error" = "Please set another passcode different from that you use for Passcode Lock";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**Premium Features**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "Quickly inform all group members and make sure everyone will read your message";
 
 "NicePremium.Renews" = "Subscription Automatically Renews";
+"NicePremium.PricePerMonth" = "Subscribe for %@ per month";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Continue";
+"NicegramOnboarding.1.Title" = "№1 Client for Telegram Messenger";
+"NicegramOnboarding.1.Desc" = "Join over 2 million Nicegram users and get access to the most powerful and secure Telegram client for business.";
+"NicegramOnboarding.2.Title" = "Advanced Messaging Experience";
+"NicegramOnboarding.2.Desc" = "Speed up your communication with unique features like a Built-in Translator, Speech 2 Text, Forwarding messages without specifying the author and Quick saving to favorites.";
+"NicegramOnboarding.3.Title" = "Extended User Profile";
+"NicegramOnboarding.3.Desc" = "Create as many Telegram accounts as you need completely free of charge, as well as view an advanced user profile with ID, registration date and clickable links.";
+"NicegramOnboarding.4.Title" = "Unique Business Extensions";
+"NicegramOnboarding.4.Desc" = "Take advantage of the innovations from the Nicegram team and get an eSIM with internet access in 133 countries. You can also register new Telegram accounts to the phone number of the eSIM data plan.";
+"NicegramOnboarding.5.Title" = "The Most Secure Messenger";
+"NicegramOnboarding.5.Desc" = "Secure Messenger with Strong Encryption, Group Audio and Video Calls, Public Channels, Groups and Bots, Unlimited Cloud Storage for Chats, Media and Documents sharing.";

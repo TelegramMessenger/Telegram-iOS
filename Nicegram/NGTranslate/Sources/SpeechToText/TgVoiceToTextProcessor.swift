@@ -1,5 +1,6 @@
 import Foundation
 import Postbox
+import SwiftSignalKit
 import TelegramCore
 import NGData
 import NGEnv
@@ -55,7 +56,8 @@ public class TgVoiceToTextProcessor {
             return
         }
         
-        let _ = mediaBox.resourceData(mediaFile.resource).start { data in
+        let _ = (mediaBox.resourceData(mediaFile.resource)
+        |> take(1)).start { data in
             do {
                 let audioData = try self.extractAudioData(data)
                 let config = self.makeRecognitionConfig()
@@ -142,11 +144,5 @@ private extension TgVoiceToTextProcessor {
         }
         
         return averageAccuracy
-    }
-}
-
-private extension Locale {
-    var langCode: String {
-        return languageCode ?? identifier
     }
 }

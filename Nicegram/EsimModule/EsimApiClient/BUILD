@@ -11,8 +11,6 @@ swift_library(
         "//Nicegram/EsimModule/EsimApiClientDefinition",
         "//Nicegram/EsimModule/EsimAuth",
 		"//Nicegram/EsimModule/EsimLogging",
-		"//Nicegram/NGAppCache:NGAppCache",
-        "//Nicegram/NGEnv:NGEnv",
         "//Vendor/DeviceKit:DeviceKit",
     ],
 )

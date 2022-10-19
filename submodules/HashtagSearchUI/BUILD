@@ -21,6 +21,9 @@ swift_library(
         "//submodules/SegmentedControlNode:SegmentedControlNode",
         "//submodules/ListMessageItem:ListMessageItem",
         "//submodules/ChatListSearchItemHeader:ChatListSearchItemHeader",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
     ],
     visibility = [
         "//visibility:public",

@@ -1,5 +1,4 @@
 import UIKit
-import NGAuth
 
 protocol AssistantAuthRouterInput: AnyObject {
     func dismiss()

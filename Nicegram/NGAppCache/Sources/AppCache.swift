@@ -23,6 +23,9 @@ public final class AppCache {
 
     @UserDefaultsBacked(key: "hasUnlimPremium", storage: .standard, defaultValue: false)
     public static var hasUnlimPremium: Bool
+    
+    @UserDefaultsBacked(key: "wasOnboardingShown", storage: .standard, defaultValue: false)
+    public static var wasOnboardingShown: Bool
 
     public static var wasLauchedBefore: Bool {
         get {

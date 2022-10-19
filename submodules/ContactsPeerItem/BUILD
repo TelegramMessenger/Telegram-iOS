@@ -26,6 +26,10 @@ swift_library(
         "//submodules/ListSectionHeaderNode:ListSectionHeaderNode",
         "//submodules/ContextUI:ContextUI",
         "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/ComponentFlow",
+        "//submodules/TelegramUI/Components/AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer",
+        "//submodules/TelegramUI/Components/EmojiStatusComponent",
     ],
     visibility = [
         "//visibility:public",

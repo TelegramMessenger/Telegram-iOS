@@ -490,7 +490,16 @@ public class Window1 {
         
         self.keyboardFrameChangeObserver = NotificationCenter.default.addObserver(forName: UIResponder.keyboardWillChangeFrameNotification, object: nil, queue: nil, using: { [weak self] notification in
             if let strongSelf = self {
+                var isTablet = false
+                if case .regular = strongSelf.windowLayout.metrics.widthClass {
+                    isTablet = true
+                }
+                
                 var keyboardFrame: CGRect = (notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? NSValue)?.cgRectValue ?? CGRect()
+                if isTablet && keyboardFrame.isEmpty {
+                    return
+                }
+                                
                 if #available(iOSApplicationExtension 14.2, iOS 14.2, *), UIAccessibility.prefersCrossFadeTransitions {
                 } else if let keyboardView = strongSelf.statusBarHost?.keyboardView {
                     if keyboardFrame.width.isEqual(to: keyboardView.bounds.width) && keyboardFrame.height.isEqual(to: keyboardView.bounds.height) && keyboardFrame.minX.isEqual(to: keyboardView.frame.minX) {
@@ -540,12 +549,20 @@ public class Window1 {
                 
                 var keyboardHeight: CGFloat
                 if keyboardFrame.isEmpty || keyboardFrame.maxY < screenHeight {
-                    keyboardHeight = 0.0
+                    if isTablet && screenHeight - keyboardFrame.maxY < 5.0 {
+                        keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
+                    } else {
+                        keyboardHeight = 0.0
+                    }
                 } else {
                     keyboardHeight = max(0.0, screenHeight - keyboardFrame.minY)
                     if inPopover && !keyboardHeight.isZero {
                         keyboardHeight = max(0.0, keyboardHeight - popoverDelta)
                     }
+                }
+                
+                if strongSelf.hostView.containerView is ChildWindowHostView, !isTablet {
+                    keyboardHeight += 27.0
                 }
                 
                 print("keyboardHeight: \(keyboardHeight) (raw: \(keyboardFrame))")
@@ -666,10 +683,10 @@ public class Window1 {
     }
     
     private func updateBadgeVisibility() {
-        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.deviceMetrics.hasDynamicIsland || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
             Queue.mainQueue().after(0.4) {
-                let badgeShouldBeHidden = !self.deviceMetrics.hasTopNotch || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+                let badgeShouldBeHidden = !self.deviceMetrics.hasTopNotch || self.deviceMetrics.hasDynamicIsland || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
                 if badgeShouldBeHidden == badgeIsHidden {
                     self.badgeView.isHidden = badgeIsHidden
                 }
@@ -856,6 +873,8 @@ public class Window1 {
                 
                 if let coveringView = self.coveringView {
                     self.hostView.containerView.insertSubview(controller.view, belowSubview: coveringView)
+//                } else if let topController = self.topPresentationContext.controllers.first {
+//                    self.hostView.containerView.insertSubview(controller.view, belowSubview: topController.0.displayNode.view)
                 } else {
                     self.hostView.containerView.insertSubview(controller.view, belowSubview: self.badgeView)
                 }
@@ -1119,7 +1138,7 @@ public class Window1 {
                 
                 if let image = self.badgeView.image {
                     self.updateBadgeVisibility()
-                    self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 6.0), size: image.size)
+                    self.badgeView.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((self.windowLayout.size.width - image.size.width) / 2.0), y: 5.0), size: image.size)
                 }
             }
         }

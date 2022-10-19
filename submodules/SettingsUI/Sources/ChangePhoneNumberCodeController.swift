@@ -11,7 +11,7 @@ import OverlayStatusController
 import AccountContext
 import AlertUI
 import PresentationDataUtils
-import AuthorizationUI
+import AuthorizationUtils
 import PhoneNumberFormat
 
 private final class ChangePhoneNumberCodeControllerArguments {
@@ -137,11 +137,11 @@ private struct ChangePhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings) -> [ChangePhoneNumberCodeEntry] {
+private func changePhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ChangePhoneNumberCodeControllerState, codeData: ChangeAccountPhoneNumberData, timeout: Int32?, strings: PresentationStrings, phoneNumber: String) -> [ChangePhoneNumberCodeEntry] {
     var entries: [ChangePhoneNumberCodeEntry] = []
     
     entries.append(.codeEntry(presentationData.theme, presentationData.strings, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
-    var text = authorizationCurrentOptionText(codeData.type, strings: presentationData.strings, primaryColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor).string
+    var text = authorizationCurrentOptionText(codeData.type, phoneNumber: phoneNumber, email: nil, strings: presentationData.strings, primaryColor: presentationData.theme.list.itemPrimaryTextColor, accentColor: presentationData.theme.list.itemAccentColor).string
     if let nextType = codeData.nextType {
         text += "\n\n" + authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string
     }
@@ -316,7 +316,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
             }
             
             let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(formatPhoneNumber(phoneNumber)), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout, strings: presentationData.strings), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+            let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: changePhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, codeData: data, timeout: timeout, strings: presentationData.strings, phoneNumber: phoneNumber), style: .blocks, focusItemTag: ChangePhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
             
             return (controllerState, (listState, arguments))
         } |> afterDisposed {

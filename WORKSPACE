@@ -83,7 +83,7 @@ http_archive(
 
 http_archive(
     name = "rules_pods",
-    urls = ["https://github.com/pinterest/PodToBUILD/releases/download/4.0.0-ad1dec4/PodToBUILD.zip"],
+    urls = ["https://github.com/pinterest/PodToBUILD/releases/download/4.0.0-5787125/PodToBUILD.zip"],
 )
 
 load(

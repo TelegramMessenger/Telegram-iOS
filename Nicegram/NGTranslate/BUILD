@@ -17,6 +17,7 @@ swift_library(
         "//Nicegram/NGLocalization:NGLocalization",
         "//Nicegram/NGModels:NGModels",
         "//Nicegram/NGStrings:NGStrings",
+        "//Nicegram/NGUtils:NGUtils",
     ],
     visibility = [
         "//visibility:public",

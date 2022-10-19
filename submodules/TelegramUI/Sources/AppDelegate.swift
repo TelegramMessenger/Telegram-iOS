@@ -6,6 +6,7 @@ import SubscriptionAnalytics
 import NGEnv
 import NGAppCache
 import NGLocalization
+import NGOnboarding
 import NGRemoteConfig
 
 import UIKit
@@ -44,6 +45,7 @@ import DebugSettingsUI
 import BackgroundTasks
 import UIKitRuntimeUtils
 import StoreKit
+import PhoneNumberFormat
 
 #if canImport(AppCenter)
 import AppCenter
@@ -121,6 +123,10 @@ private class ApplicationStatusBarHost: StatusBarHost {
     }
     
     var keyboardWindow: UIWindow? {
+        if #available(iOS 16.0, *) {
+            return UIApplication.shared.internalGetKeyboard()
+        }
+        
         for window in UIApplication.shared.windows {
             if isKeyboardWindow(window: window) {
                 return window
@@ -223,6 +229,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     private var buildConfig: BuildConfig?
     let episodeId = arc4random()
+    // MARK: Nicegram DB Changes
+    private var isCurrentlyLocked = true
+    /// property for universal links handling
+    private var needOpenURL = false
+    private let unlockedAndReady = ValuePipe<Void>()
     
     private let isInForegroundPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     private var isInForegroundValue = false
@@ -262,6 +273,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     
     private var _notificationTokenPromise: Promise<Data>?
     private let voipTokenPromise = Promise<Data>()
+    // MARK: Nicegram DB Changes
+    private var doubleBottomFlow: DoubleBottomFlow?
     
     private var notificationTokenPromise: Promise<Data> {
         if let current = self._notificationTokenPromise {
@@ -513,7 +526,6 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         TempBox.initializeShared(basePath: rootPath, processType: "app", launchSpecificId: Int64.random(in: Int64.min ... Int64.max))
         
         let legacyLogs: [String] = [
-            "logs",
             "broadcast-logs",
             "siri-logs",
             "widget-logs",
@@ -563,7 +575,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }, canOpenUrl: { url in
             return UIApplication.shared.canOpenURL(url)
         }, openUrl: { url in
-            UIApplication.shared.openURL(url)
+            UIApplication.shared.open(url, options: [:], completionHandler: nil)
         })
         
         if #available(iOS 10.0, *) {
@@ -589,9 +601,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             
             if let parsedUrl = parsedUrl {
-                UIApplication.shared.openURL(parsedUrl)
+                UIApplication.shared.open(parsedUrl, options: [:], completionHandler: nil)
             } else if let escapedUrl = url.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed), let parsedUrl = URL(string: escapedUrl) {
-                UIApplication.shared.openURL(parsedUrl)
+                UIApplication.shared.open(parsedUrl, options: [:], completionHandler: nil)
             }
         }, openUniversalUrl: { url, completion in
             if #available(iOS 10.0, *) {
@@ -667,12 +679,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return disposable
         }, openSettings: {
             if let url = URL(string: UIApplication.openSettingsURLString) {
-                UIApplication.shared.openURL(url)
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
         }, openAppStorePage: {
             let appStoreId = buildConfig.appStoreId
             if let url = URL(string: "itms-apps://itunes.apple.com/app/id\(appStoreId)") {
-                UIApplication.shared.openURL(url)
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
         }, openSubscriptions: {
             if #available(iOS 15, *), let scene = UIApplication.shared.connectedScenes.first as? UIWindowScene {
@@ -680,13 +692,15 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     try await AppStore.showManageSubscriptions(in: scene)
                 }
             } else if let url = URL(string: "https://apps.apple.com/account/subscriptions") {
-                UIApplication.shared.openURL(url)
+                UIApplication.shared.open(url, options: [:], completionHandler: nil)
             }
         }, registerForNotifications: { completion in
+            Logger.shared.log("App \(self.episodeId)", "register for notifications begin")
             let _ = (self.context.get()
             |> take(1)
             |> deliverOnMainQueue).start(next: { context in
                 if let context = context {
+                    Logger.shared.log("App \(self.episodeId)", "register for notifications initiate")
                     self.registerForNotifications(context: context.context, authorize: true, completion: completion)
                 }
             })
@@ -771,8 +785,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             UIDevice.current.setValue(value, forKey: "orientation")
             UINavigationController.attemptRotationToDeviceOrientation()
         })
-        
-        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true)
+        // MARK: Nicegram DB Changes
+        let hiddenAccountManager = HiddenAccountManagerImpl()
+        let accountManager = AccountManager<TelegramAccountManagerTypes>(basePath: rootPath + "/accounts-metadata", isTemporary: false, isReadOnly: false, useCaches: true, removeDatabaseOnError: true, hiddenAccountManager: hiddenAccountManager)
+
         self.accountManager = accountManager
 
         telegramUIDeclareEncodables()
@@ -812,6 +828,16 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let appLockContext = AppLockContextImpl(rootPath: rootPath, window: self.mainWindow!, rootController: self.window?.rootViewController, applicationBindings: applicationBindings, accountManager: accountManager, presentationDataSignal: presentationDataPromise.get(), lockIconInitialFrame: {
                 return (self.mainWindow?.viewController as? TelegramRootController)?.chatListController?.lockViewFrame
             })
+            // MARK: Nicegram DB Changes
+            _ = appLockContext.onUnlockedDismiss.signal()
+                .start { [weak self] _ in
+                    self?.unlockedAndReady.putNext(())
+                }
+            
+            _ = appLockContext.isCurrentlyLocked
+                .start { [weak self] isCurrentlyLocked in
+                    self?.isCurrentlyLocked = isCurrentlyLocked
+                }
             
             var setPresentationCall: ((PresentationCall?) -> Void)?
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
@@ -834,6 +860,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         self.mainWindow.coveringView = nil
                     }
                 }
+                // MARK: Nicegram DB Changes
+            }, openDoubleBottomFlow: { [weak self] selectedAccount in
+                self?.openDoubleBottomFlow(selectedAccount: selectedAccount)
             })
             
             presentationDataPromise.set(sharedContext.presentationData)
@@ -997,6 +1026,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             |> map { primary, accounts, auth -> (AccountContext?, UnauthorizedAccount, [AccountContext])? in
                 if let auth = auth {
                     return (primary, auth, Array(accounts.map({ $0.1 })))
+                    // MARK: Nicegram DB Changes
+                    //return (primary, auth, Array(accounts.filter { !$0.1.account.isHidden }.map({ $0.1 })))
                 } else {
                     return nil
                 }
@@ -1044,6 +1075,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         })
         
+        // MARK: Nicegram Onboarding (we put the telegram start navigation code in a closure that we will call when we are done with processing our onboarding)
+        let onNicegramOnboardingComplete = {
+        //
         let contextReadyDisposable = MetaDisposable()
         
         let startTime = CFAbsoluteTimeGetCurrent()
@@ -1161,8 +1195,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     |> take(1)
                     |> timeout(4.0, queue: .mainQueue(), alternate: .complete())
                     |> deliverOnMainQueue).start(completed: {
-                        authContextValue.rootController.view.endEditing(true)
-                        authContextValue.rootController.dismiss()
+                        Queue.mainQueue().after(0.75) {
+                            authContextValue.rootController.view.endEditing(true)
+                            authContextValue.rootController.dismiss()
+                        }
                     })
                 } else {
                     authContextValue.rootController.view.endEditing(true)
@@ -1186,6 +1222,26 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 authContextReadyDisposable.set(nil)
             }
         }))
+        // MARK: Nicegram Onboarding
+        }
+        if AppCache.wasOnboardingShown {
+            onNicegramOnboardingComplete()
+        } else {
+            AppCache.wasOnboardingShown = true
+            if let rootController = window.rootViewController {
+                let langCode = Locale.currentAppLocale.langCode
+                let controller = onboardingController(languageCode: langCode, onComplete: { [weak rootController] in
+                    rootController?.dismiss(animated: true)
+                    onNicegramOnboardingComplete()
+                })
+                
+                controller.modalPresentationStyle = .fullScreen
+                rootController.present(controller, animated: false)
+            } else {
+                onNicegramOnboardingComplete()
+            }
+        }
+        //
 
 
         let logoutDataSignal: Signal<(AccountManager, Set<PeerId>), NoError> = self.sharedContextPromise.get()
@@ -1245,7 +1301,17 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     return activeAccountsAndPeers(context: context.context)
                     |> take(1)
                     |> map { primaryAndAccounts -> (AccountContext, EnginePeer, Int32)? in
-                        return primaryAndAccounts.1.first
+                        // MARK: Nicegram DB Changes
+                        let accounts = primaryAndAccounts.1
+                        if context.context.sharedContext.accountManager.hiddenAccountManager.unlockedAccountRecordId != nil {
+                            if accounts.count > 1 {
+                                return accounts.first
+                            } else {
+                                return nil
+                            }
+                        } else {
+                            return accounts.first
+                        }
                     }
                     |> map { accountAndPeer -> String? in
                         if let (_, peer, _) = accountAndPeer {
@@ -1380,6 +1446,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
 
     func applicationDidEnterBackground(_ application: UIApplication) {
+        // MARK: Nicegram DB Changes
+        
         let _ = (self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue).start(next: { sharedApplicationContext in
@@ -1435,7 +1503,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
 
         self.resetBadge()
         
-        self.maybeCheckForUpdates()
+//        self.maybeCheckForUpdates()
         
         // MARK: Nicegram fetch
         Queue().async {
@@ -1459,6 +1527,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func applicationWillTerminate(_ application: UIApplication) {
+        // MARK: Nicegram DB Changes
         Logger.shared.log("App \(self.episodeId)", "terminating")
     }
     
@@ -1493,21 +1562,27 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             return
         }
         
-        let _ = (self.sharedContextPromise.get()
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { sharedApplicationContext in
-            sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
-                completionHandler(.newData)
-            }, timeout: 29.0)
-            sharedApplicationContext.notificationManager.addNotification(userInfo)
+        // MARK: Nicegram DB Changes
+        let _ = (combineLatest(queue: .mainQueue(), self.sharedContextPromise.get(), accountIdFromNotification(userInfo, sharedContext: self.sharedContextPromise.get()))
+                 |> take(1)).start(next: { sharedApplicationContext, accountId in
+            
+            let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ [weak sharedApplicationContext] transaction in
+                if let sharedApplicationContext = sharedApplicationContext, let record = transaction.getRecords().first(where: { $0.id == accountId }),
+                   !record.attributes.contains(where: { $0.isHiddenAccountAttribute }) {
+                    sharedApplicationContext.wakeupManager.replaceCurrentExtensionWithExternalTime(completion: {
+                        completionHandler(.newData)
+                    }, timeout: 29.0)
+                    sharedApplicationContext.notificationManager.addNotification(userInfo)
+                }
+            }) |> deliverOnMainQueue).start()
         })
     }
     
-    func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
+    /*func application(_ application: UIApplication, didReceive notification: UILocalNotification) {
         if (application.applicationState == .inactive) {
             Logger.shared.log("App \(self.episodeId)", "tap local notification \(String(describing: notification.userInfo)), applicationState \(application.applicationState)")
         }
-    }
+    }*/
 
     public func pushRegistry(_ registry: PKPushRegistry, didUpdate credentials: PKPushCredentials, for type: PKPushType) {
         if #available(iOS 9.0, *) {
@@ -1627,11 +1702,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             completion()
             return
         }
+        
+        let phoneNumber = payloadJson["phoneNumber"] as? String
 
         callKitIntegration.reportIncomingCall(
             uuid: CallSessionManager.getStableIncomingUUID(stableId: callUpdate.callId),
             stableId: callUpdate.callId,
             handle: "\(callUpdate.peer.id.id._internalGetInt64Value())",
+            phoneNumber: phoneNumber.flatMap(formatPhoneNumber),
             isVideo: false,
             displayTitle: callUpdate.peer.debugDisplayTitle,
             completion: { error in
@@ -1724,14 +1802,29 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         self.openUrl(url: url)
         return true
     }
-    
+    // MARK: Nicegram DB Changes
     func application(_ app: UIApplication, open url: URL, options: [UIApplication.OpenURLOptionsKey : Any] = [:]) -> Bool {
-        guard self.openUrlInProgress != url else {
-            return true
-        }
-        
-        self.openUrl(url: url)
+        self.handleUniversalLink(url)
         return true
+    }
+    // MARK: Nicegram DB Changes
+    private func handleUniversalLink(_ url: URL) {
+        if isCurrentlyLocked {
+            handleURLWhenUnlocked(url)
+        } else {
+            openUrl(url: url)
+        }
+    }
+    // MARK: Nicegram DB Changes
+    private func handleURLWhenUnlocked(_ url: URL) {
+        self.needOpenURL = true
+        _ = (self.unlockedAndReady.signal()
+             |> filter { self.needOpenURL }
+             |> take(1))
+        .start(next: { [weak self] in
+            self?.needOpenURL = false
+            self?.openUrl(url: url)
+        })
     }
     
     func application(_ application: UIApplication, handleOpen url: URL) -> Bool {
@@ -1763,7 +1856,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                     let presentationData = authContext.sharedContext.currentPresentationData.with { $0 }
                     authContext.rootController.currentWindow?.present(standardTextAlertController(theme: AlertControllerTheme(presentationData: presentationData), title: nil, text: presentationData.strings.Passport_NotLoggedInMessage, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Calls_NotNow, action: {
                         if let callbackUrl = URL(string: secureIdCallbackUrl(with: secureIdData.callbackUrl, peerId: secureIdData.peerId, result: .cancel, parameters: [:])) {
-                            UIApplication.shared.openURL(callbackUrl)
+                            UIApplication.shared.open(callbackUrl, options: [:], completionHandler: nil)
                         }
                     }), TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), on: .root, blockInteraction: false, completion: {})
                 } else if let confirmationCode = parseConfirmationCodeUrl(url) {
@@ -1815,52 +1908,65 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 }
                 
                 if let contact = startCallContacts.first {
-                    var processed = false
-                    if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
-                        let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
-                        if let userId = Int64(string) {
-                            startCall(userId)
-                            processed = true
-                        }
+                    let contactByIdentifier: Signal<EnginePeer?, NoError>
+                    if let context = self.contextValue?.context, let contactIdentifier = contact.contactIdentifier {
+                        contactByIdentifier = context.engine.contacts.findPeerByLocalContactIdentifier(identifier: contactIdentifier)
+                    } else {
+                        contactByIdentifier = .single(nil)
                     }
-                    if !processed, let handle = contact.personHandle, let value = handle.value {
-                        switch handle.type {
-                            case .unknown:
-                                if let userId = Int64(value) {
-                                    startCall(userId)
-                                    processed = true
-                                }
-                            case .phoneNumber:
-                                let phoneNumber = cleanPhoneNumber(value)
-                                if !phoneNumber.isEmpty {
-                                    guard let context = self.contextValue?.context else {
-                                        return true
+                    
+                    let _ = (contactByIdentifier |> deliverOnMainQueue).start(next: { peerByContact in
+                        var processed = false
+                        if let peerByContact = peerByContact {
+                            startCall(peerByContact.id.id._internalGetInt64Value())
+                            processed = true
+                        } else if let handle = contact.customIdentifier, handle.hasPrefix("tg") {
+                            let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
+                            if let userId = Int64(string) {
+                                startCall(userId)
+                                processed = true
+                            }
+                        }
+                        if !processed, let handle = contact.personHandle, let value = handle.value {
+                            switch handle.type {
+                                case .unknown:
+                                    if let userId = Int64(value) {
+                                        startCall(userId)
+                                        processed = true
                                     }
-                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
-                                    |> map { contactList -> PeerId? in
-                                        var result: PeerId?
-                                        for peer in contactList.peers {
-                                            if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
-                                                if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
-                                                    result = peer.id
-                                                    break
+                                case .phoneNumber:
+                                    let phoneNumber = cleanPhoneNumber(value)
+                                    if !phoneNumber.isEmpty {
+                                        guard let context = self.contextValue?.context else {
+                                            return
+                                        }
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Contacts.List(includePresences: false))
+                                        |> map { contactList -> PeerId? in
+                                            var result: PeerId?
+                                            for peer in contactList.peers {
+                                                if case let .user(peer) = peer, let peerPhoneNumber = peer.phone {
+                                                    if matchPhoneNumbers(phoneNumber, peerPhoneNumber) {
+                                                        result = peer.id
+                                                        break
+                                                    }
                                                 }
                                             }
+                                            return result
                                         }
-                                        return result
+                                        |> deliverOnMainQueue).start(next: { peerId in
+                                            if let peerId = peerId {
+                                                startCall(peerId.id._internalGetInt64Value())
+                                            }
+                                        })
+                                        processed = true
                                     }
-                                    |> deliverOnMainQueue).start(next: { peerId in
-                                        if let peerId = peerId {
-                                            startCall(peerId.id._internalGetInt64Value())
-                                        }
-                                    })
-                                    processed = true
-                                }
-                            default:
-                                break
+                                default:
+                                    break
+                            }
                         }
-                    }
-
+                    })
+                    
+                    return true
                 }
             } else if let sendMessageIntent = userActivity.interaction?.intent as? INSendMessageIntent {
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
@@ -1957,8 +2063,8 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 })
             }
             if let appLockContext = sharedContext.sharedContext.appLockContext as? AppLockContextImpl, !immediately {
-                let _ = (appLockContext.isCurrentlyLocked
-                |> filter { !$0 }
+                // MARK: Nicegram DB Changes
+                let _ = (appLockContext.isUnlockedAndReady
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { _ in
                     proceed()
@@ -1982,7 +2088,19 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         |> take(1)
         |> mapToSignal { sharedApplicationContext -> Signal<AuthorizedApplicationContext, NoError> in
             if let accountId = accountId {
-                sharedApplicationContext.sharedContext.switchToAccount(id: accountId)
+                // MARK: Nicegram DB Changes
+                let _ = (sharedApplicationContext.sharedContext.accountManager.transaction({ transaction -> Bool in
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }) {
+                        return !record.attributes.contains(where: { $0.isHiddenAccountAttribute })
+                    } else {
+                        return false
+                    }
+                }) |> deliverOnMainQueue).start(next: { [weak sharedApplicationContext] canSwitch in
+                    if canSwitch {
+                        sharedApplicationContext?.sharedContext.switchToAccount(id: accountId)
+                    }
+                })
+
                 return self.authorizedContext()
                 |> filter { context in
                     context.context.account.id == accountId
@@ -2036,18 +2154,55 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             })
         }))
     }
+    // MARK: Nicegram DB Changes
+    private func openDoubleBottomFlow(selectedAccount: AccountContext) {
+        guard let context = self.contextValue else { return }
+        doubleBottomFlow = DoubleBottomFlow(context: context, selectedAccount: selectedAccount) { [weak self] in
+            self?.doubleBottomFlow = nil
+        }
+        doubleBottomFlow?.start()
+    }
+
     
     @available(iOS 10.0, *)
-    func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
-        let _ = (accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get())
-        |> deliverOnMainQueue).start(next: { accountId in
+    // MARK: Nicegram DB Changes
+        func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse, withCompletionHandler completionHandler: @escaping () -> Void) {
+            let hiddenIdsAndPasscodeSettings = self.sharedContextPromise.get() |> mapToSignal { context in
+                return context.sharedContext.accountManager.transaction({ transaction -> (hiddenIds: [AccountRecordId], hasMasterPasscode: Bool) in
+                    let hiddenIds = transaction.getRecords().filter { $0.attributes.contains(where: { $0.isHiddenAccountAttribute }) }.map { $0.id }
+                    let hasMasterPasscode = transaction.getAccessChallengeData() != .none
+                    return (hiddenIds, hasMasterPasscode)
+                })
+            }
+
+            let primaryAccount = self.sharedContextPromise.get() |> mapToSignal { context in
+                return context.sharedContext.activeAccountContexts
+                |> take(1)
+                |> map { primary, _, _ -> AccountContext? in
+                    return primary
+                }
+            }
+            
+            let _ = combineLatest(queue: .mainQueue(), accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get()), hiddenIdsAndPasscodeSettings, self.sharedContextPromise.get(), primaryAccount).start(next: { accountId, hiddenIdsAndPasscodeSettings, context, primary in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
                 if let peerId = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
                     }
-                    self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    // MARK: Nicegram DB Changes
+                    if let accountId = accountId, hiddenIdsAndPasscodeSettings.hiddenIds.contains(accountId) {
+                        if hiddenIdsAndPasscodeSettings.hasMasterPasscode {
+                            context.sharedContext.appLockContext.lock()
+                        }
+                    } else if let primary = primary,
+                              primary.account.id != accountId,
+                              VarSystemNGSettings.isDoubleBottomOn,
+                              VarSystemNGSettings.inDoubleBottom {
+                        context.sharedContext.appLockContext.lock()
+                    } else {
+                        self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                    }
                 }
                 completionHandler()
             } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
@@ -2076,7 +2231,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if let messageId = messageIdFromNotification(peerId: peerId, notification: response.notification) {
                             let _ = TelegramEngine(account: account).messages.applyMaxReadIndexInteractively(index: MessageIndex(id: messageId, timestamp: 0)).start()
                         }
-                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)])
+                        return enqueueMessages(account: account, peerId: peerId, messages: [EnqueueMessage.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])])
                         |> map { messageIds -> MessageId? in
                             if messageIds.isEmpty {
                                 return nil
@@ -2133,7 +2288,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     private func registerForNotifications(replyString: String, messagePlaceholderString: String, hiddenContentString: String, includeNames: Bool, authorize: Bool = true, completion: @escaping (Bool) -> Void = { _ in }) {
         if #available(iOS 10.0, *) {
             let notificationCenter = UNUserNotificationCenter.current()
+            Logger.shared.log("App \(self.episodeId)", "register for notifications: get settings (authorize: \(authorize))")
             notificationCenter.getNotificationSettings(completionHandler: { settings in
+                Logger.shared.log("App \(self.episodeId)", "register for notifications: received settings: \(settings.authorizationStatus)")
+                
                 switch (settings.authorizationStatus, authorize) {
                     case (.authorized, _), (.notDetermined, true):
                         var authorizationOptions: UNAuthorizationOptions = [.badge, .sound, .alert, .carPlay]
@@ -2143,7 +2301,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if #available(iOS 13.0, *) {
                             authorizationOptions.insert(.announcement)
                         }
+                        Logger.shared.log("App \(self.episodeId)", "register for notifications: request authorization")
                         notificationCenter.requestAuthorization(options: authorizationOptions, completionHandler: { result, _ in
+                            Logger.shared.log("App \(self.episodeId)", "register for notifications: received authorization: \(result)")
                             completion(result)
                             if result {
                                 Queue.mainQueue().async {
@@ -2206,14 +2366,9 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             reply.identifier = "reply"
             reply.title = replyString
             reply.isDestructive = false
-            if #available(iOS 9.0, *) {
-                reply.isAuthenticationRequired = false
-                reply.behavior = .textInput
-                reply.activationMode = .background
-            } else {
-                reply.isAuthenticationRequired = true
-                reply.activationMode = .foreground
-            }
+            reply.isAuthenticationRequired = false
+            reply.behavior = .textInput
+            reply.activationMode = .background
             
             let unknownMessageCategory = UIMutableUserNotificationCategory()
             unknownMessageCategory.identifier = "unknown"
@@ -2253,10 +2408,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
         let _ = (accountIdFromNotification(notification, sharedContext: self.sharedContextPromise.get())
         |> deliverOnMainQueue).start(next: { accountId in
-            if let context = self.contextValue {
-                if let accountId = accountId, context.context.account.id != accountId {
-                    completionHandler([.alert])
-                }
+            // MARK: Nicegram DB Changes
+            if let context = self.contextValue, let accountId = accountId, context.context.account.id != accountId {
+                let _ = context.context.sharedContext.accountManager.transaction { transaction in
+                    if let record = transaction.getRecords().first(where: { $0.id == accountId }),
+                       !record.attributes.contains(where: { $0.isHiddenAccountAttribute }) {
+                        completionHandler([.alert])
+                    }
+                }.start()
             }
         })
     }
@@ -2449,6 +2608,65 @@ private func accountIdFromNotification(_ notification: UNNotification, sharedCon
         }
     }
 }
+// MARK: Nicegram DB Changes
+private func accountIdFromNotification(_ notification: [AnyHashable : Any], sharedContext: Signal<SharedApplicationContext, NoError>) -> Signal<AccountRecordId?, NoError> {
+    if let id = notification["accountId"] as? Int64 {
+        return .single(AccountRecordId(rawValue: id))
+    } else {
+        var encryptedData: Data?
+        if var encryptedPayload = notification["p"] as? String {
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "-", with: "+")
+            encryptedPayload = encryptedPayload.replacingOccurrences(of: "_", with: "/")
+            while encryptedPayload.count % 4 != 0 {
+                encryptedPayload.append("=")
+            }
+            encryptedData = Data(base64Encoded: encryptedPayload)
+        }
+        if let encryptedData = encryptedData, let notificationKeyId = notificationPayloadKey(data: encryptedData) {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccountContexts
+                |> take(1)
+                |> mapToSignal { _, contexts, _ -> Signal<AccountRecordId?, NoError> in
+                    let keys = contexts.map { _, context, _ -> Signal<(AccountRecordId, MasterNotificationKey)?, NoError> in
+                        return masterNotificationsKey(account: context.account, ignoreDisabled: true)
+                        |> map { key in
+                            return (context.account.id, key)
+                        }
+                    }
+                    return combineLatest(keys)
+                    |> map { keys -> AccountRecordId? in
+                        for idAndKey in keys {
+                            if let (id, key) = idAndKey, key.id == notificationKeyId {
+                                return id
+                            }
+                        }
+                        return nil
+                    }
+                }
+            }
+        } else if let userId = notification["userId"] as? Int {
+            return sharedContext
+            |> take(1)
+            |> mapToSignal { sharedContext -> Signal<AccountRecordId?, NoError> in
+                return sharedContext.sharedContext.activeAccountContexts
+                |> take(1)
+                |> map { _, contexts, _ -> AccountRecordId? in
+                    for (_, context, _) in contexts {
+                        if Int(context.account.peerId.id._internalGetInt64Value()) == userId {
+                            return context.account.id
+                        }
+                    }
+                    return nil
+                }
+            }
+        } else {
+            return .single(nil)
+        }
+    }
+}
+
 
 @available(iOS 10.0, *)
 private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
@@ -2512,6 +2730,170 @@ private func downloadHTTPData(url: URL) -> Signal<Data, DownloadFileError> {
             if !completed.with({ $0 }) {
                 downloadTask.cancel()
             }
+        }
+    }
+}
+
+// MARK: Nicegram DB Changes
+
+import LocalAuth
+import PasscodeUI
+import WidgetKit
+
+public class FlowViewController: ViewController {
+    weak var nextController: ViewController?
+}
+
+final class DoubleBottomFlowContext {
+    private let accountContext: SharedAccountContext
+    private let context: AuthorizedApplicationContext
+    
+    var mainPasscode: (String, Bool)?
+    var secretPasscode: (String, Bool)?
+    
+    var flowIsReady: Bool = false
+    
+    init(accountContext: SharedAccountContext, context: AuthorizedApplicationContext) {
+        self.accountContext = accountContext
+        self.context = context
+    }
+    
+    func setSecretPasscode() {
+        guard let passcode = secretPasscode?.0, let numerical = secretPasscode?.1 else { return }
+        
+        let _ = (accountContext.accountManager.transaction({ transaction -> Void in
+            var data = transaction.getAccessChallengeData()
+            if numerical {
+                data = PostboxAccessChallengeData.numericalPassword(value: passcode)
+            } else {
+                data = PostboxAccessChallengeData.plaintextPassword(value: passcode)
+            }
+            for record in transaction.getRecords() {
+                disableDoubleBottom(transaction: transaction, id: record.id)
+            }
+            if let (id, _) = transaction.getCurrent() {
+                setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
+                
+                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                
+                UserDefaults.standard.set(id.int64 ,forKey: "DoubleBottomId")
+            }
+        }) |> deliverOnMainQueue).start()
+    }
+}
+
+final class DoubleBottomFlow {
+    private(set) var doubleBottomContext: DoubleBottomFlowContext?
+    
+    private let finish: () -> Void
+    
+    let context: AuthorizedApplicationContext
+    let accountContext: SharedAccountContext
+    
+    init(context: AuthorizedApplicationContext, selectedAccount: AccountContext, finish: @escaping () -> Void) {
+        self.context = context
+        self.accountContext = selectedAccount.sharedContext
+        self.finish = finish
+        self.doubleBottomContext = DoubleBottomFlowContext(accountContext: accountContext, context: context)
+    }
+    
+    func hideCurrentAccount() {
+        doubleBottomContext?.setSecretPasscode()
+        
+        doubleBottomContext?.flowIsReady = true
+    }
+    
+    func blockInterface() {
+        let accountContext = context.sharedApplicationContext.sharedContext
+        
+        accountContext.appLockContext.lock()
+        doubleBottomContext = nil
+        _ = (accountContext.appLockContext.lockingIsCompletePromise
+            .get()
+            |> distinctUntilChanged
+            |> mapToSignal { [weak accountContext, weak self] complete -> Signal<Void, NoError> in
+                guard complete, let accountContext = accountContext else { return .single(()) }
+                
+                return accountContext.accountManager.transaction({ transaction -> Void in
+                    if let publicId = transaction.getRecords().first(where: { $0.isPublic })?.id {
+                        transaction.setCurrentId(publicId)
+                    }
+                    self?.finish()
+                })
+            }
+            |> deliverOnMainQueue).start()
+    }
+    
+    func blockInterfaceInNeeded() {
+        if doubleBottomContext?.flowIsReady ?? false {
+            blockInterface()
+        }
+    }
+    
+    func start() {
+        let _ = (context.sharedApplicationContext.sharedContext.accountManager.transaction { transaction -> DoubleBottomFlowContext?  in
+            self.doubleBottomContext = DoubleBottomFlowContext(accountContext: self.accountContext, context: self.context)
+            
+            let accessChallengeData = transaction.getAccessChallengeData()
+            self.doubleBottomContext?.mainPasscode = accessChallengeData.convert()
+            
+            return self.doubleBottomContext
+        } |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let self = self else { return }
+            let passcodeType: PasscodeEntryFieldType
+            if self.doubleBottomContext!.mainPasscode!.1 {
+                passcodeType = self.doubleBottomContext!.mainPasscode!.0.count == 6 ? .digits6 : .digits4
+            } else {
+                passcodeType = .alphanumeric
+            }
+            
+            let secretPasscodeSetupController = PasscodeSetupController(context: self.accountContext, mode: .setup(change: false, passcodeType), isChangeModeAllowed: false, isOpaqueNavigationBar: true)
+            secretPasscodeSetupController.checkSetupPasscode = { passcode in
+                return self.doubleBottomContext!.mainPasscode?.0 != passcode
+            }
+            secretPasscodeSetupController.complete = { [weak self] passcode, numerical in
+                guard let strongSelf = self else { return }
+                strongSelf.doubleBottomContext?.secretPasscode = (passcode, numerical)
+                let root = strongSelf.context.rootController
+                root.setViewControllers(Array(root.viewControllers.dropLast(3)), animated: false)
+                strongSelf.hideCurrentAccount()
+
+                let presentationData = strongSelf.context.context.sharedContext.currentPresentationData.with { $0 }
+                let locale = presentationData.strings.baseLanguageCode
+                let alert = UIAlertController(title: l("DoubleBottom.Enabled.Title", locale), message: l("DoubleBottom.Enabled.Description", locale), preferredStyle: .alert)
+                alert.addAction(UIAlertAction(title: l("DoubleBottom.Enabled.OK", locale), style: .default, handler: { _ in }))
+                strongSelf.context.mainWindow.presentNative(alert)
+                VarSystemNGSettings.isDoubleBottomOn = true
+            }
+            self.context.rootController.pushViewController(secretPasscodeSetupController, animated: true)
+        })
+    }
+}
+
+fileprivate extension AccountRecord {
+    var isPublic: Bool {
+        !attributes.contains(where: {
+            guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+            return attribute.isHiddenAccountAttribute || attribute.isLoggedOutAccountAttribute
+        })
+    }
+    
+    var isHidden: Bool {
+        attributes.contains(where: {
+            guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+            return attribute.isHiddenAccountAttribute
+        })
+    }
+}
+
+fileprivate extension PostboxAccessChallengeData {
+    func convert() -> (String, Bool)? {
+        switch self {
+        case .none: return nil
+            
+        case .numericalPassword(let value): return (value, true)
+            
+        case .plaintextPassword(let value): return (value, false)
         }
     }
 }

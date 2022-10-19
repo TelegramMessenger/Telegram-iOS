@@ -1,0 +1,31 @@
+"AppName" = "नाइसग्राम";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "प्राइवेसी पॉलिसी";
+"Nicegram.EULA" = "ईयूएलए ";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "नाइसग्राम";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "से पुराना ";
+"NiceFeatures.RegDate.Approximately" = "लगभग ";
+"NiceFeatures.RegDate.NewerThan" = "से नया";
+
+"NicePremium.Translator" = "बिल्ट इन ट्रांसलेटर ";
+"NicePremium.Translator.Desc" = "बिना 3rd पार्टी ट्रांसलेटर  को स्विच किए फटाफट एप्प में किसी भी संदेश का ट्रांसलेशन पाएं ";
+
+"NicePremium.SpeechToText.Desc" = "सेकंड्स में कोई भी वॉइस मैसेज का ट्रांसक्रिप्शन पाएं और अपना बहुत सारा समय बचाएं ";
+"NicePremium.MentionAll.Desc" = "फटाफट सभी ग्रुप मेंबर्स को इनफॉर्म करें और सुनिश्चित करें कि सब आपका संदेश पढ़ेंगे ";
+
+"NicePremium.Renews" = "सब्सक्रिप्शन खुद ब खुद रीन्यू हो जाएगी ";
+"NicegramOnboarding.1.Title" = "टेलीग्राम और मेसेंजर के लिए No.1 क्लाइंट \n";
+"NicegramOnboarding.1.Desc" = "2 मिलियन से ज़्यादा Nicegram यूजर्स से जुड़ें और बिज़नेस के लिए सबसे शक्तिशाली और सुरक्षित Telegram के क्लाइंट को एक्सेस पाएं ।  ";
+"NicegramOnboarding.2.Title" = "एडवांस्ड मैसेज करने का अनुभव ";
+"NicegramOnboarding.2.Desc" = "यूनीक फीचर्स जैसे बिल्ट इन ट्रांसलेटर , स्पीच 2 टेक्स्ट, ऑथर के बारे में स्पेसिफाई किए बिना मैसेज फॉरवर्ड करना, फेवरेट में क्विक सेव करने\nके साथ,अपने कम्युनिकेशन में तेज़ी लाएं ।";
+"NicegramOnboarding.3.Title" = "यूज़र का एक्सटेंडेड प्रोफाइल";
+"NicegramOnboarding.3.Desc" = "मुफ्त में आपको जितने चाहिएं उतने Telegram एकाउंट बनाएं , साथ ही आईडी के साथ एडवांस्ड यूज़र प्रोफाइल , उसकी रजिस्ट्रेशन की तारीख और क्लिक किए जा सकने वाले लिंक्स देखें । ";
+"NicegramOnboarding.4.Title" = "बिज़नेस के यूनीक एक्सटेंशन\n";
+"NicegramOnboarding.4.Desc" = "Nicegram टीम के इन्नोवेशन का फायदा उठाएं और eSIM के साथ 133 देशों में इन्टरनेट का एक्सेस पाएं । eSim डेटा प्लैन के फोन नम्बर के  साथ आप अपना नया Telegram एकाउंट भी रजिस्टर कर सकते हैं ।";
+"NicegramOnboarding.5.Title" = "सबसे सुरक्षित मेसेंजर ";
+"NicegramOnboarding.5.Desc" = "अपने मैसेंजर को मजबूत एनक्रिप्शन , ग्रुप ऑडियो और वीडियो कॉल , पब्लिक चैनल्स, ग्रुप्स और बॉट्स, चैट्स,मीडिया के लिए असीमित क्लाउड स्टोरेज ,डॉक्यूमेंट शेयरिंग जैसी सुविधाओं से सिक्योर (सुरक्षित) करें ।";

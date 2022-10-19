@@ -47,6 +47,10 @@ final class SubscriptionViewController: UIViewController, SubscriptionViewContro
         return .lightContent
     }
     
+    override var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+        return UIDevice.current.userInterfaceIdiom == .phone ? .portrait : .all
+    }
+    
     //  MARK: - Logic
     
     var currentSubscription: SubscriptionViewModel?
@@ -85,6 +89,18 @@ final class SubscriptionViewController: UIViewController, SubscriptionViewContro
         }
         
         output.viewDidLoad()
+    }
+    
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        UIApplication.shared.internalSetStatusBarHidden(true, animation: animated ? .fade : .none)
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        UIApplication.shared.internalSetStatusBarHidden(false, animation: animated ? .fade : .none)
     }
     
     override func viewDidLayoutSubviews() {

@@ -12,7 +12,7 @@ public struct TelegramAuthSession {
 public typealias TelegramAuthSessionError = Error
 
 public protocol TelegramAuthSessionProvider {
-    func fetchSession(telegramId: TelegramID, completion: ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?)
+    func fetchSession(telegramId: TelegramID?, completion: ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?)
 }
 
 public class TelegramAuthSessionProviderImpl {
@@ -30,10 +30,10 @@ public class TelegramAuthSessionProviderImpl {
 }
 
 extension TelegramAuthSessionProviderImpl: TelegramAuthSessionProvider {
-    public func fetchSession(telegramId: TelegramID, completion:  ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?) {
+    public func fetchSession(telegramId: TelegramID?, completion:  ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?) {
         let request = ApiRequest<TelegramAuthSessionResponse>.post(
             path: "telegram/session",
-            body: TelegramAuthSessionBody(telegramId: telegramId.id)
+            body: TelegramAuthSessionBody(telegramId: telegramId?.id)
         )
        
         apiClient.send(request) { result in
@@ -49,7 +49,7 @@ extension TelegramAuthSessionProviderImpl: TelegramAuthSessionProvider {
 }
 
 private struct TelegramAuthSessionBody: Encodable {
-    let telegramId: Int64
+    let telegramId: Int64?
 }
 
 private typealias TelegramAuthSessionResponse = TelegramAuthSessionDTO

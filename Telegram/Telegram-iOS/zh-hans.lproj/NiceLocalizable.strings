@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "圆形视频";
 "NiceFeatures.RoundVideos.UseRearCamera" = "使用后置相机";
 
+"NiceFeatures.InstantLock" = "立即";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "保存到收藏夹";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "为语言";
 "Messages.ToLanguage.WithCode" = "为语言: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "我们无法确定您希望将文本翻译为的语言。请手动选择，然后重试。";
+"Messages.ReplyPrivately" = "私密回复";
+"Messages.DeleteAllSystemMessages" = "全部删除";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "获取注册日期";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "解封指南";
 "NicegramSettings.Other.hideReactions" = "隐藏反应";
 "NicegramSettings.RoundVideos.DownloadVideos" = "将视频下载到图库";
-"Premium.OnetapTranslate.LowPower" = "低电量时禁用";
-"Premium.OnetapTranslate.LowPower.Notice" = "应用会检测您设备上每条消息使用的语言。这一功能需要很高的性能，可能会影响电池寿命。";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "忽略语言";
+"NicegramSettings.ShareChannelsInfoToggle" = "分享频道信息";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "通过自动提交频道信息和链接至我们的数据库，向最全面的 Telegram 频道和群组百科贡献力量。我们不会关联您的 Telegram 个人资料和频道，不会分享您的个人数据。";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "应用会检测您设备上每条消息使用的语言。这一功能需要很高的性能，可能会影响电池寿命。";
 "Premium.rememberFolderOnExit" = "退出时记住当前分组";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "双底已启用";
 "DoubleBottom.Enabled.Description" = "请记住你刚设置的密码，并重启应用，以便“双底”可以正常运作";
 "DoubleBottom.Enabled.OK" = "确认";
+"DoubleBottom.Passcode.Error" = "请设置另一个与密码锁不同的密码";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**高级版功能**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "快速通知所有群组成员并确保每个人都会阅读您的消息";
 
 "NicePremium.Renews" = "订阅自动续订";
+"NicePremium.PricePerMonth" = "订阅并每月支付 %@";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "继续";
+"NicegramOnboarding.1.Title" = "Telegram 通讯的首选客户端";
+"NicegramOnboarding.1.Desc" = "加入 200 多万 Nicegram 用户，使用最强大且安全的 Telegram 客户端开展业务。";
+"NicegramOnboarding.2.Title" = "高级的通讯体验";
+"NicegramOnboarding.2.Desc" = "凭借独特的功能加速您的交流，比如内置翻译器，语音转文字，隐藏作者转发消息，以及快速保存到收藏夹。";
+"NicegramOnboarding.3.Title" = "扩展用户个人资料";
+"NicegramOnboarding.3.Desc" = "根据需要，想创建多少 Telegram 账户都可以，完全免费；还可以查看显示 ID、注册日期和可点击链接的高级用户个人资料。";
+"NicegramOnboarding.4.Title" = "独特的商业扩展能力";
+"NicegramOnboarding.4.Desc" = "利用 Nicegram 团队的创新，获取可在 133 个国家上网的 eSIM。您也可以用 eSIM 数据计划的电话号码注册新的 Telegram 账户。";
+"NicegramOnboarding.5.Title" = "最安全的通讯工具";
+"NicegramOnboarding.5.Desc" = "安全的通讯工具，拥有强加密、群组音频和视频电话、公共频道、群聊和机器人、无限制的聊天云存储空间、媒体和文档共享功能。";

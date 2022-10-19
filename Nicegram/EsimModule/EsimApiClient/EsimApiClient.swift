@@ -72,7 +72,9 @@ public class EsimApiClient {
     }
     
     private func parse<Response: Decodable>(_ data: Data?, _ response: URLResponse?, _ error: Error?) throws -> Response {
-        if let error = error { throw error }
+        if let error = error {
+            throw EsimApiError.connection(error)
+        }
         
         guard let data = data else { throw EsimApiError.unexpected }
         
@@ -103,21 +105,29 @@ public class EsimApiClient {
         let url = baseUrl.appendingPathComponent(apiRequest.path)
         
         var request = URLRequest(url: url)
-        request = request.applying(headers: generateHeaders())
         request.httpMethod = apiRequest.method
         request.queryItems = apiRequest.queryParams.map({ .init(name: $0.key, value: $0.value) })
+        
+        let httpBody: Data?
         if let body = apiRequest.body {
-            request.httpBody = try? JSONEncoder().encode(body)
+            httpBody = try? JSONEncoder().encode(body)
+        } else {
+            httpBody = nil
         }
+        
+        request.httpBody = httpBody
+        request = request.applying(headers: generateHeaders(httpBody: httpBody))
         
         return request
     }
     
-    private func generateHeaders() -> [String: String] {
+    private func generateHeaders(httpBody: Data?) -> [String: String] {
         let timestamp = String(Date().timeStampMillis())
+        
         var token: String = ""
         #if canImport(CryptoKit)
-        token = [mobileIdentifier, timestamp, apiKey].joined(separator: " ").sha256
+        let bodyBase64 = httpBody?.base64EncodedString() ?? ""
+        token = [bodyBase64, apiKey].joined().sha256
         #endif
         
         let headers: [String: String] = [
@@ -153,6 +163,8 @@ extension EsimApiClient: EsimApiClientProtocol {
         internalSend(apiRequest, interceptor: interceptor, completion: completion)
     }
 }
+
+//  MARK: - DTO Functions
 
 private enum EsimApiResponse<Payload: Decodable>: Decodable {
     case success(Payload)

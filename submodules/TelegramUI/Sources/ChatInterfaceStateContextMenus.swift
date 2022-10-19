@@ -38,6 +38,14 @@ import ChatPresentationInterfaceState
 import Pasteboard
 import SettingsUI
 import PremiumUI
+import TextNodeWithEntities
+
+// MARK: Nicegram SelectAllMessagesWithAuthor
+// MARK: Nicegram ReplyPrivately
+private func isServiceMessage(_ message: Message) -> Bool {
+    return message.media.contains(where: { $0 is TelegramMediaAction })
+}
+//
 
 private struct MessageContextMenuData {
     let starStatus: Bool?
@@ -217,12 +225,14 @@ private func canViewReadStats(message: Message, participantCount: Int?, isMessag
     case let channel as TelegramChannel:
         if case .broadcast = channel.info {
             return false
-        } else if let participantCount = participantCount {
-            if participantCount > maxParticipantCount {
+        } else {
+            if let participantCount = participantCount {
+                if participantCount > maxParticipantCount {
+                    return false
+                }
+            } else {
                 return false
             }
-        } else {
-            return false
         }
     case let group as TelegramGroup:
         if group.participantCount > maxParticipantCount {
@@ -698,7 +708,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                         
                                         let id = Int64.random(in: Int64.min ... Int64.max)
                                         let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: id), partialReference: nil, resource: LocalFileReferenceMediaResource(localFilePath: logPath, randomId: id), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "application/text", size: nil, attributes: [.FileName(fileName: "CallStats.log")])
-                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil)
+                                        let message: EnqueueMessage = .message(text: "", attributes: [], inlineStickers: [:], mediaReference: .standalone(media: file), replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])
                                         
                                         let _ = enqueueMessages(account: context.account, peerId: peerId, messages: [message]).start()
                                     }
@@ -801,7 +811,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                             continue
                                         }
                                         
-                                        subActions.append(.action(ContextMenuActionItem(text: reaction.value, icon: { _ in
+                                        guard case let .builtin(emojiValue) = reaction.value else {
+                                            continue
+                                        }
+                                        
+                                        subActions.append(.action(ContextMenuActionItem(text: emojiValue, icon: { _ in
                                             return nil
                                         }, action: { _, f in
                                             let _ = updateExperimentalUISettingsInteractively(accountManager: context.sharedContext.accountManager, { settings in
@@ -881,9 +895,9 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                 currentItems = []
                                             }
                                             
-                                            currentItems.removeAll(where: { $0.key == stickerName })
+                                            currentItems.removeAll(where: { $0.key == MessageReaction.Reaction.builtin(stickerName) })
                                             currentItems.append(ExperimentalUISettings.AccountReactionOverrides.Item(
-                                                key: stickerName,
+                                                key: .builtin(stickerName),
                                                 messageId: message.id,
                                                 mediaId: file.fileId
                                             ))
@@ -925,6 +939,37 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     f(.custom(transition))
                 })
             })))
+            
+            // MARK: Nicegram ReplyPrivately
+            let message = messages[0]
+            
+            let authorId = message.author?.id
+            let currentPeerId = context.account.peerId
+            let isMyMessage = (authorId == currentPeerId)
+            
+            let chatPeer = chatPresentationInterfaceState.renderedPeer?.peer
+            let isGroup: Bool
+            if let channel = chatPeer as? TelegramChannel {
+                if case .group = channel.info {
+                    isGroup = true
+                } else {
+                    isGroup = false
+                }
+            } else if chatPeer is TelegramGroup {
+                isGroup = true
+            } else {
+                isGroup = false
+            }
+            
+            if isGroup, !isMyMessage, !isServiceMessage(message) {
+                actions.append(.action(ContextMenuActionItem(text: l("Messages.ReplyPrivately", chatPresentationInterfaceState.strings.baseLanguageCode), icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Reply"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    interfaceInteraction.replyPrivately(message)
+                    f(.dismissWithoutContent)
+                })))
+            }
+            //
         }
         
         if data.messageActions.options.contains(.sendScheduledNow) {
@@ -1054,6 +1099,11 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                 }
                                             })
                                     }
+                                    // MARK: Nicegram CopyMessageWithFile
+                                    else {
+                                        copyTextWithEntities()
+                                    }
+                                    //
                                 }
                             } else {
                                 copyTextWithEntities()
@@ -1131,17 +1181,6 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     }
                 }
             }
-        }
-        
-        if (loggingSettings.logToFile || loggingSettings.logToConsole) && !downloadableMediaResourceInfos.isEmpty {
-            actions.append(.action(ContextMenuActionItem(text: "Send Logs", icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Message"), color: theme.actionSheet.primaryTextColor)
-            }, action: { _, f in
-                triggerDebugSendLogsUI(context: context, additionalInfo: "User has requested download logs for \(downloadableMediaResourceInfos)", pushController: { c in
-                    controllerInteraction.navigationController()?.pushViewController(c)
-                })
-                f(.default)
-            })))
         }
         
         var threadId: Int64?
@@ -1468,6 +1507,19 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             
             clearCacheAsDelete = true
         }
+        
+        if isReplyThreadHead {
+            actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.SharedMedia_ViewInChat, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.actionSheet.primaryTextColor)
+            }, action: { c, _ in
+                c.dismiss(completion: {
+                    guard let navigationController = controllerInteraction.navigationController() else {
+                        return
+                    }
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: messages[0].id.peerId), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
+                })
+            })))
+        }
 
         if !isReplyThreadHead, (!data.messageActions.options.intersection([.deleteLocally, .deleteGlobally]).isEmpty || clearCacheAsDelete) {
             var autoremoveDeadline: Int32?
@@ -1514,6 +1566,31 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                         interfaceInteraction.deleteMessages(selectAll ? messages : [message], controller, f)
                     }
                 })))
+                
+                // MARK: Nicegram DeleteAllSystemMessages
+                let locale = chatPresentationInterfaceState.strings.baseLanguageCode
+                if isServiceMessage(message) {
+                    actions.append(.action(ContextMenuActionItem(text: l("Messages.DeleteAllSystemMessages", locale), textColor: .destructive, icon: { theme in
+                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.actionSheet.destructiveActionTextColor)
+                    }, action: { controller, f in
+                        _ = (context.engine.messages.allMessages(peerId: message.id.peerId, namespace: Namespaces.Message.Cloud)
+                        |> map { messages in
+                            var messages = messages
+                                .filter({ isServiceMessage($0) })
+                                .sorted(by: { $0.timestamp > $1.timestamp })
+                                .prefix(100)
+                            if !messages.contains(where: { $0.id == message.id }) {
+                                messages.append(message)
+                            }
+                            return Array(messages)
+                        }
+                        |> deliverOnMainQueue)
+                        .start(next: { messages in
+                            interfaceInteraction.deleteMessages(messages, controller, f)
+                        })
+                    })))
+                }
+                //
             }
         }
 
@@ -1625,9 +1702,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     |> map { messages in
                         var ids = messages
                             .filter({ $0.author?.id == authorId })
-                            .filter({ message in
-                                return !message.media.contains(where: { $0 is TelegramMediaAction })
-                            })
+                            .filter({ !isServiceMessage($0) })
                             .sorted(by: { $0.timestamp > $1.timestamp })
                             .prefix(100)
                             .map(\.id)
@@ -1732,7 +1807,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         
         let canViewStats = canViewReadStats(message: message, participantCount: infoSummaryData.participantCount, isMessageRead: isMessageRead, appConfig: appConfig)
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(message: message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: message).reactions {
             reactionCount += Int(reaction.count)
         }
         if let reactionsAttribute = message.reactionsAttribute {
@@ -1759,29 +1834,67 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 reactionCount = 0
             }
             
-            var readStats = readStats
+            /*var readStats = readStats
             if !canViewStats {
-                readStats = MessageReadStats(peers: [])
-            }
+                readStats = MessageReadStats(reactionCount: 0, peers: [])
+            }*/
 
             if hasReadReports || reactionCount != 0 {
                 if !actions.isEmpty {
                     actions.insert(.separator, at: 0)
                 }
 
-                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, stats: readStats, action: { c, f, stats in
+                actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
-                            controllerInteraction.openPeer(stats.peers[0].id, .default, nil, nil)
+                            controllerInteraction.openPeer(stats.peers[0].id, .default, nil, false, nil)
                         })
                     } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
-                        c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(context: context, availableReactions: availableReactions, message: EngineMessage(message), reaction: nil, readStats: stats, back: { [weak c] in
-                            c?.popItems()
-                        }, openPeer: { [weak c] id in
-                            c?.dismiss(completion: {
-                                controllerInteraction.openPeer(id, .default, nil, nil)
-                            })
-                        })), tip: nil)))
+                        var tip: ContextController.Tip?
+                        
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+                        
+                        if !premiumConfiguration.isPremiumDisabled {
+                            if customReactionEmojiPacks.count == 1, let firstCustomEmojiReaction = firstCustomEmojiReaction {
+                                tip = .animatedEmoji(
+                                    text: presentationData.strings.ChatContextMenu_ReactionEmojiSetSingle(customReactionEmojiPacks[0].title).string,
+                                    arguments: TextNodeWithEntities.Arguments(
+                                        context: context,
+                                        cache: controllerInteraction.presentationContext.animationCache,
+                                        renderer: controllerInteraction.presentationContext.animationRenderer,
+                                        placeholderColor: .clear,
+                                        attemptSynchronous: true
+                                    ),
+                                    file: firstCustomEmojiReaction,
+                                    action: {
+                                        (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
+                                    }
+                                )
+                            } else if customReactionEmojiPacks.count > 1 {
+                                tip = .animatedEmoji(text: presentationData.strings.ChatContextMenu_ReactionEmojiSet(Int32(customReactionEmojiPacks.count)), arguments: nil, file: nil, action: {
+                                    (interfaceInteraction.chatController() as? ChatControllerImpl)?.presentEmojiList(references: customReactionEmojiPacks.map { pack -> StickerPackReference in .id(id: pack.id.id, accessHash: pack.accessHash) })
+                                })
+                            }
+                        }
+                        
+                        c.pushItems(items: .single(ContextController.Items(content: .custom(ReactionListContextMenuContent(
+                            context: context,
+                            availableReactions: availableReactions,
+                            animationCache: controllerInteraction.presentationContext.animationCache,
+                            animationRenderer: controllerInteraction.presentationContext.animationRenderer,
+                            message: EngineMessage(message),
+                            reaction: nil,
+                            readStats: stats,
+                            back: { [weak c] in
+                                c?.popItems()
+                            },
+                            openPeer: { [weak c] id in
+                                c?.dismiss(completion: {
+                                    controllerInteraction.openPeer(id, .default, MessageReference(message), true, nil)
+                                })
+                            }
+                        )), tip: tip)))
                     } else {
                         f(.default)
                     }
@@ -1851,6 +1964,7 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
         var hadBanPeerId = false
         var disableDelete = false
         var isCopyProtected = false
+        var isShareProtected = false
         
         func getPeer(_ peerId: PeerId) -> Peer? {
             if let maybePeer = peerMap[peerId], let peer = maybePeer {
@@ -1883,7 +1997,9 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                     isCopyProtected = true
                 }
                 for media in message.media {
-                    if let file = media as? TelegramMediaFile, file.isSticker {
+                    if let invoice = media as? TelegramMediaInvoice, let _ = invoice.extendedMedia {
+                        isShareProtected = true
+                    } else if let file = media as? TelegramMediaFile, file.isSticker {
                         for case let .Sticker(_, packReference, _) in file.attributes {
                             if let _ = packReference {
                                 optionsMap[id]!.insert(.viewStickerPack)
@@ -2068,8 +2184,12 @@ func chatAvailableMessageActionsImpl(engine: TelegramEngine, accountPeerId: Peer
                     optionsMap[id]!.insert(.deleteLocally)
                 }
             }
+            
+            if !isShareProtected {
+                optionsMap[id]!.insert(.externalShare)
+            }
         }
-        
+                
         if !optionsMap.isEmpty {
             var reducedOptions = optionsMap.values.first!
             for value in optionsMap.values {
@@ -2313,12 +2433,14 @@ private final class ChatDeleteMessageContextItemNode: ASDisplayNode, ContextMenu
 final class ChatReadReportContextItem: ContextMenuCustomItem {
     fileprivate let context: AccountContext
     fileprivate let message: Message
+    fileprivate let hasReadReports: Bool
     fileprivate let stats: MessageReadStats?
-    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?) -> Void
+    fileprivate let action: (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void
 
-    init(context: AccountContext, message: Message, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?) -> Void) {
+    init(context: AccountContext, message: Message, hasReadReports: Bool, stats: MessageReadStats?, action: @escaping (ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void, MessageReadStats?, [StickerPackCollectionInfo], TelegramMediaFile?) -> Void) {
         self.context = context
         self.message = message
+        self.hasReadReports = hasReadReports
         self.stats = stats
         self.action = action
     }
@@ -2353,6 +2475,10 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     private var disposable: Disposable?
     private var currentStats: MessageReadStats?
+    
+    private var customEmojiPacksDisposable: Disposable?
+    private var customEmojiPacks: [StickerPackCollectionInfo] = []
+    private var firstCustomEmojiReaction: TelegramMediaFile?
 
     init(presentationData: PresentationData, item: ChatReadReportContextItem, getController: @escaping () -> ContextControllerProtocol?, actionSelected: @escaping (ContextMenuActionResult) -> Void) {
         self.item = item
@@ -2428,8 +2554,62 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(message: self.item.message).reactions {
+        var customEmojiFiles = Set<Int64>()
+        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
+            
+            if case let .custom(fileId) = reaction.value {
+                customEmojiFiles.insert(fileId)
+            }
+        }
+        
+        if !customEmojiFiles.isEmpty {
+            self.customEmojiPacksDisposable = (item.context.engine.stickers.resolveInlineStickers(fileIds: Array(customEmojiFiles))
+            |> mapToSignal { customEmoji -> Signal<([StickerPackCollectionInfo], TelegramMediaFile?), NoError> in
+                var stickerPackSignals: [Signal<StickerPackCollectionInfo?, NoError>] = []
+                var existingIds = Set<Int64>()
+                var firstCustomEmojiReaction: TelegramMediaFile?
+                for (_, file) in customEmoji {
+                    loop: for attribute in file.attributes {
+                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                            if case let .id(id, _) = packReference, !existingIds.contains(id) {
+                                if firstCustomEmojiReaction == nil {
+                                    firstCustomEmojiReaction = file
+                                }
+                                
+                                existingIds.insert(id)
+                                stickerPackSignals.append(item.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
+                                |> filter { result in
+                                    if case .result = result {
+                                        return true
+                                    } else {
+                                        return false
+                                    }
+                                }
+                                |> map { result -> StickerPackCollectionInfo? in
+                                    if case let .result(info, _, _) = result {
+                                        return info
+                                    } else {
+                                        return nil
+                                    }
+                                })
+                            }
+                            break loop
+                        }
+                    }
+                }
+                return combineLatest(stickerPackSignals)
+                |> map { stickerPacks -> ([StickerPackCollectionInfo], TelegramMediaFile?) in
+                    return (stickerPacks.compactMap { $0 }, firstCustomEmojiReaction)
+                }
+            }
+            |> deliverOnMainQueue).start(next: { [weak self] customEmojiPacks, firstCustomEmojiReaction in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.customEmojiPacks = customEmojiPacks
+                strongSelf.firstCustomEmojiReaction = firstCustomEmojiReaction
+            })
         }
 
         if let currentStats = self.currentStats {
@@ -2453,6 +2633,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
 
     deinit {
         self.disposable?.dispose()
+        self.customEmojiPacksDisposable?.dispose()
     }
 
     override func didLoad() {
@@ -2472,7 +2653,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
     private var validLayout: (calculatedWidth: CGFloat, size: CGSize)?
 
     func updateStats(stats: MessageReadStats, transition: ContainedViewLayoutTransition) {
-        self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty
+        self.buttonNode.isUserInteractionEnabled = !stats.peers.isEmpty || stats.reactionCount != 0
 
         guard let (calculatedWidth, size) = self.validLayout else {
             return
@@ -2497,11 +2678,13 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         let textFont = Font.regular(self.presentationData.listsFontSize.baseDisplaySize)
         
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(message: self.item.message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
         }
 
         if let currentStats = self.currentStats {
+            reactionCount = currentStats.reactionCount
+            
             if currentStats.peers.isEmpty {
                 if reactionCount != 0 {
                     let text: String = self.presentationData.strings.Chat_ContextReactionCount(Int32(reactionCount))
@@ -2599,15 +2782,19 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
             if let recentPeers = self.item.message.reactionsAttribute?.recentPeers, !recentPeers.isEmpty {
                 for recentPeer in recentPeers {
                     if let peer = self.item.message.peers[recentPeer.peerId] {
-                        avatarsPeers.append(EnginePeer(peer))
-                        if avatarsPeers.count == 3 {
-                            break
+                        if !avatarsPeers.contains(where: { $0.id == peer.id }) {
+                            avatarsPeers.append(EnginePeer(peer))
+                            if avatarsPeers.count == 3 {
+                                break
+                            }
                         }
                     }
                 }
             } else if let peers = self.currentStats?.peers {
                 for i in 0 ..< min(3, peers.count) {
-                    avatarsPeers.append(peers[i])
+                    if !avatarsPeers.contains(where: { $0.id == peers[i].id }) {
+                        avatarsPeers.append(peers[i])
+                    }
                 }
             }
             avatarsContent = self.avatarsContext.update(peers: avatarsPeers, animated: false)
@@ -2666,12 +2853,12 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
         }
         self.item.action(controller, { [weak self] result in
             self?.actionSelected(result)
-        }, self.currentStats)
+        }, self.currentStats, self.customEmojiPacks, self.firstCustomEmojiReaction)
     }
 
     var isActionEnabled: Bool {
         var reactionCount = 0
-        for reaction in mergedMessageReactionsAndPeers(message: self.item.message).reactions {
+        for reaction in mergedMessageReactionsAndPeers(accountPeer: nil, message: self.item.message).reactions {
             reactionCount += Int(reaction.count)
         }
         if reactionCount >= 0 {

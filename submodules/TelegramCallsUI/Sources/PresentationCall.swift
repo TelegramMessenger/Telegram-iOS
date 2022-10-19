@@ -13,6 +13,7 @@ import DeviceAccess
 import UniversalMediaPlayer
 import AccountContext
 import DeviceProximity
+import PhoneNumberFormat
 
 final class PresentationCallToneRenderer {
     let queue: Queue
@@ -607,10 +608,15 @@ public final class PresentationCallImpl: PresentationCall {
                 if previous == nil || previousControl == nil {
                     if !self.reportedIncomingCall, let stableId = sessionState.stableId {
                         self.reportedIncomingCall = true
+                        var phoneNumber: String?
+                        if let peer = self.peer as? TelegramUser, let phone = peer.phone {
+                            phoneNumber = formatPhoneNumber(phone)
+                        }
                         self.callKitIntegration?.reportIncomingCall(
                             uuid: self.internalId,
                             stableId: stableId,
                             handle: "\(self.peerId.id._internalGetInt64Value())",
+                            phoneNumber: phoneNumber,
                             isVideo: sessionState.type == .video,
                             displayTitle: self.peer?.debugDisplayTitle ?? "Unknown",
                             completion: { [weak self] error in

@@ -555,7 +555,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelAdminLogEvent: TypeConstructorDescription {
+    indirect enum ChannelAdminLogEvent: TypeConstructorDescription {
         case channelAdminLogEvent(id: Int64, date: Int32, userId: Int64, action: Api.ChannelAdminLogEventAction)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
@@ -605,9 +605,9 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChannelAdminLogEventAction: TypeConstructorDescription {
+    indirect enum ChannelAdminLogEventAction: TypeConstructorDescription {
         case channelAdminLogEventActionChangeAbout(prevValue: String, newValue: String)
-        case channelAdminLogEventActionChangeAvailableReactions(prevValue: [String], newValue: [String])
+        case channelAdminLogEventActionChangeAvailableReactions(prevValue: Api.ChatReactions, newValue: Api.ChatReactions)
         case channelAdminLogEventActionChangeHistoryTTL(prevValue: Int32, newValue: Int32)
         case channelAdminLogEventActionChangeLinkedChat(prevValue: Int64, newValue: Int64)
         case channelAdminLogEventActionChangeLocation(prevValue: Api.ChannelLocation, newValue: Api.ChannelLocation)
@@ -654,18 +654,10 @@ public extension Api {
                     break
                 case .channelAdminLogEventActionChangeAvailableReactions(let prevValue, let newValue):
                     if boxed {
-                        buffer.appendInt32(-1661470870)
+                        buffer.appendInt32(-1102180616)
                     }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(prevValue.count))
-                    for item in prevValue {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
-                    buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(newValue.count))
-                    for item in newValue {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }
+                    prevValue.serialize(buffer, true)
+                    newValue.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionChangeHistoryTTL(let prevValue, let newValue):
                     if boxed {
@@ -980,13 +972,13 @@ public extension Api {
             }
         }
         public static func parse_channelAdminLogEventActionChangeAvailableReactions(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
-            var _1: [String]?
-            if let _ = reader.readInt32() {
-                _1 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            var _1: Api.ChatReactions?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ChatReactions
             }
-            var _2: [String]?
-            if let _ = reader.readInt32() {
-                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            var _2: Api.ChatReactions?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ChatReactions
             }
             let _c1 = _1 != nil
             let _c2 = _2 != nil

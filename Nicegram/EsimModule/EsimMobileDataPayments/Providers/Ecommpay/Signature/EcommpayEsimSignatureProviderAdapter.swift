@@ -18,9 +18,9 @@ class EcommpayEsimSignatureProviderAdapter {
 }
 
 extension EcommpayEsimSignatureProviderAdapter: EcommpaySignatureProvider {
-    func getSignature(params: String, completion: @escaping (Result<String, Error>) -> ()) {
+    func getSignature(params: String, completion: @escaping (Result<String, EcommpaySignatureError>) -> ()) {
         guard let paymentInfo = paymentInfo else {
-            completion(.failure(PaymentError.unknown(meta: nil)))
+            completion(.failure(.unexpected))
             return
         }
         

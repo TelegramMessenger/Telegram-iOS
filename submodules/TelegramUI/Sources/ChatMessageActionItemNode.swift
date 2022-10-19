@@ -333,6 +333,12 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                                         strongSelf.insertSubnode(backgroundNode, at: 0)
                                     }
                                 }
+                                
+                                if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
+                                    strongSelf.backgroundColorNode.isHidden = true
+                                } else {
+                                    strongSelf.backgroundColorNode.isHidden = false
+                                }
 
                                 if backgroundMaskUpdated, let backgroundNode = strongSelf.backgroundNode {
                                     if labelRects.count == 1 {

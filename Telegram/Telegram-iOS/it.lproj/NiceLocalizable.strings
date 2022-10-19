@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "Videomessaggi";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Inizia con la camera posteriore";
 
+"NiceFeatures.InstantLock" = "Immediatamente";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Salva nel cloud";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "Nella lingua";
 "Messages.ToLanguage.WithCode" = "Nella lingua: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "Non siamo riusciti a individuare la lingua in cui desideri tradurre il testo. Per favore selezionala manualmente e riprova.";
+"Messages.ReplyPrivately" = "Rispondi in privato";
+"Messages.DeleteAllSystemMessages" = "Elimina tutto";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Ottieni data registrazione";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "Guida allo sblocco";
 "NicegramSettings.Other.hideReactions" = "Nascondi Reazioni";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Scarica i video nella Galleria";
-"Premium.OnetapTranslate.LowPower" = "Riconoscimento a bassa potenza";
-"Premium.OnetapTranslate.LowPower.Notice" = "L'app rileva la lingua di ogni messaggio sul tuo dispositivo. È un'attività che consuma tante risorse e che può influire sulla durata della batteria.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Ignora Lingue";
+"NicegramSettings.ShareChannelsInfoToggle" = "Condividi informazioni sul canale";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Contribuisci alla wikipedia più completa di canali e gruppi di Telegram inviando automaticamente le informazioni e i link dei canali al nostro database. Non colleghiamo il tuo profilo e canale Telegram e non condividiamo i tuoi dati personali.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "L'app rileva la lingua di ogni messaggio sul tuo dispositivo. È un'attività che consuma tante risorse e che può influire sulla durata della batteria.";
 "Premium.rememberFolderOnExit" = "Ricorda la cartella corrente all'uscita";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "Doppio Fondo abilitato";
 "DoubleBottom.Enabled.Description" = "Ricorda la password che hai appena impostato e riavvia l'app affinché il Doppio Fondo funzioni correttamente";
 "DoubleBottom.Enabled.OK" = "OK";
+"DoubleBottom.Passcode.Error" = "Si prega di impostare un altro codice di accesso diverso da quello utilizzato per il blocco del codice stesso.";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**Funzionalità Premium**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "Informa rapidamente tutti i membri del gruppo e assicurati che tutti leggano il tuo messaggio";
 
 "NicePremium.Renews" = "L'abbonamento si rinnova automaticamente";
+"NicePremium.PricePerMonth" = "Abbonati per %@ al mese";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Continua";
+"NicegramOnboarding.1.Title" = "Il client numero 1 per Telegram";
+"NicegramOnboarding.1.Desc" = "Unisciti a oltre 2 milioni di utenti Nicegram e accedi al client Telegram più potente e sicuro per le aziende.";
+"NicegramOnboarding.2.Title" = "Esperienza di messaggistica avanzata";
+"NicegramOnboarding.2.Desc" = "Velocizza la tua comunicazione con funzionalità uniche come un traduttore integrato, riconoscimento vocale, inoltro di messaggi senza indicare l'autore e salvataggio rapido nei preferiti.";
+"NicegramOnboarding.3.Title" = "Profilo utente esteso";
+"NicegramOnboarding.3.Desc" = "Crea tutti gli account Telegram di cui hai bisogno in modo completamente gratuito, oltre a visualizzare un profilo utente avanzato con ID, data di registrazione e link cliccabili.";
+"NicegramOnboarding.4.Title" = "Estensioni aziendali uniche";
+"NicegramOnboarding.4.Desc" = "Approfitta delle innovazioni del team di Nicegram e ottieni una eSIM con accesso a Internet in 133 paesi. Puoi inoltre registrare nuovi account Telegram al numero di telefono del piano dati della eSIM.";
+"NicegramOnboarding.5.Title" = "Il client di messaggistica più sicuro";
+"NicegramOnboarding.5.Desc" = "Client di messaggistica sicuro con crittografia avanzata, chiamate audio e video di gruppo, canali pubblici, gruppi e bot, spazio di archiviazione cloud illimitato per le chat, condivisione di file multimediali e documenti.";

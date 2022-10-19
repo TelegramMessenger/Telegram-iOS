@@ -16,6 +16,8 @@ import AttachmentTextInputPanelNode
 import ChatPresentationInterfaceState
 import ChatSendMessageActionUI
 import ChatTextLinkEditUI
+import AnimationCache
+import MultiAnimationRenderer
 
 final class PeerSelectionControllerNode: ASDisplayNode {
     private let context: AccountContext
@@ -72,6 +74,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
     }
     private var presentationDataPromise = Promise<PresentationData>()
     
+    private let animationCache: AnimationCache
+    private let animationRenderer: MultiAnimationRenderer
+    
     private var readyValue = Promise<Bool>()
     var ready: Signal<Bool, NoError> {
         return self.readyValue.get()
@@ -92,6 +97,9 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         self.hasTypeHeaders = hasTypeHeaders
         
         self.presentationData = presentationData
+        
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: .builtin(WallpaperSettings()), theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: self.context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: self.context.account.peerId, mode: .standard(previewing: false), chatLocation: .peer(id: PeerId(0)), subject: nil, peerNearbyData: nil, greetingData: nil, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         
@@ -120,7 +128,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             chatListCategories.append(ChatListNodeAdditionalCategory(id: 0, icon: PresentationResourcesItemList.createGroupIcon(self.presentationData.theme), title: self.presentationData.strings.PeerSelection_ImportIntoNewGroup, appearance: .action))
         }
        
-        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true)
+        self.chatListNode = ChatListNode(context: context, groupId: .root, previewing: false, fillPreloadItems: false, mode: .peers(filter: filter, isSelecting: false, additionalCategories: chatListCategories, chatListFilters: nil), theme: self.presentationData.theme, fontSize: presentationData.listsFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameSortOrder: presentationData.nameSortOrder, nameDisplayOrder: presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true)
         
         super.init()
         
@@ -254,7 +262,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in
@@ -586,6 +594,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
                 presentationData: self.presentationData,
                 contentNode: ChatListSearchContainerNode(
                     context: self.context,
+                    animationCache: self.animationCache,
+                    animationRenderer: self.animationRenderer,
                     updatedPresentationData: self.updatedPresentationData,
                     filter: self.filter,
                     groupId: EngineChatList.Group(.root),

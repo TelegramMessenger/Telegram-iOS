@@ -398,7 +398,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
                 let preferredRowAlignment = self.preferredRowAlignment
                 
                 return LoadFrameTask(task: { [weak self] in
-                    let frame = item.advance(advance: frameAdvance, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))
+                    let frame = item.advance(advance: frameAdvance, requestedFormat: .yuva(rowAlignment: preferredRowAlignment))?.frame
                     
                     let textureY = readyTextureY ?? TextureStoragePool.takeNew(device: device, parameters: fullParameters, pool: texturePoolFullPlane)
                     let textureU = readyTextureU ?? TextureStoragePool.takeNew(device: device, parameters: halfParameters, pool: texturePoolHalfPlane)
@@ -517,7 +517,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             return nullAction
         }
         
-        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable? {
+        func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable? {
             if size != self.cellSize {
                 return nil
             }
@@ -798,13 +798,13 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         self.isPlaying = isPlaying
     }
     
-    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
+    public func add(target: MultiAnimationRenderTarget, cache: AnimationCache, itemId: String, unique: Bool, size: CGSize, fetch: @escaping (AnimationCacheFetchOptions) -> Disposable) -> Disposable {
         assert(Thread.isMainThread)
         
         let alignedSize = CGSize(width: CGFloat(alignUp(size: Int(size.width), align: 16)), height: CGFloat(alignUp(size: Int(size.height), align: 16)))
         
         for (_, surfaceLayer) in self.surfaceLayers {
-            if let disposable = surfaceLayer.add(target: target, cache: cache, itemId: itemId, size: alignedSize, fetch: fetch) {
+            if let disposable = surfaceLayer.add(target: target, cache: cache, itemId: itemId, unique: unique, size: alignedSize, fetch: fetch) {
                 return disposable
             }
         }
@@ -818,7 +818,7 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
             strongSelf.updateIsPlaying()
         })
         self.surfaceLayers[index] = surfaceLayer
-        if let disposable = surfaceLayer.add(target: target, cache: cache, itemId: itemId, size: alignedSize, fetch: fetch) {
+        if let disposable = surfaceLayer.add(target: target, cache: cache, itemId: itemId, unique: unique, size: alignedSize, fetch: fetch) {
             return disposable
         } else {
             return EmptyDisposable
@@ -833,6 +833,9 @@ public final class MultiAnimationMetalRendererImpl: MultiAnimationRenderer {
         completion(false, true)
         
         return EmptyDisposable
+    }
+    
+    public func setFrameIndex(itemId: String, size: CGSize, frameIndex: Int, placeholder: UIImage) {
     }
     
     private func animationTick() {

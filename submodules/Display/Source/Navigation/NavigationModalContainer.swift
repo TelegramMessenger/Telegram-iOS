@@ -51,7 +51,7 @@ final class NavigationModalContainer: ASDisplayNode, UIScrollViewDelegate, UIGes
         
         self.scrollNode = ASScrollNode()
         
-        self.container = NavigationContainer(controllerRemoved: controllerRemoved)
+        self.container = NavigationContainer(isFlat: false, controllerRemoved: controllerRemoved)
         self.container.clipsToBounds = true
         
         super.init()

@@ -29,7 +29,7 @@ public class TelegramAuthenticator {
     
     //  MARK: - Public Functions
 
-    public func fetchSession(telegramId: TelegramID, completion: ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?) {
+    public func fetchSession(telegramId: TelegramID?, completion: ((Result<TelegramAuthSession, TelegramAuthSessionError>) -> ())?) {
         sessionProvider.fetchSession(telegramId: telegramId) { [weak self] result in
             guard let self = self else { return }
             
@@ -60,7 +60,7 @@ public class TelegramAuthenticator {
                 switch error {
                 case .sessionExpired:
                     self.saveSession(nil)
-                case .sessionMissed, .underlying(_):
+                case .sessionMissed, .sessionNotApproved, .underlying(_):
                     break
                 }
             }
@@ -71,6 +71,10 @@ public class TelegramAuthenticator {
     
     public func clear() {
         saveSession(nil)
+    }
+    
+    public func hasPendingSession() -> Bool {
+        return (getSession() != nil)
     }
     
     //  MARK: - Private Functions

@@ -443,7 +443,8 @@ class ChatMessageGiftBubbleContentNode: ChatMessageBubbleContentNode {
                 self.animationNode.playOnce()
             }
             
-            if !alreadySeen {
+            if !alreadySeen && self.animationNode.isPlaying {
+                item.controllerInteraction.playNextOutgoingGift = false
                 Queue.mainQueue().after(1.0) {
                     item.controllerInteraction.animateDiceSuccess(false, true)
                 }

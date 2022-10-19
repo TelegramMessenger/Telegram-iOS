@@ -158,7 +158,7 @@ private final class FetchManagerCategoryContext {
     }
     
     // MARK: Nicegram downloading feature
-    func withEntry(id: FetchManagerLocationEntryId, accountContext: AccountContext?, takeNew: (() -> (AnyMediaReference?, MediaResourceReference, MediaResourceStatsCategory, Int32))?, _ f: (FetchManagerLocationEntry) -> Void) {
+    func withEntry(id: FetchManagerLocationEntryId, accountContext: AccountContext?, shouldSave: Bool = false, takeNew: (() -> (AnyMediaReference?, MediaResourceReference, MediaResourceStatsCategory, Int32))?, _ f: (FetchManagerLocationEntry) -> Void) {
         let entry: FetchManagerLocationEntry
         let previousPriorityKey: FetchManagerPriorityKey?
         
@@ -206,7 +206,7 @@ private final class FetchManagerCategoryContext {
         let _ = activeContextsUpdated
         
         // MARK: Nicegram downloading feature
-        if self.maybeFindAndActivateNewTopEntry(accountContext: accountContext) {
+        if self.maybeFindAndActivateNewTopEntry(accountContext: accountContext, shouldSave: shouldSave) {
             activeContextsUpdated = true
         }
         
@@ -234,7 +234,7 @@ private final class FetchManagerCategoryContext {
                     let storeManager = self.storeManager
                     let parsedRanges: [(Range<Int64>, MediaBoxFetchPriority)]?
                     
-                    if ranges == RangeSet<Int64>(0 ..< Int64.max) {
+                    if ranges == RangeSet<Int64>(0 ..< Int64.max), !"".isEmpty {
                         parsedRanges = nil
                     } else {
                         var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
@@ -291,7 +291,7 @@ private final class FetchManagerCategoryContext {
     }
     
     // MARK: Nicegram downloading feature
-    func maybeFindAndActivateNewTopEntry(accountContext: AccountContext?) -> Bool {
+    func maybeFindAndActivateNewTopEntry(accountContext: AccountContext?, shouldSave: Bool = false) -> Bool {
         if self.topEntryIdAndPriority == nil && !self.entries.isEmpty {
             var topEntryIdAndPriority: (FetchManagerLocationEntryId, FetchManagerPriorityKey)?
             for (id, entry) in self.entries {
@@ -334,7 +334,7 @@ private final class FetchManagerCategoryContext {
                     isVideoPreload = true
                 }
                 
-                if count == 1 && isCompleteRange {
+                if count == 1 && isCompleteRange && !"".isEmpty {
                     parsedRanges = nil
                 } else {
                     var resultRanges: [(Range<Int64>, MediaBoxFetchPriority)] = []
@@ -376,27 +376,25 @@ private final class FetchManagerCategoryContext {
                         activeContext.disposable = (fetchedMediaResource(mediaBox: postbox.mediaBox, reference: entry.resourceReference, ranges: parsedRanges, statsCategory: entry.statsCategory, reportResultStatus: true, continueInBackground: entry.userInitiated)
                         |> mapToSignal { type -> Signal<FetchResourceSourceType, FetchResourceError> in
                             if filterDownloadStatsEntry(entry: entry), case let .message(message, _) = entry.mediaReference, let messageId = message.id, case .remote = type {
-                                // MARK: Nicegram downloading feature
-                                let _ = addRecentDownloadItem(postbox: postbox, item: RecentDownloadItem(messageId: messageId, resourceId: entry.resourceReference.resource.id.stringRepresentation, timestamp: Int32(Date().timeIntervalSince1970), isSeen: false)).start { _ in } error: { _ in } completed: { 
-                                    if let mediaReference = entry.mediaReference, 
-                                        let context = accountContext,
-                                        NGSettings.shouldDownloadVideo {
-                                        let _ = (saveToCameraRoll(context: context, postbox: postbox, mediaReference: mediaReference)
-                                                 |> deliverOnMainQueue).start(completed: {
-                                            Queue.mainQueue().after(0.2) {        
-                                                NGToast.showDefaultToast(backgroundColor: UIColor(rgb: 0x474747), image: nil, title: "The video is downloaded to your phone gallery")
-                                            }
-                                        })
-                                    }
-                                }
+                                let _ = addRecentDownloadItem(postbox: postbox, item: RecentDownloadItem(messageId: messageId, resourceId: entry.resourceReference.resource.id.stringRepresentation, timestamp: Int32(Date().timeIntervalSince1970), isSeen: false)).start()
                             }
-                            
                             if let storeManager = storeManager, let mediaReference = entry.mediaReference, case .remote = type, let peerType = entry.storeToDownloadsPeerType {
                                 return storeDownloadedMedia(storeManager: storeManager, media: mediaReference, peerType: peerType)
                                 |> castError(FetchResourceError.self)
                                 |> mapToSignal { _ -> Signal<FetchResourceSourceType, FetchResourceError> in
                                 }
                                 |> then(.single(type))
+                            }
+                            if let mediaReference = entry.mediaReference,
+                                let context = accountContext,
+                                NGSettings.shouldDownloadVideo,
+                                shouldSave {
+                                let _ = (saveToCameraRoll(context: context, postbox: postbox, mediaReference: mediaReference)
+                                         |> deliverOnMainQueue).start(completed: {
+                                    Queue.mainQueue().after(0.2) {
+                                        NGToast.showDefaultToast(backgroundColor: UIColor(rgb: 0x474747), image: nil, title: "The video is downloaded to your phone gallery")
+                                    }
+                                })
                             }
                             return .single(type)
                         }
@@ -753,7 +751,7 @@ public final class FetchManagerImpl: FetchManager {
                 
                 strongSelf.withCategoryContext(category, { context in
                     // MARK: Nicegram downloading feature
-                    context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), accountContext: accountContext, takeNew: { return (mediaReference, resourceReference, statsCategory, strongSelf.takeNextEpisodeId()) }, { entry in
+                    context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), accountContext: accountContext, shouldSave: shouldSave, takeNew: { return (mediaReference, resourceReference, statsCategory, strongSelf.takeNextEpisodeId()) }, { entry in
                         assignedEpisode = entry.episode
                         if userInitiated {
                             entry.userInitiated = true
@@ -786,7 +784,7 @@ public final class FetchManagerImpl: FetchManager {
                         if let strongSelf = self {
                             strongSelf.withCategoryContext(category, { context in
                                 // MARK: Nicegram downloading feature
-                                context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), accountContext: accountContext, takeNew: nil, { entry in
+                                context.withEntry(id: FetchManagerLocationEntryId(location: location, resourceId: resourceReference.resource.id, locationKey: locationKey), accountContext: accountContext, shouldSave: shouldSave, takeNew: nil, { entry in
                                     if entry.episode == assignedEpisode {
                                         if let assignedReferenceIndex = assignedReferenceIndex {
                                             let previousCount = entry.references.copyItems().count

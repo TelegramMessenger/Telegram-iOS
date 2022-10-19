@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "YUVARLAK VİDEOLAR";
 "NiceFeatures.RoundVideos.UseRearCamera" = "Arka kamerayla başlat";
 
+"NiceFeatures.InstantLock" = "Hemen";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "Buluta Kaydet";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "Hedef Dil";
 "Messages.ToLanguage.WithCode" = "Hedef Dil: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "Metni çevirmek istediğiniz dili tespit edemedik. Lütfen manuel olarak seçin ve tekrar deneyin.\n";
+"Messages.ReplyPrivately" = "Özelden Cevapla";
+"Messages.DeleteAllSystemMessages" = "Tümünü Sil";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "Kayıt Tarihini Göster";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "Rehberin Engelini Kaldır";
 "NicegramSettings.Other.hideReactions" = "Tepkileri Gizle";
 "NicegramSettings.RoundVideos.DownloadVideos" = "Videoları galeriye indir";
-"Premium.OnetapTranslate.LowPower" = "Düşük Güçte Tanıma";
-"Premium.OnetapTranslate.LowPower.Notice" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Dilleri görmezden gel";
+"NicegramSettings.ShareChannelsInfoToggle" = "Kanal bilgilerini paylaş";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Kanal bilgilerini ve bağlantısını veri tabanımıza göndererek en kapsamlı Telegram kanalı wikipedia'sına katkıda bulunun. Telegram profilinizi ve kanalınızı bağlamayız ve kişisel verilerinizi paylaşmayız.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
 "Premium.rememberFolderOnExit" = "Çıkışta şu anki klasörü hatırla";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "Çift Dip etkinleştirildi";
 "DoubleBottom.Enabled.Description" = "Lütfen az önce belirlediğiniz şifreyi hatırlayın ve Çift Dibin iyi çalışması için uygulamayı yeniden başlatın.";
 "DoubleBottom.Enabled.OK" = "TAMAM";
+"DoubleBottom.Passcode.Error" = "Lütfen Parola Kilidi için mevcut kullandığınızdan farklı bir parola belirleyin";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "Nicegram\n**Premium Özellikler**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "Tüm grup üyelerini hızla haberdar edin ve herkesin mesajınızı okuyacağından emin olun";
 
 "NicePremium.Renews" = "Abonelik Otomatik Olarak Yenilenir";
+"NicePremium.PricePerMonth" = "Aylık %@ karşılığında abone ol";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Devam et";
+"NicegramOnboarding.1.Title" = "Telegram Messenger için 1 Numaralı İstemci";
+"NicegramOnboarding.1.Desc" = "2 Milyondan fazla Nicegram kullanıcısına katılın ve iş için en güçlü ve güvenli Telegram istemcisine erişin. ";
+"NicegramOnboarding.2.Title" = "Gelişmiş Mesajlaşma Tecrübesi";
+"NicegramOnboarding.2.Desc" = "Dahili Çevirmen, Konuşmayı Metne Çevirme, Konuşmayı yazar belirtmeden iletme ve Sık kullanılanlara hızlı kaydetme gibi özgün özellikleri ile iletişiminizi hızlandırın. ";
+"NicegramOnboarding.3.Title" = "Genişletilmiş Kullanıcı Profili";
+"NicegramOnboarding.3.Desc" = "Tamamen ücretsiz bir şekilde istediğiniz kadar Telegram hesabı oluşturun ve bununla birlikte kimlik, kayıt tarihi ve tıklanabilir bağlantılar ile gelişmiş bir kullanıcı profili görüntüleyin.";
+"NicegramOnboarding.4.Title" = "Özgün İşletme Uzantıları";
+"NicegramOnboarding.4.Desc" = "Nicegram takımının yeniliklerinden faydalanın ve 133 ülkede internet erişimi olan bir eSIM'e sahip olun.  Aynı zamanda eSIM veri planının telefon numarasına yeni Telegram hesapları da kaydedebilirsiniz.  ";
+"NicegramOnboarding.5.Title" = "En Güvenli Mesenger";
+"NicegramOnboarding.5.Desc" = "Güçlü Şifreleme, Grup Sesli ve Görüntülü Aramalar, Genel kanallar, Gruplar ve Botlar, Sohbetler Belgeler ve Dökümanlar için Limitsiz Bulut depolaması ile Güvenli Messenger.";

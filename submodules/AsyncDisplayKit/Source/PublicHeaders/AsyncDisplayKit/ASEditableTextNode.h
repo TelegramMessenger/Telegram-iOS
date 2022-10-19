@@ -221,6 +221,9 @@ NS_ASSUME_NONNULL_BEGIN
 - (BOOL)editableTextNodeShouldReturn:(ASEditableTextNode *)editableTextNode;
 - (void)editableTextNodeBackspaceWhileEmpty:(ASEditableTextNode *)editableTextNode;
 
+
+- (UIMenu *)editableTextNodeMenu:(ASEditableTextNode *)editableTextNode forTextRange:(NSRange)textRange suggestedActions:(NSArray<UIMenuElement *> *)suggestedActions  API_AVAILABLE(ios(16.0));
+
 @end
 
 NS_ASSUME_NONNULL_END

@@ -1,0 +1,116 @@
+name: Master Release
+
+on:
+  push:
+    branches: [ nicegram-plus ]
+
+jobs:
+  build:
+    runs-on: macos-12
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+          fetch-depth: '0'
+
+      - name: Set active Xcode path
+        run: |
+          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
+          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+
+      - name: Create canonical source directory
+        run: |
+          set -x
+          sudo mkdir /Users/telegram
+          sudo chown -R $(whoami) /Users/telegram
+          cp -R $GITHUB_WORKSPACE /Users/telegram/
+          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+           ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: New testflight build
+        run: |
+          ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+
+          set -x
+
+          mkdir -p $BUILD_WORKING_DIR
+          cd $SOURCE_PATH/ci
+          fastlane master_build
+
+          cd $SOURCE_PATH
+          APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
+          echo "APP_VERSION=$APP_VERSION" >> $GITHUB_ENV
+
+          ARTIFACTS_PATH=$BUILD_WORKING_DIR/artifacts
+          echo "ARTIFACTS_PATH=$ARTIFACTS_PATH" >> $GITHUB_ENV
+
+          IPA_PATH=$ARTIFACTS_PATH/Telegram.ipa
+          echo "IPA_PATH=$IPA_PATH" >> $GITHUB_ENV
+
+          DSYMS_PATH=$ARTIFACTS_PATH/Telegram.DSYMs.zip
+          echo "DSYMS_PATH=$DSYMS_PATH" >> $GITHUB_ENV
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: build-${{ env.BUILD_NUMBER }}
+          release_name: Nicegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          body: |
+              Build of Nicegram for iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          draft: false
+          prerelease: false
+
+      - name: Upload Release IPA
+        id: upload-release-ipa
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.IPA_PATH }}
+          asset_name: Nicegram.ipa
+          asset_content_type: application/zip
+
+      - name: Upload Release DSYM
+        id: upload-release-dsym
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ${{ env.DSYMS_PATH }}
+          asset_name: Nicegram.DSYMs.zip
+          asset_content_type: application/zip
+
+      - name: Send Telegram Message Ok
+        run: |
+          cd $SOURCE_PATH/ci
+          fastlane tg message:"New iOS build is available on: ${{ steps.create_release.outputs.html_url }}"
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT }}
+      BAZEL_REMOTE_CACHE: ${{ secrets.BAZEL_REMOTE_CACHE }}
+      BAZEL_USER_ROOT: /private/var/tmp/_bazel_telegram
+      BUILD_WORKING_DIR: /Users/telegram/build-working-dir
+      BUNDLE_ID: app.nicegram
+      DISABLE_PARALLEL_SWIFTMODULE_GENERATION: 1
+      KEYCHAIN_NAME: ${{ secrets.KEYCHAIN_NAME }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      MATCH_PASSWORD: ${{ secrets.SIGN_REPO_DECRYPT_PASSWORD }}
+      SIGN_URL: ${{ secrets.SIGN_REPO_URL }}
+      SOURCE_PATH: /Users/telegram/telegram-ios
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_CODESIGNING_GIT_PASSWORD: ${{ secrets.SIGN_REPO_DECRYPT_PASSWORD }}
+      TELEGRAM_CODESIGNING_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+      TELEGRAM_CONFIGURATION_TEST: ${{ secrets.TELEGRAM_CONFIGURATION_TEST }}
+      TELEGRAM_CONFIGURATION_PROD: ${{ secrets.TELEGRAM_CONFIGURATION_PROD }}

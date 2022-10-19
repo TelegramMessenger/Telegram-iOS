@@ -521,7 +521,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum Chat: TypeConstructorDescription {
+    indirect enum Chat: TypeConstructorDescription {
         case channel(flags: Int32, id: Int64, accessHash: Int64?, title: String, username: String?, photo: Api.ChatPhoto, date: Int32, restrictionReason: [Api.RestrictionReason]?, adminRights: Api.ChatAdminRights?, bannedRights: Api.ChatBannedRights?, defaultBannedRights: Api.ChatBannedRights?, participantsCount: Int32?)
         case channelForbidden(flags: Int32, id: Int64, accessHash: Int64, title: String, untilDate: Int32?)
         case chat(flags: Int32, id: Int64, title: String, photo: Api.ChatPhoto, participantsCount: Int32, date: Int32, version: Int32, migratedTo: Api.InputChannel?, adminRights: Api.ChatAdminRights?, defaultBannedRights: Api.ChatBannedRights?)
@@ -880,14 +880,14 @@ public extension Api {
 }
 public extension Api {
     enum ChatFull: TypeConstructorDescription {
-        case channelFull(flags: Int32, flags2: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int64?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, defaultSendAs: Api.Peer?, availableReactions: [String]?)
-        case chatFull(flags: Int32, id: Int64, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, availableReactions: [String]?)
+        case channelFull(flags: Int32, flags2: Int32, id: Int64, about: String, participantsCount: Int32?, adminsCount: Int32?, kickedCount: Int32?, bannedCount: Int32?, onlineCount: Int32?, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, chatPhoto: Api.Photo, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo], migratedFromChatId: Int64?, migratedFromMaxId: Int32?, pinnedMsgId: Int32?, stickerset: Api.StickerSet?, availableMinId: Int32?, folderId: Int32?, linkedChatId: Int64?, location: Api.ChannelLocation?, slowmodeSeconds: Int32?, slowmodeNextSendDate: Int32?, statsDc: Int32?, pts: Int32, call: Api.InputGroupCall?, ttlPeriod: Int32?, pendingSuggestions: [String]?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, defaultSendAs: Api.Peer?, availableReactions: Api.ChatReactions?)
+        case chatFull(flags: Int32, id: Int64, about: String, participants: Api.ChatParticipants, chatPhoto: Api.Photo?, notifySettings: Api.PeerNotifySettings, exportedInvite: Api.ExportedChatInvite?, botInfo: [Api.BotInfo]?, pinnedMsgId: Int32?, folderId: Int32?, call: Api.InputGroupCall?, ttlPeriod: Int32?, groupcallDefaultJoinAs: Api.Peer?, themeEmoticon: String?, requestsPending: Int32?, recentRequesters: [Int64]?, availableReactions: Api.ChatReactions?)
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
                 case .channelFull(let flags, let flags2, let id, let about, let participantsCount, let adminsCount, let kickedCount, let bannedCount, let onlineCount, let readInboxMaxId, let readOutboxMaxId, let unreadCount, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let migratedFromChatId, let migratedFromMaxId, let pinnedMsgId, let stickerset, let availableMinId, let folderId, let linkedChatId, let location, let slowmodeSeconds, let slowmodeNextSendDate, let statsDc, let pts, let call, let ttlPeriod, let pendingSuggestions, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let defaultSendAs, let availableReactions):
                     if boxed {
-                        buffer.appendInt32(-362240487)
+                        buffer.appendInt32(-231385849)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(flags2, buffer: buffer, boxed: false)
@@ -937,15 +937,11 @@ public extension Api {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }}
                     if Int(flags) & Int(1 << 29) != 0 {defaultSendAs!.serialize(buffer, true)}
-                    if Int(flags) & Int(1 << 30) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(availableReactions!.count))
-                    for item in availableReactions! {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }}
+                    if Int(flags) & Int(1 << 30) != 0 {availableReactions!.serialize(buffer, true)}
                     break
                 case .chatFull(let flags, let id, let about, let participants, let chatPhoto, let notifySettings, let exportedInvite, let botInfo, let pinnedMsgId, let folderId, let call, let ttlPeriod, let groupcallDefaultJoinAs, let themeEmoticon, let requestsPending, let recentRequesters, let availableReactions):
                     if boxed {
-                        buffer.appendInt32(-779165146)
+                        buffer.appendInt32(-908914376)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt64(id, buffer: buffer, boxed: false)
@@ -971,11 +967,7 @@ public extension Api {
                     for item in recentRequesters! {
                         serializeInt64(item, buffer: buffer, boxed: false)
                     }}
-                    if Int(flags) & Int(1 << 18) != 0 {buffer.appendInt32(481674261)
-                    buffer.appendInt32(Int32(availableReactions!.count))
-                    for item in availableReactions! {
-                        serializeString(item, buffer: buffer, boxed: false)
-                    }}
+                    if Int(flags) & Int(1 << 18) != 0 {availableReactions!.serialize(buffer, true)}
                     break
     }
     }
@@ -1084,9 +1076,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 29) != 0 {if let signature = reader.readInt32() {
                 _36 = Api.parse(reader, signature: signature) as? Api.Peer
             } }
-            var _37: [String]?
-            if Int(_1!) & Int(1 << 30) != 0 {if let _ = reader.readInt32() {
-                _37 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            var _37: Api.ChatReactions?
+            if Int(_1!) & Int(1 << 30) != 0 {if let signature = reader.readInt32() {
+                _37 = Api.parse(reader, signature: signature) as? Api.ChatReactions
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1181,9 +1173,9 @@ public extension Api {
             if Int(_1!) & Int(1 << 17) != 0 {if let _ = reader.readInt32() {
                 _16 = Api.parseVector(reader, elementSignature: 570911930, elementType: Int64.self)
             } }
-            var _17: [String]?
-            if Int(_1!) & Int(1 << 18) != 0 {if let _ = reader.readInt32() {
-                _17 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            var _17: Api.ChatReactions?
+            if Int(_1!) & Int(1 << 18) != 0 {if let signature = reader.readInt32() {
+                _17 = Api.parse(reader, signature: signature) as? Api.ChatReactions
             } }
             let _c1 = _1 != nil
             let _c2 = _2 != nil
@@ -1213,7 +1205,7 @@ public extension Api {
     }
 }
 public extension Api {
-    enum ChatInvite: TypeConstructorDescription {
+    indirect enum ChatInvite: TypeConstructorDescription {
         case chatInvite(flags: Int32, title: String, about: String?, photo: Api.Photo, participantsCount: Int32, participants: [Api.User]?)
         case chatInviteAlready(chat: Api.Chat)
         case chatInvitePeek(chat: Api.Chat, expires: Int32)

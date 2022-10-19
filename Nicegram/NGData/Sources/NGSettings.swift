@@ -47,8 +47,8 @@ public struct NGSettings {
     @NGStorage(key: "oneTapTr", defaultValue: true)
     public static var oneTapTr: Bool
     
-    @NGStorage(key: "oneTapTrButtonLowPowerMode", defaultValue: false)
-    public static var oneTapTrButtonLowPowerMode: Bool
+    @NGStorage(key: "useIgnoreLanguages", defaultValue: false)
+    public static var useIgnoreLanguages: Bool
     
     @NGStorage(key: "ignoreTranslate", defaultValue: [])
     public static var ignoreTranslate: [String]
@@ -95,6 +95,9 @@ public struct NGSettings {
     
     @NGStorage(key: "shouldDownloadVideo", defaultValue: false)
     public static var shouldDownloadVideo: Bool
+    
+    @NGStorage(key: "shareChannelsInfo", defaultValue: true)
+    public static var shareChannelsInfo: Bool
 }
 
 public struct NGWebSettings {
@@ -130,7 +133,7 @@ public func isPremium() -> Bool {
 public func usetrButton() -> [(Bool, [String])] {
     if isPremium() {
         var ignoredLangs = NGSettings.ignoreTranslate
-        if !NGSettings.ignoreTranslate.isEmpty && ProcessInfo.processInfo.isLowPowerModeEnabled && !NGSettings.oneTapTrButtonLowPowerMode {
+        if !NGSettings.useIgnoreLanguages {
             ignoredLangs = []
         }
         return [(NGSettings.oneTapTr, ignoredLangs)]
@@ -158,6 +161,24 @@ public class SystemNGSettings {
         }
         set {
             UD.set(newValue, forKey: "hideReactions")
+        }
+    }
+    
+    public var isDoubleBottomOn: Bool {
+        get {
+            return UD.bool(forKey: "isDoubleBottomOn")
+        }
+        set {
+            UD.set(newValue, forKey: "isDoubleBottomOn")
+        }
+    }
+    
+    public var inDoubleBottom: Bool {
+        get {
+            return UD.bool(forKey: "inDoubleBottom")
+        }
+        set {
+            UD.set(newValue, forKey: "inDoubleBottom")
         }
     }
 }

@@ -652,7 +652,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
         firstName = presentationData.strings.Message_Contact
     }
     
-    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: []), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
+    entries.append(.info(entries.count, presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer: peer ?? TelegramUser(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: firstName, lastName: isOrganization ? nil : personName.1, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil), state: ItemListAvatarAndNameInfoItemState(editingName: editingName, updatingName: nil), job: isOrganization ? nil : jobSummary, isPlain: !isShare))
     
     if !selecting {
         if let _ = peer {
@@ -727,7 +727,7 @@ private func deviceContactInfoEntries(account: Account, engine: TelegramEngine, 
     
     var addressIndex = 0
     for address in contactData.addresses {
-        let signal = geocodeLocation(dictionary: address.dictionary)
+        let signal = geocodeLocation(address: address.asPostalAddress)
         |> mapToSignal { coordinates -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> in
             if let (latitude, longitude) = coordinates {
                 let resource = MapSnapshotMediaResource(latitude: latitude, longitude: longitude, width: 90, height: 90)
@@ -1111,7 +1111,8 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                                     |> deliverOnMainQueue).start(error: { _ in
                                         presentControllerImpl?(textAlertController(context: context, updatedPresentationData: updatedPresentationData, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                                     }, completed: {
-                                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                                        // MARK: Nicegram DB Changes
+                                        let _ = (contactDataManager.createContactWithData(composedContactData, account: context.account)
                                         |> deliverOnMainQueue).start(next: { contactIdAndData in
                                             updateState { state in
                                                 var state = state
@@ -1130,8 +1131,8 @@ public func deviceContactInfoController(context: AccountContext, updatedPresenta
                             default:
                                 break
                         }
-                        
-                        let _ = (contactDataManager.createContactWithData(composedContactData)
+                        // MARK: Nicegram DB Changes
+                        let _ = (contactDataManager.createContactWithData(composedContactData, account: context.account)
                         |> castError(AddContactError.self)
                         |> mapToSignal { contactIdAndData -> Signal<(DeviceContactStableId, DeviceContactExtendedData, Peer?)?, AddContactError> in
                             guard let (id, data) = contactIdAndData else {

@@ -19,6 +19,8 @@ import PresentationDataUtils
 import MeshAnimationCache
 import FetchManagerImpl
 import InAppPurchaseManager
+import AnimationCache
+import MultiAnimationRenderer
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -160,6 +162,9 @@ public final class AccountContextImpl: AccountContext {
     public let cachedGroupCallContexts: AccountGroupCallContextCache
     public let meshAnimationCache: MeshAnimationCache
     
+    public let animationCache: AnimationCache
+    public let animationRenderer: MultiAnimationRenderer
+    
     private var animatedEmojiStickersDisposable: Disposable?
     public private(set) var animatedEmojiStickers: [String: [StickerPackItem]] = [:]
     
@@ -203,6 +208,11 @@ public final class AccountContextImpl: AccountContext {
         
         self.cachedGroupCallContexts = AccountGroupCallContextCacheImpl()
         self.meshAnimationCache = MeshAnimationCache(mediaBox: account.postbox.mediaBox)
+        
+        self.animationCache = AnimationCacheImpl(basePath: self.account.postbox.mediaBox.basePath + "/animation-cache", allocateTempFile: {
+            return TempBox.shared.tempFile(fileName: "file").path
+        })
+        self.animationRenderer = MultiAnimationRendererImpl()
         
         let updatedLimitsConfiguration = account.postbox.preferencesView(keys: [PreferencesKeys.limitsConfiguration])
         |> map { preferences -> LimitsConfiguration in

@@ -165,7 +165,7 @@ public func generateChatInputTextEntities(_ text: NSAttributedString, maxAnimate
             } else if key == ChatTextInputAttributes.spoiler {
                 entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .Spoiler))
             } else if key == ChatTextInputAttributes.customEmoji, let value = value as? ChatTextInputTextCustomEmojiAttribute {
-                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .CustomEmoji(stickerPack: value.stickerPack, fileId: value.fileId)))
+                entities.append(MessageTextEntity(range: range.lowerBound ..< range.upperBound, type: .CustomEmoji(stickerPack: nil, fileId: value.fileId)))
             }
         }
     })

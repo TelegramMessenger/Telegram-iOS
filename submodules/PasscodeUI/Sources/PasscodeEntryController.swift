@@ -59,16 +59,27 @@ public final class PasscodeEntryController: ViewController {
     private var inBackground: Bool = false
     private var inBackgroundDisposable: Disposable?
     
+    // MARK: Nicegram DB Changes
+    private var isActive: Bool = false
+    private var isActiveDisposable: Disposable?
+    
     private var statusBarHost: StatusBarHost?
     private var previousStatusBarStyle: UIStatusBarStyle?
     
-    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments) {
+    // MARK: Nicegram DB Changes
+    private let hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData]
+    private var hasPublicAccounts: Bool = true
+    
+    public init(applicationBindings: TelegramApplicationBindings, accountManager: AccountManager<TelegramAccountManagerTypes>, appLockContext: AppLockContext, presentationData: PresentationData, presentationDataSignal: Signal<PresentationData, NoError>, statusBarHost: StatusBarHost?, challengeData: PostboxAccessChallengeData, biometrics: PasscodeEntryControllerBiometricsMode, arguments: PasscodeEntryControllerPresentationArguments, hiddenAccountsAccessChallengeData: [AccountRecordId:PostboxAccessChallengeData], hasPublicAccountsSignal: Signal<Bool, NoError> = .single(true)) {
+
         self.applicationBindings = applicationBindings
         self.accountManager = accountManager
         self.appLockContext = appLockContext
         self.presentationData = presentationData
         self.presentationDataSignal = presentationDataSignal
         self.challengeData = challengeData
+        // MARK: Nicegram DB Changes
+        self.hiddenAccountsAccessChallengeData = hiddenAccountsAccessChallengeData
         self.biometrics = biometrics
         self.arguments = arguments
         
@@ -103,12 +114,29 @@ public final class PasscodeEntryController: ViewController {
                 strongSelf.skipNextBiometricsRequest = false
             }
         })
+        // MARK: Nicegram DB Changes
+        self.isActiveDisposable = (applicationBindings.applicationIsActive
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.isActive = value
+        })
+        
+        _ = (hasPublicAccountsSignal
+        |> deliverOnMainQueue).start(next: { [weak self] value in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.hasPublicAccounts = value
+        })
     }
-    
+    // MARK: Nicegram DB Changes
     deinit {
         self.presentationDataDisposable?.dispose()
         self.biometricsDisposable.dispose()
         self.inBackgroundDisposable?.dispose()
+        self.isActiveDisposable?.dispose()
     }
     
     required public init(coder aDecoder: NSCoder) {
@@ -151,20 +179,63 @@ public final class PasscodeEntryController: ViewController {
             }
             strongSelf.controllerNode.updateInvalidAttempts(attempts)
         })
+        // MARK: Nicegram DB Changes
+        func check(passcode: String, challengeData: PostboxAccessChallengeData) -> Bool {
+            switch challengeData {
+            case .none:
+                return true
+            case let .numericalPassword(code):
+                if passcodeType == .alphanumeric {
+                    return false
+                }
+                return passcode == normalizeArabicNumeralString(code, type: .western)
+            case let .plaintextPassword(code):
+                if passcodeType != .alphanumeric {
+                    return false
+                }
+                return passcode == code
+            }
+        }
         
         self.controllerNode.checkPasscode = { [weak self] passcode in
             guard let strongSelf = self else {
                 return
             }
-    
-            var succeed = false
-            switch strongSelf.challengeData {
-                case .none:
-                    succeed = true
-                case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    succeed = passcode == code
+            // MARK: Nicegram DB Changes
+            var succeed = check(passcode: passcode, challengeData: strongSelf.challengeData)
+            if succeed {
+                UserDefaults.standard.set(false, forKey: "inDoubleBottom")
+                strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(nil)
+                let _ = strongSelf.accountManager.transaction({ transaction in
+                    if let current = transaction.getCurrent() {
+                        // HACK: Fast hack, should be changed in the future
+                        if let id = transaction.getRecords().first(where: { $0.isPublic })?.id {
+                            transaction.setCurrentId(id)
+                        }
+                        Queue.mainQueue().after(0.03) {
+                            transaction.setCurrentId(current.0)
+                        }
+                    }
+
+                }).start()
+            } else if strongSelf.hasPublicAccounts {
+                for (id, challengeData) in strongSelf.hiddenAccountsAccessChallengeData {
+                    if check(passcode: passcode, challengeData: challengeData)  {
+                        UserDefaults.standard.set(true, forKey: "inDoubleBottom")
+                        strongSelf.accountManager.hiddenAccountManager.unlockedAccountRecordIdPromise.set(id)
+                        let _ = strongSelf.accountManager.transaction({ transaction in
+                            // HACK: Fast hack, should be changed in the future
+                            if let id = transaction.getRecords().first(where: { $0.isPublic })?.id {
+                                transaction.setCurrentId(id)
+                            }
+                            Queue.mainQueue().after(0.03) {
+                                transaction.setCurrentId(id)
+                            }
+                        }).start()
+                        succeed = true
+                        break
+                    }
+                }
             }
             
             if succeed {
@@ -200,7 +271,12 @@ public final class PasscodeEntryController: ViewController {
         self.view.disablesInteractiveTransitionGestureRecognizer = true
         
         self.controllerNode.activateInput()
-        if self.arguments.animated {
+        // MARK: Nicegram DB Changes
+        if !isActive {
+            self.controllerNode.initialAppearance()
+            self.presentationCompleted?()
+        }
+        else if self.arguments.animated {
             self.controllerNode.animateIn(iconFrame: self.arguments.lockIconInitialFrame(), completion: { [weak self] in
                 self?.presentationCompleted?()
             })
@@ -296,5 +372,14 @@ public final class PasscodeEntryController: ViewController {
             strongSelf.view.endEditing(true)
             strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
         }
+    }
+}
+
+fileprivate extension AccountRecord {
+    var isPublic: Bool {
+        !attributes.contains(where: {
+            guard let attribute = $0 as? TelegramAccountRecordAttribute else { return false }
+            return attribute.isHiddenAccountAttribute || attribute.isLoggedOutAccountAttribute
+        })
     }
 }

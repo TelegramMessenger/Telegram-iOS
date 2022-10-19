@@ -429,15 +429,20 @@ private final class DeviceContactDataManagerPrivateImpl {
         for (stableId, basicData) in self.stableIdToBasicContactData {
             for phoneNumber in basicData.phoneNumbers {
                 var replace = false
+                var currentLocalIdentifiers: [String] = []
                 if let current = importableContactData[phoneNumber.value] {
                     if stableId < current.0 {
                         replace = true
+                        currentLocalIdentifiers = current.1.localIdentifiers
                     }
                 } else {
                     replace = true
                 }
                 if replace {
-                    importableContactData[phoneNumber.value] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName))
+                    if !currentLocalIdentifiers.contains(stableId) {
+                        currentLocalIdentifiers.append(stableId)
+                    }
+                    importableContactData[phoneNumber.value] = (stableId, ImportableDeviceContactData(firstName: basicData.firstName, lastName: basicData.lastName, localIdentifiers: currentLocalIdentifiers))
                 }
             }
         }
@@ -717,16 +722,23 @@ public final class DeviceContactDataManagerImpl: DeviceContactDataManager {
             return disposable
         }
     }
-    
-    public func createContactWithData(_ contactData: DeviceContactExtendedData) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
+    // MARK: Nicegram DB Changes
+    public func createContactWithData(_ contactData: DeviceContactExtendedData, account: Account) -> Signal<(DeviceContactStableId, DeviceContactExtendedData)?, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
-            self.impl.with({ impl in
-                impl.createContactWithData(contactData, completion: { next in
-                    subscriber.putNext(next)
-                    subscriber.putCompletion()
+            if account.isHidden {
+                let id = DeviceContactStableId(contactData.middleName)
+                let next = (id, contactData)
+                subscriber.putNext(next)
+                subscriber.putCompletion()
+            } else {
+                self.impl.with({ impl in
+                    impl.createContactWithData(contactData, completion: { next in
+                        subscriber.putNext(next)
+                        subscriber.putCompletion()
+                    })
                 })
-            })
+            }
             return disposable
         }
     }

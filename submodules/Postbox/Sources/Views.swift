@@ -37,6 +37,7 @@ public enum PostboxViewKey: Hashable {
     case messageGroup(id: MessageId)
     case isContact(id: PeerId)
     case chatListIndex(id: PeerId)
+    case peerTimeoutAttributes
 
     public func hash(into hasher: inout Hasher) {
         switch self {
@@ -121,6 +122,8 @@ public enum PostboxViewKey: Hashable {
             hasher.combine(id)
         case let .chatListIndex(id):
             hasher.combine(id)
+        case .peerTimeoutAttributes:
+            hasher.combine(17)
         }
     }
     
@@ -342,6 +345,12 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
+        case .peerTimeoutAttributes:
+            if case .peerTimeoutAttributes = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -420,5 +429,7 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableIsContactView(postbox: postbox, id: id)
     case let .chatListIndex(id):
         return MutableChatListIndexView(postbox: postbox, id: id)
+    case .peerTimeoutAttributes:
+        return MutablePeerTimeoutAttributesView(postbox: postbox)
     }
 }

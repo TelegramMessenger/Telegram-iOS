@@ -20,43 +20,43 @@ private let inlineBotNameFont = nameFont
 
 class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerDelegate {
     let contextSourceNode: ContextExtractedContentContainingNode
-    private let containerNode: ContextControllerSourceNode
-    private let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
+    let containerNode: ContextControllerSourceNode
+    let interactiveVideoNode: ChatMessageInteractiveInstantVideoNode
     
-    private var selectionNode: ChatMessageSelectionNode?
-    private var deliveryFailedNode: ChatMessageDeliveryFailedNode?
-    private var shareButtonNode: ChatMessageShareButton?
+    var selectionNode: ChatMessageSelectionNode?
+    var deliveryFailedNode: ChatMessageDeliveryFailedNode?
+    var shareButtonNode: ChatMessageShareButton?
     
-    private var swipeToReplyNode: ChatMessageSwipeToReplyNode?
-    private var swipeToReplyFeedback: HapticFeedback?
+    var swipeToReplyNode: ChatMessageSwipeToReplyNode?
+    var swipeToReplyFeedback: HapticFeedback?
     
-    private var appliedParams: ListViewItemLayoutParams?
-    private var appliedItem: ChatMessageItem?
-    private var appliedForwardInfo: (Peer?, String?)?
-    private var appliedHasAvatar = false
-    private var appliedCurrentlyPlaying: Bool?
-    private var appliedAutomaticDownload = false
-    private var avatarOffset: CGFloat?
+    var appliedParams: ListViewItemLayoutParams?
+    var appliedItem: ChatMessageItem?
+    var appliedForwardInfo: (Peer?, String?)?
+    var appliedHasAvatar = false
+    var appliedCurrentlyPlaying: Bool?
+    var appliedAutomaticDownload = false
+    var avatarOffset: CGFloat?
     
-    private var animatingHeight: Bool {
+    var animatingHeight: Bool {
         return self.apparentHeightTransition != nil
     }
 
-    private var viaBotNode: TextNode?
-    private var replyInfoNode: ChatMessageReplyInfoNode?
-    private var replyBackgroundNode: NavigationBackgroundNode?
-    private var forwardInfoNode: ChatMessageForwardInfoNode?
+    var viaBotNode: TextNode?
+    var replyInfoNode: ChatMessageReplyInfoNode?
+    var replyBackgroundNode: NavigationBackgroundNode?
+    var forwardInfoNode: ChatMessageForwardInfoNode?
     
-    private var actionButtonsNode: ChatMessageActionButtonsNode?
-    private var reactionButtonsNode: ChatMessageReactionButtonsNode?
+    var actionButtonsNode: ChatMessageActionButtonsNode?
+    var reactionButtonsNode: ChatMessageReactionButtonsNode?
     
-    private let messageAccessibilityArea: AccessibilityAreaNode
+    let messageAccessibilityArea: AccessibilityAreaNode
     
-    private var currentSwipeToReplyTranslation: CGFloat = 0.0
+    var currentSwipeToReplyTranslation: CGFloat = 0.0
     
-    private var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
+    var recognizer: TapLongTapOrDoubleTapGestureRecognizer?
         
-    private var currentSwipeAction: ChatControllerInteractionSwipeAction?
+    var currentSwipeAction: ChatControllerInteractionSwipeAction?
     
     override var visibility: ListViewItemNodeVisibility {
         didSet {
@@ -70,7 +70,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    private var wasPlaying = false
+    fileprivate var wasPlaying = false
     
     required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -266,7 +266,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         let currentForwardInfo = self.appliedForwardInfo
         let currentPlaying = self.appliedCurrentlyPlaying
         
-        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom in
+        func continueAsyncLayout(_ weakSelf: Weak<ChatMessageInstantVideoItemNode>, _ item: ChatMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: ChatMessageMerge, _ mergedBottom: ChatMessageMerge, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) {
             let accessibilityData = ChatMessageAccessibilityData(item: item, isSelected: nil)
             
             let layoutConstants = chatMessageItemLayoutConstants(layoutConstants, params: params, presentationData: item.presentationData)
@@ -532,7 +532,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             var maxContentWidth = normalDisplaySize.width
             var actionButtonsFinalize: ((CGFloat) -> (CGSize, (_ animation: ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode))?
             if let replyMarkup = replyMarkup {
-                let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, replyMarkup, item.message, maxContentWidth)
+                let (minWidth, buttonsLayout) = actionButtonsLayout(item.context, item.presentationData.theme, item.presentationData.chatBubbleCorners, item.presentationData.strings, item.controllerInteraction.presentationContext.backgroundNode, replyMarkup, item.message, maxContentWidth)
                 maxContentWidth = max(maxContentWidth, minWidth)
                 actionButtonsFinalize = buttonsLayout
             }
@@ -543,7 +543,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             }
             
             let reactions: ReactionsMessageAttribute
-            if shouldDisplayInlineDateReactions(message: item.message) {
+            if shouldDisplayInlineDateReactions(message: item.message, isPremium: item.associatedData.isPremium, forceInline: item.associatedData.forceInlineReactions) {
                 reactions = ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
             } else {
                 reactions = mergedMessageReactions(attributes: item.message.attributes) ?? ReactionsMessageAttribute(canViewList: false, reactions: [], recentPeers: [])
@@ -561,6 +561,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                     availableReactions: item.associatedData.availableReactions,
                     reactions: reactions,
                     message: item.message,
+                    accountPeer: item.associatedData.accountPeer,
                     isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
                     constrainedWidth: maxReactionsWidth
                 ))
@@ -581,8 +582,8 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 layoutSize.height += 6.0 + reactionButtonsSizeAndApply.0.height
             }
             
-            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { [weak self] animation, _, synchronousLoads in
-                if let strongSelf = self {
+            func finishAsyncLayout(_ animation: ListViewItemUpdateAnimation, _ synchronousLoads: Bool) {
+                if let strongSelf = weakSelf.value {
                     strongSelf.contextSourceNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.containerNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
                     strongSelf.contextSourceNode.contentNode.frame = CGRect(origin: CGPoint(), size: layoutSize)
@@ -635,7 +636,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                                 strongSelf.addSubnode(updatedShareButtonNode)
                                 updatedShareButtonNode.addTarget(strongSelf, action: #selector(strongSelf.shareButtonPressed), forControlEvents: .touchUpInside)
                             }
-                            let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
+                            let buttonSize = updatedShareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account)
                             updatedShareButtonNode.frame = CGRect(origin: CGPoint(x: min(params.width - buttonSize.width - 8.0, videoFrame.maxX - 7.0), y: videoFrame.maxY - 24.0 - buttonSize.height), size: buttonSize)
                         } else if let shareButtonNode = strongSelf.shareButtonNode {
                             shareButtonNode.removeFromSupernode()
@@ -737,7 +738,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             } else {
                                 isAppearing = true
                                 deliveryFailedNode = ChatMessageDeliveryFailedNode(tapped: {
-                                    if let item = self?.item {
+                                    if let strongSelf = weakSelf.value, let item = strongSelf.item {
                                         item.controllerInteraction.requestRedeliveryOfFailedMessages(item.content.firstMessage.id)
                                     }
                                 })
@@ -772,13 +773,13 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             if reactionButtonsNode !== strongSelf.reactionButtonsNode {
                                 strongSelf.reactionButtonsNode = reactionButtonsNode
                                 reactionButtonsNode.reactionSelected = { value in
-                                    guard let strongSelf = self, let item = strongSelf.item else {
+                                    guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                         return
                                     }
                                     item.controllerInteraction.updateMessageReaction(item.message, .reaction(value))
                                 }
                                 reactionButtonsNode.openReactionPreview = { gesture, sourceNode, value in
-                                    guard let strongSelf = self, let item = strongSelf.item else {
+                                    guard let strongSelf = weakSelf.value, let item = strongSelf.item else {
                                         gesture?.cancel()
                                         return
                                     }
@@ -822,12 +823,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             if actionButtonsNode !== strongSelf.actionButtonsNode {
                                 strongSelf.actionButtonsNode = actionButtonsNode
                                 actionButtonsNode.buttonPressed = { button in
-                                    if let strongSelf = self {
+                                    if let strongSelf = weakSelf.value {
                                         strongSelf.performMessageButtonAction(button: button)
                                     }
                                 }
                                 actionButtonsNode.buttonLongTapped = { button in
-                                    if let strongSelf = self {
+                                    if let strongSelf = weakSelf.value {
                                         strongSelf.presentMessageButtonContextMenu(button: button)
                                     }
                                 }
@@ -860,7 +861,16 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                         f()
                     }
                 }
+            }
+            
+            return (ListViewItemNodeLayout(contentSize: layoutSize, insets: layoutInsets), { animation, _, synchronousLoads in
+                finishAsyncLayout(animation, synchronousLoads)
             })
+        }
+        
+        let weakSelf = Weak(self)
+        return { item, params, mergedTop, mergedBottom, dateHeaderAtBottom -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation, ListViewItemApply, Bool) -> Void) in
+            continueAsyncLayout(weakSelf, item, params, mergedTop, mergedBottom, dateHeaderAtBottom)
         }
     }
     
@@ -918,7 +928,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                             }
                             item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                         } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, nil)
+                            item.controllerInteraction.openPeer(peer.id, peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false, nil)
                         } else if let _ = forwardInfo.authorSignature {
                             item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
                         }
@@ -990,7 +1000,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
                 if translation.x < -45.0, self.swipeToReplyNode == nil, let item = self.item {
                     self.swipeToReplyFeedback?.impact()
                     
-                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
+                    let swipeToReplyNode = ChatMessageSwipeToReplyNode(fillColor: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), foregroundColor: bubbleVariableColor(variableColor: item.presentationData.theme.theme.chat.message.shareButtonForegroundColor, wallpaper: item.presentationData.theme.wallpaper), backgroundNode: item.controllerInteraction.presentationContext.backgroundNode, action: ChatMessageSwipeToReplyNode.Action(self.currentSwipeAction))
                     self.swipeToReplyNode = swipeToReplyNode
                     self.addSubnode(swipeToReplyNode)
                     animateReplyNodeIn = true
@@ -1005,6 +1015,12 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
             
             if let swipeToReplyNode = self.swipeToReplyNode {
                 swipeToReplyNode.frame = CGRect(origin: CGPoint(x: bounds.size.width, y: floor((self.contentSize.height - 33.0) / 2.0)), size: CGSize(width: 33.0, height: 33.0))
+                
+                if let (rect, containerSize) = self.absoluteRect {
+                    let mappedRect = CGRect(origin: CGPoint(x: rect.minX + swipeToReplyNode.frame.minX, y: rect.minY + swipeToReplyNode.frame.minY), size: swipeToReplyNode.frame.size)
+                    swipeToReplyNode.updateAbsoluteRect(mappedRect, within: containerSize)
+                }
+                
                 if animateReplyNodeIn {
                     swipeToReplyNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.12)
                     swipeToReplyNode.layer.animateSpring(from: 0.1 as NSNumber, to: 1.0 as NSNumber, keyPath: "transform.scale", duration: 0.4)
@@ -1318,6 +1334,22 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         var rect = rect
         rect.origin.y = containerSize.height - rect.maxY + self.insets.top
             
+        if let shareButtonNode = self.shareButtonNode {
+            var shareButtonNodeFrame = shareButtonNode.frame
+            shareButtonNodeFrame.origin.x += rect.minX
+            shareButtonNodeFrame.origin.y += rect.minY
+            
+            shareButtonNode.updateAbsoluteRect(shareButtonNodeFrame, within: containerSize)
+        }
+        
+        if let actionButtonsNode = self.actionButtonsNode {
+            var actionButtonsNodeFrame = actionButtonsNode.frame
+            actionButtonsNodeFrame.origin.x += rect.minX
+            actionButtonsNodeFrame.origin.y += rect.minY
+            
+            actionButtonsNode.updateAbsoluteRect(actionButtonsNodeFrame, within: containerSize)
+        }
+        
         if let reactionButtonsNode = self.reactionButtonsNode {
             var reactionButtonsNodeFrame = reactionButtonsNode.frame
             reactionButtonsNodeFrame.origin.x += rect.minX
@@ -1333,7 +1365,7 @@ class ChatMessageInstantVideoItemNode: ChatMessageItemView, UIGestureRecognizerD
         }
     }
     
-    override func targetReactionView(value: String) -> UIView? {
+    override func targetReactionView(value: MessageReaction.Reaction) -> UIView? {
         if let result = self.reactionButtonsNode?.reactionTargetView(value: value) {
             return result
         }

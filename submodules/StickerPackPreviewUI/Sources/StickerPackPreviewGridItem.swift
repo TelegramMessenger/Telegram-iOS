@@ -12,6 +12,7 @@ import TelegramAnimatedStickerNode
 import TelegramPresentationData
 import ShimmerEffect
 import StickerPeekUI
+import TextFormat
 
 final class StickerPackPreviewInteraction {
     var previewedItem: StickerPreviewPeekItem?
@@ -19,11 +20,15 @@ final class StickerPackPreviewInteraction {
     
     let addStickerPack: (StickerPackCollectionInfo, [StickerPackItem]) -> Void
     let removeStickerPack: (StickerPackCollectionInfo) -> Void
+    let emojiSelected: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
+    let emojiLongPressed: (String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void
     
-    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void) {
+    init(playAnimatedStickers: Bool, addStickerPack: @escaping (StickerPackCollectionInfo, [StickerPackItem]) -> Void, removeStickerPack: @escaping (StickerPackCollectionInfo) -> Void, emojiSelected: @escaping (String, ChatTextInputTextCustomEmojiAttribute) -> Void, emojiLongPressed: @escaping (String, ChatTextInputTextCustomEmojiAttribute, ASDisplayNode, CGRect) -> Void) {
         self.playAnimatedStickers = playAnimatedStickers
         self.addStickerPack = addStickerPack
         self.removeStickerPack = removeStickerPack
+        self.emojiSelected = emojiSelected
+        self.emojiLongPressed = emojiLongPressed
     }
 }
 

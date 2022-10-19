@@ -14,7 +14,7 @@ public class ServerLogger {
     
     //  MARK: - Lifecycle
     
-    public init(apiClient: EsimApiClientProtocol, queue: DispatchQueue = .global(qos: .utility)) {
+    public init(apiClient: EsimApiClientProtocol, queue: DispatchQueue) {
         self.apiClient = apiClient
         self.queue = queue
     }
@@ -35,12 +35,32 @@ public class ServerLogger {
     }
 }
 
+//  MARK: - Logger Impl
+
 extension ServerLogger: Logger {
     public func log(_ info: [String : Encodable]) {
+        var info = info
+        info["timestamp"] = Date().timeIntervalSince1970
         log(payload: info.mapValues({ AnyEncodable($0) }))
     }
     
     public func log(message: String) {
         log(payload: message)
+    }
+}
+
+//  MARK: - Convenience inits
+
+public extension ServerLogger {
+    convenience init(apiClient: EsimApiClientProtocol) {
+        self.init(apiClient: apiClient, queue: ServerLogger.defaultQueue())
+    }
+}
+
+//  MARK: - Private Functions
+
+private extension ServerLogger {
+    class func defaultQueue() -> DispatchQueue {
+        return DispatchQueue(label: "server-logger", qos: .utility)
     }
 }

@@ -29,6 +29,8 @@
 "NiceFeatures.RoundVideos.Header" = "فيديوهات مستديرة";
 "NiceFeatures.RoundVideos.UseRearCamera" = "البدء بالكاميرا الخلفية";
 
+"NiceFeatures.InstantLock" = "فوراً ";
+
 /*Save to Cloud*/
 "Chat.SaveToCloud" = "الحفظ في السحابة";
 
@@ -115,6 +117,8 @@
 "Messages.ToLanguage" = "إلى اللغة";
 "Messages.ToLanguage.WithCode" = "إلى اللغة: %@";
 "Messages.TranslateError.ToLanguageNotFound" = "تعذر علينا تحديد اللغة التي ترغب في ترجمة النص إليها. يرجى تحديد اللغة يدوياً وإعادة المحاولة.";
+"Messages.ReplyPrivately" = "رد برسالة خاصة";
+"Messages.DeleteAllSystemMessages" = "حذف الكل";
 
 /*NG Lab Registration Date*/
 "NGLab.RegDate.Btn" = "الحصول على تاريخ التسجيل";
@@ -158,8 +162,10 @@
 "NicegramSettings.Unblock.Button" = "دليل الفتح";
 "NicegramSettings.Other.hideReactions" = "إخفاء ردود الفعل";
 "NicegramSettings.RoundVideos.DownloadVideos" = "نزّل الفيديوهات إلى المعرض";
-"Premium.OnetapTranslate.LowPower" = "التعرف واطئ الإستهلاك";
-"Premium.OnetapTranslate.LowPower.Notice" = "التطبيق يحدد لغات كل رسالة في جهازك. ويتطلب اداء عالي من الجهاز و بالتالي إستهلاك البطارية.";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "تجاهل اللغات";
+"NicegramSettings.ShareChannelsInfoToggle" = "شارك معلومات القناة";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "ساهم في موسوعة ويكيبيديا الأكثر شمولاً لقنوات ومجموعات تيليجرام عن طريق إرسال معلومات القناة تلقائياً والارتباط بقاعدة البيانات الخاصة بنا. نحن لا نربط ملفك الشخصي وقناتك على تيليجرام ولا نشارك بياناتك الشخصية.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "التطبيق يحدد لغات كل رسالة في جهازك. ويتطلب اداء عالي من الجهاز و بالتالي إستهلاك البطارية.";
 "Premium.rememberFolderOnExit" = "تذكر المجلد الحالي عند الخروج";
 
 /*Registration Date*/
@@ -188,6 +194,7 @@
 "DoubleBottom.Enabled.Title" = "تم تفعيل Double Bottom";
 "DoubleBottom.Enabled.Description" = "يرجى تذكر رمز المرور الذي عينته للتو وأعد تشغيل التطبيق حتى يعمل Double Bottom بشكل جيد";
 "DoubleBottom.Enabled.OK" = "موافق";
+"DoubleBottom.Passcode.Error" = "يرجى تعيين رمز مرور مختلف عن الذي تستخدمه في رمز مرور القفل";
 
 /*Nicegram Premium*/
 "NicePremium.Title" = "تطبيق Nicegram\n**ميزات فائقة الجودة**";
@@ -201,3 +208,17 @@
 "NicePremium.MentionAll.Desc" = "أبلغ جميع أعضاء المجموعة سريعاً وتأكد من أن جميعهم سيقرأ رسالتك";
 
 "NicePremium.Renews" = "الاشتراك يتجدد تلقائياً";
+"NicePremium.PricePerMonth" = "سعر الاشتراك الشهري %@";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "الاستمرار";
+"NicegramOnboarding.1.Title" = "العميل رقم 1 لتيليجرام ماسنجر";
+"NicegramOnboarding.1.Desc" = "انضم إلى أكثر من 2 مليون مستخدم لنايسجرام واحصل على إتاحة الوصول إلى أقوى عميل تيليجرام للأعمال التجارية.";
+"NicegramOnboarding.2.Title" = "تجربة مراسلة متقدمة";
+"NicegramOnboarding.2.Desc" = "قم بتسريع اتصالك بميزات فريدة مثل المترجم المُضمن، وتحويل الكلام إلى نصوص، وإعادة توجيه الرسائل دون تحديد المُتحدث، والحفظ السريع في التفضيلات.";
+"NicegramOnboarding.3.Title" = "ملف تعريف مستخدم مُمتد";
+"NicegramOnboarding.3.Desc" = "أنشئ أكبر عدد تريده من حسابات تيليجرام مجانًا تمامًا، بالإضافة إلى عرض ملف تعريف مستخدم متقدم مع المعرف، وتاريخ التسجيل، والروابط القابلة للنقر.";
+"NicegramOnboarding.4.Title" = "ملحقات الأعمال الفريدة";
+"NicegramOnboarding.4.Desc" = "استفد من الابتكارات من فريق نايسجرام واحصل على eSIM مع إمكانية الوصول إلى الإنترنت في 133 دولة. كما يُمكنك تسجيل حسابات تيليجرام الجديدة على رقم هاتف خطة بيانات eSIM.";
+"NicegramOnboarding.5.Title" = "برنامج المراسلة الأكثر أمانًا";
+"NicegramOnboarding.5.Desc" = "برنامج مراسلة قوي بتشفير قوي، ومكالمات صوتية ومرئية جماعية، وقنوات عامة، ومجموعات وبرمجيات بوت، وتخزين سحابي غير محدود للمحادثات، ومشاركة الوسائط والمستندات.";

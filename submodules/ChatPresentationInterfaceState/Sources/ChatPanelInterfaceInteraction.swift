@@ -59,6 +59,8 @@ public final class ChatPanelInterfaceInteraction {
     public let cloudMessages: ([Message]?) -> Void
     public let copyForwardMessages:  ([Message]?) -> Void
     public let copySelectedMessages: () -> Void
+    public let openGifs: () -> Void
+    public let replyPrivately: (Message) -> Void
     //
     public let setupReplyMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
     public let setupEditMessage: (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void
@@ -104,7 +106,7 @@ public final class ChatPanelInterfaceInteraction {
     public let displayVideoUnmuteTip: (CGPoint?) -> Void
     public let switchMediaRecordingMode: () -> Void
     public let setupMessageAutoremoveTimeout: () -> Void
-    public let sendSticker: (FileMediaReference, Bool, UIView, CGRect, CALayer?) -> Bool
+    public let sendSticker: (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
     public let unblockPeer: () -> Void
     public let pinMessage: (MessageId, ContextControllerProtocol?) -> Void
     public let unpinMessage: (MessageId, Bool, ContextControllerProtocol?) -> Void
@@ -160,6 +162,8 @@ public final class ChatPanelInterfaceInteraction {
         cloudMessages: @escaping ([Message]?) -> Void,
         copyForwardMessages: @escaping ([Message]?) -> Void,
         copySelectedMessages: @escaping () -> Void,
+        openGifs: @escaping () -> Void = {},
+        replyPrivately: @escaping (Message) -> Void = { _ in },
         //
         setupReplyMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
         setupEditMessage: @escaping (MessageId?, @escaping (ContainedViewLayoutTransition) -> Void) -> Void,
@@ -205,7 +209,7 @@ public final class ChatPanelInterfaceInteraction {
         displayVideoUnmuteTip: @escaping (CGPoint?) -> Void,
         switchMediaRecordingMode: @escaping () -> Void,
         setupMessageAutoremoveTimeout: @escaping () -> Void,
-        sendSticker: @escaping (FileMediaReference, Bool, UIView, CGRect, CALayer?) -> Bool,
+        sendSticker: @escaping (FileMediaReference, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool,
         unblockPeer: @escaping () -> Void,
         pinMessage: @escaping (MessageId, ContextControllerProtocol?) -> Void,
         unpinMessage: @escaping (MessageId, Bool, ContextControllerProtocol?) -> Void,
@@ -260,6 +264,8 @@ public final class ChatPanelInterfaceInteraction {
         self.cloudMessages = cloudMessages
         self.copyForwardMessages = copyForwardMessages
         self.copySelectedMessages = copySelectedMessages
+        self.openGifs = openGifs
+        self.replyPrivately = replyPrivately
         //
         self.setupReplyMessage = setupReplyMessage
         self.setupEditMessage = setupEditMessage
@@ -411,7 +417,7 @@ public final class ChatPanelInterfaceInteraction {
         }, displayVideoUnmuteTip: { _ in
         }, switchMediaRecordingMode: {
         }, setupMessageAutoremoveTimeout: {
-        }, sendSticker: { _, _, _, _, _ in
+        }, sendSticker: { _, _, _, _, _, _ in
             return false
         }, unblockPeer: {
         }, pinMessage: { _, _ in

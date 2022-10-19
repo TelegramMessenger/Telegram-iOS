@@ -23,7 +23,8 @@ let niceLocales: [String : [String : String]] = [
     "de": gd(locale: "de"),
     "it": gd(locale: "it"),
     "es": gd(locale: "es"),
-    "uk": gd(locale: "uk"),
+    "fr": gd(locale: "fr"),
+    "pt": gd(locale: "pt"),
     
     // Chinese
     // Simplified
@@ -38,6 +39,8 @@ let niceLocales: [String : [String : String]] = [
     "ro": gd(locale: "ro"),
     "ko": gd(locale: "ko"),
     "ku": gd(locale: "ku"),
+    "hi": gd(locale: "hi"),
+    "id": gd(locale: "id"),
     "be": [:],
 ]
 
@@ -88,6 +91,10 @@ public func l(_ key: String, _ locale: String = "en") -> String {
     let rawSuffix = "-raw"
     if lang.hasSuffix(rawSuffix) {
         lang = String(lang.dropLast(rawSuffix.count))
+    }
+    
+    if lang == "pt-br" {
+        lang = "pt"
     }
     
     if !niceLocales.keys.contains(lang) {

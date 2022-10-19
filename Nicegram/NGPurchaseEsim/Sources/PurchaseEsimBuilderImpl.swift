@@ -1,9 +1,9 @@
 import UIKit
 import AccountContext
-import EsimApiClient
 import EsimAuth
 import EsimMobileDataPurchaseProvider
 import EsimMobileDataPayments
+import NGApiClient
 import NGAuth
 import NGCountriesList
 import NGMappers
@@ -67,7 +67,7 @@ public class PurchaseEsimBuilderImpl: PurchaseEsimBuilder {
             regionsFormatter: regionsFormatter)
         presenter.output = controller
         
-        let apiClient = EsimApiClient.nicegramClient(auth: auth)
+        let apiClient = createNicegramApiClient(auth: auth)
         let paymentProvider = EcommpayEsimPaymentProvider(
             projectId: NGENV.ecommpay_project_id,
             merchantId: NGENV.ecommpay_merchant_id, 

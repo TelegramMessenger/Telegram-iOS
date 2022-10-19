@@ -10,6 +10,7 @@ swift_library(
         "//Vendor/SnapKit:SnapKit",
         "//submodules/lottie-ios:Lottie",
         "//Nicegram/EsimModule/EsimPropertyWrappers:EsimPropertyWrappers",
+        "//Nicegram/EsimModule/EsimUI:EsimUI",
         "//Nicegram/NGButton:NGButton",
         "//Nicegram/NGCustomViews:NGCustomViews",
         "//Nicegram/NGData:NGData",

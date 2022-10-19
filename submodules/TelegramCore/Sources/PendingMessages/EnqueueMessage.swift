@@ -9,14 +9,14 @@ public enum EnqueueMessageGrouping {
 }
 
 public enum EnqueueMessage {
-    case message(text: String, attributes: [MessageAttribute], inlineStickers: [MediaId: Media], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?)
+    case message(text: String, attributes: [MessageAttribute], inlineStickers: [MediaId: Media], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?, bubbleUpEmojiOrStickersets: [ItemCollectionId])
     // MARK: Nicegram (asCopy)
     case forward(source: MessageId, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute], correlationId: Int64?, asCopy: Bool = false)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
-        case let .message(text, attributes, inlineStickers, mediaReference, _, localGroupingKey, correlationId):
-            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
+        case let .message(text, attributes, inlineStickers, mediaReference, _, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
         case .forward:
             return self
         }
@@ -24,8 +24,8 @@ public enum EnqueueMessage {
     
     public func withUpdatedAttributes(_ f: ([MessageAttribute]) -> [MessageAttribute]) -> EnqueueMessage {
         switch self {
-        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
-            return .message(text: text, attributes: f(attributes), inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId)
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
+            return .message(text: text, attributes: f(attributes), inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
         case let .forward(source, grouping, attributes, correlationId, asCopy):
             return .forward(source: source, grouping: grouping, attributes: f(attributes), correlationId: correlationId, asCopy: asCopy)
         }
@@ -33,8 +33,8 @@ public enum EnqueueMessage {
     
     public func withUpdatedGroupingKey(_ f: (Int64?) -> Int64?) -> EnqueueMessage {
         switch self {
-        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
-            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: f(localGroupingKey), correlationId: correlationId)
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: f(localGroupingKey), correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
         case .forward:
             return self
         }
@@ -42,15 +42,15 @@ public enum EnqueueMessage {
 
     public func withUpdatedCorrelationId(_ value: Int64?) -> EnqueueMessage {
         switch self {
-        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _):
-            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: value)
+        case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _, bubbleUpEmojiOrStickersets):
+            return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: value, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
         case let .forward(source, grouping, attributes, _, asCopy):
             return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value, asCopy: asCopy)
         }
     }
     
     public var groupingKey: Int64? {
-        if case let .message(_, _, _, _, _, localGroupingKey, _) = self {
+        if case let .message(_, _, _, _, _, localGroupingKey, _, _) = self {
             return localGroupingKey
         } else {
             return nil
@@ -61,10 +61,19 @@ public enum EnqueueMessage {
 private extension EnqueueMessage {
     var correlationId: Int64? {
         switch self {
-        case let .message(_, _, _, _, _, _, correlationId):
+        case let .message(_, _, _, _, _, _, correlationId, _):
             return correlationId
         case let .forward(_, _, _, correlationId, _):
             return correlationId
+        }
+    }
+    
+    var bubbleUpEmojiOrStickersets: [ItemCollectionId] {
+        switch self {
+        case let .message(_, _, _, _, _, _, _, bubbleUpEmojiOrStickersets):
+            return bubbleUpEmojiOrStickersets
+        case .forward:
+            return []
         }
     }
 }
@@ -182,7 +191,7 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var hasMedia = false
     loop: for message in messages {
         switch message {
-            case let .message(_, _, _, mediaReference, _, _, _):
+            case let .message(_, _, _, mediaReference, _, _, _, _):
                 if mediaReference != nil {
                     hasMedia = true
                     break loop
@@ -199,14 +208,14 @@ private func opportunisticallyTransformOutgoingMedia(network: Network, postbox: 
     var signals: [Signal<(Bool, EnqueueMessage), NoError>] = []
     for message in messages {
         switch message {
-            case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId):
+            case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
                 if let mediaReference = mediaReference {
                     signals.append(opportunisticallyTransformMessageWithMedia(network: network, postbox: postbox, transformOutgoingMessageMedia: transformOutgoingMessageMedia, mediaReference: mediaReference, userInteractive: userInteractive)
                     |> map { result -> (Bool, EnqueueMessage) in
                         if let result = result {
-                            return (true, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: .standalone(media: result.media), replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
+                            return (true, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: .standalone(media: result.media), replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                         } else {
-                            return (false, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId))
+                            return (false, .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                         }
                     })
                 } else {
@@ -268,17 +277,19 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
                     
                     var filteredAttributes: [MessageAttribute] = []
                     var replyToMessageId: MessageId?
+                    var bubbleUpEmojiOrStickersets: [ItemCollectionId] = []
                     inner: for attribute in message.attributes {
                         if let attribute = attribute as? ReplyMessageAttribute {
                             replyToMessageId = attribute.messageId
-                        } else if attribute is OutgoingMessageInfoAttribute {
+                        } else if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                            bubbleUpEmojiOrStickersets = attribute.bubbleUpEmojiOrStickersets
                             continue inner
                         } else {
                             filteredAttributes.append(attribute)
                         }
                     }
                     
-                    messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil))
+                    messages.append(.message(text: message.text, attributes: filteredAttributes, inlineStickers: [:], mediaReference: message.media.first.flatMap(AnyMediaReference.standalone), replyToMessageId: replyToMessageId, localGroupingKey: message.groupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets))
                 }
             }
             let _ = enqueueMessages(transaction: transaction, account: account, peerId: peerId, messages: messages.map { (false, $0) })
@@ -308,7 +319,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             }
         }
         switch message {
-            case let .message(_, attributes, _, _, replyToMessageId, _, _):
+            case let .message(_, attributes, _, _, replyToMessageId, _, _, _):
                 if let replyToMessageId = replyToMessageId, replyToMessageId.peerId != peerId, let replyMessage = transaction.getMessage(replyToMessageId) {
                     var canBeForwarded = true
                     if replyMessage.id.namespace != Namespaces.Message.Cloud {
@@ -336,7 +347,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     // MARK: Nicegram
                     let localGroupingKey: Int64? = asCopy ? sourceMessage.groupingKey : nil
-                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: localGroupingKey, correlationId: nil)))
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: localGroupingKey, correlationId: nil, bubbleUpEmojiOrStickersets: [])))
                     continue outer
                 }
         }
@@ -374,11 +385,11 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
             if transformedMedia {
                 infoFlags.insert(.transformedMedia)
             }
-            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId, flags: infoFlags, acknowledged: false, correlationId: message.correlationId))
+            attributes.append(OutgoingMessageInfoAttribute(uniqueId: randomId, flags: infoFlags, acknowledged: false, correlationId: message.correlationId, bubbleUpEmojiOrStickersets: message.bubbleUpEmojiOrStickersets))
             globallyUniqueIds.append(randomId)
             
             switch message {
-                case let .message(text, requestedAttributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _):
+                case let .message(text, requestedAttributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _, _):
                     for (_, file) in inlineStickers {
                         transaction.storeMediaIfNotPresent(media: file)
                     }
