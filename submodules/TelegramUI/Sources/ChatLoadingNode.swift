@@ -328,12 +328,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    private var ignoreFirstContentOffset = true
     func addContentOffset(offset: CGFloat, transition: ContainedViewLayoutTransition) {
-        guard !self.ignoreFirstContentOffset else {
-            self.ignoreFirstContentOffset = false
-            return
-        }
         self.scrollingContainer.bounds = self.scrollingContainer.bounds.offsetBy(dx: 0.0, dy: -offset)
         transition.animateOffsetAdditive(node: self.scrollingContainer, offset: offset)
         if let (rect, containerSize) = self.absolutePosition {

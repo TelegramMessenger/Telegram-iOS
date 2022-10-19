@@ -213,7 +213,7 @@ open class ItemListController: ViewController, KeyShortcutResponder, Presentable
         }
     }
     
-    public var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?) -> Void)? {
+    public var didScrollWithOffset: ((CGFloat, ContainedViewLayoutTransition, ListViewItemNode?, Bool) -> Void)? {
         didSet {
             if self.isNodeLoaded {
                 (self.displayNode as! ItemListControllerNode).listNode.didScrollWithOffset = self.didScrollWithOffset

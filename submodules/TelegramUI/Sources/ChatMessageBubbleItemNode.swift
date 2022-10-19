@@ -353,10 +353,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             self.containerNode = ContextControllerSourceNode()
         }
         
-        private var absoluteRect: (CGRect, CGSize)?
+        fileprivate var absoluteRect: (CGRect, CGSize)?
         fileprivate func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
             self.absoluteRect = (rect, containerSize)
             guard let backgroundWallpaperNode = self.backgroundWallpaperNode else {
+                return
+            }
+            guard !self.sourceNode.isExtractedToContextPreview else {
                 return
             }
             let mappedRect = CGRect(origin: CGPoint(x: rect.minX + backgroundWallpaperNode.frame.minX, y: rect.minY + backgroundWallpaperNode.frame.minY), size: rect.size)
@@ -2711,8 +2714,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     
                     container?.isExtractedToContextPreviewUpdated(isExtractedToContextPreview)
 
-                    if !isExtractedToContextPreview, let (rect, size) = strongSelf.absoluteRect {
-                        container?.updateAbsoluteRect(relativeFrame.offsetBy(dx: rect.minX, dy: rect.minY), within: size)
+                    if !isExtractedToContextPreview, let (rect, size) = container?.absoluteRect {
+                        container?.updateAbsoluteRect(rect, within: size)
                     }
                     
                     for contentNode in strongSelf.contentNodes {
@@ -4009,11 +4012,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     
     override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteRect = (rect, containerSize)
-        if !self.mainContextSourceNode.isExtractedToContextPreview {
-            var rect = rect
-            rect.origin.y = containerSize.height - rect.maxY + self.insets.top
-            self.updateAbsoluteRectInternal(rect, within: containerSize)
+        guard !self.mainContextSourceNode.isExtractedToContextPreview else {
+            return
         }
+        var rect = rect
+        rect.origin.y = containerSize.height - rect.maxY + self.insets.top
+        self.updateAbsoluteRectInternal(rect, within: containerSize)
     }
     
     private func updateAbsoluteRectInternal(_ rect: CGRect, within containerSize: CGSize) {
@@ -4023,6 +4027,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         self.backgroundWallpaperNode.update(rect: backgroundWallpaperFrame, within: containerSize)
         for contentNode in self.contentNodes {
             contentNode.updateAbsoluteRect(CGRect(origin: CGPoint(x: rect.minX + contentNode.frame.minX, y: rect.minY + contentNode.frame.minY), size: rect.size), within: containerSize)
+        }
+        
+        for container in self.contentContainers {
+            var containerFrame = self.mainContainerNode.frame
+            containerFrame.origin.x += rect.minX
+            containerFrame.origin.y += rect.minY
+            container.updateAbsoluteRect(containerFrame, within: containerSize)
         }
         
         if let shareButtonNode = self.shareButtonNode {
