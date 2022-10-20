@@ -1,0 +1,224 @@
+"AppName" = "NiceGram";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "سياسة الخصوصية";
+"Nicegram.EULA" = "اتفاقية ترخيص المستخدم النهائي\n";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "بوتات";
+"ChatFilter.Channels" = "قنوات";
+"ChatFilter.Private" = "مستخدمين";
+"ChatFilter.Groups" = "مجموعات";
+"ChatFilter.Unread" = "غير مقروءة";
+"ChatFilter.Unmuted" = "غير مكتومة";
+"ChatFilter.Favourites" = "المفضلات";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "تبويبات";
+"NiceFeatures.Tabs.ShowContacts" = "إظهار تبويب جهات الاتصال";
+"NiceFeatures.ChatScreen.Header" = "شاشة الدردشة";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "الملصقات المتحركة";
+"NiceFeatures.useBackCam" = "استخدام الكاميرا الخلفية (فيديوهات مستديرة)";
+
+"NiceFeatures.Folders.Header" = "المجلدات";
+"NiceFeatures.Account.Header" = "إعدادات الحساب";
+"NiceFeatures.Folders.TgFolders" = "المجلدات في الأسفل";
+"NiceFeatures.Folders.TgFolders.Notice" = "قائمة مجلدات بأسلوب iOS";
+
+"NiceFeatures.RoundVideos.Header" = "فيديوهات مستديرة";
+"NiceFeatures.RoundVideos.UseRearCamera" = "البدء بالكاميرا الخلفية";
+
+"NiceFeatures.InstantLock" = "فوراً ";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "الحفظ في السحابة";
+
+/*Open Pin*/
+"Chat.OpenPin" = "عرض المثبت";
+"ChatFilter.Admin" = "مدير";
+"NiceFeatures.Notifications.Fix" = "تعطيل الأشعارات غير المرغوب فيها";
+"NiceFeatures.Notifications.FixNotice" = "مفيد إذا حصلت على إشعارات من دردشات صامتة.\nالرد من الإشعارات، تسميات الحساب، ومعاينات الوسائط لن تكون متاحة.";
+"NiceFeatures.Filters.Header" = "الفلاتر (التبويبات)";
+"NiceFeatures.Filters.Notice" = "حدد عدد التبويبات المخصصة.\nأنقر مطولًا على التبويب لتغيير الفلتر.";
+"NiceFeatures.Filters.ShowBadge" = "إظهار الشارات (الفلاتر)";
+"NiceFeatures.UseClassicInfoUi" = "استخدام واجهة معلومات الدردشة الكلاسيكية";
+
+/*Common*/
+"Common.ExitNow" = "خروج الآن";
+"Common.Later" = "لاحقاً";
+"Common.RestartRequired" = "يجب إعادة التشغيل!";
+"NiceFeatures.Tabs.ShowNames" = "إظهار أسماء التبويبات";
+"Chat.ForwardAsCopy" = "إعادة توجيه كنسخة";
+
+/*Folder*/
+"Folder.DefaultName" = "المجلد";
+"Folder.New" = "مجلد جديد";
+"Folder.Created" = "تم إنشاء المجلد";
+"Folder.AddToExisting" = "إضافة إلى مجلد جديد";
+"Folder.Updated" = "تم تحديث المجلد";
+"Folder.Create" = "إنشاء مجلد...";
+"Folder.Create.Name" = "إسم المجلد";
+"Folder.Create.Placeholder" = "المجلد...";
+"Folder.LimitExceeded" = "عفوًا، لا يمكنك إنشاء أكثر من 3 مجلدات مخصصة.\nالمزيد من المجلدات متوفرة في Premium.";
+"NiceFeatures.HideNumber" = "إخفاء الرقم من الإعدادات";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "غير متوفر في Nicegram ويرجع السبب لقواعد AppStore التوجيهية";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "رجاءً، استخدم «%1» لضبط المتصفح الافتراضي";
+"NiceFeatures.Browser.Header" = "عناوين المواقع";
+"NiceFeatures.Browser.UseBrowser" = "فتح الروابط في المتصفح";
+"NiceFeatures.Browser.UseBrowserNotice" = "سيفتح Nicegram الروابط في المتصفح الخارجي بدلًا من التطبيق. يجب تثبيت المتصفح المحدد.";
+"ChatFilter.Missed" = "فائتة";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "دردشات مثبتة غير محدودة";
+"Premium.SyncPins" = "مزامنة الدردشات المثبتة";
+"Premium.SyncPins.Notice.ON" = "إذا قمت بتغيير دردشات مثبتة في تطبيق آخر، فإنها ستتغير في Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "إذا قمت بتغير دردشات مثبتة في تطبيق آخر، فإنها لن تتغير في Nicegram.";
+"Premium.Missed.Header" = "الرسائل الفائتة";
+"Premium.Missed" = "أخبرني عند ورود رسائل جديدة";
+"Premium.Missed.Notice" = "عند فتح التطبيق بعد تأخير طويل (النوم والدراسة وما إلى ذلك)، سيقوم Nicegram بإعلامك بالرسائل والإشارات الخاصة الغير المقروءة.";
+"Folder.DeleteAsk" = "حذف المجلد";
+"Folder.NeedPremium" = "هذا المجلد متاح فقط مع Premium. يمكنك الحصول على Premium أو حذف المجلد عن طريق السحب.";
+"Common.SupportChatUsername" = "nicegramchat";
+"Common.FAQUrl" = "https://nicegram.app/faq/";
+"Common.FAQ.Button" = "الأسئلة الشاسعة حول Nicegram";
+"Common.FAQ.Intro" = "يرجى أن يكون في علمك بأن دعم Nicegram يتم بواسطة المطور والمجتمع فقط.\n\nأولًا، ألقى نظرة على الأسئلة الشاسعة بخصوص Nicegram يتضمن نصائح مهمة في استكشاف الأخطاء وإجابات على معظم الأسئلة.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "ميزات فريدة لا يمكنك رفضها!";
+"IAP.Premium.Features" = "مترجم الرسالة السريع\n\nتذكر المجلد المحدد عند الخروج";
+"IAP.Premium.Activated" = "تم تفعيل Premium!";
+"IAP.Common.Restore" = "استعادة عمليات الشراء";
+"IAP.Common.CantPay" = "عفوًا، ولكنك لا تستطيع القيام بعمليات الشراء بسبب قيود في جهازك أو حسابك.";
+"IAP.Common.ErrorFetch" = "عفوًا، لا يمكن جلب عمليات الشراء من App Store.";
+"IAP.Common.Congrats" = "مبروك!";
+"IAP.Common.ValidateError" = "عفوًا، لا يمكن التحقق من صحة عملة الشراء الخاص بك.";
+"IAP.Common.Connecting" = "يتم الأتصال بالمتجر...";
+"Premium.OnetapTranslate" = "زر الترجمة الفوري";
+"Premium.IgnoreTranslate.Title" = "اللغات المتجاهلة";
+"Premium.IgnoreTranslate.Header" = "زر ترجمة الفوري سوف يعطّل للغات المختارة ادناه.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "إدارة التبويبات";
+"ManageFilters.Header" = "ضبط الفلاتر المتاحة";
+
+"Messages.Translate" = "ترجمة";
+"Messages.UndoTranslate" = "التراجع عن الترجمة";
+"Messages.TranslateError" = "عفوًا، الترجمة غير متوفرة.";
+"Messages.SpeechToText" = "نص البيان2";
+"Messages.UndoSpeechToText" = "إلغاء نص البيان2";
+"Messages.SpeechToText.LowAccuracyError" = "فشل التعرّف على الحديث.\n\nيُمكن أن يحدث ذلك نتيجة لجودة التسجيل الصوتي الرديئة أو بسبب الاختلاف بين لغة التطبيق ولغة التسجيل الصوتي.";
+"Messages.SelectAllFromUser" = "حدد كافة الرسائل الواردة من هذا المستخدم";
+"Messages.ToLanguage" = "إلى اللغة";
+"Messages.ToLanguage.WithCode" = "إلى اللغة: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "تعذر علينا تحديد اللغة التي ترغب في ترجمة النص إليها. يرجى تحديد اللغة يدوياً وإعادة المحاولة.";
+"Messages.ReplyPrivately" = "رد برسالة خاصة";
+"Messages.DeleteAllSystemMessages" = "حذف الكل";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "الحصول على تاريخ التسجيل";
+"NGLab.RegDate.Title" = "تاريخ التسجيل";
+"NGLab.RegDate.Notice" = "هذا تاريخ تقريبي";
+"NGLab.RegDate.MenuItem" = "مسجّل";
+"NGLab.RegDate.FetchError" = "عذرًا، لا يمكن الحصول على تاريخ التسجيل.";
+"NGLab.BadDeviceToken" = "[iOS 11+] غير قادر على التحقق من الجهاز.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "مزامنة الإعدادت والمجلدات مع iCloud";
+"NiceFeatures.BackupSettings" = "إعدادت النسخ الاحتياطي والمجلدات";
+"NiceFeatures.BackupSettings.Notice" = "إنشاء ملف النسخ الاحتياطي. انقر على ملف الاستعادة.";
+"NiceFeatures.BackupSettings.Done" = "تم إرسال النسح الاحتياطي إلى الرسائل المحفوظة";
+"NiceFeatures.BackupSettings.Error" = "خطا في إنشاء نسخة الاحتياط";
+
+"NiceFeatures.RestoreSettings.Confirm" = "هل أنت متأكد من أنك تودّ استعادة المجلدات والإعدادت من الملف؟\n⚠️سيتم تجاهل البيانات الحالية";
+"NiceFeatures.RestoreSettings.Done" = "تمت استعادة المجلدات والإعدادات بنجاح";
+"NiceFeatures.RestoreSettings.Error" = "خطأ في استعادة الإعدادت. قد يكون الملف تالفًا";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "لا يمكنك إرسال رسائل في وضع المعاينة.";
+"Gmod.Unavailable" = "وضع المعاينة غير متوفر";
+"Gmod.Disable.Notice" = "سيتم تعيين ظهورك الأخير إلى «%1»";
+"Gmod" = "وضع المعاينة";
+"Gmod.Enable" = "تمكين وضع المعاينة؟";
+"Gmod.Disable" = "تعطيل وضع المعاينة؟";
+"Gmod.Notice" = "سيتم إخفاء حالة اتصالك بالأنترنت عن الجميع عن طريق إعدادت الخصوصية في تيليجرام.\nسيُظهر التطبيق تحذيرًا إذا كنت تدخل إلى محادثة خاصة.\nقد يتم الكشف عن اتصالك بالأنترنيت إذا قمت بإرسال أو كتابة أي رسالة.";
+
+"SendWithKb" = "إرسال مع زر «إدخال»";
+"NiceFeatures.ShowGmodIcon" = "إظهار أيقونة وضع المعاينة";
+"Gmod.OpenChatQ" = "فتح الدردشة؟";
+"Gmod.OpenChatNotice" = "سيتم وضع علامة \"مقروءة\"، ولكن يمكنك معاينة الدردشة بنقرة طويلة (اللمس بقوة)";
+"Gmod.OpenChatBtn" = "أجل، افتح الدردشة";
+"Gmod.DisableBtn" = "تعطيل التحذيرات";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "سيتم اخفاء رقمك من التطبيق فقط. لأخفاءهُ من المستخدمين الآخرين، يرجى استخدام إعدادات الخصوصية.";
+"NicegramSettings.Other.showProfileId" = "إظهار معرف الملف الشخصي ID";
+"NicegramSettings.Other.showRegDate" = "إظهار تاريخ التسجيل";
+"NicegramSettings.Unblock.Header" = "فتح";
+"NicegramSettings.Unblock.Button" = "دليل الفتح";
+"NicegramSettings.Other.hideReactions" = "إخفاء ردود الفعل";
+"NicegramSettings.RoundVideos.DownloadVideos" = "نزّل الفيديوهات إلى المعرض";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "تجاهل اللغات";
+"NicegramSettings.ShareChannelsInfoToggle" = "شارك معلومات القناة";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "ساهم في موسوعة ويكيبيديا الأكثر شمولاً لقنوات ومجموعات تيليجرام عن طريق إرسال معلومات القناة تلقائياً والارتباط بقاعدة البيانات الخاصة بنا. نحن لا نربط ملفك الشخصي وقناتك على تيليجرام ولا نشارك بياناتك الشخصية.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "التطبيق يحدد لغات كل رسالة في جهازك. ويتطلب اداء عالي من الجهاز و بالتالي إستهلاك البطارية.";
+"Premium.rememberFolderOnExit" = "تذكر المجلد الحالي عند الخروج";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "أقدم من";
+"NiceFeatures.RegDate.Approximately" = "تقريباً";
+"NiceFeatures.RegDate.NewerThan" = "أحدث من";
+
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "الردود السريعة";
+"NiceFeatures.QuickReplies.Description" = "يمكنك إضافة عدد غير محدود من الردود باستخدام الزر أدناه. لاستخدام الرد السريع، أدخل **الرمز \"&\"** في حقل إدخال الرسالة.";
+"NiceFeatures.QuickReplies.AddNew" = "أضف رداً جديداً";
+"NiceFeatures.QuickReplies.Placeholder" = "أدخل النص";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "للأسف، لا يمكنك الحصول على**ميزات تيليجرام المُميّز** أثناء تسجيلك الدخول في تطبيق Nicegram. يرجى الانتقال إلى تطبيق تيليجرام الرسمي والاشتراك في **تيليجرام المُميّز**. وعندما تعود إلى تطبيق Nicegram، ستجد جميع **ميزات تيليجرام المُميّز** متاحة للاستخدام.";
+"TelegramPremium.Title" = "استعادة اشتراك premium";
+"TelegramPremium.Failure.Title" = "خطأ";
+"TelegramPremium.Failure.Description" = "لقد حدث خطأ ما. يرجى استخدم Nicegram Bot لاستعادة اشتراك Premium Lifetime الخاص بك";
+"TelegramPremium.Failure.Pending" = "طلبك معلق. يرجى الانتظار حتى تتم الموافقة عليه من قبل Nicegram Bot";
+"TelegramPremium.Success.Title" = "تم بنجاح";
+"TelegramPremium.Success.Description" = "تمت استعادة اشتراك Premium Lifetime الخاص بك بنجاح!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Double bottom";
+"DoubleBottom.Description" = "لتمكين هذه الميزة، يجب أن يكون لديك أكثر من حساب وتشغيل قفل رمز المرور (انتقل إلى الإعدادات ← الخصوصية والأمان ← قفل رمز المرور)";
+"DoubleBottom.Enabled.Title" = "تم تفعيل Double Bottom";
+"DoubleBottom.Enabled.Description" = "يرجى تذكر رمز المرور الذي عينته للتو وأعد تشغيل التطبيق حتى يعمل Double Bottom بشكل جيد";
+"DoubleBottom.Enabled.OK" = "موافق";
+"DoubleBottom.Passcode.Error" = "يرجى تعيين رمز مرور مختلف عن الذي تستخدمه في رمز مرور القفل";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "تطبيق Nicegram\n**ميزات فائقة الجودة**";
+
+"NicePremium.Translator" = "برنامج مدمج للترجمة";
+"NicePremium.Translator.Desc" = "ترجم أي رسالة في التطبيق فوراً دون الحاجة إلى الانتقال إلى برامج ترجمة خارجية";
+
+"NicePremium.SpeechToText.Desc" = "حوّل أي رسالة صوتية إلى نص مكتوب في ثوانٍ ووفر الكثير من وقت فراغك";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "أبلغ جميع أعضاء المجموعة سريعاً وتأكد من أن جميعهم سيقرأ رسالتك";
+
+"NicePremium.Renews" = "الاشتراك يتجدد تلقائياً";
+"NicePremium.PricePerMonth" = "سعر الاشتراك الشهري %@";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "الاستمرار";
+"NicegramOnboarding.1.Title" = "العميل رقم 1 لتيليجرام ماسنجر";
+"NicegramOnboarding.1.Desc" = "انضم إلى أكثر من 2 مليون مستخدم لنايسجرام واحصل على إتاحة الوصول إلى أقوى عميل تيليجرام للأعمال التجارية.";
+"NicegramOnboarding.2.Title" = "تجربة مراسلة متقدمة";
+"NicegramOnboarding.2.Desc" = "قم بتسريع اتصالك بميزات فريدة مثل المترجم المُضمن، وتحويل الكلام إلى نصوص، وإعادة توجيه الرسائل دون تحديد المُتحدث، والحفظ السريع في التفضيلات.";
+"NicegramOnboarding.3.Title" = "ملف تعريف مستخدم مُمتد";
+"NicegramOnboarding.3.Desc" = "أنشئ أكبر عدد تريده من حسابات تيليجرام مجانًا تمامًا، بالإضافة إلى عرض ملف تعريف مستخدم متقدم مع المعرف، وتاريخ التسجيل، والروابط القابلة للنقر.";
+"NicegramOnboarding.4.Title" = "ملحقات الأعمال الفريدة";
+"NicegramOnboarding.4.Desc" = "استفد من الابتكارات من فريق نايسجرام واحصل على eSIM مع إمكانية الوصول إلى الإنترنت في 133 دولة. كما يُمكنك تسجيل حسابات تيليجرام الجديدة على رقم هاتف خطة بيانات eSIM.";
+"NicegramOnboarding.5.Title" = "برنامج المراسلة الأكثر أمانًا";
+"NicegramOnboarding.5.Desc" = "برنامج مراسلة قوي بتشفير قوي، ومكالمات صوتية ومرئية جماعية، وقنوات عامة، ومجموعات وبرمجيات بوت، وتخزين سحابي غير محدود للمحادثات، ومشاركة الوسائط والمستندات.";

@@ -1,0 +1,48 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+swift_library(
+    name = "MediaPickerUI",
+    module_name = "MediaPickerUI",
+    srcs = glob([
+		"Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramStringFormatting:TelegramStringFormatting",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/CheckNode:CheckNode",
+        "//submodules/MergeLists:MergeLists",
+        "//submodules/LegacyComponents:LegacyComponents",
+        "//submodules/LegacyUI:LegacyUI",
+        "//submodules/LegacyMediaPickerUI:LegacyMediaPickerUI",
+        "//submodules/AttachmentUI:AttachmentUI",
+        "//submodules/SegmentedControlNode:SegmentedControlNode",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/PhotoResources:PhotoResources",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/MosaicLayout:MosaicLayout",
+        "//submodules/AnimatedStickerNode:AnimatedStickerNode",
+        "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/WallpaperBackgroundNode:WallpaperBackgroundNode",
+        "//submodules/WebSearchUI:WebSearchUI",
+        "//submodules/ChatMessageBackground:ChatMessageBackground",
+        "//submodules/SparseItemGrid:SparseItemGrid",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/MoreButtonNode:MoreButtonNode",
+    ],
+    visibility = [
+        "//visibility:public",
+    ],
+)

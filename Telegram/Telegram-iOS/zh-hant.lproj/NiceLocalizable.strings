@@ -1,0 +1,224 @@
+"AppName" = "Nicegram";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "隱私政策";
+"Nicegram.EULA" = "EULA";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "機器人";
+"ChatFilter.Channels" = "頻道";
+"ChatFilter.Private" = "用戶";
+"ChatFilter.Groups" = "群組";
+"ChatFilter.Unread" = "未讀訊息";
+"ChatFilter.Unmuted" = "開啟通知";
+"ChatFilter.Favourites" = "常用";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "標籤";
+"NiceFeatures.Tabs.ShowContacts" = "顯示聯絡人標籤";
+"NiceFeatures.ChatScreen.Header" = "對話介面";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "動態貼圖";
+"NiceFeatures.useBackCam" = "使用後置鏡頭 (圓形影片)";
+
+"NiceFeatures.Folders.Header" = "資料夾";
+"NiceFeatures.Account.Header" = "帳戶設定";
+"NiceFeatures.Folders.TgFolders" = "底部資料夾";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS 風格資料夾列表";
+
+"NiceFeatures.RoundVideos.Header" = "圓形影片";
+"NiceFeatures.RoundVideos.UseRearCamera" = "開啟後置鏡頭";
+
+"NiceFeatures.InstantLock" = "立即";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "轉傳到儲存的訊息";
+
+/*Open Pin*/
+"Chat.OpenPin" = "顯示置頂";
+"ChatFilter.Admin" = "管理員";
+"NiceFeatures.Notifications.Fix" = "停用非必要通知";
+"NiceFeatures.Notifications.FixNotice" = "如果您想將「已關閉通知」的對話完全禁音，這將非常有用。\n來自回覆、@username、媒體預覽的通知將被停用。";
+"NiceFeatures.Filters.Header" = "篩選標籤";
+"NiceFeatures.Filters.Notice" = "選擇篩選標籤的數量。\n長按標籤來更改篩選器。";
+"NiceFeatures.Filters.ShowBadge" = "顯示標記 (小紅點)";
+"NiceFeatures.UseClassicInfoUi" = "使用經典版介面";
+
+/*Common*/
+"Common.ExitNow" = "立即結束";
+"Common.Later" = "稍後";
+"Common.RestartRequired" = "必須重新啟動";
+"NiceFeatures.Tabs.ShowNames" = "顯示篩選標籤名稱";
+"Chat.ForwardAsCopy" = "複製後轉傳";
+
+/*Folder*/
+"Folder.DefaultName" = "資料夾";
+"Folder.New" = "新資料夾";
+"Folder.Created" = "已建立資料夾";
+"Folder.AddToExisting" = "新增至現有資料夾";
+"Folder.Updated" = "資料夾已更新";
+"Folder.Create" = "建立資料夾…";
+"Folder.Create.Name" = "資料夾名稱";
+"Folder.Create.Placeholder" = "資料夾…";
+"Folder.LimitExceeded" = "抱歉，您最多只能建立 3 個自訂資料夾。\n進階版將可建立更多資料夾。";
+"NiceFeatures.HideNumber" = "在設定中隱藏電話號碼";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "由於 App Store 審核指南，在 Nicegram 中不可用";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "請使用 «%1» 設定預設瀏覽器";
+"NiceFeatures.Browser.Header" = "連結";
+"NiceFeatures.Browser.UseBrowser" = "在瀏覽器中開啟連結";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram 將在外部瀏覽器開啟連結而不是在 App 內開啟，必須安裝所選擇的瀏覽器。";
+"ChatFilter.Missed" = "錯過的訊息";
+
+/*Premium*/
+"Premium.Title" = "進階版功能";
+"Premium.UnlimitedPins.Header" = "無限置頂";
+"Premium.SyncPins" = "同步置頂對話";
+"Premium.SyncPins.Notice.ON" = "如果您在其他客戶端中變更置頂對話，它們在 Nicegram 中將會同步。";
+"Premium.SyncPins.Notice.OFF" = "不如果您在其他客戶端中變更置頂對話，它們在 Nicegram 中將不會同步。";
+"Premium.Missed.Header" = "錯過的訊息";
+"Premium.Missed" = "錯過的訊息通知";
+"Premium.Missed.Notice" = "長時間未上線後開啟 App 時，Nicegram 會通知您未讀的對話及 TAG";
+"Folder.DeleteAsk" = "刪除資料夾";
+"Folder.NeedPremium" = "這個資料夾是進階版功能。您可以透過刷卡來升級，或是刪除一些對話夾。";
+"Common.SupportChatUsername" = "nicegram_tw";
+"Common.FAQUrl" = "https://nicegram-tw.gitbook.io/";
+"Common.FAQ.Button" = "Nicegram 常見問題";
+"Common.FAQ.Intro" = "注意：Nicegram 支援僅由開發人員和志願者提供。\n\n請先看一下 Nicegram 常見問題：它有故障排除指示和其他大多數問題的解答。";
+"IAP.Premium.Title" = "進階版功能";
+"IAP.Premium.Subtitle" = "您無法抗拒的獨特功能！";
+"IAP.Premium.Features" = "訊息快速翻譯";
+"IAP.Premium.Activated" = "已升級進階版！";
+"IAP.Common.Restore" = "恢復購買";
+"IAP.Common.CantPay" = "抱歉，由於您的設備或帳戶限制，您無法購買。";
+"IAP.Common.ErrorFetch" = "抱歉，無法取得 App Store 購買的商品。";
+"IAP.Common.Congrats" = "恭喜！";
+"IAP.Common.ValidateError" = "很抱歉，無法驗證您的購買。";
+"IAP.Common.Connecting" = "正在連接到 AppStore...";
+"Premium.OnetapTranslate" = "快速翻譯按鈕";
+"Premium.IgnoreTranslate.Title" = "忽略的語言";
+"Premium.IgnoreTranslate.Header" = "對於以下選擇的語言，「快速翻譯」按鈕將被停用。";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "管理標籤";
+"ManageFilters.Header" = "設定過濾器";
+
+"Messages.Translate" = "翻譯";
+"Messages.UndoTranslate" = "取消翻譯";
+"Messages.TranslateError" = "抱歉，無法翻譯。";
+"Messages.SpeechToText" = "語音轉文字";
+"Messages.UndoSpeechToText" = "取消語音轉文字";
+"Messages.SpeechToText.LowAccuracyError" = "語音辨識失敗。\n\n這可能是由於錄音品質不好，或應用程式和錄音語言之間的差異。";
+"Messages.SelectAllFromUser" = "選擇來自這位使用者的所有訊息";
+"Messages.ToLanguage" = "翻譯為";
+"Messages.ToLanguage.WithCode" = "翻譯為：%@";
+"Messages.TranslateError.ToLanguageNotFound" = "我們無法確定您希望將文字翻譯成何種語言。請手動選擇語言並再試一次。";
+"Messages.ReplyPrivately" = "私下回覆";
+"Messages.DeleteAllSystemMessages" = "全部刪除";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "取得註冊日期";
+"NGLab.RegDate.Title" = "註冊日期";
+"NGLab.RegDate.Notice" = "這是一個大概的日期";
+"NGLab.RegDate.MenuItem" = "已註冊";
+"NGLab.RegDate.FetchError" = "抱歉，無法取得註冊日期。";
+"NGLab.BadDeviceToken" = "抱歉，無法驗證裝置！";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "從 iCloud 同步設定與資料夾";
+"NiceFeatures.BackupSettings" = "備份設定與資料夾";
+"NiceFeatures.BackupSettings.Notice" = "建立備份檔，點擊檔案開始還原。";
+"NiceFeatures.BackupSettings.Done" = "備份已儲存";
+"NiceFeatures.BackupSettings.Error" = "建立備份檔時發生錯誤";
+
+"NiceFeatures.RestoreSettings.Confirm" = "您確定要從備份檔還原「文件夾和設定」？\n⚠️它將覆蓋當前數據";
+"NiceFeatures.RestoreSettings.Done" = "已成功還原「文件夾與設定」";
+"NiceFeatures.RestoreSettings.Error" = "恢復設定錯誤，備份檔可能已損壞";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "您無法在預覽模式下傳送訊息";
+"Gmod.Unavailable" = "預覽模式無法使用";
+"Gmod.Disable.Notice" = "您的「線上狀態」設定將變更為 «%1»";
+"Gmod" = "預覽模式";
+"Gmod.Enable" = "啟用預覽模式？";
+"Gmod.Disable" = "停用預覽模式？";
+"Gmod.Notice" = "您的線上狀態會被 Telegram 隱私設定隱藏。\n如果您進入私人對話，App 會顯示警告。\n如果您傳送或輸入任何訊息，你的線上狀態將可能會被顯示。";
+
+"SendWithKb" = "點擊 «Enter» 傳送";
+"NiceFeatures.ShowGmodIcon" = "顯示預覽模式圖示";
+"Gmod.OpenChatQ" = "開啟對話？";
+"Gmod.OpenChatNotice" = "對話將被標記為「已讀」，但您可以長按來預覽聊天。";
+"Gmod.OpenChatBtn" = "是的，打開對話";
+"Gmod.DisableBtn" = "停用警告";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "您的電話號碼只會在介面中隱藏。要完全隱藏起來，請使用「隱私設定」。";
+"NicegramSettings.Other.showProfileId" = "顯示用戶ID";
+"NicegramSettings.Other.showRegDate" = "顯示用戶註冊日期";
+"NicegramSettings.Unblock.Header" = "解除封鎖";
+"NicegramSettings.Unblock.Button" = "解除封鎖說明";
+"NicegramSettings.Other.hideReactions" = "隱藏心情回應";
+"NicegramSettings.RoundVideos.DownloadVideos" = "將影片下載至圖片庫";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "忽略語言";
+"NicegramSettings.ShareChannelsInfoToggle" = "分享頻道資訊";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "將頻道資訊與連結自動提交給我們的資料庫，來為最全面的 Telegram 頻道與群組維基百科做出貢獻。我們不會連接您的 Telegram 個人檔案與頻道，也不會分享您的個人資料。";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "App 會檢測您設備上每則訊息的語言。這是一項高耗電的功能，會影響您的電池壽命。";
+"Premium.rememberFolderOnExit" = "記下應用程式關閉時所在的資料夾";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "較舊於";
+"NiceFeatures.RegDate.Approximately" = "大約";
+"NiceFeatures.RegDate.NewerThan" = "較新於";
+
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "快速回覆";
+"NiceFeatures.QuickReplies.Description" = "您可以使用下面的按鈕新增無限數量的回覆。如要使用快速回覆，請在訊息輸入欄中輸入**符號「&」**。";
+"NiceFeatures.QuickReplies.AddNew" = "新增";
+"NiceFeatures.QuickReplies.Placeholder" = "輸入文字";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "很遺憾地，當你登入 Nicegram 應用程式時，你沒有辦法取得**Telegram Premium Features**。\n請到官方的 Telegram 應用程式並訂閱** Telegram Premium**。當你再度回到 Nicegram 時，你將可以使用所有的**Premium Festures**。";
+"TelegramPremium.Title" = "恢復 Premium";
+"TelegramPremium.Failure.Title" = "失敗";
+"TelegramPremium.Failure.Description" = "出現問題。請使用 Nicegram Bot 以恢復您的終生 Premium 訂閱";
+"TelegramPremium.Failure.Pending" = "您的要求正待處理。 請等待直到 Nicegram Bot 核准之";
+"TelegramPremium.Success.Title" = "成功 ";
+"TelegramPremium.Success.Description" = "您的終生 Premium 已成功恢復了！";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Double Bottom";
+"DoubleBottom.Description" = "要啟用此功能，您必須擁有一個以上的帳號並啟用密碼鎖 (前往設定→隱私與安全→密碼鎖)";
+"DoubleBottom.Enabled.Title" = "Double Bottom 已啟用";
+"DoubleBottom.Enabled.Description" = "為了使 Double Bottom正常運作，請記住您剛才設定的密碼並重新開啟應用程式 ";
+"DoubleBottom.Enabled.OK" = "好";
+"DoubleBottom.Passcode.Error" = "請設定另一個與你的密碼鎖不同的密碼。";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**進階功能**";
+
+"NicePremium.Translator" = "內置翻譯器";
+"NicePremium.Translator.Desc" = "立即翻譯應用程式中的任何消息，而無需切換到第3方翻譯器";
+
+"NicePremium.SpeechToText.Desc" = "在幾秒鐘內轉錄任何語音消息，並節省大量時間";
+
+"NicePremium.MentionAll" = "@提及所有人";
+"NicePremium.MentionAll.Desc" = "立刻通知所有小組成員，並確保每個人都會閱讀您的訊息";
+
+"NicePremium.Renews" = "自動續訂";
+"NicePremium.PricePerMonth" = "訂閱費用每月 %@";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "繼續";
+"NicegramOnboarding.1.Title" = "第一名的 Telegram 即時通訊用戶端";
+"NicegramOnboarding.1.Desc" = "加入超過 200 萬名 Nicegram 用戶的行列，並獲得使用最強大與最安全的商用 Telegram 用戶端的機會。";
+"NicegramOnboarding.2.Title" = "進階的即時通訊體驗";
+"NicegramOnboarding.2.Desc" = "使用獨特功能如內建翻譯器、語音轉文本、不需指定作者即可轉傳訊息以及快速儲存到我的最愛等來提升您的溝通速度。";
+"NicegramOnboarding.3.Title" = "擴充的使用者檔案";
+"NicegramOnboarding.3.Desc" = "創建 Telegram 帳戶，要多少設多少且完全免費，並瀏覽具有 ID、註冊日期以及可點擊連結之進階用戶資料。";
+"NicegramOnboarding.4.Title" = "獨特的商用擴充元件";
+"NicegramOnboarding.4.Desc" = "利用 Nicegram 團隊的創新技術並取得可在 133 個國家上網的 eSIM。您還可以用 eSIM 數據方案的電話號碼註冊新的 Telegram 帳戶。";
+"NicegramOnboarding.5.Title" = "最安全的即時通訊程式";
+"NicegramOnboarding.5.Desc" = "具有高強度加密、群組語音及視訊通話、公用頻道、群組和機器人、可用於聊天、媒體和文件共享的無限雲端儲存之安全即時通訊程式。";

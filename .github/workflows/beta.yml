@@ -1,0 +1,63 @@
+name: Beta Release
+
+on:
+  push:
+    branches: [ beta ]
+
+jobs:
+  build:
+    runs-on: macos-12
+
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          submodules: 'recursive'
+          fetch-depth: '0'
+
+      - name: Set active Xcode path
+        run: |
+          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
+          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+
+      - name: Create canonical source directory
+        run: |
+          set -x
+          sudo mkdir /Users/telegram
+          sudo chown -R $(whoami) /Users/telegram
+          cp -R $GITHUB_WORKSPACE /Users/telegram/
+          mv /Users/telegram/$(basename $GITHUB_WORKSPACE) /Users/telegram/telegram-ios
+
+      - uses: webfactory/ssh-agent@v0.5.4
+        with:
+           ssh-private-key: ${{ secrets.SSH_KEY }}
+
+      - name: New testflight build
+        run: |
+          ssh-keyscan bitbucket.org >> ~/.ssh/known_hosts
+
+          set -x
+
+          mkdir -p $BUILD_WORKING_DIR
+          cd $SOURCE_PATH/ci
+          fastlane beta_build
+    env:
+      APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
+      APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}
+      APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT: ${{ secrets.APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT }}
+      BAZEL_REMOTE_CACHE: ${{ secrets.BAZEL_REMOTE_CACHE }}
+      BAZEL_USER_ROOT: /private/var/tmp/_bazel_telegram
+      BUILD_WORKING_DIR: /Users/telegram/build-working-dir
+      BUNDLE_ID: app.nicegram
+      DISABLE_PARALLEL_SWIFTMODULE_GENERATION: 1
+      KEYCHAIN_NAME: ${{ secrets.KEYCHAIN_NAME }}
+      KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+      MATCH_PASSWORD: ${{ secrets.SIGN_REPO_DECRYPT_PASSWORD }}
+      SIGN_URL: ${{ secrets.SIGN_REPO_URL }}
+      SOURCE_PATH: /Users/telegram/telegram-ios
+      TEAM_ID: ${{ secrets.TEAM_ID }}
+      TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+      TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+      TELEGRAM_CODESIGNING_GIT_PASSWORD: ${{ secrets.SIGN_REPO_DECRYPT_PASSWORD }}
+      TELEGRAM_CODESIGNING_PRIVATE_KEY: ${{ secrets.SSH_KEY }}
+      TELEGRAM_CONFIGURATION_TEST: ${{ secrets.TELEGRAM_CONFIGURATION_TEST }}
+      TELEGRAM_CONFIGURATION_PROD: ${{ secrets.TELEGRAM_CONFIGURATION_PROD }}

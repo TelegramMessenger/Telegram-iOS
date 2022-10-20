@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<installer-gui-script minSpecVersion="1">
+	<title>@CMAKE_PROJECT_NAME@</title>
+	<welcome file="Welcome.rtf" />
+	<readme file="ReadMe.txt" />
+	<license file="License.rtf" />
+	<domains
+		enable_anywhere="false"
+		enable_currentUserHome="false"
+		enable_localSystem="true"
+	/>
+	<options customize="never" />
+	<choices-outline>
+		<line choice="default">
+			<line choice="@PKGID@"/>
+		</line>
+	</choices-outline>
+	<choice id="default"/>
+	<choice id="@PKGID@" visible="false">
+		<pkg-ref id="@PKGID@"/>
+	</choice>
+	<pkg-ref auth="root"
+		id="@PKGID@">@PKGNAME@.pkg</pkg-ref>
+</installer-gui-script>

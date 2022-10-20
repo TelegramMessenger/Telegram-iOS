@@ -1,0 +1,224 @@
+"AppName" = "Nicegram";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Gizlilik politikası";
+"Nicegram.EULA" = "EULA";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Botlar";
+"ChatFilter.Channels" = "Kanallar";
+"ChatFilter.Private" = "Kullanıcılar";
+"ChatFilter.Groups" = "Gruplar";
+"ChatFilter.Unread" = "Okunmamış";
+"ChatFilter.Unmuted" = "Sessize Alınmış";
+"ChatFilter.Favourites" = "Favoriler";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Nicegram";
+"NiceFeatures.Tabs.Header" = "SEKMELER";
+"NiceFeatures.Tabs.ShowContacts" = "Kişiler Sekmesini Göster";
+"NiceFeatures.ChatScreen.Header" = "SOHBET EKRANI";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Animasyonlu Çıkartmalar";
+"NiceFeatures.useBackCam" = "Arka kamerayı kullan (Yuvarlak Videolar)";
+
+"NiceFeatures.Folders.Header" = "KLASÖRLER";
+"NiceFeatures.Account.Header" = "HESAP AYARLARI";
+"NiceFeatures.Folders.TgFolders" = "Alttaki Klasörler";
+"NiceFeatures.Folders.TgFolders.Notice" = "iOS tarzı klasör listesi";
+
+"NiceFeatures.RoundVideos.Header" = "YUVARLAK VİDEOLAR";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Arka kamerayla başlat";
+
+"NiceFeatures.InstantLock" = "Hemen";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Buluta Kaydet";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Sabiti Göster";
+"ChatFilter.Admin" = "Yönetici";
+"NiceFeatures.Notifications.Fix" = "İstenmeyen Bildirimleri Devre Dışı Bırak";
+"NiceFeatures.Notifications.FixNotice" = "Sessiz sohbetlerden bildirimler alıyorsanız kullanışlıdır.\nBildirimlerden yanıtlama, hesap etiketleri ve medya önizlemeleri kullanılamaz olacak.";
+"NiceFeatures.Filters.Header" = "FİLTRELER (SEKMELER)";
+"NiceFeatures.Filters.Notice" = "Özel sekmelerin sayısını seçin.\nFiltreyi değiştirmek için sekmeye uzun basın.";
+"NiceFeatures.Filters.ShowBadge" = "Rozetleri Göster (Filtreler)";
+"NiceFeatures.UseClassicInfoUi" = "Klasik Sohbet Bilgisi Arayüzünü Kullan";
+
+/*Common*/
+"Common.ExitNow" = "Şimdi Çık";
+"Common.Later" = "Sonra";
+"Common.RestartRequired" = "Yeniden Başlatma Gerekli!";
+"NiceFeatures.Tabs.ShowNames" = "Sekme İsimlerini Göster";
+"Chat.ForwardAsCopy" = "Kopya Olarak İlet";
+
+/*Folder*/
+"Folder.DefaultName" = "Klasör";
+"Folder.New" = "Yeni Klasör";
+"Folder.Created" = "Klasör oluşturuldu";
+"Folder.AddToExisting" = "Var Olan Klasöre Ekle";
+"Folder.Updated" = "Klasör güncellendi";
+"Folder.Create" = "Klasör Oluştur...";
+"Folder.Create.Name" = "Klasör İsmi";
+"Folder.Create.Placeholder" = "Klasör...";
+"Folder.LimitExceeded" = "Üzgünüz, 3’ten fazla özel klasör oluşturamazsınız.\nDaha fazla klasör Premium’da kullanılabilir.";
+"NiceFeatures.HideNumber" = "Ayarlarda numarayı gizle";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "AppStore Kuralları yüzünden Nicegram’da kullanılamıyor";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Lütfen, varsayılan tarayıcıyı ayarlamak için «%1» kısmını kullanın";
+"NiceFeatures.Browser.Header" = "Bağlantılar";
+"NiceFeatures.Browser.UseBrowser" = "Bağlantıları tarayıcıda aç";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram, bağlantıları uygulama içi yerine harici tarayıcıda açacak. Seçilen tarayıcı yüklü olmalı.";
+"ChatFilter.Missed" = "Kaçırılan";
+
+/*Premium*/
+"Premium.Title" = "Premium";
+"Premium.UnlimitedPins.Header" = "SINIRSIZ SABİTLENMİŞ SOHBET";
+"Premium.SyncPins" = "Senkronize Sabitlenmiş Sohbetler";
+"Premium.SyncPins.Notice.ON" = "Eğer diğer sistemlerinizde sabit sohbetlerinizi değiştirirseniz, Nicegram’da da DEĞİŞECEKTİR.";
+"Premium.SyncPins.Notice.OFF" = "Eğer diğer sistemlerinizde sabit sohbetlerinizi değiştirirseniz, Nicegram’da DEĞİŞMEYECEKTİR.";
+"Premium.Missed.Header" = "Kaçırılan mesajlar";
+"Premium.Missed" = "Kaçırılan mesajlarda bildirim";
+"Premium.Missed.Notice" = "Uzun bir süreden sonra (uyku, çalışma vb.) uygulamayı açtığınızda, Nicegram size okunmamış özel mesajlar ve bahsedilmeler hakkında bildirim gönderecek.";
+"Folder.DeleteAsk" = "Klasörü Sil";
+"Folder.NeedPremium" = "Bu klasör sadece Premium ile kullanılabilir. Premium’u alabilir ya da kaydırarak klasörü silebilirsiniz.";
+"Common.SupportChatUsername" = "nicegram_tr";
+"Common.FAQUrl" = "https://nicegram.app/tr/faq/";
+"Common.FAQ.Button" = "Nicegram SSS";
+"Common.FAQ.Intro" = "Lütfen Nicegram Destek’in sadece geliştirici ve topluluktan ibaret olduğunu unutmayın.\n\nİlk olarak, Nicegram SSS’e göz atın: önemli çözüm ipuçları ve birçok soruya cevaplar var.";
+"IAP.Premium.Title" = "Premium";
+"IAP.Premium.Subtitle" = "Reddedemeyeceğiniz benzersiz özellikler!";
+"IAP.Premium.Features" = "Hızlı Mesaj Çevirmeni\n\nÇıkışta seçili klasörü hatırla";
+"IAP.Premium.Activated" = "Premium Aktive Edildi!";
+"IAP.Common.Restore" = "Satın Alımları Geri Yükle";
+"IAP.Common.CantPay" = "Üzgünüz, ama cihaz veya hesap kısıtlamalarınız yüzünden satın alım yapamazsınız.";
+"IAP.Common.ErrorFetch" = "Üzgünüz, App Store satın alımları çekilemiyor.";
+"IAP.Common.Congrats" = "Tebrikler!";
+"IAP.Common.ValidateError" = "Üzgünüz, satın alımınız doğrulanamıyor.";
+"IAP.Common.Connecting" = "AppStore'a bağlanılıyor...";
+"Premium.OnetapTranslate" = "Hızlı Çeviri butonu";
+"Premium.IgnoreTranslate.Title" = "İstenmeyen Diller";
+"Premium.IgnoreTranslate.Header" = "Hızlı Çeviri butonu, aşağıda seçtiğiniz diller için DEVRE DIŞI bırakılacaktır.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Sekmeleri Yönet";
+"ManageFilters.Header" = "KULLANILAN FİLTRELERİ ÖZELLEŞTİR";
+
+"Messages.Translate" = "Çevir";
+"Messages.UndoTranslate" = "Çeviriyi Geri Al";
+"Messages.TranslateError" = "Üzgünüz, çeviri kullanılamıyor.";
+"Messages.SpeechToText" = "Konuşmadan Metne";
+"Messages.UndoSpeechToText" = "Konuşmadan Metne Özelliğini Geri Al";
+"Messages.SpeechToText.LowAccuracyError" = "Konuşma tanıma başarısız oldu.\n\nBu, ses kaydının kalitesizliğinden ya da uygulamanın dili ile ses kaydının dili arasındaki farklılıklardan kaynaklanabilir.";
+"Messages.SelectAllFromUser" = "Bu Kullanıcıdan Olan Bütün Mesajları Seç";
+"Messages.ToLanguage" = "Hedef Dil";
+"Messages.ToLanguage.WithCode" = "Hedef Dil: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Metni çevirmek istediğiniz dili tespit edemedik. Lütfen manuel olarak seçin ve tekrar deneyin.\n";
+"Messages.ReplyPrivately" = "Özelden Cevapla";
+"Messages.DeleteAllSystemMessages" = "Tümünü Sil";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Kayıt Tarihini Göster";
+"NGLab.RegDate.Title" = "Kayıt Tarihi";
+"NGLab.RegDate.Notice" = "Bu yaklaşık bir tarihtir";
+"NGLab.RegDate.MenuItem" = "kayıtlı";
+"NGLab.RegDate.FetchError" = "Üzgünüz, kayıt tarihi gösterilemiyor.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Cihaz doğrulanamıyor.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Ayarları & Klasörleri iCloud ile Senkronize Et";
+"NiceFeatures.BackupSettings" = "Ayarları & Klasörleri Yedekle";
+"NiceFeatures.BackupSettings.Notice" = "Yedekleme dosyası oluşturur. Geri yüklemek için dosyaya dokunun.";
+"NiceFeatures.BackupSettings.Done" = "Yedekleme, Kayıtlı Mesajlar’a gönderildi";
+"NiceFeatures.BackupSettings.Error" = "Yedekleme oluşturulurken hata";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Klasör & Ayarları dosyadan geri yüklemek istediğinize emin misiniz?\n⚠️ Şu ankinin üzerine yazılacak";
+"NiceFeatures.RestoreSettings.Done" = "Klasör & Ayarlar başarılı bir şekilde geri yüklendi";
+"NiceFeatures.RestoreSettings.Error" = "Ayarlar geri yüklenirken hata. Dosya bozulmuş olabilir";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "Önizleme Modu’nda mesaj gönderemezsiniz.";
+"Gmod.Unavailable" = "Önizleme Modu Kullanılamaz";
+"Gmod.Disable.Notice" = "Son görülme görünürlüğünüz, «%1» olarak ayarlanacak";
+"Gmod" = "Önizleme Modu";
+"Gmod.Enable" = "Önizleme Modu etkinleştirilsin mi?";
+"Gmod.Disable" = "Önizleme Modu devre dışı bırakılsın mı?";
+"Gmod.Notice" = "Çevrimiçi durumunuz, Telegram gizlilik ayarlarına göre herkesten gizlenecek.\nUygulama, siz özel bir sohbete girerken bir uyarı gösterecek.\nHERHANGİ BİR mesaj yazar veya gönderirseniz, çevrimiçi durumunuz görünebilir.";
+
+"SendWithKb" = "«Enter» butonu ile gönder";
+"NiceFeatures.ShowGmodIcon" = "Önizleme Modu simgesini göster";
+"Gmod.OpenChatQ" = "Sohbet açılsın mı?";
+"Gmod.OpenChatNotice" = "Sohbet “okundu” olarak işaretlenecek, ama uzun dokunma ile sohbeti önizleyebilirsiniz (force-touch)";
+"Gmod.OpenChatBtn" = "Evet, sohbeti aç";
+"Gmod.DisableBtn" = "Uyarıları devre dışı bırak";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Numaranız sadece arayüzde gizlenecek. Diğerlerinden gizlemek için, lütfen Gizlilik ayarlarını kullanın.";
+"NicegramSettings.Other.showProfileId" = "Profil ID'sini Göster";
+"NicegramSettings.Other.showRegDate" = "Kayıt Tarihini Göster";
+"NicegramSettings.Unblock.Header" = "Engeli Kaldır";
+"NicegramSettings.Unblock.Button" = "Rehberin Engelini Kaldır";
+"NicegramSettings.Other.hideReactions" = "Tepkileri Gizle";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Videoları galeriye indir";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Dilleri görmezden gel";
+"NicegramSettings.ShareChannelsInfoToggle" = "Kanal bilgilerini paylaş";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Kanal bilgilerini ve bağlantısını veri tabanımıza göndererek en kapsamlı Telegram kanalı wikipedia'sına katkıda bulunun. Telegram profilinizi ve kanalınızı bağlamayız ve kişisel verilerinizi paylaşmayız.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "Uygulama, cihazınızdaki her mesajın dilini algılar. Bu, pil ömrünüzü etkileyebilecek yüksek öncelikli bir görevdir.";
+"Premium.rememberFolderOnExit" = "Çıkışta şu anki klasörü hatırla";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Şundan daha eski:";
+"NiceFeatures.RegDate.Approximately" = "Yaklaşık olarak";
+"NiceFeatures.RegDate.NewerThan" = "Şundan daha yeni:";
+
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Hızlı Yanıtlar";
+"NiceFeatures.QuickReplies.Description" = "Aşağıdaki butonu kullanarak istediğiniz sayıda yanıt ekleyebilirsiniz. Hızlı yanıtı kullanmak için ** \"&\" sembolünü** mesaj giriş alanına girin.";
+"NiceFeatures.QuickReplies.AddNew" = "Yeni Ekle";
+"NiceFeatures.QuickReplies.Placeholder" = "Metin Gir";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "Ne yazık ki, Nicegram uygulamasında oturum açarken **Telegram Premium Özellikleri**'ni alamazsınız. Lütfen resmi Telegram uygulamasına gidin ve **Telegram Premium**'a abone olun. Nicegram'a geri döndüğünüzde, tüm **Premium Özellikler** kullanıma hazır olacaktır.";
+"TelegramPremium.Title" = "Premium'u geri yükleyin";
+"TelegramPremium.Failure.Title" = "Hata";
+"TelegramPremium.Failure.Description" = "Bir şeyler yanlış gitti. Premium Ömür Boyu Üyeliği geri yüklemek için lütfen Nicegram Bot'u kullanın";
+"TelegramPremium.Failure.Pending" = "Talebiniz beklemededir. Nicegram Bot onu onaylayana kadar lütfen bekleyin";
+"TelegramPremium.Success.Title" = "Başarılı";
+"TelegramPremium.Success.Description" = "Premium Ömür Boyu Üyeliğiniz başarılı bir şekilde geri yüklendi!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Çift Dip";
+"DoubleBottom.Description" = "Bu özelliği etkinleştirmek için birden fazla hesabınızın olması ve Parola Kilidini açmanız gerekir (Ayarlar → Gizlilik & Güvenlik  → Parola Kilidi)";
+"DoubleBottom.Enabled.Title" = "Çift Dip etkinleştirildi";
+"DoubleBottom.Enabled.Description" = "Lütfen az önce belirlediğiniz şifreyi hatırlayın ve Çift Dibin iyi çalışması için uygulamayı yeniden başlatın.";
+"DoubleBottom.Enabled.OK" = "TAMAM";
+"DoubleBottom.Passcode.Error" = "Lütfen Parola Kilidi için mevcut kullandığınızdan farklı bir parola belirleyin";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Premium Özellikler**";
+
+"NicePremium.Translator" = "Yerleşik Çevirmen";
+"NicePremium.Translator.Desc" = "Üçüncü kişi çevirmenlere geçmeden tüm mesajları anında uygulamada çevirin";
+
+"NicePremium.SpeechToText.Desc" = "Saniyeler içinde tüm sesli mesajların dökümünü oluşturun ve boş zamanınızdan tasarruf edin";
+
+"NicePremium.MentionAll" = "@TümündenBahset";
+"NicePremium.MentionAll.Desc" = "Tüm grup üyelerini hızla haberdar edin ve herkesin mesajınızı okuyacağından emin olun";
+
+"NicePremium.Renews" = "Abonelik Otomatik Olarak Yenilenir";
+"NicePremium.PricePerMonth" = "Aylık %@ karşılığında abone ol";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Devam et";
+"NicegramOnboarding.1.Title" = "Telegram Messenger için 1 Numaralı İstemci";
+"NicegramOnboarding.1.Desc" = "2 Milyondan fazla Nicegram kullanıcısına katılın ve iş için en güçlü ve güvenli Telegram istemcisine erişin. ";
+"NicegramOnboarding.2.Title" = "Gelişmiş Mesajlaşma Tecrübesi";
+"NicegramOnboarding.2.Desc" = "Dahili Çevirmen, Konuşmayı Metne Çevirme, Konuşmayı yazar belirtmeden iletme ve Sık kullanılanlara hızlı kaydetme gibi özgün özellikleri ile iletişiminizi hızlandırın. ";
+"NicegramOnboarding.3.Title" = "Genişletilmiş Kullanıcı Profili";
+"NicegramOnboarding.3.Desc" = "Tamamen ücretsiz bir şekilde istediğiniz kadar Telegram hesabı oluşturun ve bununla birlikte kimlik, kayıt tarihi ve tıklanabilir bağlantılar ile gelişmiş bir kullanıcı profili görüntüleyin.";
+"NicegramOnboarding.4.Title" = "Özgün İşletme Uzantıları";
+"NicegramOnboarding.4.Desc" = "Nicegram takımının yeniliklerinden faydalanın ve 133 ülkede internet erişimi olan bir eSIM'e sahip olun.  Aynı zamanda eSIM veri planının telefon numarasına yeni Telegram hesapları da kaydedebilirsiniz.  ";
+"NicegramOnboarding.5.Title" = "En Güvenli Mesenger";
+"NicegramOnboarding.5.Desc" = "Güçlü Şifreleme, Grup Sesli ve Görüntülü Aramalar, Genel kanallar, Gruplar ve Botlar, Sohbetler Belgeler ve Dökümanlar için Limitsiz Bulut depolaması ile Güvenli Messenger.";

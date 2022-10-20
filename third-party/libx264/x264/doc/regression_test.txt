@@ -1,0 +1,24 @@
+Here is one test method which checks that the encoder's
+view of decoded pictures in the same as the decoder's view.
+This ensures that there is no distortion besides what is
+inherently caused by compression.
+
+# Install and compile x264 :
+git clone git://git.videolan.org/x264.git x264
+cd x264
+./configure
+make
+cd ..
+
+# Install and compile JM reference decoder :
+wget http://iphome.hhi.de/suehring/tml/download/jm17.2.zip
+unzip jm17.2.zip
+cd JM
+sh unixprep.sh
+cd ldecod
+make
+cd ../..
+
+./x264/x264 input.yuv --dump-yuv fdec.yuv -o output.h264
+./JM/bin/ldecod.exe -i output.h264 -o ref.yuv
+diff ref.yuv fdec.yuv

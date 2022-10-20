@@ -1,0 +1,284 @@
+#!/bin/sh
+
+set -u
+set -e
+trap onexit INT
+trap onexit TERM
+trap onexit EXIT
+
+TMPDIR=
+
+onexit()
+{
+	if [ ! "$TMPDIR" = "" ]; then
+		rm -rf $TMPDIR
+	fi
+}
+
+safedirmove ()
+{
+	if [ "$1" = "$2" ]; then
+		return 0
+	fi
+	if [ "$1" = "" -o ! -d "$1" ]; then
+		echo safedirmove: source dir $1 is not valid
+		return 1
+	fi
+	if [ "$2" = "" -o -e "$2" ]; then
+		echo safedirmove: dest dir $2 is not valid
+		return 1
+	fi
+	if [ "$3" = "" -o -e "$3" ]; then
+		echo safedirmove: tmp dir $3 is not valid
+		return 1
+	fi
+	mkdir -p $3
+	mv $1/* $3/
+	rmdir $1
+	mkdir -p $2
+	mv $3/* $2/
+	rmdir $3
+	return 0
+}
+
+usage()
+{
+	echo "$0 [universal] [-lipo [path to lipo]]"
+	exit 1
+}
+
+UNIVERSAL=0
+
+PKGNAME=@PKGNAME@
+VERSION=@VERSION@
+BUILD=@BUILD@
+SRCDIR=@CMAKE_CURRENT_SOURCE_DIR@
+BUILDDIR32=@OSX_32BIT_BUILD@
+BUILDDIRARMV7=@IOS_ARMV7_BUILD@
+BUILDDIRARMV7S=@IOS_ARMV7S_BUILD@
+BUILDDIRARMV8=@IOS_ARMV8_BUILD@
+WITH_JAVA=@WITH_JAVA@
+OSX_APP_CERT_NAME="@OSX_APP_CERT_NAME@"
+OSX_INST_CERT_NAME="@OSX_INST_CERT_NAME@"
+LIPO=lipo
+
+PREFIX=@CMAKE_INSTALL_PREFIX@
+BINDIR=@CMAKE_INSTALL_FULL_BINDIR@
+DOCDIR=@CMAKE_INSTALL_FULL_DOCDIR@
+LIBDIR=@CMAKE_INSTALL_FULL_LIBDIR@
+
+LIBJPEG_DSO_NAME=libjpeg.@SO_MAJOR_VERSION@.@SO_AGE@.@SO_MINOR_VERSION@.dylib
+TURBOJPEG_DSO_NAME=libturbojpeg.@TURBOJPEG_SO_VERSION@.dylib
+
+while [ $# -gt 0 ]; do
+	case $1 in
+	-h*)
+		usage 0
+		;;
+	-lipo)
+		if [ $# -gt 1 ]; then
+			if [[ ! "$2" =~ -.* ]]; then
+				LIPO=$2;  shift
+			fi
+		fi
+		;;
+	universal)
+		UNIVERSAL=1
+		;;
+	esac
+	shift
+done
+
+if [ -f $PKGNAME-$VERSION.dmg ]; then
+	rm -f $PKGNAME-$VERSION.dmg
+fi
+
+umask 022
+TMPDIR=`mktemp -d /tmp/$PKGNAME-build.XXXXXX`
+PKGROOT=$TMPDIR/pkg/Package_Root
+mkdir -p $PKGROOT
+
+make install DESTDIR=$PKGROOT
+
+if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$DOCDIR" = "@CMAKE_INSTALL_DEFAULT_PREFIX@/doc" ]; then
+	mkdir -p $PKGROOT/Library/Documentation
+	safedirmove $PKGROOT$DOCDIR $PKGROOT/Library/Documentation/$PKGNAME $TMPDIR/__tmpdoc
+	ln -fs /Library/Documentation/$PKGNAME $PKGROOT$DOCDIR
+fi
+
+if [ $UNIVERSAL = 1 -a "$BUILDDIR32" != "" ]; then
+	if [ ! -d $BUILDDIR32 ]; then
+		echo ERROR: 32-bit build directory $BUILDDIR32 does not exist
+		exit 1
+	fi
+	if [ ! -f $BUILDDIR32/Makefile ]; then
+		echo ERROR: 32-bit build directory $BUILDDIR32 is not configured
+		exit 1
+	fi
+	mkdir -p $TMPDIR/dist.x86
+	pushd $BUILDDIR32
+	make install DESTDIR=$TMPDIR/dist.x86
+	popd
+		$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$LIBDIR/$LIBJPEG_DSO_NAME \
+		-arch x86_64 $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME \
+		-output $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
+		$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$LIBDIR/libjpeg.a \
+		-arch x86_64 $PKGROOT/$LIBDIR/libjpeg.a \
+		-output $PKGROOT/$LIBDIR/libjpeg.a
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$LIBDIR/$TURBOJPEG_DSO_NAME \
+		-arch x86_64 $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME \
+		-output $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$LIBDIR/libturbojpeg.a \
+		-arch x86_64 $PKGROOT/$LIBDIR/libturbojpeg.a \
+		-output $PKGROOT/$LIBDIR/libturbojpeg.a
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/cjpeg \
+		-arch x86_64 $PKGROOT/$BINDIR/cjpeg \
+		-output $PKGROOT/$BINDIR/cjpeg
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/djpeg \
+		-arch x86_64 $PKGROOT/$BINDIR/djpeg \
+		-output $PKGROOT/$BINDIR/djpeg
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/jpegtran \
+		-arch x86_64 $PKGROOT/$BINDIR/jpegtran \
+		-output $PKGROOT/$BINDIR/jpegtran
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/tjbench \
+		-arch x86_64 $PKGROOT/$BINDIR/tjbench \
+		-output $PKGROOT/$BINDIR/tjbench
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/rdjpgcom \
+		-arch x86_64 $PKGROOT/$BINDIR/rdjpgcom \
+		-output $PKGROOT/$BINDIR/rdjpgcom
+	$LIPO -create \
+		-arch i386 $TMPDIR/dist.x86/$BINDIR/wrjpgcom \
+		-arch x86_64 $PKGROOT/$BINDIR/wrjpgcom \
+		-output $PKGROOT/$BINDIR/wrjpgcom
+fi
+
+install_ios()
+{
+	BUILDDIR=$1
+	ARCHNAME=$2
+	DIRNAME=$3
+	LIPOARCH=$4
+
+	if [ ! -d $BUILDDIR ]; then
+		echo ERROR: $ARCHNAME build directory $BUILDDIR does not exist
+		exit 1
+	fi
+	if [ ! -f $BUILDDIR/Makefile ]; then
+		echo ERROR: $ARCHNAME build directory $BUILDDIR is not configured
+		exit 1
+	fi
+	mkdir -p $TMPDIR/dist.$DIRNAME
+	pushd $BUILDDIR
+	make install DESTDIR=$TMPDIR/dist.$DIRNAME
+	popd
+		$LIPO -create \
+		$PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/$LIBJPEG_DSO_NAME \
+		-output $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
+		$LIPO -create \
+		$PKGROOT/$LIBDIR/libjpeg.a \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/libjpeg.a \
+		-output $PKGROOT/$LIBDIR/libjpeg.a
+	$LIPO -create \
+		$PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/$TURBOJPEG_DSO_NAME \
+		-output $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME
+	$LIPO -create \
+		$PKGROOT/$LIBDIR/libturbojpeg.a \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$LIBDIR/libturbojpeg.a \
+		-output $PKGROOT/$LIBDIR/libturbojpeg.a
+	$LIPO -create \
+		$PKGROOT/$BINDIR/cjpeg \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/cjpeg \
+		-output $PKGROOT/$BINDIR/cjpeg
+	$LIPO -create \
+		$PKGROOT/$BINDIR/djpeg \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/djpeg \
+		-output $PKGROOT/$BINDIR/djpeg
+	$LIPO -create \
+		$PKGROOT/$BINDIR/jpegtran \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/jpegtran \
+		-output $PKGROOT/$BINDIR/jpegtran
+	$LIPO -create \
+		$PKGROOT/$BINDIR/tjbench \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/tjbench \
+		-output $PKGROOT/$BINDIR/tjbench
+	$LIPO -create \
+		$PKGROOT/$BINDIR/rdjpgcom \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/rdjpgcom \
+		-output $PKGROOT/$BINDIR/rdjpgcom
+	$LIPO -create \
+		$PKGROOT/$BINDIR/wrjpgcom \
+		-arch $LIPOARCH $TMPDIR/dist.$DIRNAME/$BINDIR/wrjpgcom \
+		-output $PKGROOT/$BINDIR/wrjpgcom
+}
+
+if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV7" != "" ]; then
+	install_ios $BUILDDIRARMV7 ARMv7 armv7 arm
+	fi
+
+if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV7S" != "" ]; then
+	install_ios $BUILDDIRARMV7S ARMv7s armv7s arm
+fi
+
+if [ $UNIVERSAL = 1 -a "$BUILDDIRARMV8" != "" ]; then
+	install_ios $BUILDDIRARMV8 ARMv8 armv8 arm64
+	fi
+
+install_name_tool -id $LIBDIR/$LIBJPEG_DSO_NAME $PKGROOT/$LIBDIR/$LIBJPEG_DSO_NAME
+install_name_tool -id $LIBDIR/$TURBOJPEG_DSO_NAME $PKGROOT/$LIBDIR/$TURBOJPEG_DSO_NAME
+
+if [ $WITH_JAVA = 1 ]; then
+	ln -fs $TURBOJPEG_DSO_NAME $PKGROOT/$LIBDIR/libturbojpeg.jnilib
+fi
+if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$LIBDIR" = "@CMAKE_INSTALL_DEFAULT_PREFIX@/lib" ]; then
+	if [ ! -h $PKGROOT/$PREFIX/lib32 ]; then
+		ln -fs lib $PKGROOT/$PREFIX/lib32
+	fi
+	if [ ! -h $PKGROOT/$PREFIX/lib64 ]; then
+		ln -fs lib $PKGROOT/$PREFIX/lib64
+	fi
+fi
+
+mkdir -p $TMPDIR/pkg
+
+install -m 755 pkgscripts/uninstall $PKGROOT/$BINDIR/
+
+find $PKGROOT -type f | while read file; do xattr -c $file; done
+
+cp $SRCDIR/release/License.rtf $SRCDIR/release/Welcome.rtf $SRCDIR/release/ReadMe.txt $TMPDIR/pkg/
+
+mkdir $TMPDIR/dmg
+pkgbuild --root $PKGROOT --version $VERSION.$BUILD --identifier @PKGID@ \
+	$TMPDIR/pkg/$PKGNAME.pkg
+SUFFIX=
+if [ "$OSX_INST_CERT_NAME" != "" ]; then
+	SUFFIX=-unsigned
+fi
+productbuild --distribution pkgscripts/Distribution.xml \
+	--package-path $TMPDIR/pkg/ --resources $TMPDIR/pkg/ \
+	$TMPDIR/dmg/$PKGNAME$SUFFIX.pkg
+if [ "$OSX_INST_CERT_NAME" != "" ]; then
+	productsign --sign "$OSX_INST_CERT_NAME" --timestamp \
+		$TMPDIR/dmg/$PKGNAME$SUFFIX.pkg $TMPDIR/dmg/$PKGNAME.pkg
+	rm -r $TMPDIR/dmg/$PKGNAME$SUFFIX.pkg
+	pkgutil --check-signature $TMPDIR/dmg/$PKGNAME.pkg
+fi
+hdiutil create -fs HFS+ -volname $PKGNAME-$VERSION \
+	-srcfolder "$TMPDIR/dmg" $TMPDIR/$PKGNAME-$VERSION.dmg
+if [ "$OSX_APP_CERT_NAME" != "" ]; then
+	codesign -s "$OSX_APP_CERT_NAME" --timestamp $TMPDIR/$PKGNAME-$VERSION.dmg
+	codesign -vv $TMPDIR/$PKGNAME-$VERSION.dmg
+fi
+cp $TMPDIR/$PKGNAME-$VERSION.dmg .
+
+exit

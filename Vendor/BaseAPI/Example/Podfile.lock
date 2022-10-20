@@ -1,0 +1,16 @@
+PODS:
+  - BaseAPI (0.1.12)
+
+DEPENDENCIES:
+  - BaseAPI (from `../`)
+
+EXTERNAL SOURCES:
+  BaseAPI:
+    :path: "../"
+
+SPEC CHECKSUMS:
+  BaseAPI: 84c9b49d75b8be1e9d7facd66bd14082eee499e4
+
+PODFILE CHECKSUM: b43feb5cd2b068bff5560f910a4dbd0feec4a223
+
+COCOAPODS: 1.10.1

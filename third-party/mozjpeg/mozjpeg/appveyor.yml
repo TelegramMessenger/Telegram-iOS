@@ -1,0 +1,26 @@
+image: Visual Studio 2017
+configuration: Release
+
+install:
+  ## Download nasm
+  - mkdir nasm
+  - cd nasm
+  - appveyor DownloadFile https://www.nasm.us/pub/nasm/releasebuilds/2.14.02/win64/nasm-2.14.02-win64.zip -FileName nasm.zip
+  - 7z e -y nasm.zip
+  - set PATH=%PATH%;%CD%
+  ## Prepare cmake
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - mkdir cmake_build
+
+before_build:
+  - cmake --version
+  - cd cmake_build
+  - cmake .. -G "Visual Studio 15 2017" -DPNG_SUPPORTED=NO
+
+build_script:
+  - cd %APPVEYOR_BUILD_FOLDER%
+  - msbuild cmake_build\mozjpeg.sln
+
+artifacts:
+ - path: cmake_build\**\Release\**\*.exe
+ - path: cmake_build\**\Release\**\*.lib

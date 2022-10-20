@@ -1,0 +1,16 @@
+load("//Config:buck_rule_macros.bzl", "static_library")
+
+static_library(
+    name = "NGData",
+    srcs = glob([
+        "Sources/**/*.swift",
+    ]),
+    deps = [
+        "//Nicegram/NGRequests:NGRequests",
+        "//Nicegram/NGLogging:NGLogging",
+        "//Nicegram/NGEnv:NGEnv"
+    ],
+    frameworks = [
+        "$SDKROOT/System/Library/Frameworks/Foundation.framework",
+    ],
+)

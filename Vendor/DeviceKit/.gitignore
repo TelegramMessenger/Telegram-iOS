@@ -1,0 +1,47 @@
+# Created by https://www.gitignore.io/api/xcode
+
+### Xcode ###
+# Xcode
+#
+# gitignore contributors: remember to update Global/Xcode.gitignore, Objective-C.gitignore & Swift.gitignore
+
+## Build generated
+build/
+DerivedData
+*.profraw
+*.profdata
+
+## Various settings
+*.pbxuser
+!default.pbxuser
+*.mode1v3
+!default.mode1v3
+*.mode2v3
+!default.mode2v3
+*.perspectivev3
+!default.perspectivev3
+xcuserdata
+
+## Other
+*.xccheckout
+*.moved-aside
+*.xcuserstate
+*.DS_Store
+Utils/gyb.pyc
+
+.build
+/.previous-build
+xcuserdata
+.DS_Store
+*~
+\#*
+.\#*
+*.xcscmblueprint
+/default.profraw
+Utilities/Docker/*.tar.gz
+.swiftpm
+Package.resolved
+vendor
+
+## Generated Files
+# *.generated.swift # we have to check it in because of CocoaPods ...

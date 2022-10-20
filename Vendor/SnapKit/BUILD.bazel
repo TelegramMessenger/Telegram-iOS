@@ -1,0 +1,232 @@
+load('@build_bazel_rules_swift//swift:swift.bzl', 'swift_library')
+load(
+  "//Vendor/rules_pods/BazelExtensions:extensions.bzl",
+  "acknowledged_target",
+  "gen_module_map",
+  "gen_includes",
+  "headermap",
+  "umbrella_header"
+)
+# Add a config setting release for compilation mode
+# Assume that people are using `opt` for release mode
+# see the bazel user manual for more information
+# https://docs.bazel.build/versions/master/be/general.html#config_setting
+config_setting(
+  name = "release",
+  values = {
+    "compilation_mode": "opt"
+  }
+)
+config_setting(
+  name = "osxCase",
+  values = {
+    "apple_platform_type": "macos"
+  }
+)
+config_setting(
+  name = "tvosCase",
+  values = {
+    "apple_platform_type": "tvos"
+  }
+)
+config_setting(
+  name = "watchosCase",
+  values = {
+    "apple_platform_type": "watchos"
+  }
+)
+filegroup(
+  name = "SnapKit_package_hdrs",
+  srcs = [
+    "SnapKit_direct_hdrs"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+swift_library(
+  name = "SnapKit_swift",
+  module_name = "SnapKit",
+  srcs = glob(
+    [
+      "Source/*.swift"
+    ]
+  ),
+  deps = [
+    ":SnapKit_hmap",
+    ":SnapKit_module_map",
+    ":SnapKit_umbrella_header"
+  ],
+  data = [],
+  copts = select(
+    {
+      "//conditions:default": [
+        "-enable-testing",
+        "-DDEBUG",
+        "-Xcc",
+        "-DPOD_CONFIGURATION_DEBUG=1",
+        "-Xcc",
+        "-DDEBUG=1"
+      ],
+      ":release": [
+        "-Xcc",
+        "-DPOD_CONFIGURATION_RELEASE=1"
+      ]
+    }
+  ) + [
+    "-DCOCOAPODS",
+    "-Xcc",
+    "-DCOCOAPODS=1",
+    "-Xcc",
+    "-I$(execpath SnapKit_hmap)",
+    "-Xcc",
+    "-I.",
+    "-Xcc",
+    "-D__SWIFTC__",
+    "-Xfrontend",
+    "-no-clang-module-breadcrumbs",
+    "-Xcc",
+    "-fmodule-map-file=$(execpath SnapKit_module_map)",
+    "-import-underlying-module"
+  ],
+  swiftc_inputs = [
+    ":SnapKit_hmap",
+    ":SnapKit_module_map",
+    ":SnapKit_umbrella_header"
+  ],
+  generated_header_name = "SnapKit-Swift.h",
+  generates_header = True,
+  features = [
+    "swift.no_generated_module_map"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "SnapKit_direct_hdrs",
+  srcs = glob(
+    [
+      "pod_support/Headers/Public/**/*"
+    ]
+  ),
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "SnapKit_public_hdrs",
+  srcs = [],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+filegroup(
+  name = "SnapKit_hdrs",
+  srcs = glob(
+    [
+      "pod_support/Headers/Public/**/*"
+    ]
+  ),
+  visibility = [
+    "//visibility:public"
+  ]
+)
+headermap(
+  name = "SnapKit_hmap",
+  namespace = "SnapKit",
+  hdrs = [
+    "SnapKit_package_hdrs",
+    ":SnapKit_hdrs"
+  ],
+  deps = [],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+objc_library(
+  name = "SnapKit",
+  enable_modules = 1,
+  module_map = ":SnapKit_extended_module_map",
+  hdrs = [
+    ":SnapKit_hdrs",
+    ":SnapKit_hmap"
+  ],
+  pch = "pod_support/Headers/Private/SnapKit-prefix.pch",
+  deps = [
+    ":SnapKit_swift",
+    ":SnapKit_hmap",
+    ":SnapKit_extended_module_map"
+  ],
+  copts = [
+    "-I$(GENDIR)/Vendor/SnapKit/",
+    "-fobjc-weak",
+    "-Wno-everything",
+    "-Wnon-modular-include-in-framework-module",
+    "-g",
+    "-stdlib=libc++",
+    "-DCOCOAPODS=1",
+    "-DOBJC_OLD_DISPATCH_PROTOTYPES=0",
+    "-fdiagnostics-show-note-include-stack",
+    "-fno-common",
+    "-fembed-bitcode-marker",
+    "-fmessage-length=0",
+    "-fpascal-strings",
+    "-fstrict-aliasing",
+    "-Wno-error=nonportable-include-path"
+  ] + select(
+    {
+      "//conditions:default": [
+        "-DDEBUG=1",
+        "-DPOD_CONFIGURATION_DEBUG=1"
+      ],
+      ":release": [
+        "-DPOD_CONFIGURATION_RELEASE=1",
+        "-DNS_BLOCK_ASSERTIONS=1"
+      ]
+    }
+  ) + [
+    "-I$(GENDIR)/Vendor/SnapKit/SnapKit_hmap.hmap",
+    "-I."
+  ] + [
+    "-fmodule-name=SnapKit",
+    "-fmodules"
+  ],
+  visibility = [
+    "//visibility:public"
+  ]
+)
+acknowledged_target(
+  name = "SnapKit_acknowledgement",
+  deps = [],
+  value = "//Vendor/SnapKit/pod_support_buildable:acknowledgement_fragment"
+)
+gen_module_map(
+  name = "SnapKit_module_map",
+  module_name = "SnapKit",
+  hdrs = [
+    "SnapKit_public_hdrs"
+  ],
+  module_map_name = "SnapKit.modulemap",
+  umbrella_hdr = "SnapKit_umbrella_header",
+  visibility = [
+    "//visibility:public"
+  ]
+)
+umbrella_header(
+  name = "SnapKit_umbrella_header",
+  hdrs = [
+    "SnapKit_public_hdrs"
+  ]
+)
+gen_module_map(
+  name = "SnapKit_extended_module_map",
+  module_name = "SnapKit",
+  hdrs = [
+    "SnapKit_public_hdrs"
+  ],
+  swift_hdr = "../SnapKit-Swift.h",
+  visibility = [
+    "//visibility:public"
+  ]
+)

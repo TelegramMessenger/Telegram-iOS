@@ -1,0 +1,83 @@
+#!/bin/sh
+
+if [ "$1" == "--version" ]; then
+	echo "0.29.2"
+	exit 0
+elif [ "$1" == "--exists" ]; then
+	NAME="$2"
+	PRINT_ERRORS="0"
+	if [ "$NAME" == "--print-errors" ]; then
+		NAME="$3"
+		PRINT_ERRORS="1"
+	fi
+	if [ "$NAME" == "zlib" ]; then
+		exit 0
+	elif [ "$NAME" == "opus" ]; then
+		exit 0
+	elif [ "$NAME" == "vpx" ]; then
+		exit 0
+	else
+		if [ "PRINT_ERRORS" == "1" ]; then
+			echo "Package $NAME was not found in the pkg-config search path."
+			echo "Perhaps you should add the directory containing \`$NAME.pc'"
+			echo "to the PKG_CONFIG_PATH environment variable"
+		fi
+		exit 1
+	fi
+elif [ "$1" == "--cflags" ]; then
+	NAME="$2"
+	LIBOPUS_PATH=""
+	LIBVPX_PATH=""
+	if [ "$2" == "--libopus_path" ]; then
+		LIBOPUS_PATH="$3"
+		NAME="$6"
+	else
+		exit 1
+	fi
+	if [ "$4" == "--libvpx_path" ]; then
+		LIBVPX_PATH="$5"
+	else
+		exit 1
+	fi
+	if [ "$NAME" == "zlib" ]; then
+		echo ""
+		exit 0
+	elif [ "$NAME" == "opus" ]; then
+		echo "-I$LIBOPUS_PATH/include/opus"
+		exit 0
+	elif [ "$NAME" == "vpx" ]; then
+		echo "-I$LIBVPX_PATH/include"
+		exit 0
+	else
+		exit 1
+	fi
+elif [ "$1" == "--libs" ]; then
+	NAME="$2"
+	LIBOPUS_PATH=""
+	LIBVPX_PATH=""
+	if [ "$2" == "--libopus_path" ]; then
+		LIBOPUS_PATH="$3"
+		NAME="$6"
+	else
+		exit 1
+	fi
+	if [ "$4" == "--libvpx_path" ]; then
+		LIBVPX_PATH="$5"
+	else
+		exit 1
+	fi
+	if [ "$NAME" == "zlib" ]; then
+		echo "-lz"
+		exit 0
+	elif [ "$NAME" == "opus" ]; then
+		echo "-L$LIBOPUS_PATH/lib -lopus"
+		exit 0
+	elif [ "$NAME" == "vpx" ]; then
+		echo "-L$LIBVPX_PATH/lib -lVPX"
+		exit 0
+	else
+		exit 1
+	fi
+else
+	exit 1
+fi

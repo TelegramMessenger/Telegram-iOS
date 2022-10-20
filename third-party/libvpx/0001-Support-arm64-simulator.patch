@@ -1,0 +1,69 @@
+From 929479648182b3e5b3a84c46065f7520146902f6 Mon Sep 17 00:00:00 2001
+From: Ali <>
+Date: Thu, 21 Apr 2022 18:10:43 +0400
+Subject: [PATCH] Support arm simulator
+
+---
+ build/make/configure.sh | 18 ++++++++++++++----
+ configure               |  1 +
+ 2 files changed, 15 insertions(+), 4 deletions(-)
+
+diff --git a/build/make/configure.sh b/build/make/configure.sh
+index 581042e38..88dc80e92 100644
+--- a/build/make/configure.sh
++++ b/build/make/configure.sh
+@@ -1117,9 +1117,14 @@ EOF
+           soft_enable unit_tests
+           ;;
+ 
+-        darwin)
++        darwin|iphonesimulator)
+           if ! enabled external_build; then
+-            XCRUN_FIND="xcrun --sdk iphoneos --find"
++            sdk_platform_name="iphoneos"
++            if [ "${tgt_os}" == "iphonesimulator" ]; then
++              sdk_platform_name="iphonesimulator"
++            fi
++
++            XCRUN_FIND="xcrun --sdk $sdk_platform_name --find"
+             CXX="$(${XCRUN_FIND} clang++)"
+             CC="$(${XCRUN_FIND} clang)"
+             AR="$(${XCRUN_FIND} ar)"
+@@ -1138,7 +1143,12 @@ EOF
+             add_cflags -arch ${tgt_isa}
+             add_ldflags -arch ${tgt_isa}
+ 
+-            alt_libc="$(show_darwin_sdk_path iphoneos)"
++            if [ "${tgt_os}" == "iphonesimulator" ]; then
++              add_cflags --target=arm64-apple-ios7.0-simulator
++              add_ldflags --target=arm64-apple-ios7.0-simulator
++            fi
++
++            alt_libc="$(show_darwin_sdk_path $sdk_platform_name)"
+             if [ -d "${alt_libc}" ]; then
+               add_cflags -isysroot ${alt_libc}
+             fi
+@@ -1167,7 +1177,7 @@ EOF
+                 ;;
+             esac
+ 
+-            if [ "$(show_darwin_sdk_major_version iphoneos)" -gt 8 ]; then
++            if [ "$(show_darwin_sdk_major_version $sdk_platform_name)" -gt 8 ]; then
+               check_add_cflags -fembed-bitcode
+               check_add_asflags -fembed-bitcode
+               check_add_ldflags -fembed-bitcode
+diff --git a/configure b/configure
+index beea65032..f29c9f327 100755
+--- a/configure
++++ b/configure
+@@ -100,6 +100,7 @@ EOF
+ all_platforms="${all_platforms} arm64-android-gcc"
+ all_platforms="${all_platforms} arm64-darwin-gcc"
+ all_platforms="${all_platforms} arm64-darwin20-gcc"
++all_platforms="${all_platforms} arm64-iphonesimulator-gcc"
+ all_platforms="${all_platforms} arm64-darwin21-gcc"
+ all_platforms="${all_platforms} arm64-linux-gcc"
+ all_platforms="${all_platforms} arm64-win64-gcc"
+-- 
+2.32.0 (Apple Git-132)
+

@@ -1,0 +1,9 @@
+#ifndef Telegraph_WatchExtension_Prefix_pch
+#define Telegraph_WatchExtension_Prefix_pch
+
+#import <Watchkit/Watchkit.h>
+#import <Foundation/Foundation.h>
+#import <UIKit/UIKit.h>
+#import "TGWatchCommon.h"
+
+#endif

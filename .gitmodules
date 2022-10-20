@@ -1,0 +1,31 @@
+
+[submodule "submodules/rlottie/rlottie"]
+	path = submodules/rlottie/rlottie
+	url=https://github.com/TelegramMessenger/rlottie.git
+[submodule "build-system/bazel-rules/rules_apple"]
+	path = build-system/bazel-rules/rules_apple
+	url=https://github.com/ali-fareed/rules_apple.git
+[submodule "build-system/bazel-rules/rules_swift"]
+	path = build-system/bazel-rules/rules_swift
+url=https://github.com/bazelbuild/rules_swift.git
+[submodule "build-system/bazel-rules/apple_support"]
+	path = build-system/bazel-rules/apple_support
+	url = https://github.com/bazelbuild/apple_support.git
+[submodule "submodules/TgVoip/libtgvoip"]
+	path = submodules/TgVoip/libtgvoip
+	url = https://github.com/telegramdesktop/libtgvoip.git
+[submodule "build-system/tulsi"]
+	path = build-system/tulsi
+	url=https://github.com/bazelbuild/tulsi.git
+[submodule "submodules/TgVoipWebrtc/tgcalls"]
+	path = submodules/TgVoipWebrtc/tgcalls
+	url=https://github.com/TelegramMessenger/tgcalls.git
+[submodule "third-party/libvpx/libvpx"]
+	path = third-party/libvpx/libvpx
+	url = https://github.com/webmproject/libvpx.git
+[submodule "third-party/webrtc/webrtc"]
+	path = third-party/webrtc/webrtc
+	url = https://github.com/ali-fareed/webrtc.git
+[submodule "third-party/libx264/x264"]
+	path = third-party/libx264/x264
+	url = https://github.com/mirror/x264.git

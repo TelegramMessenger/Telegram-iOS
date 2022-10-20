@@ -1,0 +1,53 @@
+load("@build_bazel_rules_swift//swift:swift.bzl", "swift_library")
+
+NGDEPS = ["//Nicegram/NGData:NGData"]
+
+swift_library(
+    name = "GalleryUI",
+    module_name = "GalleryUI",
+    srcs = glob([
+		"Sources/**/*.swift",
+    ]),
+    copts = [
+        "-warnings-as-errors",
+    ],
+    deps = [
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
+        "//submodules/AsyncDisplayKit:AsyncDisplayKit",
+        "//submodules/Display:Display",
+        "//submodules/Postbox:Postbox",
+        "//submodules/TelegramCore:TelegramCore",
+        "//submodules/TelegramPresentationData:TelegramPresentationData",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramUniversalVideoContent:TelegramUniversalVideoContent",
+        "//submodules/WebsiteType:WebsiteType",
+        "//submodules/ScreenCaptureDetection:ScreenCaptureDetection",
+        "//submodules/OpenInExternalAppUI:OpenInExternalAppUI",
+        "//submodules/ShareController:ShareController",
+        "//submodules/SwipeToDismissGesture:SwipeToDismissGesture",
+        "//submodules/CheckNode:CheckNode",
+        "//submodules/AppBundle:AppBundle",
+        "//submodules/StickerPackPreviewUI:StickerPackPreviewUI",
+        "//submodules/OverlayStatusController:OverlayStatusController",
+        "//submodules/PresentationDataUtils:PresentationDataUtils",
+        "//submodules/UrlEscaping:UrlEscaping",
+        "//submodules/ManagedAnimationNode:ManagedAnimationNode",
+        "//submodules/ContextUI:ContextUI",
+        "//submodules/SaveToCameraRoll:SaveToCameraRoll",
+        "//submodules/TelegramUIPreferences:TelegramUIPreferences",
+        "//submodules/ImageContentAnalysis:ImageContentAnalysis",
+        "//submodules/TextSelectionNode:TextSelectionNode",
+        "//submodules/Speak:Speak",
+        "//submodules/UndoUI:UndoUI",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode",
+        "//submodules/TranslateUI:TranslateUI",
+        "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/TelegramUI/Components/TextNodeWithEntities:TextNodeWithEntities",
+        "//submodules/TelegramUI/Components/AnimationCache:AnimationCache",
+        "//submodules/TelegramUI/Components/MultiAnimationRenderer:MultiAnimationRenderer",
+    ] + NGDEPS,
+    visibility = [
+        "//visibility:public",
+    ],
+)

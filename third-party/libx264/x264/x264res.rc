@@ -1,0 +1,86 @@
+/*****************************************************************************
+ * x264res.rc: windows resource file
+ *****************************************************************************
+ * Copyright (C) 2012-2022 x264 project
+ *
+ * Authors: Henrik Gramner <henrik@gramner.com>
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; either version 2 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02111, USA.
+ *
+ * This program is also available under a commercial proprietary license.
+ * For more information, contact us at licensing@x264.com.
+ *****************************************************************************/
+
+#include <windows.h>
+#include <stdint.h>
+#include "x264.h"
+
+#ifndef X264_REV
+#define X264_REV 0
+#define X264_REV_DIFF 0
+#endif
+
+#define str(s) #s
+#define xstr(s) str(s)
+
+#ifndef DLL
+1 RT_MANIFEST "x264res.manifest"
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION     0, X264_BUILD, X264_REV, X264_REV_DIFF
+PRODUCTVERSION  0, X264_BUILD, X264_REV, X264_REV_DIFF
+FILEFLAGSMASK   VS_FFI_FILEFLAGSMASK
+#ifdef DEBUG
+FILEFLAGS       VS_FF_DEBUG
+#else
+FILEFLAGS       0
+#endif
+FILEOS          VOS_NT_WINDOWS32 /* Identical for x86-64 */
+#ifdef DLL
+FILETYPE        VFT_DLL
+#else
+FILETYPE        VFT_APP
+#endif
+FILESUBTYPE     VFT2_UNKNOWN
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904B0"
+        BEGIN
+            VALUE "CompanyName",      "x264 project"
+#ifdef DLL
+            VALUE "FileDescription",  "H.264 (MPEG-4 AVC) encoder library"
+#else
+            VALUE "FileDescription",  "H.264 (MPEG-4 AVC) encoder"
+#endif
+            VALUE "FileVersion",      X264_POINTVER
+            VALUE "InternalName",     "x264"
+            VALUE "LegalCopyright",   "Copyright (C) 2003-2022 x264 project"
+#ifdef DLL
+            VALUE "OriginalFilename", "libx264-" xstr(X264_BUILD) ".dll"
+#else
+            VALUE "OriginalFilename", "x264.exe"
+#endif
+            VALUE "ProductName",      "x264"
+            VALUE "ProductVersion",   X264_POINTVER
+        END
+    END
+
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x0409, 0x04B0 /* U.S. English (Unicode) */
+    END
+END

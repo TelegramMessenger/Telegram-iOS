@@ -1,0 +1,22 @@
+{
+  "images" : [
+    {
+      "idiom" : "universal",
+      "scale" : "1x"
+    },
+    {
+      "filename" : "submodules_TelegramUI_Images.xcassets_Call_CallMuteButton.imageset_CallMuteIcon@2x_Before_b542dc3fd7b381de80e554286a94ccd5b8d02154.png",
+      "idiom" : "universal",
+      "scale" : "2x"
+    },
+    {
+      "filename" : "submodules_TelegramUI_Images.xcassets_Call_CallMuteButton.imageset_CallMuteIcon@3x_Before_b542dc3fd7b381de80e554286a94ccd5b8d02154.png",
+      "idiom" : "universal",
+      "scale" : "3x"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

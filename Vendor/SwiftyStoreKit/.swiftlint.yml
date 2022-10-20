@@ -1,0 +1,12 @@
+# included:
+#     - Sources
+
+# rule identifiers to exclude from running
+disabled_rules:
+- line_length
+- identifier_name
+- trailing_whitespace
+
+# configurable rules can be customized from this configuration file
+line_length: 250
+

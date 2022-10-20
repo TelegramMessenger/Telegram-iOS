@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+
+"NSContactsUsageDescription" = "Telegram barcha qurilmalaringizdan doʻstlaringiz bilan bogʻlana olishingiz uchun muntazam ravishda kontaktlaringizni kuchli shifrlanadigan bulut serverlariga yuklaydi.";
+"NSLocationWhenInUseUsageDescription" = "Joylashuvingizni doʻstlaringizga yuborganingizda Telegram ularga xaritani koʻrsatishi uchun ruxsat kerak boʻladi.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "Chatda doʻstlarga Jonli joylashuvingizni ulashishni tanlaganingizda, Telegram joylashuvingizni jonli ulashish davomida yangilab turishi uchun undan fonda foydalanishi kerak.";
+"NSLocationAlwaysUsageDescription" = "Chatda doʻstlarga Jonli joylashuvingizni ulashishni tanlaganingizda, Telegram joylashuvingizni jonli ulashish davomida yangilab turishi uchun undan fonda foydalanishi kerak. Sizga bu Apple Watchdan joylashuvlarni yuborish uchun ham kerak.";
+"NSCameraUsageDescription" = "Bu bizga rasm va videolarga olish, shuningdek, video chaqiruvlar qilish va ularni ulashishingiz uchun kerak.";
+"NSPhotoLibraryUsageDescription" = "Bu bizga galereyangizdan rasm va videolaringizni ulasha olishingiz uchun kerak.";
+"NSPhotoLibraryAddUsageDescription" = "Bu bizga rasm va videolaringizni galereyangizga saqlay olishingiz uchun kerak.";
+"NSMicrophoneUsageDescription" = "Bu bizga ovozli xabarlarni tovush bilan yozishingiz va ulashingiz uchun kerak.";
+"NSSiriUsageDescription" = "Siz xabarlar yuborish uchun Siridan foydalanishingiz mumkin.";
+"NSFaceIDUsageDescription" = "Siz ilovani Face ID yordamida ochishingiz mumkin.";

@@ -1,0 +1,12 @@
+/* Localized versions of Info.plist keys */
+"CFBundleDisplayName" = "تيليجرام";
+"NSContactsUsageDescription" = "سيقوم تيليجرام برفع جهات الاتصال الخاصة بك باستمرار إلى خوادم التخزين السحابية ذات التشفير العالي لتتمكن من التواصل مع أصدقائك من خلال جميع أجهزتك.";
+"NSLocationWhenInUseUsageDescription" = "عندما ترغب في مشاركة مكانك مع أصدقائك، تيليجرام يحتاج لصلاحيات لعرض الخريطة لهم.";
+"NSLocationAlwaysAndWhenInUseUsageDescription" = "عندما تختار أن تشارك مكانك بشكل حي مع أصدقائك في المحادثة، يحتاج تيليجرام إلى الوصول لموقعك في الخلفية حتى بعد إغلاق تيليجرام خلال فترة المشاركة.";
+"NSLocationAlwaysUsageDescription" = "عندما تقوم بمشاركة موقعك مع أصدقائك، تيليجرام يحتاج إلى الصلاحية ليعرض لهم الخريطة. كما تحتاج لإعطاء تيليجرام الصلاحية لتتمكن من إرسال موقعك من ساعة آبل.";
+"NSCameraUsageDescription" = "نحتاج ذلك لتتمكن من التقاط وإرسال الصور والفيديوهات.";
+"NSPhotoLibraryUsageDescription" = "نحتاج ذلك لتتمكن من إرسال الصور والفيديوهات من ألبوم الصور.";
+"NSPhotoLibraryAddUsageDescription" = "نحتاج هذه الصلاحية لتتمكن من حفظ وسائطك في مكتبة الصور الخاصة بك.";
+"NSMicrophoneUsageDescription" = "نحتاج ذلك لتتمكن من تسجيل رسائل صوتية وفيديوهات بالصوت لترسلها..";
+"NSSiriUsageDescription" = "يمكنك استخدام سيري لإرسال رسائلك.";
+"NSFaceIDUsageDescription" = "يمكنك استخدام Face ID لفتح قفل التطبيق.";

@@ -1,0 +1,19 @@
+"AppName" = "Tên Ứng dụng";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Lọc Chat";
+"ChatFilter.Channels" = "Kênh";
+"ChatFilter.Private" = "Riêng tư";
+"ChatFilter.Groups" = "Nhóm";
+"ChatFilter.Unread" = "Chưa đọc";
+"ChatFilter.Unmuted" = "Bật tiếng";
+"ChatFilter.Favourites" = "Ưa thích";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Tên Ứng dụng";
+"NiceFeatures.Tabs.Header" = "B";
+"NiceFeatures.Tabs.ShowContacts" = "Hiện Liên hệ";
+"NiceFeatures.ChatScreen.Header" = "CHAT SCREEN";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Nhãn dán Đã lưu";
+
+"NiceFeatures.Folders.Header" = "Thư mục";

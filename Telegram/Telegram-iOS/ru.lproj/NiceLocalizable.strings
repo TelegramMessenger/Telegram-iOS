@@ -1,0 +1,224 @@
+"AppName" = "Найсграм";
+
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Политика конфиденциальности Nicegram";
+"Nicegram.EULA" = "Пользовательское соглашение Nicegram";
+
+/*ChatFilter*/
+"ChatFilter.Bots" = "Боты";
+"ChatFilter.Channels" = "Каналы";
+"ChatFilter.Private" = "Пользователи";
+"ChatFilter.Groups" = "Группы";
+"ChatFilter.Unread" = "Непрочитанные";
+"ChatFilter.Unmuted" = "Со звуком";
+"ChatFilter.Favourites" = "Важные";
+
+/*Nice Features*/
+"NiceFeatures.Title" = "Найсграм";
+"NiceFeatures.Tabs.Header" = "ВКЛАДКИ";
+"NiceFeatures.Tabs.ShowContacts" = "Вкладка «Контакты»";
+"NiceFeatures.ChatScreen.Header" = "ЧАТ";
+"NiceFeatures.ChatScreen.AnimatedStickers" = "Анимированные Стикеры";
+"NiceFeatures.useBackCam" = "Задняя камера (Видеосообщения)";
+
+"NiceFeatures.Folders.Header" = "ПАПКИ";
+"NiceFeatures.Account.Header" = "НАСТРОЙКИ АККАУНТА";
+"NiceFeatures.Folders.TgFolders" = "Папки снизу";
+"NiceFeatures.Folders.TgFolders.Notice" = "Список папок в стиле iOS";
+
+"NiceFeatures.RoundVideos.Header" = "ВИДЕОСООБЩЕНИЯ";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Запись сразу с задней камеры";
+
+"NiceFeatures.InstantLock" = "Немедленно";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Сохранить в Избранное";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Показать Пин";
+"ChatFilter.Admin" = "Админ";
+"NiceFeatures.Notifications.Fix" = "Отключить нежелательные уведомления";
+"NiceFeatures.Notifications.FixNotice" = "Нужно, если вы получаете уведомления, даже если они отключены в чате. Ответ из уведомления, метки аккаунтов и предпросмотр медиа будут недоступны.";
+"NiceFeatures.Filters.Header" = "ФИЛЬТРЫ (ВКЛАДКИ)";
+"NiceFeatures.Filters.Notice" = "Выберите количество пользовательских вкладок.\nДолгое нажатие по вкладке позволит сменить фильтр.";
+"NiceFeatures.Filters.ShowBadge" = "Показывать бейджи (Фильтры)";
+"NiceFeatures.UseClassicInfoUi" = "Классический интерфейс «о чате»";
+
+/*Common*/
+"Common.ExitNow" = "Выйти Сейчас";
+"Common.Later" = "Позже";
+"Common.RestartRequired" = "Необходим перезапуск!";
+"NiceFeatures.Tabs.ShowNames" = "Показывать Имена Вкладок";
+"Chat.ForwardAsCopy" = "Переслать без Автора";
+
+/*Folder*/
+"Folder.DefaultName" = "Папка";
+"Folder.New" = "Новая Папка";
+"Folder.Created" = "Папка создана";
+"Folder.AddToExisting" = "Добавить в Папку";
+"Folder.Updated" = "Папка обновлена";
+"Folder.Create" = "Создать Папку...";
+"Folder.Create.Name" = "Название Папки";
+"Folder.Create.Placeholder" = "Папка...";
+"Folder.LimitExceeded" = "К сожалению, создать можно не больше 3 папок. Совсем скоро можно будет создать больше.";
+"NiceFeatures.HideNumber" = "Скрыть номер в настройках";
+
+/*NGWeb*/
+"NGWeb.Blocked" = "Недоступно в Nicegram по правилам AppStore";
+
+/*Browser*/
+/*Please, Go to «Data & Storage» to configure default browser*/
+"NiceFeatures.Use.DataStorage" = "Пожалуйста, используйте «%1» для настройки браузера по умолчанию";
+"NiceFeatures.Browser.Header" = "ССЫЛКИ";
+"NiceFeatures.Browser.UseBrowser" = "Открывать во внешнем браузере";
+"NiceFeatures.Browser.UseBrowserNotice" = "Nicegram будет открывать ссылки во внешнем браузере вместо встроенного. Выбранный браузер должен быть установлен.";
+"ChatFilter.Missed" = "Новые";
+
+/*Premium*/
+"Premium.Title" = "Премиум";
+"Premium.UnlimitedPins.Header" = "НЕОГРАНИЧЕННЫЕ ЗАКРЕПЛЁННЫЕ ЧАТЫ";
+"Premium.SyncPins" = "Синхронизировать Чаты";
+"Premium.SyncPins.Notice.ON" = "Если вы измените закрепленные чаты в другом клиенте, они ИЗМЕНЯТСЯ в Nicegram.";
+"Premium.SyncPins.Notice.OFF" = "Если вы измените закрепленные чаты в другом клиенте, они НЕ ИЗМЕНЯТСЯ в Nicegram.";
+"Premium.Missed.Header" = "Новые сообщения";
+"Premium.Missed" = "Уведомлять о пропущенных";
+"Premium.Missed.Notice" = "Когда вы открываете приложение после долгого отсутствия (сон, работа и т.д.), Nicegram откроет вкладку с непрочитанными сообщениями и упоминаниями.";
+"Folder.DeleteAsk" = "Удалить папку";
+"Folder.NeedPremium" = "Эта Папка доступна только с Премиумом. Вы можете получить Премиум или удалить папку свайпом.";
+"Common.SupportChatUsername" = "nicegram_ru";
+"Common.FAQUrl" = "https://nicegram.app/ru/faq/";
+"Common.FAQ.Button" = "Вопросы о Nicegram";
+"Common.FAQ.Intro" = "Пожалуйста, обратите внимание, что поддержка Nicegram осуществляется одним единственным разработчиком и сообществом.\n\nВ первую очередь, ознакомьтесь с часто задаваемыми вопросами о Nicegram: там Вы найдёте ответы на большинство вопросов и важные советы по устранению неполадок.";
+"IAP.Premium.Title" = "Премиум";
+"IAP.Premium.Subtitle" = "Уникальные функции, от которых трудно отказаться!";
+"IAP.Premium.Features" = "Быстрая кнопка перевода\n\nЗапоминание папки при выходе";
+"IAP.Premium.Activated" = "Премиум Активирован!";
+"IAP.Common.Restore" = "Восстановить Покупки";
+"IAP.Common.CantPay" = "К сожалению, Вы не можете производить покупки ввиду ограничений вашего устройства или аккаунта.";
+"IAP.Common.ErrorFetch" = "Не удалось связаться с AppStore";
+"IAP.Common.Congrats" = "Поздравляем!";
+"IAP.Common.ValidateError" = "К сожалению, подтвердить покупку не удалось.";
+"IAP.Common.Connecting" = "Подключение к AppStore...";
+"Premium.OnetapTranslate" = "Кнопка быстрого перевода";
+"Premium.IgnoreTranslate.Title" = "Игнорируемые языки";
+"Premium.IgnoreTranslate.Header" = "Кнопка быстрого перевода будет ОТКЛЮЧЕНА для выбранных ниже языков.";
+
+/*Manage Filters*/
+"ManageFilters.Title" = "Управление вкладками";
+"ManageFilters.Header" = "РЕДАКТИРОВАНИЕ ДОСТУПНЫХ ФИЛЬТРОВ";
+
+"Messages.Translate" = "Перевод";
+"Messages.UndoTranslate" = "Отменить Перевод";
+"Messages.TranslateError" = "К сожалению, перевод недоступен.";
+"Messages.SpeechToText" = "Речь в текст";
+"Messages.UndoSpeechToText" = "Отменить «Речь в текст»";
+"Messages.SpeechToText.LowAccuracyError" = "Распознать речь не удалось.\n\nЭто может случаться из-за плохого качества аудио или различий между языком приложения и аудио.";
+"Messages.SelectAllFromUser" = "Выбрать все от этого пользователя";
+"Messages.ToLanguage" = "На язык";
+"Messages.ToLanguage.WithCode" = "На язык: %@";
+"Messages.TranslateError.ToLanguageNotFound" = "Нам не удалось определить язык, на который вы хотите перевести текст. Выберите его вручную и повторите попытку.";
+"Messages.ReplyPrivately" = "Ответить конфиденциально";
+"Messages.DeleteAllSystemMessages" = "Удалить все";
+
+/*NG Lab Registration Date*/
+"NGLab.RegDate.Btn" = "Узнать дату регистрации";
+"NGLab.RegDate.Title" = "Дата регистрации";
+"NGLab.RegDate.Notice" = "Это примерная дата";
+"NGLab.RegDate.MenuItem" = "регистрация";
+"NGLab.RegDate.FetchError" = "К сожалению, дата регистрации недоступна.";
+"NGLab.BadDeviceToken" = "[iOS 11+] Не удалось проверить устройство.";
+
+/*Backup Settings*/
+"NiceFeatures.BackupIcloud" = "Синхронизация Настроек и Папок в iCloud";
+"NiceFeatures.BackupSettings" = "Резервное копирование настроек и папок";
+"NiceFeatures.BackupSettings.Notice" = "Создает бэкап файл. Тапни на файл для восстановления.";
+"NiceFeatures.BackupSettings.Done" = "Резервное копирование выполнено в сохраненные сообщения";
+"NiceFeatures.BackupSettings.Error" = "Ошибка при создании бэкапа";
+
+"NiceFeatures.RestoreSettings.Confirm" = "Восстановить Папки и Настройки из файла?\n⚠️ Текущие данные будут перезаписаны";
+"NiceFeatures.RestoreSettings.Done" = "Папки и настройки успешно восстановлены";
+"NiceFeatures.RestoreSettings.Error" = "Ошибка при восстановлении настроек. Возможно, файл повреждён";
+
+/*Preview Mode*/
+"Gmod.Restricted" = "Вы не можете отправлять сообщения в режиме предпросмотра.";
+"Gmod.Unavailable" = "Режим предпросмотра недоступен";
+"Gmod.Disable.Notice" = "Настройка видимости онлайн статуса будет установлена в «%1»";
+"Gmod" = "Режим предпросмотра";
+"Gmod.Enable" = "Включить режим предпросмотра?";
+"Gmod.Disable" = "Отключить режим предпросмотра?";
+"Gmod.Notice" = "Ваш онлайн статус будет скрыт от всех в настройках конфиденциальности Telegram.\nПриложение предупредит, если вы захотите открыть личный чат.\nВаш онлайн статус может быть виден, если вы отправите или напечатаете ЛЮБОЕ сообщение.";
+
+"SendWithKb" = "Отправка кнопкой «Enter»";
+"NiceFeatures.ShowGmodIcon" = "Иконка режима предпросмотра";
+"Gmod.OpenChatQ" = "Открыть чат?";
+"Gmod.OpenChatNotice" = "Чат будет помечен как \"прочитанный\", но вы можете просмотреть чат, не помечая его, долгим нажатием";
+"Gmod.OpenChatBtn" = "Да, открыть чат";
+"Gmod.DisableBtn" = "Отключить предупреждения";
+
+"NicegramSettings.Other.hidePhoneInSettingsNotice" = "Ваш номер будет скрыт только в интерфейсе. Чтобы скрыть его от других, пожалуйста, используйте настройки конфиденциальности.";
+"NicegramSettings.Other.showProfileId" = "Показывать ID профилей";
+"NicegramSettings.Other.showRegDate" = "Показывать дату регистрации";
+"NicegramSettings.Unblock.Header" = "Разблокировать";
+"NicegramSettings.Unblock.Button" = "Руководство по разблокировке";
+"NicegramSettings.Other.hideReactions" = "Скрыть реакции";
+"NicegramSettings.RoundVideos.DownloadVideos" = "Скачивать видео в галерею";
+"Premium.OnetapTranslate.UseIgnoreLanguages" = "Игнорировать языки";
+"NicegramSettings.ShareChannelsInfoToggle" = "Поделиться информацией канала";
+"NicegramSettings.ShareChannelsInfoToggle.Note" = "Внесите свой вклад в самую полную Википедию каналов и групп Telegram, автоматически отправляя информацию о каналах и ссылки в нашу базу данных. Мы не связываем ваш телеграм-профиль и канал, а также никому не передаем ваши личные данные.";
+"Premium.OnetapTranslate.UseIgnoreLanguages.Note" = "Приложение определяет язык для каждого сообщения на Вашем устройстве. Поскольку это высокопроизводительная задача, время работы аккумулятора может уменьшиться.";
+"Premium.rememberFolderOnExit" = "Запомнить текущую папку при выходе";
+
+/*Registration Date*/
+"NiceFeatures.RegDate.OlderThan" = "Старше, чем";
+"NiceFeatures.RegDate.Approximately" = "Приблизительно";
+"NiceFeatures.RegDate.NewerThan" = "Новее, чем";
+
+/*Quick Replies*/
+"NiceFeatures.QuickReplies" = "Быстрые ответы";
+"NiceFeatures.QuickReplies.Description" = "Вы можете добавить неограниченное количество ответов, используя кнопку ниже. Чтобы воспользоваться быстрым ответом, введите **символ «&»** в поле ввода сообщения.";
+"NiceFeatures.QuickReplies.AddNew" = "Добавить новый";
+"NiceFeatures.QuickReplies.Placeholder" = "Введите текст";
+
+/*Telegram Premium*/
+"TelegramPremium.Description" = "К сожалению, вы не можете получить **функции Telegram Premium**, если вы вошли в приложение Nicegram. Перейдите в официальное приложение Telegram и подпишитесь на **Telegram Premium**. Когда вы вернетесь в Nicegram, все **функции Premium** будут доступны для использования. ";
+"TelegramPremium.Title" = "Восстановить премиум-подписку";
+"TelegramPremium.Failure.Title" = "Ошибка";
+"TelegramPremium.Failure.Description" = "Что-то пошло не так. Воспользуйтесь ботом Nicegram, чтобы восстановить пожизненную премиум-подписку";
+"TelegramPremium.Failure.Pending" = "Ваш запрос ожидает рассмотрения. Пожалуйста, подождите, пока бот Nicegram его одобрит";
+"TelegramPremium.Success.Title" = "Готово";
+"TelegramPremium.Success.Description" = "Ваша пожизненная премиум-подписка успешно восстановлена!";
+
+/*Double Bottom*/
+"DoubleBottom.Title" = "Двойное дно";
+"DoubleBottom.Description" = "Чтобы включить эту функцию, у вас должно быть более одного аккаунта и включена блокировка кодом (перейдите в «Настройки» → «Конфиденциальность и безопасность» → «Блокировка кодом»).";
+"DoubleBottom.Enabled.Title" = "Двойное дно включено";
+"DoubleBottom.Enabled.Description" = "Пожалуйста, запомните код доступа, который вы только что установили, и перезапустите приложение, чтобы «Двойное дно» работало правильно";
+"DoubleBottom.Enabled.OK" = "Ок";
+"DoubleBottom.Passcode.Error" = "Установите другой код доступа, отличающийся от того, который Вы используете для Блокировки кодом доступа.";
+
+/*Nicegram Premium*/
+"NicePremium.Title" = "Nicegram\n**Премиум-функции**";
+
+"NicePremium.Translator" = "Встроенный переводчик";
+"NicePremium.Translator.Desc" = "Мгновенно переводите любые сообщения прямо в приложении";
+
+"NicePremium.SpeechToText.Desc" = "Переводите любые голосовые сообщения в текст за считанные секунды";
+
+"NicePremium.MentionAll" = "@MentionAll";
+"NicePremium.MentionAll.Desc" = "Используйте возможность упомянуть всех участников группы в одно касание";
+
+"NicePremium.Renews" = "Подписка продлевается автоматически";
+"NicePremium.PricePerMonth" = "Подпишитесь за %@ в месяц";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Продолжить";
+"NicegramOnboarding.1.Title" = "Клиент №1 для мессенджера Telegram";
+"NicegramOnboarding.1.Desc" = "Присоединяйтесь к более чем 2 миллионам пользователей Nicegram и получите доступ к самому мощному и безопасному клиенту Telegram для бизнеса.";
+"NicegramOnboarding.2.Title" = "Улучшенный обмен сообщениями";
+"NicegramOnboarding.2.Desc" = "Ускорьте общение благодаря таким уникальным функциям, как встроенный переводчик, перевод речи в текст, пересылка сообщений без указания автора и быстрое сохранение в избранное.";
+"NicegramOnboarding.3.Title" = "Расширенные профили пользователей";
+"NicegramOnboarding.3.Desc" = "Создавайте сколько угодно аккаунтов Telegram совершенно бесплатно, а также просматривайте расширенные профили пользователей с идентификаторами, датами регистрации и интерактивными ссылками.";
+"NicegramOnboarding.4.Title" = "Уникальные бизнес-расширения";
+"NicegramOnboarding.4.Desc" = "Воспользуйтесь инновациями от команды Nicegram и получите eSIM с доступом в интернет в 133 странах. Вы также можете зарегистрировать новые аккаунты Telegram на номер телефона тарифного плана eSIM.";
+"NicegramOnboarding.5.Title" = "Самый безопасный мессенджер";
+"NicegramOnboarding.5.Desc" = "Безопасный мессенджер с надежным шифрованием, групповыми аудио- и видеозвонками, общедоступными каналами, группами и ботами, неограниченным облачным хранилищем для чатов, а также возможностью обмена медиафайлами и документами.";

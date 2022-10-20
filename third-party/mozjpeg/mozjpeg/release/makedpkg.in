@@ -1,0 +1,115 @@
+#!/bin/sh
+
+set -u
+set -e
+trap onexit INT
+trap onexit TERM
+trap onexit EXIT
+
+TMPDIR=
+SUDO=
+
+onexit()
+{
+	if [ ! "$TMPDIR" = "" ]; then
+		$SUDO rm -rf $TMPDIR
+	fi
+}
+
+uid()
+{
+	id | cut -f2 -d = | cut -f1 -d \(;
+}
+
+safedirmove ()
+{
+	if [ "$1" = "$2" ]; then
+		return 0
+	fi
+	if [ "$1" = "" -o ! -d "$1" ]; then
+		echo safedirmove: source dir $1 is not valid
+		return 1
+	fi
+	if [ "$2" = "" -o -e "$2" ]; then
+		echo safedirmove: dest dir $2 is not valid
+		return 1
+	fi
+	if [ "$3" = "" -o -e "$3" ]; then
+		echo safedirmove: tmp dir $3 is not valid
+		return 1
+	fi
+	mkdir -p $3
+	mv $1/* $3/
+	rmdir $1
+	mkdir -p $2
+	mv $3/* $2/
+	rmdir $3
+	return 0
+}
+
+makedeb()
+{
+	SUPPLEMENT=$1
+	DIRNAME=$PKGNAME
+
+	if [ $SUPPLEMENT = 1 ]; then
+		PKGNAME=$PKGNAME\32
+		DEBARCH=amd64
+	fi
+
+	umask 022
+	rm -f $PKGNAME\_$VERSION\_$DEBARCH.deb
+	TMPDIR=`mktemp -d /tmp/$PKGNAME-build.XXXXXX`
+	mkdir $TMPDIR/DEBIAN
+
+	if [ $SUPPLEMENT = 1 ]; then
+		make install DESTDIR=$TMPDIR
+		rm -rf $TMPDIR$BINDIR
+		if [ "$DATAROOTDIR" != "$PREFIX" ]; then
+			rm -rf $TMPDIR$DATAROOTDIR
+		fi
+		if [ "$JAVADIR" != "" ]; then
+			rm -rf $TMPDIR$JAVADIR
+		fi
+		rm -rf $TMPDIR$DOCDIR
+		rm -rf $TMPDIR$INCLUDEDIR
+		rm -rf $TMPDIR$MANDIR
+	else
+		make install DESTDIR=$TMPDIR
+		if [ "$PREFIX" = "@CMAKE_INSTALL_DEFAULT_PREFIX@" -a "$DOCDIR" = "@CMAKE_INSTALL_DEFAULT_PREFIX@/doc" ]; then
+			safedirmove $TMPDIR/$DOCDIR $TMPDIR/usr/share/doc/$PKGNAME-$VERSION $TMPDIR/__tmpdoc
+			ln -fs /usr/share/doc/$DIRNAME-$VERSION $TMPDIR$DOCDIR
+		fi
+	fi
+
+	SIZE=`du -s $TMPDIR | cut -f1`
+	(cat pkgscripts/deb-control | sed s/{__PKGNAME}/$PKGNAME/g \
+		| sed s/{__ARCH}/$DEBARCH/g | sed s/{__SIZE}/$SIZE/g \
+		> $TMPDIR/DEBIAN/control)
+
+	/sbin/ldconfig -n $TMPDIR$LIBDIR
+
+	$SUDO chown -Rh root:root $TMPDIR/*
+	dpkg -b $TMPDIR $PKGNAME\_$VERSION\_$DEBARCH.deb
+}
+
+PKGNAME=@PKGNAME@
+VERSION=@VERSION@
+DEBARCH=@DEBARCH@
+PREFIX=@CMAKE_INSTALL_PREFIX@
+BINDIR=@CMAKE_INSTALL_FULL_BINDIR@
+DATAROOTDIR=@CMAKE_INSTALL_FULL_DATAROOTDIR@
+DOCDIR=@CMAKE_INSTALL_FULL_DOCDIR@
+INCLUDEDIR=@CMAKE_INSTALL_FULL_INCLUDEDIR@
+JAVADIR=@CMAKE_INSTALL_FULL_JAVADIR@
+LIBDIR=@CMAKE_INSTALL_FULL_LIBDIR@
+MANDIR=@CMAKE_INSTALL_FULL_MANDIR@
+
+if [ ! `uid` -eq 0 ]; then
+	SUDO=sudo
+fi
+
+makedeb 0
+if [ "$DEBARCH" = "i386" ]; then makedeb 1; fi
+
+exit

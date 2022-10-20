@@ -1,0 +1,318 @@
+default_platform :ios
+
+require 'base64'
+require 'fileutils'
+require 'spaceship'
+
+APP_STORE_CONNECT_API_KEY_ID = ENV["APP_STORE_CONNECT_API_KEY_ID"]
+APP_STORE_CONNECT_API_KEY_ISSUER_ID = ENV["APP_STORE_CONNECT_API_KEY_ISSUER_ID"]
+APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT = ENV["APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT"]
+BAZEL_LOCAL_CACHE = ENV["BAZEL_LOCAL_CACHE"]
+BAZEL_PATH = ENV["BAZEL_PATH"]
+BAZEL_REMOTE_CACHE = ENV["BAZEL_REMOTE_CACHE"]
+BAZEL_USER_ROOT = ENV["BAZEL_USER_ROOT"]
+BUILD_WORKING_DIR = ENV["BUILD_WORKING_DIR"]
+BUNDLE_ID = ENV["BUNDLE_ID"]
+DISABLE_PARALLEL_SWIFTMODULE_GENERATION = ENV["DISABLE_PARALLEL_SWIFTMODULE_GENERATION"]
+KEYCHAIN_NAME = ENV["KEYCHAIN_NAME"]
+KEYCHAIN_PASSWORD = ENV["KEYCHAIN_PASSWORD"]
+SIGN_URL = ENV["SIGN_URL"]
+SOURCE_PATH = ENV["SOURCE_PATH"]
+TEAM_ID = ENV["TEAM_ID"]
+TELEGRAM_BOT_TOKEN = ENV["TELEGRAM_BOT_TOKEN"]
+TELEGRAM_CONFIGURATION_TEST = ENV["TELEGRAM_CONFIGURATION_TEST"]
+TELEGRAM_CONFIGURATION_PROD = ENV["TELEGRAM_CONFIGURATION_PROD"]
+TELEGRAM_CHAT_ID = ENV["TELEGRAM_CHAT_ID"]
+
+base_app_identifier_llc = BUNDLE_ID || "app.nicegram"
+app_identifier_llc = [
+  base_app_identifier_llc,
+  base_app_identifier_llc + ".Widget",
+  base_app_identifier_llc + ".NotificationContent",
+  base_app_identifier_llc + ".SiriIntents",
+  base_app_identifier_llc + ".Share",
+  base_app_identifier_llc + ".NotificationService",
+  base_app_identifier_llc + ".watchkitapp",
+  base_app_identifier_llc + ".watchkitapp.watchkitextension",
+  base_app_identifier_llc + ".BroadcastUpload"
+]
+
+lane :beta_build do |options|
+  build(
+    build_number: latest_testflight_build_number(
+      api_key: generate_app_store_connect_api_key(),
+      app_identifier: BUNDLE_ID
+    ) + 1,
+    upload_to_tf: true
+  )
+end
+
+lane :master_build do |options|
+  build_number = latest_testflight_build_number(
+    api_key: generate_app_store_connect_api_key(),
+    app_identifier: BUNDLE_ID
+  )
+
+  sh("echo BUILD_NUMBER=#{build_number} >> $GITHUB_ENV")
+
+  build(
+    build_number: build_number,
+    upload_to_tf: false
+  )
+end
+
+lane :build do |options|
+  build_number = options[:build_number]
+  upload_to_tf = options[:upload_to_tf]
+
+  start_time = Time.new
+
+  configuration_start_time = Time.new
+
+  log(message: "Preparing for build...")
+
+  # Create temp keychain
+  ensure_temp_keychain(name: KEYCHAIN_NAME, password: KEYCHAIN_PASSWORD)
+  # Match because Telegram script doesnt import certificates
+  nicegram_match(
+    type: "appstore"
+  )
+
+  telegram_configuration_path = resolve_telegram_configuration()
+
+  configuration_end_time = Time.new
+  building_start_time = Time.new
+
+  # Build
+  log(message: "🔨 Building Nicegram (#{build_number})...")
+  ipa_path = build_bazel(
+    build_number: build_number,
+    configuration_path: telegram_configuration_path,
+    git_codesigning_repository: SIGN_URL,
+    git_codesigning_type: "appstore"
+  )
+
+  building_end_time = Time.new
+  uploading_start_time = Time.new
+
+  # Upload to testflight
+  log(message: "✔️ Build completed, uploading...")
+  if upload_to_tf
+    upload_ipa(ipa: ipa_path)
+  end
+
+  uploading_end_time = Time.new
+  end_time = Time.new
+
+  configuration_time = (configuration_end_time - configuration_start_time).to_i
+  building_time = (building_end_time - building_start_time).to_i
+  uploading_time = (uploading_end_time - uploading_start_time).to_i
+  total_time = (end_time - start_time).to_i
+
+  log(message: "✅ DONE Building Nicegram (#{build_number})\n"\
+      "Configuration time = #{configuration_time} sec.\n"\
+      "Building time = #{building_time} sec.\n"\
+      "Uploading time = #{uploading_time} sec.\n"\
+      "Total time = #{total_time} sec."
+  )
+
+  delete_keychain_if_exists(name: KEYCHAIN_NAME)
+end
+
+lane :update_nice_localization do |options|
+  translations_path = options[:translations]
+  project_path = options[:project]
+
+  FileUtils.rm_rf(Dir.glob("#{project_path}/Telegram/Telegram-iOS/*/NiceLocalizable.strings"))
+  FileUtils.cp_r("#{translations_path}/master/Telegram-iOS", "#{project_path}/Telegram")
+  FileUtils.remove_dir(translations_path)
+end
+
+lane :upload_nice_localization do |options|
+  destination_path = options[:dest]
+  project_path = options[:project]
+
+  folder_path = "#{destination_path}/NiceLocalizable"
+  FileUtils.rm_rf(folder_path)
+  FileUtils.mkdir(folder_path)
+
+  index = 1
+  Dir.glob("#{project_path}/Telegram/Telegram-iOS/*/NiceLocalizable.strings") do |filename|
+    FileUtils.cp(filename, "#{folder_path}/#{index}.strings")
+    index += 1
+  end
+
+  zip(
+    path: folder_path,
+    output_path: "#{destination_path}/NiceLocalizable.zip"
+  )
+
+  FileUtils.rm_rf(folder_path)
+end
+
+lane :resolve_telegram_configuration do |options|
+  telegram_configuration_path = "#{BUILD_WORKING_DIR}/telegram-configuration.json"
+
+  env_path = "#{SOURCE_PATH}/ng-env.txt"
+  env = File.read(env_path)
+  telegram_configuration_base64 = ""
+  if env == "test"
+    telegram_configuration_base64 = TELEGRAM_CONFIGURATION_TEST
+  elsif env == "prod"
+    telegram_configuration_base64 = TELEGRAM_CONFIGURATION_PROD
+  else
+    raise "Unknown environment in #{env_path}"
+  end
+
+  telegram_configuration = Base64.decode64(telegram_configuration_base64)
+  File.write(telegram_configuration_path, telegram_configuration)
+
+  telegram_configuration_path
+end
+
+lane :build_bazel do |options|
+  build_number = options[:build_number]
+  configuration_path = options[:configuration_path]
+  git_codesigning_repository = options[:git_codesigning_repository]
+  git_codesigning_type = options[:git_codesigning_type]
+
+  artifacts_path = "#{BUILD_WORKING_DIR}/artifacts"
+  FileUtils.rm_rf(artifacts_path)
+  FileUtils.mkdir(artifacts_path)
+
+  shell_command = "cd #{SOURCE_PATH} && python3 build-system/Make/Make.py "
+
+  unless BAZEL_PATH.nil?
+    shell_command += "--bazel=#{BAZEL_PATH} "
+  end
+
+  unless BAZEL_USER_ROOT.nil?
+    shell_command += "--bazelUserRoot=#{BAZEL_USER_ROOT} "
+  end
+
+  unless BAZEL_LOCAL_CACHE.nil?
+    shell_command += "--cacheDir=#{BAZEL_LOCAL_CACHE} "
+  end
+
+  unless BAZEL_REMOTE_CACHE.nil?
+    shell_command += "--cacheHost=#{BAZEL_REMOTE_CACHE} "
+  end
+
+  shell_command += "build \
+  --configurationPath=#{configuration_path} \
+  --gitCodesigningRepository=#{git_codesigning_repository} \
+  --gitCodesigningType=#{git_codesigning_type} \
+  --buildNumber=#{build_number} \
+  --configuration=release_universal \
+  --outputBuildArtifactsPath=#{artifacts_path} "
+
+  unless DISABLE_PARALLEL_SWIFTMODULE_GENERATION.nil?
+    shell_command += "--disableParallelSwiftmoduleGeneration "
+  end
+
+  error_callback = lambda do |result|
+    raise "❌ Build script error\n#{result}"
+  end
+
+  sh shell_command, error_callback: error_callback
+
+  ipa_path = "#{artifacts_path}/Telegram.ipa"
+end
+
+lane :generate_project do |options|
+  match(
+    type: "development",
+    app_identifier: app_identifier_llc,
+    team_id: TEAM_ID,
+    git_url: SIGN_URL,
+    git_branch: TEAM_ID,
+    api_key: generate_app_store_connect_api_key(),
+    skip_provisioning_profiles: true
+  )
+
+  configuration_path = resolve_telegram_configuration()
+
+  sh "cd #{SOURCE_PATH} && python3 build-system/Make/Make.py \
+  --bazel=#{BAZEL_PATH} \
+  --cacheDir=#{BAZEL_LOCAL_CACHE} \
+  generateProject \
+  --configurationPath=#{configuration_path} \
+  --buildNumber=0 \
+  --gitCodesigningRepository=#{SIGN_URL} \
+  --gitCodesigningType=development"
+end
+
+
+lane :upload_ipa do |options|
+  ipa_path = options[:ipa]
+
+  upload_to_testflight(
+    api_key: generate_app_store_connect_api_key(),
+    ipa: ipa_path,
+    skip_waiting_for_build_processing: true,
+  )
+end
+
+lane :nicegram_match do |options|
+  type = options[:type]
+
+  match(
+    type: type,
+    app_identifier: app_identifier_llc,
+    team_id: TEAM_ID,
+    git_url: SIGN_URL,
+    git_branch: TEAM_ID,
+    api_key: generate_app_store_connect_api_key(),
+    keychain_name: KEYCHAIN_NAME,
+    keychain_password: KEYCHAIN_PASSWORD,
+    skip_provisioning_profiles: true
+  )
+end
+
+lane :generate_app_store_connect_api_key do |options|
+  app_store_connect_api_key(
+    key_id: APP_STORE_CONNECT_API_KEY_ID,
+    issuer_id: APP_STORE_CONNECT_API_KEY_ISSUER_ID,
+    key_content: APP_STORE_CONNECT_API_PRIVATE_KEY_CONTENT
+  )
+end
+
+lane :ensure_temp_keychain do |options|
+  name = options[:name]
+  password = options[:password]
+
+  delete_keychain_if_exists(name: name)
+  create_keychain(
+    name: name,
+    password: password,
+    unlock: true,
+    timeout: 0
+  )
+end
+
+lane :delete_keychain_if_exists do |options|
+  name = options[:name]
+
+  delete_keychain(name: name) if File.exist?(File.expand_path("~/Library/Keychains/#{name}-db"))
+end
+
+lane :log do |options|
+  message = options[:message]
+  # tg(message: message)
+end
+
+lane :tg do |options|
+  message = options[:message]
+
+  telegram(
+    token: TELEGRAM_BOT_TOKEN,
+    chat_id: TELEGRAM_CHAT_ID,
+    text: message
+  )
+end
+
+
+error do |_, exception|
+    delete_keychain_if_exists(name: KEYCHAIN_NAME)
+    log(message: "❌ Error building Nicegram\n#{exception}")
+end

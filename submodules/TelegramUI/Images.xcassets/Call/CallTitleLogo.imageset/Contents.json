@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "ic_calls_tlogo.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
