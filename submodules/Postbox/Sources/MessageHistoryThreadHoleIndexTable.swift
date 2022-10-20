@@ -188,6 +188,26 @@ final class MessageHistoryThreadHoleIndexTable: Table {
         return result
     }
     
+    func latest(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace) -> ClosedRange<MessageId.Id>? {
+        self.ensureInitialized(peerId: peerId, threadId: threadId)
+        
+        var result: ClosedRange<MessageId.Id>?
+        self.valueBox.range(self.table, start: self.upperBound(peerId: peerId, threadId: threadId, namespace: namespace, space: space), end: self.lowerBound(peerId: peerId, threadId: threadId, namespace: namespace, space: space), values: { key, value in
+            
+            let (keyThreadId, upperId, keySpace) = decomposeKey(key)
+            assert(keyThreadId == threadId)
+            assert(keySpace == space)
+            assert(upperId.peerId == peerId)
+            assert(upperId.namespace == namespace)
+            let lowerId = decodeValue(value: value, peerId: peerId, namespace: namespace)
+            result = lowerId.id ... upperId.id
+            
+            return false
+        }, limit: 1)
+        
+        return result
+    }
+    
     func closest(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>) -> IndexSet {
         self.ensureInitialized(peerId: peerId, threadId: threadId)
         

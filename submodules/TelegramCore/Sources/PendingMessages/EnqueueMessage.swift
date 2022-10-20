@@ -10,7 +10,7 @@ public enum EnqueueMessageGrouping {
 
 public enum EnqueueMessage {
     case message(text: String, attributes: [MessageAttribute], inlineStickers: [MediaId: Media], mediaReference: AnyMediaReference?, replyToMessageId: MessageId?, localGroupingKey: Int64?, correlationId: Int64?, bubbleUpEmojiOrStickersets: [ItemCollectionId])
-    case forward(source: MessageId, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute], correlationId: Int64?)
+    case forward(source: MessageId, threadId: Int64?, grouping: EnqueueMessageGrouping, attributes: [MessageAttribute], correlationId: Int64?)
     
     public func withUpdatedReplyToMessageId(_ replyToMessageId: MessageId?) -> EnqueueMessage {
         switch self {
@@ -25,8 +25,8 @@ public enum EnqueueMessage {
         switch self {
         case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, correlationId, bubbleUpEmojiOrStickersets):
             return .message(text: text, attributes: f(attributes), inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: correlationId, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
-        case let .forward(source, grouping, attributes, correlationId):
-            return .forward(source: source, grouping: grouping, attributes: f(attributes), correlationId: correlationId)
+        case let .forward(source, threadId, grouping, attributes, correlationId):
+            return .forward(source: source, threadId: threadId, grouping: grouping, attributes: f(attributes), correlationId: correlationId)
         }
     }
     
@@ -43,8 +43,8 @@ public enum EnqueueMessage {
         switch self {
         case let .message(text, attributes, inlineStickers, mediaReference, replyToMessageId, localGroupingKey, _, bubbleUpEmojiOrStickersets):
             return .message(text: text, attributes: attributes, inlineStickers: inlineStickers, mediaReference: mediaReference, replyToMessageId: replyToMessageId, localGroupingKey: localGroupingKey, correlationId: value, bubbleUpEmojiOrStickersets: bubbleUpEmojiOrStickersets)
-        case let .forward(source, grouping, attributes, _):
-            return .forward(source: source, grouping: grouping, attributes: attributes, correlationId: value)
+        case let .forward(source, threadId, grouping, attributes, _):
+            return .forward(source: source, threadId: threadId, grouping: grouping, attributes: attributes, correlationId: value)
         }
     }
     
@@ -62,7 +62,7 @@ private extension EnqueueMessage {
         switch self {
         case let .message(_, _, _, _, _, _, correlationId, _):
             return correlationId
-        case let .forward(_, _, _, correlationId):
+        case let .forward(_, _, _, _, correlationId):
             return correlationId
         }
     }
@@ -298,7 +298,7 @@ public func resendMessages(account: Account, messageIds: [MessageId]) -> Signal<
 func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId, messages: [(Bool, EnqueueMessage)], disableAutoremove: Bool = false, transformGroupingKeysWithPeerId: Bool = false) -> [MessageId?] {
     var forwardedMessageIds = Set<MessageId>()
     for (_, message) in messages {
-        if case let .forward(sourceId, _, _, _) = message {
+        if case let .forward(sourceId, _, _, _, _) = message {
             forwardedMessageIds.insert(sourceId)
         }
     }
@@ -329,10 +329,10 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         }
                     }
                     if canBeForwarded {
-                        updatedMessages.append((true, .forward(source: replyToMessageId, grouping: .none, attributes: attributes, correlationId: nil)))
+                        updatedMessages.append((true, .forward(source: replyToMessageId, threadId: nil, grouping: .none, attributes: attributes, correlationId: nil)))
                     }
                 }
-            case let .forward(sourceId, _, _, _):
+            case let .forward(sourceId, threadId, _, _, _):
                 if let sourceMessage = forwardedMessageToBeReuploaded(transaction: transaction, id: sourceId) {
                     var mediaReference: AnyMediaReference?
                     if sourceMessage.id.peerId.namespace == Namespaces.Peer.SecretChat {
@@ -340,7 +340,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                             mediaReference = .standalone(media: media)
                         }
                     }
-                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: nil, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])))
+                    updatedMessages.append((transformedMedia, .message(text: sourceMessage.text, attributes: sourceMessage.attributes, inlineStickers: [:], mediaReference: mediaReference, replyToMessageId: threadId.flatMap { MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: $0)) }, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: [])))
                     continue outer
                 }
         }
@@ -571,7 +571,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                     }
                     
                     storeMessages.append(StoreMessage(peerId: peerId, namespace: messageNamespace, globallyUniqueId: randomId, groupingKey: localGroupingKey, threadId: threadId, timestamp: effectiveTimestamp, flags: flags, tags: tags, globalTags: globalTags, localTags: localTags, forwardInfo: nil, authorId: authorId, text: text, attributes: attributes, media: mediaList))
-                case let .forward(source, grouping, requestedAttributes, _):
+                case let .forward(source, threadId, grouping, requestedAttributes, _):
                     let sourceMessage = transaction.getMessage(source)
                     if let sourceMessage = sourceMessage, let author = sourceMessage.author ?? sourceMessage.peers[sourceMessage.id.peerId] {
                         var messageText = sourceMessage.text
@@ -731,7 +731,7 @@ func enqueueMessages(transaction: Transaction, account: Account, peerId: PeerId,
                         var entitiesAttribute: TextEntitiesMessageAttribute?
                         var effectiveTimestamp = timestamp
                         var sendAsPeer: Peer?
-                        var threadId: Int64?
+                        var threadId: Int64? = threadId
                         for attribute in attributes {
                             if let attribute = attribute as? TextEntitiesMessageAttribute {
                                 entitiesAttribute = attribute

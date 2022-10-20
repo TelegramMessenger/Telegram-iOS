@@ -6685,12 +6685,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var forwardedMessages: [[EnqueueMessage]] = []
                 var forwardSourcePeerIds = Set<PeerId>()
                 for message in transformedMessages {
-                    if case let .forward(source, _, _, _) = message {
+                    if case let .forward(source, _, _, _, _) = message {
                         forwardSourcePeerIds.insert(source.peerId)
                         
                         var added = false
                         if var last = forwardedMessages.last {
-                            if let currentMessage = last.first, case let .forward(currentSource, _, _, _) = currentMessage, currentSource.peerId == source.peerId {
+                            if let currentMessage = last.first, case let .forward(currentSource, _, _, _, _) = currentMessage, currentSource.peerId == source.peerId {
                                 last.append(message)
                                 added = true
                             }
@@ -14996,7 +14996,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions?.hideNames == true, hideCaptions: forwardOptions?.hideCaptions == true))
                 
                 result.append(contentsOf: messages.map { message -> EnqueueMessage in
-                    return .forward(source: message.id, grouping: .auto, attributes: attributes, correlationId: nil)
+                    return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
                 })
                 
                 let commit: ([EnqueueMessage]) -> Void = { result in
@@ -15118,7 +15118,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }), in: .current)
                     
                     let _ = (enqueueMessages(account: strongSelf.context.account, peerId: peerId, messages: messages.map { message -> EnqueueMessage in
-                        return .forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil)
+                        return .forward(source: message.id, threadId: nil, grouping: .auto, attributes: [], correlationId: nil)
                     })
                     |> deliverOnMainQueue).start(next: { messageIds in
                         if let strongSelf = self {

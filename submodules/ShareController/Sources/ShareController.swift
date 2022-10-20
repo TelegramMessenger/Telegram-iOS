@@ -678,8 +678,10 @@ public final class ShareController: ViewController {
             case let .messages(messages):
                 for peerId in peerIds {
                     var replyToMessageId: MessageId?
+                    var threadId: Int64?
                     if let topicId = topicIds[peerId] {
                         replyToMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: topicId))
+                        threadId = topicId
                     }
                     
                     var messagesToEnqueue: [EnqueueMessage] = []
@@ -687,7 +689,7 @@ public final class ShareController: ViewController {
                         messagesToEnqueue.append(.message(text: text, attributes: [], inlineStickers: [:], mediaReference: nil, replyToMessageId: replyToMessageId, localGroupingKey: nil, correlationId: nil, bubbleUpEmojiOrStickersets: []))
                     }
                     for message in messages {
-                        messagesToEnqueue.append(.forward(source: message.id, grouping: .auto, attributes: [], correlationId: nil))
+                        messagesToEnqueue.append(.forward(source: message.id, threadId: threadId, grouping: .auto, attributes: [], correlationId: nil))
                     }
                     messagesToEnqueue = transformMessages(messagesToEnqueue, showNames: showNames, silently: silently)
                     shareSignals.append(enqueueMessages(account: strongSelf.currentAccount, peerId: peerId, messages: messagesToEnqueue))

@@ -2661,6 +2661,7 @@ private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: 
                     updatedState.mergeUsers(users)
                     
                     updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
+                    updatedState.resetForumTopicLists[peer.peerId] = []
                     
                     for apiMessage in messages {
                         if var message = StoreMessage(apiMessage: apiMessage) {
@@ -4029,6 +4030,20 @@ func replayFinalState(
             Logger.shared.log("State", "not adding hole for peer \(messageId.peerId), \(upperId) >= \(messageId.id) = false")
         }
     }
+    
+    for (peerId, _) in finalState.state.resetForumTopicLists {
+        for item in transaction.getMessageHistoryThreadIndex(peerId: peerId, limit: 10000) {
+            let holeLowerBound = transaction.holeLowerBoundForTopValidRange(peerId: peerId, threadId: item.threadId, namespace: Namespaces.Message.Cloud, space: .everywhere)
+         
+            transaction.addHole(peerId: peerId, threadId: item.threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: holeLowerBound ... (Int32.max - 1))
+            for tag in MessageTags.all {
+                transaction.addHole(peerId: peerId, threadId: item.threadId, namespace: Namespaces.Message.Cloud, space: .tag(tag), range: holeLowerBound ... (Int32.max - 1))
+            }
+        }
+        
+        transaction.setPeerThreadCombinedState(peerId: peerId, state: nil)
+    }
+    
 //TODO Please do not forget fix holes space.
     
     // could be the reason for unbounded slowdown, needs investigation

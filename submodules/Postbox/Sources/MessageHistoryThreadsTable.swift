@@ -112,6 +112,40 @@ class MessageHistoryThreadsTable: Table {
         return maxIndex
     }
     
+    func holeLowerBoundForTopValidRange(peerId: PeerId, threadId: Int64, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, holeIndexTable: MessageHistoryThreadHoleIndexTable) -> MessageId.Id {
+        let topHole = holeIndexTable.latest(peerId: peerId, threadId: threadId, namespace: namespace, space: space)
+        if let topHole = topHole {
+            let maxInHole = topHole.upperBound
+            var messageNotInHole: MessageId?
+            self.valueBox.range(self.table, start: self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace), end: self.lowerBound(threadId: threadId, peerId: peerId, namespace: namespace), keys: { key in
+                let index = extractKey(key)
+                if index.id.id > maxInHole {
+                    messageNotInHole = index.id
+                    return false
+                }
+                return true
+            }, limit: 32000)
+            if let messageNotInHole = messageNotInHole {
+                return messageNotInHole.id + 1
+            } else {
+                return topHole.lowerBound
+            }
+        } else {
+            var messageNotInHole: MessageId?
+            self.valueBox.range(self.table, start: self.upperBound(threadId: threadId, peerId: peerId, namespace: namespace), end: self.lowerBound(threadId: threadId, peerId: peerId, namespace: namespace), keys: { key in
+                let index = extractKey(key)
+            
+                messageNotInHole = index.id
+                return false
+            }, limit: 1)
+            if let messageNotInHole = messageNotInHole {
+                return messageNotInHole.id + 1
+            } else {
+                return 1
+            }
+        }
+    }
+    
     func getMessageCountInRange(threadId: Int64, peerId: PeerId, namespace: MessageId.Namespace, lowerBound: MessageIndex?, upperBound: MessageIndex?) -> Int {
         if let lowerBound = lowerBound {
             precondition(lowerBound.id.namespace == namespace)
