@@ -177,7 +177,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         let bubbleBorderImage = messageBubbleImage(maxCornerRadius: bubbleCorners.mainRadius, minCornerRadius: bubbleCorners.auxiliaryRadius, incoming: true, fillColor: .clear, strokeColor: .red, neighbors: .none, theme: theme.chat, wallpaper: .color(0xffffff), knockout: true, mask: true, extendedEdges: true, onlyOutline: true)
         
         var messageContainers: [ChatLoadingPlaceholderMessageContainer] = []
-        for _ in 0 ..< 8 {
+        for _ in 0 ..< 11 {
             let container = ChatLoadingPlaceholderMessageContainer(bubbleImage: bubbleImage, bubbleBorderImage: bubbleBorderImage)
             container.setup(maskNode: self.maskNode, borderMaskNode: self.borderMaskNode)
             messageContainers.append(container)
@@ -394,6 +394,9 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
             CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
             CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
             CGSize(width: floorToScreenPixels(0.57 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.73 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.57 * size.width), height: shortHeight),
         ]
         
         var offset: CGFloat = 5.0
@@ -403,7 +406,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
         
         for messageContainer in self.messageContainers {
-            let messageSize = dimensions[index % 8]
+            let messageSize = dimensions[index % 11]
             messageContainer.update(size: size, hasAvatar: self.isGroup, rect: CGRect(origin: CGPoint(x: 0.0, y: size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
