@@ -509,12 +509,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         
         var items: [ContextMenuItem] = []
         
-        var canManage: Bool = false
         if channel.hasPermission(.pinMessages) {
-            canManage = true
-        }
-        
-        if canManage {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
@@ -714,7 +709,15 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             }
         })))
         
-        if canManage || threadData.isOwnedByMe {
+        var canManage = false
+        if channel.flags.contains(.isCreator) {
+            canManage = true
+        } else if channel.adminRights != nil {
+            canManage = true
+        } else if threadData.isOwnedByMe {
+            canManage = true
+        }
+        if canManage {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? "Restart" : "Close", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)

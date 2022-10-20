@@ -330,10 +330,10 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isPinned: Bool, isEditing: Bool, canManage: Bool) -> [ItemListRevealOption] {
+private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isPinned: Bool, isEditing: Bool, canPin: Bool, canManage: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if canManage {
+        if canPin {
             if isPinned {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
             } else {
@@ -1852,16 +1852,18 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if case .forum = item.chatListLocation {
                             if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
                                 var canManage = false
-                                if channel.hasPermission(.pinMessages) {
+                                if channel.flags.contains(.isCreator) {
                                     canManage = true
-                                } else if let threadInfo {
-                                    canManage = threadInfo.isOwner
+                                } else if channel.adminRights != nil {
+                                    canManage = true
+                                } else if let threadInfo = threadInfo, threadInfo.isOwner {
+                                    canManage = true
                                 }
                                 var isClosed = false
                                 if let threadInfo {
                                     isClosed = threadInfo.isClosed
                                 }
-                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isPinned: isPinned, isEditing: item.editing, canManage: canManage)
+                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isPinned: isPinned, isEditing: item.editing, canPin: channel.hasPermission(.pinMessages), canManage: canManage)
                                 peerLeftRevealOptions = []
                             } else {
                                 peerRevealOptions = []

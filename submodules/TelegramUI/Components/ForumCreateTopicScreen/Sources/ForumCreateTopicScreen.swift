@@ -15,6 +15,7 @@ import MultilineTextComponent
 import EmojiStatusComponent
 import Postbox
 import PremiumUI
+import ProgressNavigationButtonNode
 
 private final class TitleFieldComponent: Component {
     typealias EnvironmentType = Empty
@@ -161,6 +162,8 @@ private final class TitleFieldComponent: Component {
                 
                 placeholderComponentView.frame = CGRect(origin: CGPoint(x: 62.0, y: floorToScreenPixels((availableSize.height - placeholderSize.height) / 2.0) + 1.0 - UIScreenPixel), size: placeholderSize)
             }
+            
+            self.placeholderView.view?.isHidden = !component.text.isEmpty
             
             let iconSize = self.iconView.update(
                 transition: .easeInOut(duration: 0.2),
@@ -782,10 +785,32 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         case edit(topic: EngineMessageHistoryThread.Info)
     }
     
+    private let context: AccountContext
+    private let mode: Mode
+    
+    private var doneBarItem: UIBarButtonItem?
+    
     private var state: (String, Int64?) = ("", nil)
     public var completion: (String, Int64?) -> Void = { _, _ in }
     
+    public var isInProgress: Bool = false {
+        didSet {
+            if self.isInProgress != oldValue {
+                if self.isInProgress {
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
+                } else {
+                    //TODO:localize
+                    self.navigationItem.rightBarButtonItem = self.doneBarItem
+                }
+            }
+        }
+    }
+    
     public init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode) {
+        self.context = context
+        self.mode = mode
+        
         var titleUpdatedImpl: ((String) -> Void)?
         var iconUpdatedImpl: ((Int64?) -> Void)?
         var openPremiumImpl: (() -> Void)?
@@ -802,12 +827,14 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         let title: String
         let doneTitle: String
         switch mode {
-            case .create:
-                title = "New Topic"
-                doneTitle = "Create"
-            case .edit:
-                title = "Edit Topic"
-                doneTitle = "Done"
+        case .create:
+            title = "New Topic"
+            doneTitle = "Create"
+        case let .edit(topic):
+            title = "Edit Topic"
+            doneTitle = "Done"
+            
+            self.state = (topic.title, topic.icon)
         }
         
         self.title = title
@@ -815,20 +842,21 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
-        self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: doneTitle, style: .done, target: self, action: #selector(self.createPressed))
-        self.navigationItem.rightBarButtonItem?.isEnabled = false
+        self.doneBarItem = UIBarButtonItem(title: doneTitle, style: .done, target: self, action: #selector(self.createPressed))
+        self.navigationItem.rightBarButtonItem = self.doneBarItem
+        self.doneBarItem?.isEnabled = false
         
         if case .edit = mode {
-            self.navigationItem.rightBarButtonItem?.isEnabled = true
+            self.doneBarItem?.isEnabled = true
         }
         
         titleUpdatedImpl = { [weak self] title in
-            guard let strongSelf = self else {
+            guard let self else {
                 return
             }
-            strongSelf.navigationItem.rightBarButtonItem?.isEnabled = !title.isEmpty
+            self.doneBarItem?.isEnabled = !title.isEmpty
             
-            strongSelf.state = (title, strongSelf.state.1)
+            self.state = (title, self.state.1)
         }
         
         iconUpdatedImpl = { [weak self] fileId in

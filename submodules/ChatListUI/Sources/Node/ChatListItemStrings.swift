@@ -270,7 +270,12 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                     }
                                 }
                             default:
-                                hideAuthor = true
+                                switch action.action {
+                                case .topicCreated, .topicEdited:
+                                    hideAuthor = false
+                                default:
+                                    hideAuthor = true
+                                }
                                 if let (text, textSpoilers, customEmojiRangesValue) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
                                     messageText = text
                                     spoilers = textSpoilers

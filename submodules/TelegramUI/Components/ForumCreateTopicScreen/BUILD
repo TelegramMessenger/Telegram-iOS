@@ -31,6 +31,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/Components/PagerComponent:PagerComponent",
         "//submodules/PremiumUI",
+        "//submodules/ProgressNavigationButtonNode",
     ],
     visibility = [
         "//visibility:public",

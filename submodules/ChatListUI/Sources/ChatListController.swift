@@ -1590,10 +1590,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { title, fileId in
+                    controller.completion = { [weak controller] title, fileId in
+                        controller?.isInProgress = true
+                        
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text).start()
+                        }, error: { _ in
+                            controller?.isInProgress = false
                         })
                     }
                     strongSelf.push(controller)
@@ -2631,12 +2635,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
-                    controller.completion = { title, fileId in
+                    
+                    controller.completion = { [weak controller] title, fileId in
+                        controller?.isInProgress = true
+                        
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             if let navigationController = (sourceController.navigationController as? NavigationController) {
                                 let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text).start()
                             }
+                        }, error: { _ in
+                            controller?.isInProgress = false
                         })
                     }
                     sourceController.push(controller)
@@ -3709,6 +3718,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         var items: [ActionSheetItem] = []
             
         //TODO:localize
+        items.append(ActionSheetTextItem(title: "This will delete the topic with all its messages", parseMarkdown: true))
         items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
             actionSheet?.dismissAnimated()
             self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)

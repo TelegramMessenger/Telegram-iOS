@@ -226,7 +226,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             }
             
             if let topicId = topicId {
-                return resolveForumThreads(postbox: account.postbox, network: account.network, ids: [])
+                return resolveForumThreads(postbox: account.postbox, network: account.network, ids: [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: topicId))])
                 |> castError(CreateForumChannelTopicError.self)
                 |> map { _ -> Int64 in
                     return topicId
