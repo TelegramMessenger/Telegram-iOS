@@ -392,39 +392,53 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             }
             strongSelf.topicsContentNode = topicsContentNode
             strongSelf.contentNode?.supernode?.addSubnode(topicsContentNode)
-            topicsContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
-                self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
-            })
                         
             if let (layout, navigationBarHeight, _) = strongSelf.containerLayout {
                 strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
             
-            if let sourceFrame = strongSelf.peersContentNode?.animateOut(peerId: peer.peerId) {
-                topicsContentNode.animateIn(sourceFrame: sourceFrame)
+            if let peersContentNode = strongSelf.peersContentNode {
+                peersContentNode.setContentOffsetUpdated(nil)
+                let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - peersContentNode.contentGridNode.scrollView.contentOffset.y
+                if let sourceFrame = peersContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
+                    topicsContentNode.animateIn(sourceFrame: sourceFrame, scrollDelta: scrollDelta)
+                }
             }
+            
+            topicsContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
+                self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
+            })
+            strongSelf.contentNodeOffsetUpdated(topicsContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
         })
     }
     
     func closePeerTopics(_ peerId: EnginePeer.Id) {
         if let topicsContentNode = self.topicsContentNode, let peersContentNode = self.peersContentNode {
+            topicsContentNode.setContentOffsetUpdated(nil)
             topicsContentNode.supernode?.insertSubnode(topicsContentNode, belowSubnode: peersContentNode)
         }
-        self.peersContentNode?.setContentOffsetUpdated({ [weak self] contentOffset, transition in
-            self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
-        })
                     
         if let (layout, navigationBarHeight, _) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
         }
-        
-        if let targetFrame = self.peersContentNode?.animateIn(peerId: peerId), let topicsContentNode = self.topicsContentNode {
-            topicsContentNode.animateOut(targetFrame: targetFrame, completion: { [weak self] in
-                if let topicsContentNode = self?.topicsContentNode {
-                    topicsContentNode.removeFromSupernode()
-                    self?.topicsContentNode = nil
-                }
+
+        if let peersContentNode = self.peersContentNode {
+            peersContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
+                self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
+            self.contentNodeOffsetUpdated(peersContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+        }
+                                      
+        if let peersContentNode = self.peersContentNode, let topicsContentNode = self.topicsContentNode {
+            let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - peersContentNode.contentGridNode.scrollView.contentOffset.y
+            if let targetFrame = peersContentNode.animateIn(peerId: peerId, scrollDelta: scrollDelta) {
+                topicsContentNode.animateOut(targetFrame: targetFrame, scrollDelta: scrollDelta, completion: { [weak self] in
+                    if let topicsContentNode = self?.topicsContentNode {
+                        topicsContentNode.removeFromSupernode()
+                        self?.topicsContentNode = nil
+                    }
+                })
+            }
         }
     }
     

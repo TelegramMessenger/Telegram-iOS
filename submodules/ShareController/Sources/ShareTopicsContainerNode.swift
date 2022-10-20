@@ -165,7 +165,8 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var entries: [ShareTopicEntry] = []
     private var enqueuedTransitions: [(ShareGridTransaction, Bool)] = []
     
-    private let contentGridNode: GridNode
+    let contentGridNode: GridNode
+    private let headerNode: ASDisplayNode
     private let contentTitleNode: ASTextNode
     private let contentSubtitleNode: ASTextNode
     private let backNode: CancelButtonNode
@@ -203,6 +204,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         
         self.contentGridNode = GridNode()
+        self.headerNode = ASDisplayNode()
         
         self.contentTitleNode = ASTextNode()
         self.contentTitleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
@@ -219,10 +221,11 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         super.init()
         
         self.addSubnode(self.contentGridNode)
+        self.addSubnode(self.headerNode)
         
-        self.addSubnode(self.contentTitleNode)
-        self.addSubnode(self.contentSubtitleNode)
-        self.addSubnode(self.backNode)
+        self.headerNode.addSubnode(self.contentTitleNode)
+        self.headerNode.addSubnode(self.contentSubtitleNode)
+        self.headerNode.addSubnode(self.backNode)
                 
         let previousItems = Atomic<[ShareTopicEntry]?>(value: [])
         self.disposable.set((items
@@ -304,7 +307,9 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     func deactivate() {
     }
     
-    func animateIn(sourceFrame: CGRect) {
+    func animateIn(sourceFrame: CGRect, scrollDelta: CGFloat) {
+        self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         self.backNode.alpha = 1.0
         self.backNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.backNode.layer.animatePosition(from: CGPoint(x: 20.0, y: 0.0), to: .zero, duration: 0.2, additive: true)
@@ -319,6 +324,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 10.0), to: .zero, duration: 0.2, additive: true)
         self.contentSubtitleNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.2)
         
+        self.contentGridNode.layer.animatePosition(from: CGPoint(x: 0.0, y: scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         self.contentGridNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         
         self.contentGridNode.forEachItemNode { itemNode in
@@ -327,7 +333,9 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
     
-    func animateOut(targetFrame: CGRect, completion: @escaping () -> Void = {}) {
+    func animateOut(targetFrame: CGRect, scrollDelta: CGFloat, completion: @escaping () -> Void = {}) {
+        self.headerNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         self.backNode.alpha = 0.0
         self.backNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         self.backNode.layer.animatePosition(from: .zero, to: CGPoint(x: 20.0, y: 0.0), duration: 0.2, additive: true)
@@ -342,13 +350,15 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 10.0), duration: 0.2, additive: true)
         self.contentSubtitleNode.layer.animateScale(from: 1.0, to: 0.85, duration: 0.2)
         
+        self.contentGridNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         self.contentGridNode.alpha = 0.0
         self.contentGridNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { _ in
             completion()
         })
         
         self.contentGridNode.forEachItemNode { itemNode in
-            itemNode.layer.animatePosition(from: itemNode.position, to: targetFrame.center, duration: 0.45, timingFunction: kCAMediaTimingFunctionSpring)
+            itemNode.layer.animatePosition(from: itemNode.position, to: targetFrame.center, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
             itemNode.layer.animateScale(from: 1.0, to: 0.2, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }
     }
@@ -412,19 +422,22 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         let rawTitleOffset = -titleAreaHeight - presentationLayout.contentOffset.y
         let titleOffset = max(-titleAreaHeight, rawTitleOffset)
         
+        let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: titleOffset), size: CGSize(width: size.width, height: 64.0))
+        transition.updateFrame(node: self.headerNode, frame: headerFrame)
+        
         let titleSize = self.contentTitleNode.measure(size)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: titleOffset + 15.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 15.0), size: titleSize)
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         
         let subtitleSize = self.contentSubtitleNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: titleAreaHeight))
-        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleOffset + 40.0), size: subtitleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: 40.0), size: subtitleSize)
         var originalSubtitleFrame = self.contentSubtitleNode.frame
         originalSubtitleFrame.origin.x = subtitleFrame.origin.x
         originalSubtitleFrame.size = subtitleFrame.size
         self.contentSubtitleNode.frame = originalSubtitleFrame
         transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
         
-        let backFrame = CGRect(origin: CGPoint(x: 30.0, y: titleOffset + 6.0), size: CGSize(width: 90.0, height: 56.0))
+        let backFrame = CGRect(origin: CGPoint(x: 30.0, y: 6.0), size: CGSize(width: 90.0, height: 56.0))
         transition.updateFrame(node: self.backNode, frame: backFrame)
         
         self.contentOffsetUpdated?(presentationLayout.contentOffset.y, actualTransition)

@@ -115,7 +115,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var entries: [SharePeerEntry] = []
     private var enqueuedTransitions: [(ShareGridTransaction, Bool)] = []
     
-    private let contentGridNode: GridNode
+    let contentGridNode: GridNode
+    private let headerNode: ASDisplayNode
     private let contentTitleNode: ASTextNode
     private let contentSubtitleNode: ASTextNode
     private let contentTitleAccountNode: AvatarNode
@@ -193,6 +194,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
         
         self.contentGridNode = GridNode()
+        self.headerNode = ASDisplayNode()
         
         self.contentTitleNode = ASTextNode()
         self.contentTitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
@@ -247,17 +249,19 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         super.init()
         
         self.addSubnode(self.contentGridNode)
+        self.addSubnode(self.headerNode)
         
-        self.addSubnode(self.contentTitleNode)
-        self.addSubnode(self.contentSubtitleNode)
-        self.addSubnode(self.contentTitleAccountNode)
-        self.addSubnode(self.segmentedNode)
-        self.addSubnode(self.searchButtonNode)
+        self.headerNode.addSubnode(self.contentTitleNode)
+        self.headerNode.addSubnode(self.contentSubtitleNode)
+        self.headerNode.addSubnode(self.contentTitleAccountNode)
+        self.headerNode.addSubnode(self.segmentedNode)
+        self.headerNode.addSubnode(self.searchButtonNode)
         
         self.shareContainerNode.addSubnode(self.shareReferenceNode)
         self.shareButtonNode.addSubnode(self.shareContainerNode)
         
-        self.addSubnode(self.shareButtonNode)
+        self.headerNode.addSubnode(self.shareButtonNode)
+        
         self.addSubnode(self.contentSeparatorNode)
         
         self.shareContainerNode.activated = { [weak self] gesture, _ in
@@ -367,7 +371,11 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                 node = itemNode
             }
         }
-        return node?.frame.offsetBy(dx: 0.0, dy: -10.0)
+        if let node = node {
+            return node.frame.offsetBy(dx: 0.0, dy: -10.0)
+        } else {
+            return nil
+        }
     }
     
     func generateMaskImage() -> UIImage? {
@@ -385,10 +393,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         })?.stretchableImage(withLeftCapWidth: 49, topCapHeight: 49)
     }
     
-    func animateIn(peerId: EnginePeer.Id) -> CGRect? {
+    func animateIn(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         self.searchButtonNode.alpha = 1.0
         self.searchButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
         self.searchButtonNode.layer.animatePosition(from: CGPoint(x: -20.0, y: 0.0), to: .zero, duration: 0.2, additive: true)
+
+        self.shareButtonNode.alpha = 1.0
+        self.shareButtonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.shareButtonNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 0.0), to: .zero, duration: 0.2, additive: true)
         
         self.contentTitleNode.alpha = 1.0
         self.contentTitleNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
@@ -400,13 +414,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -10.0), to: .zero, duration: 0.2, additive: true)
         self.contentSubtitleNode.layer.animateScale(from: 0.85, to: 1.0, duration: 0.2)
         
+        self.contentGridNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         if let targetFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
-            let sourceCenter = targetFrame.center
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
             clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentTitleNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
             self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            
+            clippedNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             
             let maskView = UIView()
             maskView.frame = clippedNode.bounds
@@ -415,33 +432,31 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskImageView.image = generateMaskImage()
             maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
             maskView.addSubview(maskImageView)
-            
             clippedNode.view.mask = maskView
+            
             
             self.contentGridNode.alpha = 1.0
             self.contentGridNode.forEachItemNode { itemNode in
-                if let snapshotView = itemNode.view.snapshotView(afterScreenUpdates: false) {
+                if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+                    itemNode.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak clippedNode] _ in
+                        clippedNode?.view.removeFromSuperview()
+                    })
+                } else if let snapshotView = itemNode.view.snapshotView(afterScreenUpdates: false) {
                     snapshotView.frame = itemNode.view.convert(itemNode.bounds, to: clippedNode.view)
                     
-                    if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
-                        itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-                        itemNode.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak clippedNode] _ in
-                            clippedNode?.view.removeFromSuperview()
-                        })
-                    } else {
-                        clippedNode.view.addSubview(snapshotView)
-                        
-                        itemNode.alpha = 0.0
-                        let angle = sourceCenter.angle(to: itemNode.position)
-                        let distance = sourceCenter.distance(to: itemNode.position)
-                        let newDistance = distance * 2.8
-                        let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
-                        snapshotView.layer.animatePosition(from: newPosition, to: snapshotView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-                        snapshotView.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak itemNode] _ in
-                            itemNode?.alpha = 1.0
-                        })
-                        snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
-                    }
+                    clippedNode.view.addSubview(snapshotView)
+                    
+                    itemNode.alpha = 0.0
+                    let angle = targetFrame.center.angle(to: itemNode.position)
+                    let distance = targetFrame.center.distance(to: itemNode.position)
+                    let newDistance = distance * 2.8
+                    let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
+                    snapshotView.layer.animatePosition(from: newPosition, to: snapshotView.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                    snapshotView.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak itemNode] _ in
+                        itemNode?.alpha = 1.0
+                    })
+                    snapshotView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
                 }
             }
                         
@@ -451,10 +466,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
     
-    func animateOut(peerId: EnginePeer.Id) -> CGRect? {
+    func animateOut(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
+        self.headerNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         self.searchButtonNode.alpha = 0.0
         self.searchButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
         self.searchButtonNode.layer.animatePosition(from: .zero, to: CGPoint(x: -20.0, y: 0.0), duration: 0.2, additive: true)
+        
+        self.shareButtonNode.alpha = 0.0
+        self.shareButtonNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
+        self.shareButtonNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: 0.0), duration: 0.2, additive: true)
         
         self.contentTitleNode.alpha = 0.0
         self.contentTitleNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2)
@@ -466,13 +487,16 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -10.0), duration: 0.2, additive: true)
         self.contentSubtitleNode.layer.animateScale(from: 1.0, to: 0.85, duration: 0.3)
         
+        self.contentGridNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        
         if let sourceFrame = self.frameForPeerId(peerId), let (size, bottomInset) = self.validLayout {
-            let sourceCenter = sourceFrame.center
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
             clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentTitleNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
             self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
+            
+            clippedNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
             
             let maskView = UIView()
             maskView.frame = clippedNode.bounds
@@ -481,7 +505,6 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskImageView.image = generateMaskImage()
             maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
             maskView.addSubview(maskImageView)
-            
             clippedNode.view.mask = maskView
             
             self.contentGridNode.forEachItemNode { itemNode in
@@ -492,8 +515,8 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
                     if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
                         
                     } else {
-                        let angle = sourceCenter.angle(to: itemNode.position)
-                        let distance = sourceCenter.distance(to: itemNode.position)
+                        let angle = sourceFrame.center.angle(to: itemNode.position)
+                        let distance = sourceFrame.center.distance(to: itemNode.position)
                         let newDistance = distance * 2.8
                         let newPosition = snapshotView.center.offsetBy(distance: newDistance, inDirection: angle)
                         snapshotView.layer.animatePosition(from: snapshotView.center, to: newPosition, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring)
@@ -562,12 +585,15 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         let rawTitleOffset = -titleAreaHeight - presentationLayout.contentOffset.y
         let titleOffset = max(-titleAreaHeight, rawTitleOffset)
         
+        let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: titleOffset), size: CGSize(width: size.width, height: 64.0))
+        transition.updateFrame(node: self.headerNode, frame: headerFrame)
+        
         let titleSize = self.contentTitleNode.measure(size)
-        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: titleOffset + 15.0), size: titleSize)
+        let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 15.0), size: titleSize)
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         
         let subtitleSize = self.contentSubtitleNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: titleAreaHeight))
-        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: titleOffset + 40.0), size: subtitleSize)
+        let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: 40.0), size: subtitleSize)
         var originalSubtitleFrame = self.contentSubtitleNode.frame
         originalSubtitleFrame.origin.x = subtitleFrame.origin.x
         originalSubtitleFrame.size = subtitleFrame.size
@@ -575,19 +601,19 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
           
         let titleButtonSize = CGSize(width: 44.0, height: 44.0)
-        let searchButtonFrame = CGRect(origin: CGPoint(x: 12.0, y: titleOffset + 12.0), size: titleButtonSize)
+        let searchButtonFrame = CGRect(origin: CGPoint(x: 12.0, y: 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.searchButtonNode, frame: searchButtonFrame)
         
-        let shareButtonFrame = CGRect(origin: CGPoint(x: size.width - titleButtonSize.width - 12.0, y: titleOffset + 12.0), size: titleButtonSize)
+        let shareButtonFrame = CGRect(origin: CGPoint(x: size.width - titleButtonSize.width - 12.0, y: 12.0), size: titleButtonSize)
         transition.updateFrame(node: self.shareButtonNode, frame: shareButtonFrame)
         transition.updateFrame(node: self.shareContainerNode, frame: CGRect(origin: CGPoint(), size: titleButtonSize))
         transition.updateFrame(node: self.shareReferenceNode, frame: CGRect(origin: CGPoint(), size: titleButtonSize))
         
         let segmentedSize = self.segmentedNode.updateLayout(.sizeToFit(maximumWidth: size.width - titleButtonSize.width * 2.0, minimumWidth: 160.0, height: 32.0), transition: transition)
-        transition.updateFrame(node: self.segmentedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - segmentedSize.width) / 2.0), y: titleOffset + 18.0), size: segmentedSize))
+        transition.updateFrame(node: self.segmentedNode, frame: CGRect(origin: CGPoint(x: floor((size.width - segmentedSize.width) / 2.0), y: 18.0), size: segmentedSize))
         
         let avatarButtonSize = CGSize(width: 36.0, height: 36.0)
-        let avatarButtonFrame = CGRect(origin: CGPoint(x: size.width - avatarButtonSize.width - 20.0, y: titleOffset + 15.0), size: avatarButtonSize)
+        let avatarButtonFrame = CGRect(origin: CGPoint(x: size.width - avatarButtonSize.width - 20.0, y: 15.0), size: avatarButtonSize)
         transition.updateFrame(node: self.contentTitleAccountNode, frame: avatarButtonFrame)
         
         transition.updateFrame(node: self.contentSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: titleOffset + titleAreaHeight), size: CGSize(width: size.width, height: UIScreenPixel)))

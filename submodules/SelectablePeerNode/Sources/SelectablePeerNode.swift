@@ -73,7 +73,7 @@ public final class SelectablePeerNode: ASDisplayNode {
     private let avatarNode: AvatarNode
     private let onlineNode: PeerOnlineMarkerNode
     private var checkNode: CheckNode?
-    private let textNode: ASTextNode
+    private let textNode: ImmediateTextNode
     
     private let iconView: ComponentView<Empty>
 
@@ -117,7 +117,7 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.avatarNode.frame = CGRect(origin: CGPoint(), size: CGSize(width: 60.0, height: 60.0))
         self.avatarNode.isLayerBacked = !smartInvertColorsEnabled()
         
-        self.textNode = ASTextNode()
+        self.textNode = ImmediateTextNode()
         self.textNode.isUserInteractionEnabled = false
         self.textNode.displaysAsynchronously = false
         
@@ -309,16 +309,16 @@ public final class SelectablePeerNode: ASDisplayNode {
         self.avatarNodeContainer.frame = CGRect(origin: CGPoint(x: floor((bounds.size.width - 60.0) / 2.0), y: 4.0), size: CGSize(width: 60.0, height: 60.0))
         
         let iconSize = CGSize(width: 18.0, height: 18.0)
-        let textSize = self.textNode.calculateSizeThatFits(bounds.size)
+        let textSize = self.textNode.updateLayout(bounds.size)
         var totalWidth = textSize.width
         var leftOrigin = floorToScreenPixels((bounds.width - textSize.width) / 2.0)
         if let iconView = self.iconView.view, iconView.superview != nil {
             totalWidth += iconView.frame.width + 2.0
             leftOrigin = floorToScreenPixels((bounds.width - totalWidth) / 2.0)
-            iconView.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 1.0), size: iconSize)
+            iconView.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0 + floorToScreenPixels((textSize.height - iconSize.height) / 2.0)), size: iconSize)
             leftOrigin += iconSize.width + 2.0
         }
-        self.textNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0), size: CGSize(width: textSize.width, height: 34.0))
+        self.textNode.frame = CGRect(origin: CGPoint(x: leftOrigin, y: 4.0 + 60.0 + 4.0), size: textSize)
         
         let avatarFrame = self.avatarNode.frame
         let avatarContainerFrame = self.avatarNodeContainer.frame
