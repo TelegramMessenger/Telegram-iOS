@@ -274,10 +274,6 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 return
             }
             
-            if let bubbleItemNode = listItemNode as? ChatMessageBubbleItemNode, bubbleItemNode.contentNodes.contains(where: { $0 is ChatMessageActionBubbleContentNode }) {
-                return
-            }
-            
             let messageContainer = self.messageContainers[index]
             messageContainer.animateWith(listItemNode, delay: delay, transition: transition)
             
