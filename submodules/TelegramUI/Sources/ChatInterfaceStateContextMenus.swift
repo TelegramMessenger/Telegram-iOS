@@ -1070,6 +1070,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                                     copyTextWithEntities()
                                                 }
                                             })
+                                        break
+                                    } else {
+                                        copyTextWithEntities()
+                                        break
                                     }
                                 }
                             } else {

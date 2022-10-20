@@ -1673,7 +1673,20 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 action = presentationData.strings.Channel_Setup_ActivateAlertShow
             }
             presentControllerImpl?(textAlertController(context: context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: action, action: {
-                let _ = context.engine.peers.toggleAddressNameActive(domain: .peer(peerId), name: name, active: true).start()
+                let _ = context.engine.peers.toggleAddressNameActive(domain: .peer(peerId), name: name, active: true).start(error: { error in
+                    let errorText: String
+                    switch error {
+                    case .activeLimitReached:
+                        if isGroup {
+                            errorText = presentationData.strings.Group_Setup_ActiveLimitReachedError
+                        } else {
+                            errorText = presentationData.strings.Channel_Setup_ActiveLimitReachedError
+                        }
+                    default:
+                        errorText = presentationData.strings.Login_UnknownError
+                    }
+                    presentControllerImpl?(textAlertController(context: context, title: nil, text: errorText, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                })
             })]), nil)
         })
     }, deactivateLink: { name in

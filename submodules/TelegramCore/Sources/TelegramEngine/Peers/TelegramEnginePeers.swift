@@ -47,6 +47,10 @@ public extension TelegramEngine {
             return _internal_updateAddressName(account: self.account, domain: domain, name: name)
         }
         
+        public func deactivateAllAddressNames(peerId: EnginePeer.Id) -> Signal<Never, DeactivateAllAddressNamesError> {
+            return _internal_deactivateAllAddressNames(account: self.account, peerId: peerId)
+        }
+        
         public func toggleAddressNameActive(domain: AddressNameDomain, name: String, active: Bool) -> Signal<Void, ToggleAddressNameActiveError> {
             return _internal_toggleAddressNameActive(account: self.account, domain: domain, name: name, active: active)
         }

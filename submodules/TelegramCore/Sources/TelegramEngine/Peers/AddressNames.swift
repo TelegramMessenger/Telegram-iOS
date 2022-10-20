@@ -172,8 +172,49 @@ func _internal_updateAddressName(account: Account, domain: AddressNameDomain, na
     } |> mapError { _ -> UpdateAddressNameError in } |> switchToLatest
 }
 
+public enum DeactivateAllAddressNamesError {
+    case generic
+}
+
+func _internal_deactivateAllAddressNames(account: Account, peerId: EnginePeer.Id) -> Signal<Never, DeactivateAllAddressNamesError> {
+    return account.postbox.transaction { transaction -> Signal<Never, DeactivateAllAddressNamesError> in
+        if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
+            return account.network.request(Api.functions.channels.deactivateAllUsernames(channel: inputChannel), automaticFloodWait: false)
+            |> mapError { _ -> DeactivateAllAddressNamesError in
+                return .generic
+            }
+            |> mapToSignal { result -> Signal<Never, DeactivateAllAddressNamesError> in
+                return account.postbox.transaction { transaction -> Signal<Void, DeactivateAllAddressNamesError> in
+                    if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramChannel {
+                        var updatedNames: [TelegramPeerUsername] = []
+                        for username in peer.usernames {
+                            var updatedFlags = username.flags
+                            updatedFlags.remove(.isActive)
+                            updatedNames.append(TelegramPeerUsername(flags: updatedFlags, username: username.username))
+                        }
+                        let updatedUser = peer.withUpdatedAddressNames(updatedNames)
+                        updatePeers(transaction: transaction, peers: [updatedUser], update: { _, updated in
+                            return updated
+                        })
+                    }
+                    return .complete()
+                }
+                |> castError(DeactivateAllAddressNamesError.self)
+                |> switchToLatest
+                |> ignoreValues
+            }
+        } else {
+            return .never()
+        }
+    }
+    |> mapError { _ -> DeactivateAllAddressNamesError in
+    }
+    |> switchToLatest
+}
+
 public enum ToggleAddressNameActiveError {
     case generic
+    case activeLimitReached
 }
 
 func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDomain, name: String, active: Bool) -> Signal<Void, ToggleAddressNameActiveError> {

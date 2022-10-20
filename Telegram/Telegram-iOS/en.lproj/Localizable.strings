@@ -8093,6 +8093,8 @@ Sorry for the inconvenience.";
 "Group.Setup.ActivateAlertText" = "Do you want to show this link on the group info page?";
 "Group.Setup.ActivateAlertShow" = "Show";
 
+"Group.Setup.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
+
 "Group.Setup.DeactivateAlertTitle" = "Deactivate Link";
 "Group.Setup.DeactivateAlertText" = "Do you want to hide this link from the group info page?";
 "Group.Setup.DeactivateAlertHide" = "Hide";
@@ -8105,6 +8107,8 @@ Sorry for the inconvenience.";
 "Channel.Setup.ActivateAlertText" = "Do you want to show this link on the channel info page?";
 "Channel.Setup.ActivateAlertShow" = "Show";
 
+"Channel.Setup.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
+
 "Channel.Setup.DeactivateAlertTitle" = "Deactivate Link";
 "Channel.Setup.DeactivateAlertText" = "Do you want to hide this link from the channel info page?";
 "Channel.Setup.DeactivateAlertHide" = "Hide";
@@ -8116,6 +8120,8 @@ Sorry for the inconvenience.";
 "Username.ActivateAlertTitle" = "Activate Username";
 "Username.ActivateAlertText" = "Do you want to show this link on your info page?";
 "Username.ActivateAlertShow" = "Show";
+
+"Username.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
 
 "Username.DeactivateAlertTitle" = "Deactivate Username";
 "Username.DeactivateAlertText" = "Do you want to hide this link from your info page?";

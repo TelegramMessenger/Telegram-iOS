@@ -42,7 +42,6 @@ public final class SearchDisplayController {
         self.inline = inline
         self.searchBar = SearchBarNode(theme: SearchBarNodeTheme(theme: presentationData.theme, hasBackground: hasBackground, hasSeparator: hasSeparator, inline: inline), strings: presentationData.strings, fieldStyle: .modern, forceSeparator: hasSeparator, displayBackground: hasBackground)
         self.backgroundNode = BackgroundNode()
-        self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
         self.backgroundNode.allowsGroupOpacity = true
         
         self.mode = mode
@@ -105,6 +104,14 @@ public final class SearchDisplayController {
         |> deliverOnMainQueue).start(next: { [weak self] value in
             self?.searchBar.activity = value
         })
+        
+        if self.contentNode.hasDim {
+            self.backgroundNode.backgroundColor = .clear
+            self.backgroundNode.isTransparent = true
+        } else {
+            self.backgroundNode.backgroundColor = presentationData.theme.chatList.backgroundColor
+            self.backgroundNode.isTransparent = false
+        }
     }
     
     public func updatePresentationData(_ presentationData: PresentationData) {

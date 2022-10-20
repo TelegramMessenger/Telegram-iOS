@@ -193,12 +193,16 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
                 
         return { item, params, neighbors, firstWithHeader, last in
             var updatedTheme: PresentationTheme?
+            var updatedIsActive = false
         
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseFontSize)
             let subtitleFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
+            }
+            if currentItem?.username?.isActive != item.username?.isActive {
+                updatedIsActive = true
             }
             
             let iconColor: UIColor
@@ -303,7 +307,11 @@ public class AdditionalLinkItemNode: ListViewItemNode, ItemListItemNode {
                         strongSelf.backgroundNode.backgroundColor = itemBackgroundColor
                         strongSelf.highlightedBackgroundNode.backgroundColor = item.presentationData.theme.list.itemHighlightedBackgroundColor
                         
-                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Link"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
+                       
+                    }
+                    
+                    if updatedIsActive || updatedTheme != nil {
+                        strongSelf.iconNode.image = generateTintedImage(image: UIImage(bundleImageName: item.username?.isActive == true ? "Chat/Context Menu/Link" : "Chat/Context Menu/Unlink"), color: item.presentationData.theme.list.itemCheckColors.foregroundColor)
                     }
                                         
                     let transition = ContainedViewLayoutTransition.immediate

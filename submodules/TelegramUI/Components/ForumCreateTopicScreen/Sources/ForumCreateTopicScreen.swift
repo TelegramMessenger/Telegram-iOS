@@ -27,6 +27,7 @@ private final class TitleFieldComponent: Component {
     let iconColor: Int32
     let text: String
     let textUpdated: (String) -> Void
+    let iconPressed: () -> Void
     
     init(
         context: AccountContext,
@@ -36,7 +37,8 @@ private final class TitleFieldComponent: Component {
         fileId: Int64,
         iconColor: Int32,
         text: String,
-        textUpdated: @escaping (String) -> Void
+        textUpdated: @escaping (String) -> Void,
+        iconPressed: @escaping () -> Void
     ) {
         self.context = context
         self.textColor = textColor
@@ -46,6 +48,7 @@ private final class TitleFieldComponent: Component {
         self.iconColor = iconColor
         self.text = text
         self.textUpdated = textUpdated
+        self.iconPressed = iconPressed
     }
     
     static func ==(lhs: TitleFieldComponent, rhs: TitleFieldComponent) -> Bool {
@@ -74,33 +77,51 @@ private final class TitleFieldComponent: Component {
     }
     
     final class View: UIView {
+        private let iconButton: HighlightTrackingButton
         private let iconView: ComponentView<Empty>
+        private let placeholderView: ComponentView<Empty>
         private let textField: TextFieldNodeView
         
         private var component: TitleFieldComponent?
         private weak var state: EmptyComponentState?
         
         override init(frame: CGRect) {
+            self.iconButton = HighlightTrackingButton()
             self.iconView = ComponentView<Empty>()
+            self.placeholderView = ComponentView<Empty>()
             self.textField = TextFieldNodeView(frame: .zero)
             
             super.init(frame: frame)
             
-            self.textField.placeholder = "What do you want to discuss?"
             self.textField.addTarget(self, action: #selector(self.textChanged(_:)), for: .editingChanged)
             
             self.addSubview(self.textField)
+            self.addSubview(self.iconButton)
+            
+            self.iconButton.highligthedChanged = { [weak self] highlighted in
+                if let strongSelf = self, let iconView = strongSelf.iconView.view {
+                    if highlighted {
+                        iconView.layer.animateScale(from: 1.0, to: 0.8, duration: 0.25, removeOnCompletion: false)
+                    } else if let presentationLayer = iconView.layer.presentation() {
+                        iconView.layer.animateScale(from: CGFloat((presentationLayer.value(forKeyPath: "transform.scale.y") as? NSNumber)?.floatValue ?? 1.0), to: 1.0, duration: 0.2, removeOnCompletion: false)
+                    }
+                }
+            }
+            self.iconButton.addTarget(self, action: #selector(self.iconButtonPressed), for: .touchUpInside)
         }
         
         required init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
         }
         
-        deinit {
+        @objc func iconButtonPressed() {
+            self.component?.iconPressed()
         }
         
         @objc func textChanged(_ sender: Any) {
-            self.component?.textUpdated(self.textField.text ?? "")
+            let text = self.textField.text ?? ""
+            self.component?.textUpdated(text)
+            self.placeholderView.view?.isHidden = !text.isEmpty
         }
         
         func update(component: TitleFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
@@ -114,8 +135,31 @@ private final class TitleFieldComponent: Component {
             let iconContent: EmojiStatusComponent.Content
             if component.fileId == 0 {
                 iconContent = .topic(title: String(component.text.prefix(1)), color: component.iconColor, size: CGSize(width: 32.0, height: 32.0))
+                self.iconButton.isUserInteractionEnabled = true
             } else {
                 iconContent = .animation(content: .customEmoji(fileId: component.fileId), size: CGSize(width: 48.0, height: 48.0), placeholderColor: component.placeholderColor, themeColor: component.accentColor, loopMode: .count(2))
+                self.iconButton.isUserInteractionEnabled = false
+            }
+            
+            let placeholderSize = self.placeholderView.update(
+                transition: .easeInOut(duration: 0.2),
+                component: AnyComponent(
+                    Text(
+                        text: "What do you want to discuss?",
+                        font: Font.regular(17.0),
+                        color: component.placeholderColor
+                    )
+                ),
+                environment: {},
+                containerSize: availableSize
+            )
+            
+            if let placeholderComponentView = self.placeholderView.view {
+                if placeholderComponentView.superview == nil {
+                    self.insertSubview(placeholderComponentView, at: 0)
+                }
+                
+                placeholderComponentView.frame = CGRect(origin: CGPoint(x: 62.0, y: floorToScreenPixels((availableSize.height - placeholderSize.height) / 2.0) + 1.0 - UIScreenPixel), size: placeholderSize)
             }
             
             let iconSize = self.iconView.update(
@@ -134,11 +178,11 @@ private final class TitleFieldComponent: Component {
             
             if let iconComponentView = self.iconView.view {
                 if iconComponentView.superview == nil {
-                    self.addSubview(iconComponentView)
+                    self.insertSubview(iconComponentView, at: 0)
                 }
                 
                 iconComponentView.frame = CGRect(origin: CGPoint(x: 15.0, y: floorToScreenPixels((availableSize.height - iconSize.height) / 2.0)), size: iconSize)
-                
+                self.iconButton.frame = iconComponentView.frame.insetBy(dx: -4.0, dy: -4.0)
                 self.textField.becomeFirstResponder()
             }
             
@@ -443,9 +487,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         func updateTitle(_ text: String) {
             self.title = text
             self.updated(transition: .immediate)
-            
             self.titleUpdated(text)
-            
+            self.updateEmojiContent()
+        }
+        
+        func updateEmojiContent() {
             self.emojiContentDisposable.set((
                 EmojiPagerContentComponent.emojiInputData(
                     context: self.context,
@@ -469,6 +515,18 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             }))
         }
         
+        func switchIcon() {
+            let colors = ForumCreateTopicScreen.iconColors
+            if let index = colors.firstIndex(where: { $0 == self.iconColor }) {
+                let nextIndex = (index + 1) % colors.count
+                self.iconColor = colors[nextIndex]
+            } else {
+                self.iconColor = colors.first ?? 0
+            }
+            self.updated(transition: .immediate)
+            self.updateEmojiContent()
+        }
+        
         func applyItem(groupId: AnyHashable, item: EmojiPagerContentComponent.Item?) {
             guard let item = item else {
                 return
@@ -486,30 +544,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             }
             
             self.updated(transition: .immediate)
-            
             self.iconUpdated(self.fileId != 0 ? self.fileId : nil)
-            
-            self.emojiContentDisposable.set((
-                EmojiPagerContentComponent.emojiInputData(
-                    context: self.context,
-                    animationCache: self.context.animationCache,
-                    animationRenderer: self.context.animationRenderer,
-                    isStandalone: false,
-                    isStatusSelection: false,
-                    isReactionSelection: false,
-                    isTopicIconSelection: true,
-                    topReactionItems: [],
-                    areUnicodeEmojiEnabled: false,
-                    areCustomEmojiEnabled: true,
-                    chatPeerId: self.context.account.peerId,
-                    selectedItems: Set([MediaId(namespace: Namespaces.Media.CloudFile, id: self.fileId)]),
-                    topicTitle: self.title,
-                    topicColor: self.iconColor
-                )
-            |> deliverOnMainQueue).start(next: { [weak self] content in
-                self?.emojiContent = content
-                self?.updated(transition: .immediate)
-            }))
+            self.updateEmojiContent()
         }
     }
     
@@ -599,6 +635,9 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     text: state.title,
                     textUpdated: { [weak state] text in
                         state?.updateTitle(text)
+                    },
+                    iconPressed: { [weak state] in
+                        state?.switchIcon()
                     }
                 ),
                 availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 44.0),
@@ -736,6 +775,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
 }
 
 public class ForumCreateTopicScreen: ViewControllerComponentContainer {
+    public static let iconColors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98, 0xFF93B2, 0xFB6F5F]
+    
     public enum Mode: Equatable {
         case create
         case edit(topic: EngineMessageHistoryThread.Info)
