@@ -130,7 +130,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
                 if let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {
                     backgroundContent.allowsGroupOpacity = true
                     backgroundContent.clipsToBounds = true
-                    backgroundContent.alpha = 0.2
+                    backgroundContent.alpha = 0.3
                     backgroundContent.cornerRadius = 19.0
                     backgroundContent.frame = self.backgroundNode.frame
                     self.buttonNode.insertSubnode(backgroundContent, aboveSubnode: self.backgroundNode)

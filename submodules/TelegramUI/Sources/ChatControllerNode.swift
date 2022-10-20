@@ -1732,7 +1732,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             if let inputNode = self.inputNode {
                 extensionValue = inputNode.topBackgroundExtension
             }
-            let apparentInputBackgroundFrame = CGRect(origin: .zero, size: CGSize(width: apparentInputBackgroundFrame.width, height: apparentInputBackgroundFrame.height + extensionValue))
+            let apparentInputBackgroundFrame = CGRect(origin: apparentInputBackgroundFrame.origin, size: CGSize(width: apparentInputBackgroundFrame.width, height: apparentInputBackgroundFrame.height + extensionValue))
             var transition = transition
             var delay: Double = 0.0
             if apparentInputBackgroundFrame.height > inputPanelBackgroundContent.frame.height {
@@ -2271,12 +2271,12 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                             
                             navigationBarBackgroundContent.allowsGroupOpacity = true
                             navigationBarBackgroundContent.implicitContentUpdate = false
-                            navigationBarBackgroundContent.alpha = 0.2
+                            navigationBarBackgroundContent.alpha = 0.3
                             self.navigationBar?.insertSubnode(navigationBarBackgroundContent, at: 1)
                             
                             inputPanelBackgroundContent.allowsGroupOpacity = true
                             inputPanelBackgroundContent.implicitContentUpdate = false
-                            inputPanelBackgroundContent.alpha = 0.2
+                            inputPanelBackgroundContent.alpha = 0.3
                             self.inputPanelBackgroundNode.addSubnode(inputPanelBackgroundContent)
                         }
                     }
