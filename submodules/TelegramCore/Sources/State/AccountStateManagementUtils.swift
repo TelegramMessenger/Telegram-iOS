@@ -2414,6 +2414,8 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
                         notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                         
                         updatedState.updatePeerChatInclusion(peerId: peerId, groupId: groupId, changedGroup: false)
+                        
+                        updatedState.resetForumTopicLists[peerId] = []
                     }
                     
                     for message in messages {
@@ -2490,7 +2492,11 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
 private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
         let limit: Int32
+        #if DEBUG
+        limit = 2
+        #else
         limit = 100
+        #endif
         
         let pollPts: Int32
         if let channelState = state.channelStates[peer.id] {

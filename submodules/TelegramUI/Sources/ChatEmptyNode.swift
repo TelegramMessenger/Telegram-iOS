@@ -819,9 +819,10 @@ final class ChatEmptyNodeTopicChatContent: ASDisplayNode, ChatEmptyNodeContent, 
             self.currentTheme = interfaceState.theme
             self.currentStrings = interfaceState.strings
             
+            //TODO:localize
             self.titleNode.attributedText = NSAttributedString(string: "Almost done!", font: titleFont, textColor: serviceColor.primaryText)
             
-            self.textNode.attributedText = NSAttributedString(string: "Send first message to\nstart this topic.", font: messageFont, textColor: serviceColor.primaryText)
+            self.textNode.attributedText = NSAttributedString(string: "Send the first message to\nstart this topic.", font: messageFont, textColor: serviceColor.primaryText)
         }
         
         let inset: CGFloat
