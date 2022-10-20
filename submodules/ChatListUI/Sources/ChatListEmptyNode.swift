@@ -13,7 +13,7 @@ import AccountContext
 final class ChatListEmptyNode: ASDisplayNode {
     enum Subject {
         case chats
-        case filter
+        case filter(showEdit: Bool)
         case forum
     }
     private let action: () -> Void
@@ -54,7 +54,12 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.descriptionNode.textAlignment = .center
         self.descriptionNode.lineSpacing = 0.1
         
-        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: theme), cornerRadius: 11.0, gloss: true)
+        var gloss = true
+        if case .filter = subject {
+            gloss = false
+        }
+        
+        self.buttonNode = SolidRoundedButtonNode(theme: SolidRoundedButtonTheme(theme: theme), cornerRadius: 11.0, gloss: gloss)
         
         self.secondaryButtonNode = HighlightableButtonNode()
         
@@ -70,8 +75,9 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.addSubnode(self.activityIndicator)
         
         let animationName: String
-        if case .filter = subject {
+        if case let .filter(showEdit) = subject {
             animationName = "ChatListFilterEmpty"
+            self.buttonNode.isHidden = !showEdit
         } else {
             animationName = "ChatListEmpty"
         }

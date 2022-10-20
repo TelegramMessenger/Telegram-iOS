@@ -337,8 +337,14 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         currentNode.updateIsLoading(isLoading)
                     } else {
                         let subject: ChatListEmptyNode.Subject
-                        if filter != nil {
-                            subject = .filter
+                        if let filter = filter {
+                            var showEdit = true
+                            if case let .filter(_, _, _, data) = filter {
+                                if data.excludeRead && data.includePeers.peers.isEmpty && data.includePeers.pinnedPeers.isEmpty {
+                                    showEdit = false
+                                }
+                            }
+                            subject = .filter(showEdit: showEdit)
                         } else {
                             if case .forum = location {
                                 subject = .forum
@@ -1309,7 +1315,10 @@ final class ChatListControllerNode: ASDisplayNode {
             return nil
         }
         
-        let filter: ChatListNodePeersFilter = []
+        var filter: ChatListNodePeersFilter = []
+        if case .forum = self.location {
+            filter.insert(.excludeRecent)
+        }
         
         let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: location, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)

@@ -3963,7 +3963,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     let progress = abs(translation.x) / swipeOffset
                     swipeToReplyNode.updateProgress(progress)
                     
-                    if progress == 1.0 && !self.playedSwipeToReplyHaptic {
+                    if progress > 1.0 - .ulpOfOne && !self.playedSwipeToReplyHaptic {
+                        self.playedSwipeToReplyHaptic = true
                         self.swipeToReplyFeedback?.impact(.heavy)
                     }
                 }

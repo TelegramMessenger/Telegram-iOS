@@ -483,6 +483,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.copyProtectionTooltipController?.dismiss()
     }
     
+    public override var hasDim: Bool {
+        return self.peersFilter.contains(.excludeRecent)
+    }
+    
     private func updateState(_ f: (ChatListSearchContainerNodeSearchState) -> ChatListSearchContainerNodeSearchState) {
         let state = f(self.stateValue)
         if state != self.stateValue {
@@ -606,6 +610,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
         
+        let isFirstTime = self.validLayout == nil
         self.validLayout = (layout, navigationBarHeight)
         
         let topInset = navigationBarHeight
@@ -625,6 +630,10 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         
         let overflowInset: CGFloat = 20.0
         self.filterContainerNode.update(size: CGSize(width: layout.size.width - overflowInset * 2.0, height: 38.0), sideInset: layout.safeInsets.left - overflowInset, filters: filters.map { .filter($0) }, selectedFilter: self.selectedFilter?.id, transitionFraction: self.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))
+        
+        if isFirstTime {
+            self.filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        }
         
         var bottomIntrinsicInset = layout.intrinsicInsets.bottom
         if case .chatList(.root) = self.location {

@@ -1042,7 +1042,7 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     public func deactivate(clear: Bool = true) {
         self.textField.resignFirstResponder()
         if clear {
-            self.textField.text = nil
+            self.textField.text = nil            
             self.textField.tokens = []
             self.textField.prefixString = nil
             self.textField.placeholderLabel.alpha = 1.0

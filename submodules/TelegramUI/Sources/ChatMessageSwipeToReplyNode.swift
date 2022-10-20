@@ -20,8 +20,9 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
     private let foregroundNode: ASImageNode
     
     private let maskNode: ASDisplayNode
-    private let progressLayer: CAShapeLayer
-    private let fillLayer: CAShapeLayer
+    private let progressLayer: SimpleShapeLayer
+    private let fillLayer: SimpleShapeLayer
+    private let semiFillLayer: SimpleShapeLayer
     
     private var absolutePosition: (CGRect, CGSize)?
     
@@ -67,9 +68,10 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         })
         
         self.maskNode = ASDisplayNode()
-        self.progressLayer = CAShapeLayer()
-        self.fillLayer = CAShapeLayer()
-        
+        self.progressLayer = SimpleShapeLayer()
+        self.fillLayer = SimpleShapeLayer()
+        self.semiFillLayer = SimpleShapeLayer()
+    
         super.init()
         
         self.allowsGroupOpacity = true
@@ -78,6 +80,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         
         self.maskNode.layer.addSublayer(self.progressLayer)
         self.maskNode.layer.addSublayer(self.fillLayer)
+        self.maskNode.layer.addSublayer(self.semiFillLayer)
         
         self.addSubnode(self.foregroundNode)
         
@@ -95,10 +98,15 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         self.fillLayer.strokeColor = UIColor.white.cgColor
         self.fillLayer.fillColor = UIColor.clear.cgColor
         self.fillLayer.isHidden = true
+        
+        self.semiFillLayer.fillColor = UIColor(rgb: 0xffffff, alpha: 0.6).cgColor
            
         self.maskNode.frame = CGRect(origin: CGPoint(x: 22.0, y: 22.0), size: backgroundFrame.size)
         self.progressLayer.frame = CGRect(origin: .zero, size: size).insetBy(dx: -20.0, dy: -20.0)
         self.fillLayer.frame = CGRect(origin: .zero, size: size)
+        
+        self.semiFillLayer.frame = self.fillLayer.frame
+        self.semiFillLayer.path = UIBezierPath(ovalIn: self.semiFillLayer.bounds).cgPath
         
         let path = UIBezierPath(arcCenter: CGPoint(x: self.progressLayer.frame.width / 2.0, y: self.progressLayer.frame.height / 2.0), radius: size.width / 2.0, startAngle: CGFloat(-0.5 * .pi), endAngle: CGFloat(1.5 * .pi), clockwise: true)
         self.progressLayer.path = path.cgPath
@@ -154,6 +162,8 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
             self.maskNode.alpha = progress
         }
         
+        self.semiFillLayer.opacity = Float(progress)
+        
         self.layer.sublayerTransform = CATransform3DMakeScale(scaleProgress, scaleProgress, 1.0)
         
         self.foregroundNode.alpha = foregroundProgress
@@ -180,7 +190,7 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         var path = self.progressLayer.path
         var targetPath = UIBezierPath(arcCenter: CGPoint(x: self.progressLayer.frame.width / 2.0, y: self.progressLayer.frame.height / 2.0), radius: 35.0, startAngle: CGFloat(-0.5 * .pi), endAngle: CGFloat(-0.5 * .pi + 2.0 * .pi), clockwise: true).cgPath
         self.progressLayer.path = targetPath
-        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.2)
+        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
         
         self.fillLayer.isHidden = false
         self.fillLayer.path = UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).cgPath

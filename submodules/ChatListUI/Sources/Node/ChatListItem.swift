@@ -330,10 +330,16 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isEditing: Bool, canManage: Bool) -> [ItemListRevealOption] {
+private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isPinned: Bool, isEditing: Bool, canManage: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if let isMuted = isMuted {
+        if canManage {
+            if isPinned {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            }
+        } else if let isMuted = isMuted {
             if isMuted {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
             } else {
@@ -351,20 +357,6 @@ private func forumRevealOptions(strings: PresentationStrings, theme: Presentatio
             }
         }
     }
-    return options
-}
-
-private func forumLeftRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isUnread: Bool, isEditing: Bool, isPinned: Bool, location: ChatListControllerLocation, peer: EnginePeer) -> [ItemListRevealOption] {
-    var options: [ItemListRevealOption] = []
-    
-    if case let .channel(channel) = peer, channel.hasPermission(.pinMessages) {
-        if isPinned {
-            options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-        } else {
-            options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-        }
-    }
-    
     return options
 }
 
@@ -1869,8 +1861,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 if let threadInfo {
                                     isClosed = threadInfo.isClosed
                                 }
-                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canManage: canManage)
-                                peerLeftRevealOptions = forumLeftRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isUnread: unreadCount.unread, isEditing: item.editing, isPinned: isPinned, location: item.chatListLocation, peer: itemPeer.peers[itemPeer.peerId]!)
+                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isPinned: isPinned, isEditing: item.editing, canManage: canManage)
+                                peerLeftRevealOptions = []
                             } else {
                                 peerRevealOptions = []
                                 peerLeftRevealOptions = []

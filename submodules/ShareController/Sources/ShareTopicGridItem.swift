@@ -63,6 +63,8 @@ final class ShareTopicGridItemNode: GridItemNode {
     override init() {
         self.iconView = ComponentView<Empty>()
         self.textNode = ImmediateTextNode()
+        self.textNode.maximumNumberOfLines = 2
+        self.textNode.textAlignment = .center
         
         super.init()
         
