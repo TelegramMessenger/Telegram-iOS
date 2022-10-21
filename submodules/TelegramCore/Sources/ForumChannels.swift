@@ -373,22 +373,6 @@ func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, t
             account.stateManager.addUpdates(result)
             
             return .complete()
-            
-            /*return account.postbox.transaction { transaction -> Void in
-                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
-                    var data = initialData
-                    
-                    data.isClosed = isClosed
-                    
-                    if data != initialData {
-                        if let entry = StoredMessageHistoryThreadInfo(data) {
-                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
-                        }
-                    }
-                }
-            }
-            |> castError(EditForumChannelTopicError.self)
-            |> ignoreValues*/
         }
     }
 }
@@ -421,8 +405,8 @@ enum LoadMessageHistoryThreadsError {
     case generic
 }
 
-func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Signal<Never, LoadMessageHistoryThreadsError> {
-    let signal: Signal<Never, LoadMessageHistoryThreadsError> = account.postbox.transaction { transaction -> Api.InputChannel? in
+func _internal_loadMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<Never, LoadMessageHistoryThreadsError> {
+    let signal: Signal<Never, LoadMessageHistoryThreadsError> = postbox.transaction { transaction -> Api.InputChannel? in
         return transaction.getPeer(peerId).flatMap(apiInputChannel)
     }
     |> castError(LoadMessageHistoryThreadsError.self)
@@ -430,23 +414,32 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
         guard let inputChannel = inputChannel else {
             return .fail(.generic)
         }
-        let signal: Signal<Never, LoadMessageHistoryThreadsError> = account.network.request(Api.functions.channels.getForumTopics(
-            flags: 0,
+        let flags: Int32 = 0
+        var offsetDate: Int32 = 0
+        var offsetId: Int32 = 0
+        var offsetTopic: Int32 = 0
+        if let offsetIndex = offsetIndex {
+            offsetDate = offsetIndex.timestamp
+            offsetId = offsetIndex.messageId
+            offsetTopic = Int32(clamping: offsetIndex.threadId)
+        }
+        let signal: Signal<Never, LoadMessageHistoryThreadsError> = network.request(Api.functions.channels.getForumTopics(
+            flags: flags,
             channel: inputChannel,
             q: nil,
-            offsetDate: 0,
-            offsetId: 0,
-            offsetTopic: 0,
-            limit: 100
+            offsetDate: offsetDate,
+            offsetId: offsetId,
+            offsetTopic: offsetTopic,
+            limit: Int32(limit)
         ))
         |> mapError { _ -> LoadMessageHistoryThreadsError in
             return .generic
         }
         |> mapToSignal { result -> Signal<Never, LoadMessageHistoryThreadsError> in
-            return account.postbox.transaction { transaction -> Void in
+            return postbox.transaction { transaction -> Void in
                 var pinnedId: Int64?
                 switch result {
-                case let .forumTopics(flags, count, topics, messages, chats, users, pts):
+                case let .forumTopics(_, _, topics, messages, chats, users, pts):
                     var peers: [Peer] = []
                     var peerPresences: [PeerId: Api.User] = [:]
                     for chat in chats {
@@ -463,19 +456,16 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                         return updated
                     })
                     
-                    updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
+                    updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
                     
-                    let _ = InternalAccountState.addMessages(transaction: transaction, messages: messages.compactMap { message -> StoreMessage? in
+                    let addedMessages = messages.compactMap { message -> StoreMessage? in
                         return StoreMessage(apiMessage: message)
-                    }, location: .Random)
+                    }
                     
-                    let _ = flags
-                    let _ = count
-                    let _ = topics
-                    let _ = messages
-                    let _ = chats
-                    let _ = users
+                    let _ = InternalAccountState.addMessages(transaction: transaction, messages: addedMessages, location: .Random)
+                    
                     let _ = pts
+                    var minIndex: StoredPeerThreadCombinedState.Index?
                     
                     for topic in topics {
                         switch topic {
@@ -509,6 +499,22 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                             
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
+                            
+                            var topTimestamp = date
+                            for message in addedMessages {
+                                if message.id.peerId == peerId && message.threadId == Int64(id) {
+                                    topTimestamp = max(topTimestamp, message.timestamp)
+                                }
+                            }
+                            
+                            let topicIndex = StoredPeerThreadCombinedState.Index(timestamp: topTimestamp, threadId: Int64(id), messageId: topMessage)
+                            if let minIndexValue = minIndex {
+                                if topicIndex < minIndexValue {
+                                    minIndex = topicIndex
+                                }
+                            } else {
+                                minIndex = topicIndex
+                            }
                         case .forumTopicDeleted:
                             break
                         }
@@ -520,9 +526,17 @@ func _internal_loadMessageHistoryThreads(account: Account, peerId: PeerId) -> Si
                         transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
                     }
                     
-                    if let entry = StoredPeerThreadCombinedState(PeerThreadCombinedState(
-                        validIndexBoundary: StoredPeerThreadCombinedState.Index(timestamp: Int32.max, threadId: Int64(Int32.max), messageId: Int32.max)
-                    )) {
+                    var nextIndex: StoredPeerThreadCombinedState.Index
+                    if topics.count != 0 {
+                        nextIndex = minIndex ?? StoredPeerThreadCombinedState.Index(timestamp: 0, threadId: 0, messageId: 1)
+                    } else {
+                        nextIndex = StoredPeerThreadCombinedState.Index(timestamp: 0, threadId: 0, messageId: 1)
+                    }
+                    if let offsetIndex = offsetIndex, nextIndex == offsetIndex {
+                        nextIndex = StoredPeerThreadCombinedState.Index(timestamp: 0, threadId: 0, messageId: 1)
+                    }
+                    
+                    if let entry = StoredPeerThreadCombinedState(PeerThreadCombinedState(validIndexBoundary: nextIndex)) {
                         transaction.setPeerThreadCombinedState(peerId: peerId, state: entry)
                     }
                 }
@@ -641,7 +655,7 @@ public final class ForumChannelTopics {
             self.account = account
             self.peerId = peerId
             
-            let _ = _internal_loadMessageHistoryThreads(account: self.account, peerId: peerId).start()
+            //let _ = _internal_loadMessageHistoryThreads(account: self.account, peerId: peerId, offsetIndex: nil, limit: 100).start()
             
             self.updateDisposable.set(account.viewTracker.polledChannel(peerId: peerId).start())
         }

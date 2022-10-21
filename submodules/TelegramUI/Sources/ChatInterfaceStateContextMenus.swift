@@ -525,6 +525,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     
     let message = messages[0]
     
+    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if message.threadId == nil {
+            canReply = false
+        }
+    }
+    
     if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
         canPin = false

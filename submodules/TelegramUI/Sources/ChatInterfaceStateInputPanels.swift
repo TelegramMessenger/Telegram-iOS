@@ -181,6 +181,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             }
                         }
                     }
+                } else {
+                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
+                        }
+                    }
                 }
             }
                         

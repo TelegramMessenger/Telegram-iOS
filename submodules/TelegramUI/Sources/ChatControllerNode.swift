@@ -79,9 +79,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var containerNode: ASDisplayNode?
     private var overlayNavigationBar: ChatOverlayNavigationBar?
     
-    var peerView: PeerView? {
+    var overlayTitle: String? {
         didSet {
-            self.overlayNavigationBar?.peerView = self.peerView
+            self.overlayNavigationBar?.title = self.overlayTitle
         }
     }
     
@@ -234,7 +234,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     } else {
                         loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
                         loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
-                        self.contentContainerNode.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
+                        self.backgroundNode.supernode?.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
                         
                         self.loadingPlaceholderNode = loadingPlaceholderNode
                      
@@ -968,7 +968,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }, close: { [weak self] in
                     self?.dismissAsOverlay()
                 })
-                overlayNavigationBar.peerView = self.peerView
+                overlayNavigationBar.title = self.overlayTitle
                 self.overlayNavigationBar = overlayNavigationBar
                 self.containerNode?.addSubnode(overlayNavigationBar)
             }

@@ -265,6 +265,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var moreInfoNavigationButton: ChatNavigationButton?
     
     private var peerView: PeerView?
+    private var threadInfo: EngineMessageHistoryThread.Info?
     
     private var historyStateDisposable: Disposable?
     
@@ -519,6 +520,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     private var inviteRequestsContext: PeerInvitationImportersContext?
     private var inviteRequestsDisposable = MetaDisposable()
+    
+    private var overlayTitle: String? {
+        var title: String?
+        if let threadInfo = self.threadInfo {
+            title = threadInfo.title
+        } else if let peerView = self.peerView {
+            if let peer = peerViewMainPeer(peerView) {
+                title = EnginePeer(peer).displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder)
+            }
+        }
+        return title
+    }
     
     public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
         let _ = ChatControllerCount.modify { value in
@@ -3018,6 +3031,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation, replyThreadMessage.messageId == message.id {
                     return .none
                 }
+                if case .peer = strongSelf.chatLocation, let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                    if message.threadId == nil {
+                        return .none
+                    }
+                }
                 
                 if canReplyInChat(strongSelf.presentationInterfaceState) {
                     return .reply
@@ -4408,10 +4426,28 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }))
                 
-                self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get(), displayedCountSignal)
-                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount in
+                let threadInfo: Signal<EngineMessageHistoryThread.Info?, NoError>
+                if let threadId = self.chatLocation.threadId {
+                    let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: threadId)
+                    threadInfo = context.account.postbox.combinedView(keys: [viewKey])
+                    |> map { views -> EngineMessageHistoryThread.Info? in
+                        guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
+                            return nil
+                        }
+                        guard let data = view.info?.data.get(MessageHistoryThreadData.self) else {
+                            return nil
+                        }
+                        return data.info
+                    }
+                    |> distinctUntilChanged
+                } else {
+                    threadInfo = .single(nil)
+                }
+                
+                self.peerDisposable.set((combineLatest(queue: Queue.mainQueue(), peerView.get(), onlineMemberCount, hasScheduledMessages, self.reportIrrelvantGeoNoticePromise.get(), displayedCountSignal, threadInfo)
+                |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, hasScheduledMessages, peerReportNotice, pinnedCount, threadInfo in
                     if let strongSelf = self {
-                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages {
+                        if strongSelf.peerView === peerView && strongSelf.reportIrrelvantGeoNotice == peerReportNotice && strongSelf.hasScheduledMessages == hasScheduledMessages && strongSelf.threadInfo == threadInfo {
                             return
                         }
                         
@@ -4454,6 +4490,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         let firstTime = strongSelf.peerView == nil
                         strongSelf.peerView = peerView
+                        strongSelf.threadInfo = threadInfo
                         if wasGroupChannel != isGroupChannel {
                             if let isGroupChannel = isGroupChannel, isGroupChannel {
                                 let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
@@ -4467,7 +4504,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         }
                         if strongSelf.isNodeLoaded {
-                            strongSelf.chatDisplayNode.peerView = peerView
+                            strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
                         }
                         var peerIsMuted = false
                         if let notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings {
@@ -4841,9 +4878,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         let firstTime = strongSelf.peerView == nil
                         strongSelf.peerView = peerView
+                        strongSelf.threadInfo = messageAndTopic.threadData?.info
                         
                         if strongSelf.isNodeLoaded {
-                            strongSelf.chatDisplayNode.peerView = peerView
+                            strongSelf.chatDisplayNode.overlayTitle = strongSelf.overlayTitle
                         }
 
                         var peerDiscussionId: PeerId?
@@ -5922,7 +5960,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        self.chatDisplayNode.peerView = self.peerView
+        self.chatDisplayNode.overlayTitle = self.overlayTitle
         
         let currentAccountPeer = self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
         |> map { peer in

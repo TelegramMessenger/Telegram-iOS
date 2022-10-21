@@ -1,7 +1,7 @@
 import Foundation
 
 public struct StoredPeerThreadCombinedState: Equatable, Codable {
-    public struct Index: Equatable, Comparable, Codable {
+    public struct Index: Hashable, Comparable, Codable {
         private enum CodingKeys: String, CodingKey {
             case timestamp = "t"
             case threadId = "i"

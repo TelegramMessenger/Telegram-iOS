@@ -872,8 +872,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
                 return
             }
             var replaceImpl: ((ViewController) -> Void)?
-            let controller = PremiumDemoScreen(context: context, subject: .uniqueReactions, action: {
-                let controller = PremiumIntroScreen(context: context, source: .reactions)
+            let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
+                let controller = PremiumIntroScreen(context: context, source: .animatedEmoji)
                 replaceImpl?(controller)
             })
             replaceImpl = { [weak controller] c in
