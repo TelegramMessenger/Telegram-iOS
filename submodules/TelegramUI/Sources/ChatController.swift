@@ -387,7 +387,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     private var stickerSettings: ChatInterfaceStickerSettings
     private var stickerSettingsDisposable: Disposable?
-    
+    private var quickReactionSettings: QuickReactionSettings
+    private var quickReactionSettingsDisposable: Disposable?
+        
     private var applicationInForegroundDisposable: Disposable?
     private var applicationInFocusDisposable: Disposable?
     
@@ -572,6 +574,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.automaticMediaDownloadSettings = context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }
         
         self.stickerSettings = ChatInterfaceStickerSettings(loopAnimatedStickers: false)
+        self.quickReactionSettings = QuickReactionSettings.defaultSettings
         
         self.presentationInterfaceState = ChatPresentationInterfaceState(chatWallpaper: self.presentationData.chatWallpaper, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, limitsConfiguration: context.currentLimitsConfiguration.with { $0 }, fontSize: self.presentationData.chatFontSize, bubbleCorners: self.presentationData.chatBubbleCorners, accountPeerId: context.account.peerId, mode: mode, chatLocation: chatLocation, subject: subject, peerNearbyData: peerNearbyData, greetingData: context.prefetchManager?.preloadedGreetingSticker, pendingUnpinnedAllMessages: false, activeGroupCallInfo: nil, hasActiveGroupCall: false, importState: nil)
         self.presentationInterfaceStatePromise = ValuePromise(self.presentationInterfaceState)
@@ -591,6 +594,19 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 navigationBarPresentationData = NavigationBarPresentationData(presentationData: self.presentationData, hideBackground: self.context.sharedContext.immediateExperimentalUISettings.playerEmbedding ? true : false, hideBadge: false)
         }
         super.init(context: context, navigationBarPresentationData: navigationBarPresentationData, mediaAccessoryPanelVisibility: mediaAccessoryPanelVisibility, locationBroadcastPanelSource: locationBroadcastPanelSource, groupCallPanelSource: groupCallPanelSource)
+        
+        self.quickReactionSettingsDisposable = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.quickReactionSettings])
+        |> deliverOnMainQueue).start(next: { [weak self] sharedData in
+            if let strongSelf = self {
+                let quickReactionSettings: QuickReactionSettings
+                if let current = sharedData.entries[ApplicationSpecificSharedDataKeys.quickReactionSettings]?.get(QuickReactionSettings.self) {
+                    quickReactionSettings = current
+                } else {
+                    quickReactionSettings = QuickReactionSettings.defaultSettings
+                }
+                strongSelf.quickReactionSettings = quickReactionSettings
+            }
+        })
         
         self.automaticallyControlPresentationContextLayout = false
         self.blocksBackgroundWhenInOverlay = true
@@ -1578,6 +1594,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         return
                     }
                     guard item.message.id == message.id else {
+                        return
+                    }
+
+                    if !strongSelf.quickReactionSettings.enableQuickReaction {
+                        itemNode.openMessageContextMenu()
                         return
                     }
                     

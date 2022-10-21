@@ -19,25 +19,31 @@ private final class QuickReactionSetupControllerArguments {
     let context: AccountContext
     let openQuickReaction: () -> Void
     let toggleReaction: () -> Void
+    let toggleEnableQuickReaction: (Bool) -> Void
     
     init(
         context: AccountContext,
         openQuickReaction: @escaping () -> Void,
-        toggleReaction: @escaping () -> Void
+        toggleReaction: @escaping () -> Void,
+        toggleEnableQuickReaction: @escaping (Bool) -> Void
     ) {
         self.context = context
         self.openQuickReaction = openQuickReaction
         self.toggleReaction = toggleReaction
+        self.toggleEnableQuickReaction = toggleEnableQuickReaction
     }
 }
 
 private enum QuickReactionSetupControllerSection: Int32 {
+    case enableQuickReaction
     case demo
     case items
 }
 
 private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     enum StableId: Hashable {
+        case enableQuickReactionSwitch
+        case enableQuickReactionInfo
         case demoHeader
         case demoMessage
         case demoDescription
@@ -45,6 +51,8 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
         case quickReactionDescription
     }
     
+    case enableQuickReactionSwitch(PresentationTheme, String, Bool)
+    case enableQuickReactionInfo(PresentationTheme, String)
     case demoHeader(String)
     case demoMessage(wallpaper: TelegramWallpaper, fontSize: PresentationFontSize, bubbleCorners: PresentationChatBubbleCorners, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, availableReactions: AvailableReactions?, reaction: MessageReaction.Reaction?)
     case demoDescription(String)
@@ -53,6 +61,8 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+        case .enableQuickReactionSwitch, .enableQuickReactionInfo:
+            return QuickReactionSetupControllerSection.enableQuickReaction.rawValue
         case .demoHeader, .demoMessage, .demoDescription:
             return QuickReactionSetupControllerSection.demo.rawValue
         case .quickReaction, .quickReactionDescription:
@@ -62,6 +72,10 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     
     var stableId: StableId {
         switch self {
+        case .enableQuickReactionSwitch:
+            return .enableQuickReactionSwitch
+        case .enableQuickReactionInfo:
+            return .enableQuickReactionInfo
         case .demoHeader:
             return .demoHeader
         case .demoMessage:
@@ -77,21 +91,37 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     
     var sortId: Int {
         switch self {
-        case .demoHeader:
+        case .enableQuickReactionSwitch:
             return 0
-        case .demoMessage:
+        case .enableQuickReactionInfo:
             return 1
-        case .demoDescription:
+        case .demoHeader:
             return 2
-        case .quickReaction:
+        case .demoMessage:
             return 3
-        case .quickReactionDescription:
+        case .demoDescription:
             return 4
+        case .quickReaction:
+            return 5
+        case .quickReactionDescription:
+            return 6
         }
     }
     
     static func ==(lhs: QuickReactionSetupControllerEntry, rhs: QuickReactionSetupControllerEntry) -> Bool {
         switch lhs {
+        case let .enableQuickReactionSwitch(lhsTheme, lhsText, lhsValue):
+            if case let .enableQuickReactionSwitch(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
+                return true
+            } else {
+                return false
+            }
+        case let .enableQuickReactionInfo(lhsTheme, lhsText):
+            if case let .enableQuickReactionInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                return true
+            } else {
+                return false
+            }
         case let .demoHeader(text):
             if case .demoHeader(text) = rhs {
                 return true
@@ -132,6 +162,12 @@ private enum QuickReactionSetupControllerEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! QuickReactionSetupControllerArguments
         switch self {
+        case let .enableQuickReactionSwitch(_, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.toggleEnableQuickReaction(value)
+            })
+        case let .enableQuickReactionInfo(_, text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
         case let .demoHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .demoMessage(wallpaper, fontSize, chatBubbleCorners, dateTimeFormat, nameDisplayOrder, availableReactions, reaction):
@@ -172,11 +208,14 @@ private func quickReactionSetupControllerEntries(
     availableReactions: AvailableReactions?,
     reactionSettings: ReactionSettings,
     state: QuickReactionSetupControllerState,
-    isPremium: Bool
+    isPremium: Bool,
+    quickReactionSettings: QuickReactionSettings
 ) -> [QuickReactionSetupControllerEntry] {
     var entries: [QuickReactionSetupControllerEntry] = []
     
     if let availableReactions = availableReactions {
+        entries.append(.enableQuickReactionSwitch(presentationData.theme, presentationData.strings.Settings_QuickReactionSetup_Switch, quickReactionSettings.enableQuickReaction))
+        entries.append(.enableQuickReactionInfo(presentationData.theme, presentationData.strings.Settings_QuickReactionSetup_SwitchInfo))
         entries.append(.demoHeader(presentationData.strings.Settings_QuickReactionSetup_DemoHeader))
         entries.append(.demoMessage(
             wallpaper: presentationData.chatWallpaper,
@@ -225,6 +264,11 @@ public func quickReactionSetupController(
                 state.hasReaction = !state.hasReaction
                 return state
             }
+        },
+        toggleEnableQuickReaction: { value in
+            let _ = updateQuickReactionSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                return current.withUpdatedQuickReactions(value)
+            }).start()
         }
     )
     
@@ -239,16 +283,23 @@ public func quickReactionSetupController(
         return reactionSettings
     }
     
+    let quickReactionSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.quickReactionSettings])
+    |> map { sharedData in
+        let quickReactionSettings: QuickReactionSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.quickReactionSettings]?.get(QuickReactionSettings.self) ?? .defaultSettings
+        return quickReactionSettings
+    }
+    
     let presentationData = updatedPresentationData?.signal ?? context.sharedContext.presentationData
     let signal = combineLatest(queue: .mainQueue(),
         presentationData,
         statePromise.get(),
         context.engine.stickers.availableReactions(),
+        quickReactionSettings,
         settings,
         context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
     |> deliverOnMainQueue
-    |> map { presentationData, state, availableReactions, settings, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    |> map { presentationData, state, availableReactions, quickReactionSettings, settings, accountPeer -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let isPremium = accountPeer?.isPremium ?? false
         let title: String = presentationData.strings.Settings_QuickReactionSetup_Title
         
@@ -257,7 +308,8 @@ public func quickReactionSetupController(
             availableReactions: availableReactions,
             reactionSettings: settings,
             state: state,
-            isPremium: isPremium
+            isPremium: isPremium,
+            quickReactionSettings: quickReactionSettings
         )
         
         let controllerState = ItemListControllerState(
