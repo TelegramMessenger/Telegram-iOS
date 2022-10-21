@@ -79,9 +79,9 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var containerNode: ASDisplayNode?
     private var overlayNavigationBar: ChatOverlayNavigationBar?
     
-    var peerView: PeerView? {
+    var overlayTitle: String? {
         didSet {
-            self.overlayNavigationBar?.peerView = self.peerView
+            self.overlayNavigationBar?.title = self.overlayTitle
         }
     }
     
@@ -246,7 +246,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     } else {
                         loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
                         loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
-                        self.contentContainerNode.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
+                        self.backgroundNode.supernode?.insertSubnode(loadingPlaceholderNode, aboveSubnode: self.backgroundNode)
                         
                         self.loadingPlaceholderNode = loadingPlaceholderNode
                      
@@ -980,7 +980,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }, close: { [weak self] in
                     self?.dismissAsOverlay()
                 })
-                overlayNavigationBar.peerView = self.peerView
+                overlayNavigationBar.title = self.overlayTitle
                 self.overlayNavigationBar = overlayNavigationBar
                 self.containerNode?.addSubnode(overlayNavigationBar)
             }
@@ -1064,13 +1064,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var extraTransition = transition
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
-                 dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
+                dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
                 self.titleAccessoryPanelNode = titleAccessoryPanelNode
                 immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = true
                 self.titleAccessoryPanelContainer.addSubnode(titleAccessoryPanelNode)
                 
                 titleAccessoryPanelNode.clipsToBounds = true
-                extraTransition = .animated(duration: 0.2, curve: .easeInOut)
+                if transition.isAnimated {
+                    extraTransition = .animated(duration: 0.2, curve: .easeInOut)
+                }
             }
             
             let layoutResult = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)

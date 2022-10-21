@@ -270,14 +270,17 @@ private class AdMessagesHistoryContextImpl {
     struct CachedState: Codable, PostboxCoding {
         enum CodingKeys: String, CodingKey {
             case timestamp
+            case interPostInterval
             case messages
         }
 
         var timestamp: Int32
+        var interPostInterval: Int32?
         var messages: [CachedMessage]
 
-        init(timestamp: Int32, messages: [CachedMessage]) {
+        init(timestamp: Int32, interPostInterval: Int32?, messages: [CachedMessage]) {
             self.timestamp = timestamp
+            self.interPostInterval = interPostInterval
             self.messages = messages
         }
 
@@ -285,6 +288,7 @@ private class AdMessagesHistoryContextImpl {
             let container = try decoder.container(keyedBy: CodingKeys.self)
 
             self.timestamp = try container.decode(Int32.self, forKey: .timestamp)
+            self.interPostInterval = try container.decodeIfPresent(Int32.self, forKey: .interPostInterval)
             self.messages = try container.decode([CachedMessage].self, forKey: .messages)
         }
 
@@ -292,11 +296,13 @@ private class AdMessagesHistoryContextImpl {
             var container = encoder.container(keyedBy: CodingKeys.self)
 
             try container.encode(self.timestamp, forKey: .timestamp)
+            try container.encodeIfPresent(self.interPostInterval, forKey: .interPostInterval)
             try container.encode(self.messages, forKey: .messages)
         }
 
         init(decoder: PostboxDecoder) {
             self.timestamp = decoder.decodeInt32ForKey("timestamp", orElse: 0)
+            self.interPostInterval = decoder.decodeOptionalInt32ForKey("interPostInterval")
             if let messagesData = decoder.decodeOptionalDataArrayForKey("messages") {
                 self.messages = messagesData.compactMap { data -> CachedMessage? in
                     return try? AdaptedPostboxDecoder().decode(CachedMessage.self, from: data)
@@ -308,6 +314,11 @@ private class AdMessagesHistoryContextImpl {
 
         func encode(_ encoder: PostboxEncoder) {
             encoder.encodeInt32(self.timestamp, forKey: "timestamp")
+            if let interPostInterval = self.interPostInterval {
+                encoder.encodeInt32(interPostInterval, forKey: "interPostInterval")
+            } else {
+                encoder.encodeNil(forKey: "interPostInterval")
+            }
             encoder.encodeDataArray(self.messages.compactMap { message -> Data? in
                 return try? AdaptedPostboxEncoder().encode(message)
             }, forKey: "messages")
@@ -338,9 +349,13 @@ private class AdMessagesHistoryContextImpl {
     }
     
     struct State: Equatable {
+        var interPostInterval: Int32?
         var messages: [Message]
 
         static func ==(lhs: State, rhs: State) -> Bool {
+            if lhs.interPostInterval != rhs.interPostInterval {
+                return false
+            }
             if lhs.messages.count != rhs.messages.count {
                 return false
             }
@@ -372,43 +387,41 @@ private class AdMessagesHistoryContextImpl {
         self.account = account
         self.peerId = peerId
 
-        self.stateValue = State(messages: [])
+        self.stateValue = State(interPostInterval: nil, messages: [])
 
         self.state.set(CachedState.getCached(postbox: account.postbox, peerId: peerId)
         |> mapToSignal { cachedState -> Signal<State, NoError> in
             if let cachedState = cachedState, cachedState.timestamp >= Int32(Date().timeIntervalSince1970) - 5 * 60 {
                 return account.postbox.transaction { transaction -> State in
-                    return State(messages: cachedState.messages.compactMap { message -> Message? in
+                    return State(interPostInterval: cachedState.interPostInterval, messages: cachedState.messages.compactMap { message -> Message? in
                         return message.toMessage(peerId: peerId, transaction: transaction)
                     })
                 }
             } else {
-                return .single(State(messages: []))
+                return .single(State(interPostInterval: nil, messages: []))
             }
         })
 
-        let signal: Signal<[Message], NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
+        let signal: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> = account.postbox.transaction { transaction -> Api.InputChannel? in
             return transaction.getPeer(peerId).flatMap(apiInputChannel)
         }
-        |> mapToSignal { inputChannel -> Signal<[Message], NoError> in
+        |> mapToSignal { inputChannel -> Signal<(interPostInterval: Int32?, messages: [Message]), NoError> in
             guard let inputChannel = inputChannel else {
-                return .single([])
+                return .single((nil, []))
             }
             return account.network.request(Api.functions.channels.getSponsoredMessages(channel: inputChannel))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.SponsoredMessages?, NoError> in
                 return .single(nil)
             }
-            |> mapToSignal { result -> Signal<[Message], NoError> in
+            |> mapToSignal { result -> Signal<(interPostInterval: Int32?, messages: [Message]), NoError> in
                 guard let result = result else {
-                    return .single([])
+                    return .single((nil, []))
                 }
 
-                return account.postbox.transaction { transaction -> [Message] in
+                return account.postbox.transaction { transaction -> (interPostInterval: Int32?, messages: [Message]) in
                     switch result {
                     case let .sponsoredMessages(_, postsBetween, messages, chats, users):
-                        let _ = postsBetween
-                        
                         var peers: [Peer] = []
                         var peerPresences: [PeerId: Api.User] = [:]
 
@@ -501,24 +514,24 @@ private class AdMessagesHistoryContextImpl {
                             }
                         }
 
-                        CachedState.setCached(transaction: transaction, peerId: peerId, state: CachedState(timestamp: Int32(Date().timeIntervalSince1970), messages: parsedMessages))
+                        CachedState.setCached(transaction: transaction, peerId: peerId, state: CachedState(timestamp: Int32(Date().timeIntervalSince1970), interPostInterval: postsBetween, messages: parsedMessages))
 
-                        return parsedMessages.compactMap { message -> Message? in
+                        return (postsBetween, parsedMessages.compactMap { message -> Message? in
                             return message.toMessage(peerId: peerId, transaction: transaction)
-                        }
+                        })
                     case .sponsoredMessagesEmpty:
-                        return []
+                        return (nil, [])
                     }
                 }
             }
         }
         
         self.disposable.set((signal
-        |> deliverOn(self.queue)).start(next: { [weak self] messages in
+        |> deliverOn(self.queue)).start(next: { [weak self] interPostInterval, messages in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.stateValue = State(messages: messages)
+            strongSelf.stateValue = State(interPostInterval: interPostInterval, messages: messages)
         }))
     }
     
@@ -549,13 +562,13 @@ public class AdMessagesHistoryContext {
     private let queue = Queue()
     private let impl: QueueLocalObject<AdMessagesHistoryContextImpl>
     
-    public var state: Signal<[Message], NoError> {
+    public var state: Signal<(interPostInterval: Int32?, messages: [Message]), NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
             
             self.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
-                    subscriber.putNext(state.messages)
+                    subscriber.putNext((state.interPostInterval, state.messages))
                 })
                 disposable.set(stateDisposable)
             }

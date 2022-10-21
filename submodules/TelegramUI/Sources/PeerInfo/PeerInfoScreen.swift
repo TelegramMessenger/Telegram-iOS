@@ -8197,7 +8197,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     leftNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .qrCode, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .search, isForExpandedView: true))
-                } else if peerInfoCanEdit(peer: self.data?.peer, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
+                } else if peerInfoCanEdit(peer: self.data?.peer, threadData: self.data?.threadData, cachedData: self.data?.cachedData, isContact: self.data?.isContact) {
                     rightNavigationButtons.append(PeerInfoHeaderNavigationButtonSpec(key: .edit, isForExpandedView: false))
                 }
                 if self.state.selectedMessageIds == nil {
@@ -8259,7 +8259,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 isLandscape = true
             }
             if offsetY <= -32.0 && scrollView.isDragging && scrollView.isTracking {
-                if let peer = self.data?.peer, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {
+                if let peer = self.data?.peer, self.chatLocation.threadId == nil, peer.smallProfileImage != nil && self.state.updatingAvatar == nil && !isLandscape {
                     shouldBeExpanded = true
                     
                     if self.canOpenAvatarByDragging && self.headerNode.isAvatarExpanded && offsetY <= -32.0 {
@@ -9616,6 +9616,31 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                     contactsController?.dismiss()
                 }, completed: {
                     contactsController?.dismiss()
+                    
+                    let mappedPeerIds: [EnginePeer.Id] = peers.compactMap { peer -> EnginePeer.Id? in
+                        switch peer {
+                        case let .peer(id):
+                            return id
+                        default:
+                            return nil
+                        }
+                    }
+                    if !mappedPeerIds.isEmpty {
+                        let _ = (context.engine.data.get(EngineDataMap(mappedPeerIds.map(TelegramEngine.EngineData.Item.Peer.Peer.init(id:))))
+                        |> deliverOnMainQueue).start(next: { maybePeers in
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let peers = maybePeers.compactMap { $0.value }
+                            
+                            //TODO:localize
+                            let text: String
+                            if peers.count == 1 {
+                                text = "**\(peers[0].displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** added to the group."
+                            } else {
+                                text = "**\(peers.count)** members added to the group."
+                            }
+                            parentController?.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: context, peers: peers, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                        })
+                    }
                 }))
             }))
             contactsController.dismissed = {

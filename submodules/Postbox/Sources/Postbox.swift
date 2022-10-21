@@ -3281,6 +3281,18 @@ final class PostboxImpl {
         }
     }
     
+    public func forumTopicListHolesView() -> Signal<ForumTopicListHolesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+            self.queue.async {
+                disposable.set(self.viewTracker.forumTopicListHolesViewSignal().start(next: { view in
+                    subscriber.putNext(view)
+                }))
+            }
+            return disposable
+        }
+    }
+    
     public func unsentMessageIdsView() -> Signal<UnsentMessageIdsView, NoError> {
         return Signal { subscriber in
             let disposable = MetaDisposable()
@@ -4190,6 +4202,18 @@ public class Postbox {
 
             self.impl.with { impl in
                 disposable.set(impl.chatListHolesView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
+            }
+
+            return disposable
+        }
+    }
+    
+    public func forumTopicListHolesView() -> Signal<ForumTopicListHolesView, NoError> {
+        return Signal { subscriber in
+            let disposable = MetaDisposable()
+
+            self.impl.with { impl in
+                disposable.set(impl.forumTopicListHolesView().start(next: subscriber.putNext, error: subscriber.putError, completed: subscriber.putCompletion))
             }
 
             return disposable

@@ -102,7 +102,9 @@ private func peerButtons(_ state: ChatPresentationInterfaceState) -> [ChatReport
             if let threadData = state.threadData {
                 if threadData.isClosed {
                     var canManage = false
-                    if channel.hasPermission(.pinMessages) {
+                    if channel.flags.contains(.isCreator) {
+                        canManage = true
+                    } else if channel.adminRights != nil {
                         canManage = true
                     } else if threadData.isOwn {
                         canManage = true
@@ -597,7 +599,7 @@ final class ChatReportPeerTitlePanelNode: ChatTitleAccessoryPanelNode {
         if let renderedPeer = interfaceState.renderedPeer {
             chatPeer = renderedPeer.peers[renderedPeer.peerId]
         }
-        if let chatPeer = chatPeer, let invitedBy = interfaceState.contactStatus?.invitedBy {
+        if let chatPeer = chatPeer, (updatedButtons.contains(.block) || updatedButtons.contains(.reportSpam) || updatedButtons.contains(.reportUserSpam)), let invitedBy = interfaceState.contactStatus?.invitedBy {
             var inviteInfoTransition = transition
             let inviteInfoNode: ChatInfoTitlePanelInviteInfoNode
             if let current = self.inviteInfoNode {

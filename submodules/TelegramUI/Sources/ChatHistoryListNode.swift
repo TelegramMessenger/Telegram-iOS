@@ -641,14 +641,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         default:
             break
         }
-        var adMessages: Signal<[Message], NoError>
+        var adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>
         if case .bubbles = mode, let peerId = displayAdPeer {
             let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
             adMessages = adMessagesContext.state
         } else {
             self.adMessagesContext = nil
-            adMessages = .single([])
+            adMessages = .single((nil, []))
         }
 
         /*if case .bubbles = mode, let peerId = sparseScrollPeerId {
@@ -664,7 +664,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         super.init()
 
         adMessages = adMessages
-        |> afterNext { [weak self] messages in
+        |> afterNext { [weak self] interPostInterval, messages in
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return

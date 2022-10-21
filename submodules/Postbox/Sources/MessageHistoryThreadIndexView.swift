@@ -33,6 +33,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
     fileprivate let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var peer: Peer?
     fileprivate var items: [Item] = []
+    private var hole: ForumTopicListHolesEntry?
     fileprivate var isLoading: Bool = false
     
     init(postbox: PostboxImpl, peerId: PeerId, summaryComponents: ChatListEntrySummaryComponents) {
@@ -49,6 +50,16 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         
         let validIndexBoundary = postbox.peerThreadCombinedStateTable.get(peerId: peerId)?.validIndexBoundary
         self.isLoading = validIndexBoundary == nil
+        
+        if let validIndexBoundary = validIndexBoundary {
+            if validIndexBoundary.messageId != 1 {
+                self.hole = ForumTopicListHolesEntry(peerId: self.peerId, index: validIndexBoundary)
+            } else {
+                self.hole = nil
+            }
+        } else {
+            self.hole = ForumTopicListHolesEntry(peerId: self.peerId, index: nil)
+        }
         
         if !self.isLoading {
             let pinnedThreadIds = postbox.messageHistoryThreadPinnedTable.get(peerId: self.peerId)
@@ -124,9 +135,15 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         
         return updated
     }
+    
+    func topHole() -> ForumTopicListHolesEntry? {
+        return self.hole
+    }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        return false
+        self.reload(postbox: postbox)
+        
+        return true
     }
     
     func immutableView() -> PostboxView {

@@ -420,7 +420,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, _, onlineMemberCount, isScheduledMessages, _):
+                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _):
                             if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
@@ -485,7 +485,10 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                                         state = .info(string, .generic)
                                     }
                                 } else if let channel = peer as? TelegramChannel {
-                                    if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
+                                    if channel.flags.contains(.isForum), customTitle != nil {
+                                        let string = NSAttributedString(string: EnginePeer(peer).displayTitle(strings: self.strings, displayOrder: self.nameDisplayOrder), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                        state = .info(string, .generic)
+                                    } else if let cachedChannelData = peerView.cachedData as? CachedChannelData, let memberCount = cachedChannelData.participantsSummary.memberCount {
                                         if memberCount == 0 {
                                             let string: NSAttributedString
                                             if case .group = channel.info {

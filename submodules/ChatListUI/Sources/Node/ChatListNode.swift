@@ -145,9 +145,19 @@ public final class ChatListNodeInteraction {
 }
 
 public final class ChatListNodePeerInputActivities {
-    public let activities: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]]
+    public struct ItemId: Hashable {
+        public var peerId: EnginePeer.Id
+        public var threadId: Int64?
+        
+        public init(peerId: EnginePeer.Id, threadId: Int64?) {
+            self.peerId = peerId
+            self.threadId = threadId
+        }
+    }
     
-    public init(activities: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]]) {
+    public let activities: [ItemId: [(EnginePeer, PeerInputActivity)]]
+    
+    public init(activities: [ItemId: [(EnginePeer, PeerInputActivity)]]) {
         self.activities = activities
     }
 }
@@ -1155,7 +1165,7 @@ public final class ChatListNode: ListView {
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
             
-            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode)
+            let (rawEntries, isLoading) = chatListNodeEntriesForView(update.list, state: state, savedMessagesPeer: savedMessagesPeer, foundPeers: state.foundPeers, hideArchivedFolderByDefault: hideArchivedFolderByDefault, displayArchiveIntro: displayArchiveIntro, mode: mode, chatListLocation: location)
             let entries = rawEntries.filter { entry in
                 switch entry {
                 case let .PeerEntry(_, _, _, _, _, _, peer, _, _, _, _, _, _, _, _, _, _, _, _):
@@ -1488,7 +1498,7 @@ public final class ChatListNode: ListView {
         let previousPeerCache = Atomic<[EnginePeer.Id: EnginePeer]>(value: [:])
         let previousActivities = Atomic<ChatListNodePeerInputActivities?>(value: nil)
         self.activityStatusesDisposable = (context.account.allPeerInputActivities()
-        |> mapToSignal { activitiesByPeerId -> Signal<[EnginePeer.Id: [(EnginePeer, PeerInputActivity)]], NoError> in
+        |> mapToSignal { activitiesByPeerId -> Signal<[ChatListNodePeerInputActivities.ItemId: [(EnginePeer, PeerInputActivity)]], NoError> in
             var activitiesByPeerId = activitiesByPeerId
             for key in activitiesByPeerId.keys {
                 activitiesByPeerId[key]?.removeAll(where: { _, activity in
@@ -1504,11 +1514,23 @@ public final class ChatListNode: ListView {
             }
             
             var foundAllPeers = true
-            var cachedResult: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
+            var cachedResult: [ChatListNodePeerInputActivities.ItemId: [(EnginePeer, PeerInputActivity)]] = [:]
             previousPeerCache.with { dict -> Void in
                 for (chatPeerId, activities) in activitiesByPeerId {
-                    guard case .global = chatPeerId.category else {
-                        continue
+                    var threadId: Int64?
+                    switch location {
+                    case .chatList:
+                        guard case .global = chatPeerId.category else {
+                            continue
+                        }
+                    case let .forum(peerId):
+                        if chatPeerId.peerId != peerId {
+                            continue
+                        }
+                        guard case let .thread(threadIdValue) = chatPeerId.category else {
+                            continue
+                        }
+                        threadId = threadIdValue
                     }
                     var cachedChatResult: [(EnginePeer, PeerInputActivity)] = []
                     for (peerId, activity) in activities {
@@ -1518,31 +1540,46 @@ public final class ChatListNode: ListView {
                             foundAllPeers = false
                             break
                         }
-                        cachedResult[chatPeerId.peerId] = cachedChatResult
+                        cachedResult[ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: threadId)] = cachedChatResult
                     }
                 }
             }
             if foundAllPeers {
                 return .single(cachedResult)
             } else {
+                var dataKeys: [EnginePeer.Id] = []
+                for (peerId, activities) in activitiesByPeerId {
+                    dataKeys.append(peerId.peerId)
+                    for activity in activities {
+                        dataKeys.append(activity.0)
+                    }
+                }
                 return engine.data.get(EngineDataMap(
-                    activitiesByPeerId.keys.filter { key in
-                        if case .global = key.category {
-                            return true
-                        } else {
-                            return false
-                        }
-                    }.map { key in
-                        return TelegramEngine.EngineData.Item.Peer.Peer(id: key.peerId)
+                    Set(dataKeys).map {
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: $0)
                     }
                 ))
-                |> map { peerMap -> [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] in
-                    var result: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = [:]
+                |> map { peerMap -> [ChatListNodePeerInputActivities.ItemId: [(EnginePeer, PeerInputActivity)]] in
+                    var result: [ChatListNodePeerInputActivities.ItemId: [(EnginePeer, PeerInputActivity)]] = [:]
                     var peerCache: [EnginePeer.Id: EnginePeer] = [:]
                     for (chatPeerId, activities) in activitiesByPeerId {
-                        guard case .global = chatPeerId.category else {
-                            continue
+                        let itemId: ChatListNodePeerInputActivities.ItemId
+                        switch location {
+                        case .chatList:
+                            guard case .global = chatPeerId.category else {
+                                continue
+                            }
+                            itemId = ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: nil)
+                        case let .forum(peerId):
+                            if chatPeerId.peerId != peerId {
+                                continue
+                            }
+                            guard case let .thread(threadIdValue) = chatPeerId.category else {
+                                continue
+                            }
+                            itemId = ChatListNodePeerInputActivities.ItemId(peerId: chatPeerId.peerId, threadId: threadIdValue)
                         }
+                        
                         var chatResult: [(EnginePeer, PeerInputActivity)] = []
                         
                         for (peerId, activity) in activities {
@@ -1552,7 +1589,7 @@ public final class ChatListNode: ListView {
                             }
                         }
                         
-                        result[chatPeerId.peerId] = chatResult
+                        result[itemId] = chatResult
                     }
                     let _ = previousPeerCache.swap(peerCache)
                     return result
@@ -1562,7 +1599,7 @@ public final class ChatListNode: ListView {
         |> map { activities -> ChatListNodePeerInputActivities? in
             return previousActivities.modify { current in
                 var updated = false
-                let currentList: [EnginePeer.Id: [(EnginePeer, PeerInputActivity)]] = current?.activities ?? [:]
+                let currentList: [ChatListNodePeerInputActivities.ItemId: [(EnginePeer, PeerInputActivity)]] = current?.activities ?? [:]
                 if currentList.count != activities.count {
                     updated = true
                 } else {

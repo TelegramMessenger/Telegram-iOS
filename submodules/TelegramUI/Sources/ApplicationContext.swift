@@ -324,7 +324,7 @@ final class AuthorizedApplicationContext {
                     
                     var chatIsVisible = false
                     if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.traceVisibility() {
-                        if topController.chatLocation.peerId == firstMessage.id.peerId {
+                        if topController.chatLocation.peerId == firstMessage.id.peerId, (topController.chatLocation.threadId == nil || topController.chatLocation.threadId == firstMessage.threadId) {
                             chatIsVisible = true
                         }
                     }
@@ -335,7 +335,7 @@ final class AuthorizedApplicationContext {
                     
                     if !chatIsVisible {
                         strongSelf.mainWindow.forEachViewController({ controller in
-                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, controller.chatLocation.threadId == chatLocation.threadId {
+                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, (chatLocation.threadId == nil || chatLocation.threadId == controller.chatLocation.threadId) {
                                 chatIsVisible = true
                                 return false
                             }
@@ -415,14 +415,14 @@ final class AuthorizedApplicationContext {
                                             return true
                                         }
                                         
-                                        if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.chatLocation.peerId == chatLocation.peerId, topController.chatLocation.threadId == chatLocation.threadId {
+                                        if let topController = strongSelf.rootController.topViewController as? ChatControllerImpl, topController.chatLocation.peerId == chatLocation.peerId, (topController.chatLocation.threadId == nil || topController.chatLocation.threadId == chatLocation.threadId) {
                                             strongSelf.notificationController.removeItemsWithGroupingKey(firstMessage.id.peerId)
                                             
                                             return false
                                         }
                                         
                                         for controller in strongSelf.rootController.viewControllers {
-                                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, controller.chatLocation.threadId == chatLocation.threadId {
+                                            if let controller = controller as? ChatControllerImpl, controller.chatLocation.peerId == chatLocation.peerId, (controller.chatLocation.threadId == nil || controller.chatLocation.threadId == chatLocation.threadId) {
                                                 return true
                                             }
                                         }

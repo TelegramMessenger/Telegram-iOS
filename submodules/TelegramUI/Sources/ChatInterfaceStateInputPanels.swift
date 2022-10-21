@@ -162,7 +162,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 if let threadData = chatPresentationInterfaceState.threadData {
                     if threadData.isClosed {
                         var canManage = false
-                        if channel.hasPermission(.pinMessages) {
+                        if channel.flags.contains(.isCreator) {
+                            canManage = true
+                        } else if channel.adminRights != nil {
                             canManage = true
                         } else if threadData.isOwn {
                             canManage = true
@@ -177,6 +179,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 panel.interfaceInteraction = interfaceInteraction
                                 return (panel, nil)
                             }
+                        }
+                    }
+                } else {
+                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
                         }
                     }
                 }

@@ -1189,7 +1189,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
     return result
 }
 
-func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
+func peerInfoCanEdit(peer: Peer?, threadData: MessageHistoryThreadData?, cachedData: CachedPeerData?, isContact: Bool?) -> Bool {
     if let user = peer as? TelegramUser {
         if user.isDeleted {
             return false
@@ -1199,14 +1199,26 @@ func peerInfoCanEdit(peer: Peer?, cachedData: CachedPeerData?, isContact: Bool?)
         }
         return true
     } else if let peer = peer as? TelegramChannel {
-        if peer.flags.contains(.isCreator) {
-            return true
-        } else if peer.hasPermission(.changeInfo) {
-            return true
-        } else if let _ = peer.adminRights {
-            return true
+        if peer.flags.contains(.isForum) {
+            if peer.flags.contains(.isCreator) {
+                return true
+            } else if let threadData = threadData, threadData.isOwnedByMe {
+                return true
+            } else if let _ = peer.adminRights {
+                return true
+            } else {
+                return false
+            }
+        } else {
+            if peer.flags.contains(.isCreator) {
+                return true
+            } else if peer.hasPermission(.changeInfo) {
+                return true
+            } else if let _ = peer.adminRights {
+                return true
+            }
+            return false
         }
-        return false
     } else if let peer = peer as? TelegramGroup {
         if case .creator = peer.role {
             return true

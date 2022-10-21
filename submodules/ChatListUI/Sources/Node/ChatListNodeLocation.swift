@@ -232,7 +232,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     pinnedIndex = .none
                 }
                 
-                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
                 
                 var draft: EngineChatList.Draft?
                 if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {

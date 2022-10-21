@@ -29,10 +29,14 @@ public final class EngineChatList: Equatable {
     
     public struct ForumTopicData: Equatable {
         public var title: String
+        public let iconFileId: Int64?
+        public let iconColor: Int32
         public var maxOutgoingReadMessageId: EngineMessage.Id
         
-        public init(title: String, maxOutgoingReadMessageId: EngineMessage.Id) {
+        public init(title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id) {
             self.title = title
+            self.iconFileId = iconFileId
+            self.iconColor = iconColor
             self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
         }
     }
@@ -422,7 +426,7 @@ extension EngineChatList.Item {
             
             var forumTopicDataValue: EngineChatList.ForumTopicData?
             if let forumTopicData = forumTopicData?.data.get(MessageHistoryThreadData.self) {
-                forumTopicDataValue = EngineChatList.ForumTopicData(title: forumTopicData.info.title, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
+                forumTopicDataValue = EngineChatList.ForumTopicData(title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
             }
             
             let readCounters = readState.flatMap(EnginePeerReadCounters.init)

@@ -94,6 +94,10 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                     
                     if preloaded {
+                        if tagMask == nil && view.entries.isEmpty {
+                            print("")
+                        }
+                        
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
                         if view.isLoading {
@@ -102,7 +106,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                         var scrollPosition: ChatHistoryViewScrollPosition?
                         
                         let canScrollToRead: Bool
-                        if case .replyThread = chatLocation {
+                        if case let .replyThread(message) = chatLocation, !message.isForumPost {
                             canScrollToRead = true
                         } else if view.isAddedToChatList {
                             canScrollToRead = true
@@ -114,7 +118,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                             let aroundIndex = maxReadIndex
                             scrollPosition = .unread(index: maxReadIndex)
                             
-                            if case .peer = chatLocation {
+                            if let _ = chatLocation.peerId {
                                 var targetIndex = 0
                                 for i in 0 ..< view.entries.count {
                                     if view.entries[i].index >= aroundIndex {
@@ -152,7 +156,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                         } else if view.isAddedToChatList, tagMask == nil, let historyScrollState = (initialData?.storedInterfaceState).flatMap(_internal_decodeStoredChatInterfaceState).flatMap(ChatInterfaceState.parse)?.historyScrollState {
                             scrollPosition = .positionRestoration(index: historyScrollState.messageIndex, relativeOffset: CGFloat(historyScrollState.relativeOffset))
                         } else {
-                            if case .peer = chatLocation, !view.isAddedToChatList {
+                            if let _ = chatLocation.peerId, !view.isAddedToChatList {
                                 if view.holeEarlier && view.entries.count <= 2 {
                                     fadeIn = true
                                     return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
@@ -162,6 +166,10 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                                 fadeIn = true
                                 return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                             }
+                        }
+                        
+                        if tagMask == nil && view.entries.isEmpty {
+                            print("")
                         }
                         
                         preloaded = true

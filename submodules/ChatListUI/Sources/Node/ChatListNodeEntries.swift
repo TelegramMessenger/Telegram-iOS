@@ -316,7 +316,7 @@ private func offsetPinnedIndex(_ index: EngineChatList.Item.Index, offset: UInt1
     }
 }
 
-func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode) -> (entries: [ChatListNodeEntry], loading: Bool) {
+func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState, savedMessagesPeer: EnginePeer?, foundPeers: [(EnginePeer, EnginePeer?)], hideArchivedFolderByDefault: Bool, displayArchiveIntro: Bool, mode: ChatListNodeMode, chatListLocation: ChatListControllerLocation) -> (entries: [ChatListNodeEntry], loading: Bool) {
     var result: [ChatListNodeEntry] = []
     
     var pinnedIndexOffset: UInt16 = 0
@@ -343,8 +343,13 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
     }
     loop: for entry in view.items {
         var peerId: EnginePeer.Id?
+        var activityItemId: ChatListNodePeerInputActivities.ItemId?
         if case let .chatList(index) = entry.index {
             peerId = index.messageIndex.id.peerId
+            activityItemId = ChatListNodePeerInputActivities.ItemId(peerId: index.messageIndex.id.peerId, threadId: nil)
+        } else if case let .forum(_, _, threadId, _, _) = entry.index, case let .forum(peerIdValue) = chatListLocation {
+            peerId = peerIdValue
+            activityItemId = ChatListNodePeerInputActivities.ItemId(peerId: peerIdValue, threadId: threadId)
         }
         
         if let savedMessagesPeer = savedMessagesPeer, let peerId = peerId, savedMessagesPeer.id == peerId || foundPeerIds.contains(peerId) {
@@ -370,8 +375,8 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             hasActiveRevealControls = peerId == state.peerIdWithRevealedOptions
         }
         var inputActivities: [(EnginePeer, PeerInputActivity)]?
-        if let peerId {
-            inputActivities = state.peerInputActivities?.activities[peerId]
+        if let activityItemId {
+            inputActivities = state.peerInputActivities?.activities[activityItemId]
         }
         
         var threadId: Int64 = 0
@@ -474,7 +479,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         editing: state.editing,
                         hasActiveRevealControls: peerId == state.peerIdWithRevealedOptions,
                         selected: isSelected,
-                        inputActivities: state.peerInputActivities?.activities[peerId],
+                        inputActivities: state.peerInputActivities?.activities[ChatListNodePeerInputActivities.ItemId(peerId: peerId, threadId: nil)],
                         promoInfo: promoInfo,
                         hasFailedMessages: item.item.hasFailed,
                         isContact: item.item.isContact,

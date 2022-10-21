@@ -61,7 +61,9 @@ func titlePanelForChatPresentationInterfaceState(_ chatPresentationInterfaceStat
         if let threadData = chatPresentationInterfaceState.threadData {
             if threadData.isClosed {
                 var canManage = false
-                if channel.hasPermission(.pinMessages) {
+                if channel.flags.contains(.isCreator) {
+                    canManage = true
+                } else if channel.adminRights != nil {
                     canManage = true
                 } else if threadData.isOwn {
                     canManage = true

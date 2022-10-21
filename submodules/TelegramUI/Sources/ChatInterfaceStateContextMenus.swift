@@ -262,7 +262,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
         if let threadData = chatPresentationInterfaceState.threadData {
             if threadData.isClosed {
                 var canManage = false
-                if channel.hasPermission(.pinMessages) {
+                if channel.flags.contains(.isCreator) {
+                    canManage = true
+                } else if channel.adminRights != nil {
                     canManage = true
                 } else if threadData.isOwn {
                     canManage = true
@@ -522,6 +524,12 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
     let canSelect = !isAction
     
     let message = messages[0]
+    
+    if case .peer = chatPresentationInterfaceState.chatLocation, let channel = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+        if message.threadId == nil {
+            canReply = false
+        }
+    }
     
     if Namespaces.Message.allScheduled.contains(message.id.namespace) || message.id.peerId.isReplies {
         canReply = false
@@ -1248,7 +1256,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.canPin && !isMigrated, case .peer = chatPresentationInterfaceState.chatLocation {
+        var canPin = data.canPin
+        if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
+            if !message.isForumPost {
+                canPin = false
+            }
+        }
+        if isMigrated {
+            canPin = false
+        }
+        
+        if canPin {
             var pinnedSelectedMessageId: MessageId?
             for message in messages {
                 if message.tags.contains(.pinned) {
