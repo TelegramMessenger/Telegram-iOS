@@ -25,7 +25,7 @@ func chatHistoryEntriesForView(
     customChannelDiscussionReadState: MessageId?,
     customThreadOutgoingReadState: MessageId?,
     cachedData: CachedPeerData?,
-    adMessages: [Message]
+    adMessages: (interPostInterval: Int32?, messages: [Message])
 ) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []
@@ -329,9 +329,9 @@ func chatHistoryEntriesForView(
         }
 
         if view.laterId == nil && !view.isLoading {
-            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.isEmpty {
+            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.messages.isEmpty {
                 var nextAdMessageId: Int32 = 1
-                for message in adMessages {
+                if let message = adMessages.messages.first {
                     let updatedMessage = Message(
                         stableId: UInt32.max - 1 - UInt32(nextAdMessageId),
                         stableVersion: message.stableVersion,

@@ -3716,7 +3716,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     func deletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
-            
+        
         //TODO:localize
         items.append(ActionSheetTextItem(title: "This will delete the topic with all its messages", parseMarkdown: true))
         items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in

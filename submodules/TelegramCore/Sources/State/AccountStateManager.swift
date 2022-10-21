@@ -1328,6 +1328,49 @@ public final class AccountStateManager {
     }
 }
 
+func resolveNotificationSettings(list: [TelegramPeerNotificationSettings], defaultSettings: MessageNotificationSettings) -> (sound: PeerMessageSound, notify: Bool, displayContents: Bool) {
+    var sound: PeerMessageSound = defaultSettings.sound
+    
+    var notify = defaultSettings.enabled
+    var displayContents = defaultSettings.displayPreviews
+    
+    for item in list.reversed() {
+        if case .default = item.messageSound {
+        } else {
+            sound = item.messageSound
+        }
+        
+        switch item.displayPreviews {
+        case .default:
+            break
+        case .show:
+            displayContents = true
+        case .hide:
+            displayContents = false
+        }
+        
+        switch item.muteState {
+        case .default:
+            break
+        case .unmuted:
+            notify = true
+        case let .muted(deadline):
+            let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            if deadline > timestamp {
+                notify = false
+            } else {
+                notify = true
+            }
+        }
+    }
+    
+    if case .default = sound {
+        sound = defaultCloudPeerNotificationSound
+    }
+    
+    return (sound, notify, displayContents)
+}
+
 public func messagesForNotification(transaction: Transaction, id: MessageId, alwaysReturnMessage: Bool) -> (messages: [Message], notify: Bool, sound: PeerMessageSound, displayContents: Bool, threadData: MessageHistoryThreadData?) {
     guard let message = transaction.getMessage(id) else {
         Logger.shared.log("AccountStateManager", "notification message doesn't exist")
@@ -1335,7 +1378,6 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     }
 
     var notify = true
-    var sound: PeerMessageSound = defaultCloudPeerNotificationSound
     var muted = false
     var displayContents = true
     var threadData: MessageHistoryThreadData?
@@ -1365,8 +1407,6 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
         }
     }
     
-    let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-    
     var notificationPeerId = id.peerId
     let peer = transaction.getPeer(id.peerId)
     if let peer = peer, let associatedPeerId = peer.associatedPeerId {
@@ -1376,47 +1416,38 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
         notificationPeerId = author.id
     }
     
+    var notificationSettingsStack: [TelegramPeerNotificationSettings] = []
+    
+    if let threadId = message.threadId, let threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+        notificationSettingsStack.append(threadData.notificationSettings)
+    }
+    
     if let notificationSettings = transaction.getPeerNotificationSettings(id: notificationPeerId) as? TelegramPeerNotificationSettings {
-        var defaultSound: PeerMessageSound = defaultCloudPeerNotificationSound
-        var defaultNotify: Bool = true
-        if let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) {
-            if id.peerId.namespace == Namespaces.Peer.CloudUser {
-                defaultNotify = globalNotificationSettings.effective.privateChats.enabled
-                defaultSound = globalNotificationSettings.effective.privateChats.sound
-                displayContents = globalNotificationSettings.effective.privateChats.displayPreviews
-            } else if id.peerId.namespace == Namespaces.Peer.SecretChat {
-                defaultNotify = globalNotificationSettings.effective.privateChats.enabled
-                defaultSound = globalNotificationSettings.effective.privateChats.sound
-                displayContents = false
-            } else if id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = peer as? TelegramChannel, case .broadcast = peer.info {
-                defaultNotify = globalNotificationSettings.effective.channels.enabled
-                defaultSound = globalNotificationSettings.effective.channels.sound
-                displayContents = globalNotificationSettings.effective.channels.displayPreviews
-            } else {
-                defaultNotify = globalNotificationSettings.effective.groupChats.enabled
-                defaultSound = globalNotificationSettings.effective.groupChats.sound
-                displayContents = globalNotificationSettings.effective.groupChats.displayPreviews
-            }
-        }
-        switch notificationSettings.muteState {
-            case .default:
-                if !defaultNotify {
-                    notify = false
-                }
-            case let .muted(until):
-                if until >= timestamp {
-                    notify = false
-                }
-            case .unmuted:
-                break
-        }
-        if case .default = notificationSettings.messageSound {
-            sound = defaultSound
-        } else {
-            sound = notificationSettings.messageSound
-        }
+        notificationSettingsStack.append(notificationSettings)
+    }
+    
+    let globalNotificationSettings = transaction.getPreferencesEntry(key: PreferencesKeys.globalNotifications)?.get(GlobalNotificationSettings.self) ?? GlobalNotificationSettings.defaultSettings
+    
+    let defaultNotificationSettings: MessageNotificationSettings
+    if id.peerId.namespace == Namespaces.Peer.CloudUser {
+        defaultNotificationSettings = globalNotificationSettings.effective.privateChats
+    } else if id.peerId.namespace == Namespaces.Peer.SecretChat {
+        defaultNotificationSettings = globalNotificationSettings.effective.privateChats
+        displayContents = false
+    } else if id.peerId.namespace == Namespaces.Peer.CloudChannel, let peer = peer as? TelegramChannel, case .broadcast = peer.info {
+        defaultNotificationSettings = globalNotificationSettings.effective.channels
     } else {
-        Logger.shared.log("AccountStateManager", "notification settings for \(notificationPeerId) are undefined")
+        defaultNotificationSettings = globalNotificationSettings.effective.groupChats
+    }
+    
+    let (resolvedSound, resolvedNotify, resolvedDisplayContents) = resolveNotificationSettings(list: notificationSettingsStack, defaultSettings: defaultNotificationSettings)
+    
+    var sound = resolvedSound
+    if !resolvedNotify {
+        notify = false
+    }
+    if !resolvedDisplayContents {
+        displayContents = false
     }
     
     if muted {
@@ -1425,10 +1456,10 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
     
     if let channel = message.peers[message.id.peerId] as? TelegramChannel {
         switch channel.participationStatus {
-            case .kicked, .left:
-                return ([], false, sound, false, threadData)
-            case .member:
-                break
+        case .kicked, .left:
+            return ([], false, sound, false, threadData)
+        case .member:
+            break
         }
     }
     

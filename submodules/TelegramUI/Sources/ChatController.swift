@@ -5565,9 +5565,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     }
     
     private func topPinnedMessageSignal(latest: Bool) -> Signal<ChatPinnedMessage?, NoError> {
-        let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+        var pinnedPeerId: EnginePeer.Id?
+        let threadId = self.chatLocation.threadId
+        
         switch self.chatLocation {
-        case let .peer(peerId):
+        case let .peer(id):
+            pinnedPeerId = id
+        case let .replyThread(message):
+            if message.isForumPost {
+                pinnedPeerId = self.chatLocation.peerId
+            }
+        default:
+            break
+        }
+        
+        if let peerId = pinnedPeerId {
+            let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
+            
             struct ReferenceMessage {
                 var id: MessageId
                 var isScrolled: Bool
@@ -5611,7 +5625,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     location = .Initial(count: count)
                 }
                 
-                return (chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), ignoreMessagesInTimestampRange: nil, context: context, chatLocation: .peer(id: peerId), chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, appendMessagesFromTheSameGroup: false, additionalData: [], orderStatistics: .combinedLocation)
+                let chatLocation: ChatLocation
+                if let threadId {
+                    chatLocation = .replyThread(message: ChatReplyThreadMessage(messageId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                } else {
+                    chatLocation = .peer(id: peerId)
+                }
+                
+                return (chatHistoryViewForLocation(ChatHistoryLocationInput(content: location, id: 0), ignoreMessagesInTimestampRange: nil, context: context, chatLocation: chatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), scheduled: false, fixedCombinedReadStates: nil, tagMask: MessageTags.pinned, appendMessagesFromTheSameGroup: false, additionalData: [], orderStatistics: .combinedLocation)
                 |> castError(Bool.self)
                 |> mapToSignal { update -> Signal<ChatHistoryViewUpdate, Bool> in
                     switch update {
@@ -5831,10 +5852,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 return message
             }
             |> distinctUntilChanged
-        case .replyThread, .feed:
+            
+            return topPinnedMessage
+        } else {
             return .single(nil)
         }
-        return topPinnedMessage
     }
     
     override public func loadDisplayNode() {
@@ -6241,7 +6263,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     switch strongSelf.chatLocation {
                     case let .replyThread(replyThreadMessage):
                         if isForum {
-                            pinnedMessageId = nil
+                            pinnedMessageId = topPinnedMessage?.message.id
+                            pinnedMessage = topPinnedMessage
                         } else {
                             if isTopReplyThreadMessageShown {
                                 pinnedMessageId = nil
@@ -8325,7 +8348,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }, unblockPeer: { [weak self] in
             self?.unblockPeer()
         }, pinMessage: { [weak self] messageId, contextController in
-            if let strongSelf = self, case let .peer(currentPeerId) = strongSelf.chatLocation {
+            if let strongSelf = self, let currentPeerId = strongSelf.chatLocation.peerId {
                 if let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                     if strongSelf.canManagePin() {
                         let pinAction: (Bool, Bool) -> Void = { notify, forThisPeerOnlyIfPossible in

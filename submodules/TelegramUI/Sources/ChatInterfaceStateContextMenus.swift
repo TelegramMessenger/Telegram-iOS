@@ -1250,7 +1250,17 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
-        if data.canPin && !isMigrated, case .peer = chatPresentationInterfaceState.chatLocation {
+        var canPin = data.canPin
+        if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
+            if !message.isForumPost {
+                canPin = false
+            }
+        }
+        if isMigrated {
+            canPin = false
+        }
+        
+        if canPin {
             var pinnedSelectedMessageId: MessageId?
             for message in messages {
                 if message.tags.contains(.pinned) {

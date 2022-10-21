@@ -1052,13 +1052,15 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         var extraTransition = transition
         if let titleAccessoryPanelNode = titlePanelForChatPresentationInterfaceState(self.chatPresentationInterfaceState, context: self.context, currentPanel: self.titleAccessoryPanelNode, controllerInteraction: self.controllerInteraction, interfaceInteraction: self.interfaceInteraction) {
             if self.titleAccessoryPanelNode != titleAccessoryPanelNode {
-                 dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
+                dismissedTitleAccessoryPanelNode = self.titleAccessoryPanelNode
                 self.titleAccessoryPanelNode = titleAccessoryPanelNode
                 immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance = true
                 self.titleAccessoryPanelContainer.addSubnode(titleAccessoryPanelNode)
                 
                 titleAccessoryPanelNode.clipsToBounds = true
-                extraTransition = .animated(duration: 0.2, curve: .easeInOut)
+                if transition.isAnimated {
+                    extraTransition = .animated(duration: 0.2, curve: .easeInOut)
+                }
             }
             
             let layoutResult = titleAccessoryPanelNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, transition: immediatelyLayoutTitleAccessoryPanelNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState)
