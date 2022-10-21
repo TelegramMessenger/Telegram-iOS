@@ -3027,6 +3027,8 @@ func replayFinalState(
                                 for media in message.media {
                                     if let action = media as? TelegramMediaAction {
                                         switch action.action {
+                                        case .topicCreated:
+                                            transaction.removeHole(peerId: id.peerId, threadId: threadId, namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... id.id)
                                         case let .topicEdited(components):
                                             if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                                                 var data = initialData
@@ -3038,7 +3040,7 @@ func replayFinalState(
                                                     case let .iconFileId(fileId):
                                                         data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
                                                     case let .isClosed(isClosed):
-                                                        let _ = isClosed
+                                                        data.isClosed = isClosed
                                                     }
                                                 }
                                                 

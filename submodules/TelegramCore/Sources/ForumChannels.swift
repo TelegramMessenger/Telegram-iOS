@@ -500,10 +500,24 @@ func _internal_loadMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
                             transaction.replaceMessageTagSummary(peerId: peerId, threadId: Int64(id), tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud, count: unreadReactionsCount, maxId: topMessage)
                             
+                            if topMessage != 0 {
+                                transaction.removeHole(peerId: peerId, threadId: Int64(id), namespace: Namespaces.Message.Cloud, space: .everywhere, range: topMessage ... (Int32.max - 1))
+                            }
+                            
                             var topTimestamp = date
                             for message in addedMessages {
                                 if message.id.peerId == peerId && message.threadId == Int64(id) {
                                     topTimestamp = max(topTimestamp, message.timestamp)
+                                    
+                                    if case let .Id(messageId) = message.id {
+                                        for media in message.media {
+                                            if let action = media as? TelegramMediaAction {
+                                                if case .topicCreated = action.action {
+                                                    transaction.removeHole(peerId: messageId.peerId, threadId: Int64(id), namespace: Namespaces.Message.Cloud, space: .everywhere, range: 1 ... messageId.id)
+                                                }
+                                            }
+                                        }
+                                    }
                                 }
                             }
                             
@@ -520,10 +534,12 @@ func _internal_loadMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox
                         }
                     }
                     
-                    if let pinnedId = pinnedId {
-                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [pinnedId])
-                    } else {
-                        transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                    if offsetIndex != nil {
+                        if let pinnedId = pinnedId {
+                            transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [pinnedId])
+                        } else {
+                            transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                        }
                     }
                     
                     var nextIndex: StoredPeerThreadCombinedState.Index
