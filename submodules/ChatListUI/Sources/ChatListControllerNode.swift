@@ -396,6 +396,8 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 emptyNodeTransition.updateAlpha(node: emptyShimmerEffectNode, alpha: 0.0, completion: { [weak emptyShimmerEffectNode] _ in
                     emptyShimmerEffectNode?.removeFromSupernode()
                 })
+                strongSelf.listNode.alpha = 0.0
+                emptyNodeTransition.updateAlpha(node: strongSelf.listNode, alpha: 1.0)
             }
         }
         
