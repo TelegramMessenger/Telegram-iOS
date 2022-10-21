@@ -333,13 +333,7 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
 private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isPinned: Bool, isEditing: Bool, canManage: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
-        if canManage {
-            if isPinned {
-                options.append(ItemListRevealOption(key: RevealOptionKey.unpin.rawValue, title: strings.DialogList_Unpin, icon: unpinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-            } else {
-                options.append(ItemListRevealOption(key: RevealOptionKey.pin.rawValue, title: strings.DialogList_Pin, icon: pinIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
-            }
-        } else if let isMuted = isMuted {
+        if let isMuted = isMuted {
             if isMuted {
                 options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
             } else {
@@ -1029,14 +1023,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         }
         if case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _) = item.content {
             if promoInfo == nil, let mainPeer = peer.peer {
-                var threadId: Int64?
                 switch item.index {
                 case let .forum(_, _, threadIdValue, _, _):
-                    threadId = threadIdValue
+                    item.interaction.toggleThreadsSelection([threadIdValue], !item.selected)
                 case .chatList:
-                    break
+                    item.interaction.togglePeerSelected(mainPeer, nil)
                 }
-                item.interaction.togglePeerSelected(mainPeer, threadId)
             }
         }
     }

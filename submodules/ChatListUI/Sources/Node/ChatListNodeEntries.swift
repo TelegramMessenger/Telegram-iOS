@@ -369,10 +369,6 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
         if let peerId {
             hasActiveRevealControls = peerId == state.peerIdWithRevealedOptions
         }
-        var isSelected = false
-        if let peerId {
-            isSelected = state.selectedPeerIds.contains(peerId)
-        }
         var inputActivities: [(EnginePeer, PeerInputActivity)]?
         if let peerId {
             inputActivities = state.peerInputActivities?.activities[peerId]
@@ -384,6 +380,13 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             threadId = threadIdValue
         default:
             break
+        }
+        
+        var isSelected = false
+        if threadId != 0 {
+            isSelected = state.selectedThreadIds.contains(threadId)
+        } else if let peerId {
+            isSelected = state.selectedPeerIds.contains(peerId)
         }
 
         result.append(.PeerEntry(index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset), presentationData: state.presentationData, messages: updatedMessages, readState: updatedCombinedReadState, isRemovedFromTotalUnreadCount: entry.isMuted, draftState: draftState, peer: entry.renderedPeer, threadInfo: entry.threadData.flatMap { ChatListItemContent.ThreadInfo(id: threadId, info: $0.info, isOwner: $0.isOwnedByMe, isClosed: $0.isClosed) }, presence: entry.presence, hasUnseenMentions: entry.hasUnseenMentions, hasUnseenReactions: entry.hasUnseenReactions, editing: state.editing, hasActiveRevealControls: hasActiveRevealControls, selected: isSelected, inputActivities: inputActivities, promoInfo: nil, hasFailedMessages: entry.hasFailed, isContact: entry.isContact, forumTopicData: entry.forumTopicData))

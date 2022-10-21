@@ -235,25 +235,41 @@ public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePee
             return
         }
         
-        let chatLocation: ChatLocation = .replyThread(message: result.message)
-        
-        let subject: ChatControllerSubject?
-        if let messageId = messageId {
-            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
-        } else {
-            subject = nil
-        }
-        
         var actualActivateInput: ChatControllerActivateInput? = result.isEmpty ? .text : nil
         if let activateInput = activateInput {
             actualActivateInput = activateInput
         }
         
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: actualActivateInput, keepStack: .never))
+        context.sharedContext.navigateToChatController(
+            NavigateToChatControllerParams(
+                navigationController: navigationController,
+                context: context,
+                chatLocation: .replyThread(message: result.message),
+                chatLocationContextHolder: result.contextHolder,
+                subject: messageId.flatMap { .message(id: .id($0), highlight: true, timecode: nil) },
+                activateInput: actualActivateInput,
+                keepStack: .never
+            )
+        )
     }
     |> ignoreValues
     |> `catch` { _ -> Signal<Never, NoError> in
         return .complete()
+    }
+}
+
+public func chatControllerForForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64) -> Signal<ChatController, NoError> {
+    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: nil, preload: false)
+    |> deliverOnMainQueue
+    |> `catch` { _ -> Signal<ReplyThreadInfo, NoError> in
+        return .complete()
+    }
+    |> map { result in
+        return ChatControllerImpl(
+            context: context,
+            chatLocation: .replyThread(message: result.message),
+            chatLocationContextHolder: result.contextHolder
+        )
     }
 }
 

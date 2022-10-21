@@ -1163,6 +1163,10 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return navigateToForumThreadImpl(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: activateInput)
     }
     
+    public func chatControllerForForumThread(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64) -> Signal<ChatController, NoError> {
+        return chatControllerForForumThreadImpl(context: context, peerId: peerId, threadId: threadId)
+    }
+    
     public func openStorageUsage(context: AccountContext) {
         guard let navigationController = self.mainWindow?.viewController as? NavigationController else {
             return
@@ -1347,6 +1351,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: backgroundNode as? WallpaperBackgroundNode))
         

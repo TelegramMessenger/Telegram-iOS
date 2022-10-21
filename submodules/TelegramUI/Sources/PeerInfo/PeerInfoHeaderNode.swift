@@ -648,6 +648,13 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
         
         let transition = ContainedViewLayoutTransition.animated(duration: 0.2, curve: .linear)
         
+        let clipStyle: AvatarNodeClipStyle
+        if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            clipStyle = .roundedRect
+        } else {
+            clipStyle = .round
+        }
+        
         if canEditPeerInfo(context: self.context, peer: peer, threadData: threadData) {
             var overlayHidden = true
             if let updatingAvatar = updatingAvatar {
@@ -658,7 +665,8 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 if case let .image(representation) = updatingAvatar {
                     if representation != self.currentRepresentation {
                         self.currentRepresentation = representation
-                        if let signal = peerAvatarImage(account: context.account, peerReference: nil, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: avatarSize, height: avatarSize), emptyColor: nil, synchronousLoad: false, provideUnrounded: false) {
+
+                        if let signal = peerAvatarImage(account: context.account, peerReference: nil, authorOfMessage: nil, representation: representation, displayDimensions: CGSize(width: avatarSize, height: avatarSize), clipStyle: clipStyle, emptyColor: nil, synchronousLoad: false, provideUnrounded: false) {
                             self.imageNode.setSignal(signal |> map { $0?.0 })
                         }
                     }
@@ -680,7 +688,14 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
                 }
             }
             if !overlayHidden && self.updatingAvatarOverlay.image == nil {
-                self.updatingAvatarOverlay.image = generateFilledCircleImage(diameter: avatarSize, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
+                switch clipStyle {
+                case .round:
+                    self.updatingAvatarOverlay.image = generateFilledCircleImage(diameter: avatarSize, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
+                case .roundedRect:
+                    self.updatingAvatarOverlay.image = generateFilledRoundedRectImage(size: CGSize(width: avatarSize, height: avatarSize), cornerRadius: avatarSize * 0.25, color: UIColor(white: 0.0, alpha: 0.4), backgroundColor: nil)
+                default:
+                    break
+                }
             }
         } else {
             self.statusNode.transitionToState(.none)

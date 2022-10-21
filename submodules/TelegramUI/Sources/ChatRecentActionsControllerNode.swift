@@ -543,6 +543,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: self.backgroundNode))
         self.controllerInteraction = controllerInteraction

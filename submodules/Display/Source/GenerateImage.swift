@@ -147,6 +147,41 @@ public func generateFilledCircleImage(diameter: CGFloat, color: UIColor?, stroke
     })
 }
 
+public func generateFilledRoundedRectImage(size: CGSize, cornerRadius: CGFloat, color: UIColor?, strokeColor: UIColor? = nil, strokeWidth: CGFloat? = nil, backgroundColor: UIColor? = nil) -> UIImage? {
+    return generateImage(CGSize(width: size.width, height: size.height), contextGenerator: { size, context in
+        context.clear(CGRect(origin: CGPoint(), size: size))
+        if let backgroundColor = backgroundColor {
+            context.setFillColor(backgroundColor.cgColor)
+            context.fill(CGRect(origin: CGPoint(), size: size))
+        }
+        
+        if let strokeColor = strokeColor, let strokeWidth = strokeWidth {
+            context.setFillColor(strokeColor.cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+            
+            if let color = color {
+                context.setFillColor(color.cgColor)
+            } else {
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+            }
+            let path = CGPath(roundedRect: CGRect(origin: CGPoint(x: strokeWidth, y: strokeWidth), size: CGSize(width: size.width - strokeWidth * 2.0, height: size.height - strokeWidth * 2.0)), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+            context.addPath(path)
+            context.fillPath()
+        } else {
+            if let color = color {
+                context.setFillColor(color.cgColor)
+            } else {
+                context.setFillColor(UIColor.clear.cgColor)
+                context.setBlendMode(.copy)
+            }
+            let path = CGPath(roundedRect: CGRect(origin: CGPoint(), size: size), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
+            context.addPath(path)
+            context.fillPath()
+        }
+    })
+}
+
 public func generateAdjustedStretchableFilledCircleImage(diameter: CGFloat, color: UIColor) -> UIImage? {
     let corner: CGFloat = diameter / 2.0
     return generateImage(CGSize(width: diameter + 2.0, height: diameter + 2.0), contextGenerator: { size, context in

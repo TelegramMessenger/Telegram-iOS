@@ -26,6 +26,23 @@ struct ChatMessageBubbleContentProperties {
     let hidesBackground: ChatMessageBubbleContentBackgroundHiding
     let forceFullCorners: Bool
     let forceAlignment: ChatMessageBubbleContentAlignment
+    let shareButtonOffset: CGPoint?
+    
+    init(
+        hidesSimpleAuthorHeader: Bool,
+        headerSpacing: CGFloat,
+        hidesBackground: ChatMessageBubbleContentBackgroundHiding,
+        forceFullCorners: Bool,
+        forceAlignment: ChatMessageBubbleContentAlignment,
+        shareButtonOffset: CGPoint? = nil
+    ) {
+        self.hidesSimpleAuthorHeader = hidesSimpleAuthorHeader
+        self.headerSpacing = headerSpacing
+        self.hidesBackground = hidesBackground
+        self.forceFullCorners = forceFullCorners
+        self.forceAlignment = forceAlignment
+        self.shareButtonOffset = shareButtonOffset
+    }
 }
 
 enum ChatMessageBubbleNoneMergeStatus {
@@ -136,12 +153,17 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     }
     
     weak var bubbleBackgroundNode: ChatMessageBackground?
+    weak var bubbleBackdropNode: ChatMessageBubbleBackdrop?
     
     var visibility: ListViewItemNodeVisibility = .none
     
     var item: ChatMessageBubbleContentItem?
     
     var updateIsTextSelectionActive: ((Bool) -> Void)?
+    
+    var disablesClipping: Bool {
+        return false
+    }
     
     required override init() {
         super.init()

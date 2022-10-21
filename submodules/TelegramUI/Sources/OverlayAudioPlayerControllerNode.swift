@@ -157,6 +157,7 @@ final class OverlayAudioPlayerControllerNode: ViewControllerTracingNode, UIGestu
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         
         self.dimNode = ASDisplayNode()

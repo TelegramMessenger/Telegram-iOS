@@ -2541,6 +2541,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }, requestMessageUpdate: { _ in
         }, cancelInteractiveKeyboardGestures: {
         }, dismissTextInput: {
+        }, scrollToMessageId: { _ in
         }, automaticMediaDownloadSettings: MediaAutoDownloadSettings.defaultSettings,
         pollActionState: ChatInterfacePollActionState(), stickerSettings: ChatInterfaceStickerSettings(loopAnimatedStickers: false), presentationContext: ChatPresentationContext(context: context, backgroundNode: nil))
         self.hiddenMediaDisposable = context.sharedContext.mediaManager.galleryHiddenMediaManager.hiddenIds().start(next: { [weak self] ids in
@@ -7297,7 +7298,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
                 strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .forward(savedMessages: savedMessages, text: text), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
             }
-            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer, _ in
+            peerSelectionController.peerSelected = { [weak self, weak peerSelectionController] peer, threadId in
                 let peerId = peer.id
                 
                 if let strongSelf = self, let _ = peerSelectionController {
@@ -7334,27 +7335,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             peerSelectionController.dismiss()
                         }
                     } else {
-                        let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                        let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in
                             return currentState.withUpdatedForwardMessageIds(Array(messageIds))
                         })
                         |> deliverOnMainQueue).start(completed: {
                             if let strongSelf = self {
-                                strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
-                                
-                                if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId))
-                                    var viewControllers = navigationController.viewControllers
-                                    viewControllers.insert(chatController, at: viewControllers.count - 1)
-                                    navigationController.setViewControllers(viewControllers, animated: false)
+                                let proceed: (ChatController) -> Void = { chatController in
+                                    strongSelf.headerNode.navigationButtonContainer.performAction?(.selectionDone, nil, nil)
                                     
-                                    strongSelf.activeActionDisposable.set((chatController.ready.get()
-                                    |> filter { $0 }
-                                    |> take(1)
-                                    |> deliverOnMainQueue).start(next: { _ in
-                                        if let peerSelectionController = peerSelectionController {
-                                            peerSelectionController.dismiss()
+                                    if let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                                        var viewControllers = navigationController.viewControllers
+                                        if threadId != nil {
+                                            viewControllers.insert(chatController, at: viewControllers.count - 2)
+                                        } else {
+                                            viewControllers.insert(chatController, at: viewControllers.count - 1)
                                         }
-                                    }))
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+                                        
+                                        strongSelf.activeActionDisposable.set((chatController.ready.get()
+                                        |> filter { $0 }
+                                        |> take(1)
+                                        |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                                            viewControllers.removeAll(where: { $0 is PeerSelectionController })
+                                            navigationController?.setViewControllers(viewControllers, animated: true)
+                                        }))
+                                    }
+                                }
+                                
+                                if let threadId = threadId {
+                                    let _ = (strongSelf.context.sharedContext.chatControllerForForumThread(context: strongSelf.context, peerId: peerId, threadId: threadId)
+                                    |> deliverOnMainQueue).start(next: { chatController in
+                                        proceed(chatController)
+                                    })
+                                } else {
+                                    proceed(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId)))
                                 }
                             }
                         })

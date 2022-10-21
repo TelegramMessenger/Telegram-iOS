@@ -970,7 +970,14 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                                         } else if peer.isDeleted {
                                             overrideImage = .deletedIcon
                                         }
-                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, synchronousLoad: synchronousLoads)
+                                        let clipStyle: AvatarNodeClipStyle
+                                        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                                            clipStyle = .roundedRect
+                                        } else {
+                                            clipStyle = .round
+                                        }
+                                        
+                                        strongSelf.avatarNode.setPeer(context: item.context, theme: item.presentationData.theme, peer: peer, overrideImage: overrideImage, emptyColor: item.presentationData.theme.list.mediaPlaceholderColor, clipStyle: clipStyle, synchronousLoad: synchronousLoads)
                                     }
                                 case let .deviceContact(_, contact):
                                     let letters: [String]

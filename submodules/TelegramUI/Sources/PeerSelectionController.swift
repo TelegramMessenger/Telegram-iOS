@@ -94,14 +94,16 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData))
         
-        self.navigationPresentation = .modal
-        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
         self.customTitle = params.title
         self.title = self.customTitle ?? self.presentationData.strings.Conversation_ForwardTitle
         
-        self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        if params.forumPeerId == nil {
+            self.navigationPresentation = .modal
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        }
+        self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         
         self.scrollToTop = { [weak self] in
             if let strongSelf = self {
@@ -179,7 +181,29 @@ public final class PeerSelectionControllerImpl: ViewController, PeerSelectionCon
         
         self.peerSelectionNode.requestOpenPeer = { [weak self] peer, threadId in
             if let strongSelf = self, let peerSelected = strongSelf.peerSelected {
-                peerSelected(peer, threadId)
+                if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum), threadId == nil {
+                    let controller = PeerSelectionControllerImpl(
+                        PeerSelectionControllerParams(
+                            context: strongSelf.context,
+                            updatedPresentationData: nil,
+                            filter: strongSelf.filter,
+                            forumPeerId: peer.id,
+                            hasChatListSelector: false,
+                            hasContactSelector: false,
+                            hasGlobalSearch: false,
+                            title: EnginePeer(peer).compactDisplayTitle,
+                            attemptSelection: strongSelf.attemptSelection,
+                            createNewGroup: nil,
+                            pretendPresentedInModal: false,
+                            multipleSelection: false,
+                            forwardedMessageIds: [],
+                            hasTypeHeaders: false)
+                    )
+                    controller.peerSelected = strongSelf.peerSelected
+                    strongSelf.push(controller)
+                } else {
+                    peerSelected(peer, threadId)
+                }
             }
         }
         

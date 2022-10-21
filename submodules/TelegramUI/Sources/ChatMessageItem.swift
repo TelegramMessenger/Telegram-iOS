@@ -431,7 +431,8 @@ public final class ChatMessageItem: ListViewItem, CustomStringConvertible {
                             break loop
                         case let .Video(_, _, flags):
                             if flags.contains(.instantRoundVideo) {
-                                viewClassName = ChatMessageInstantVideoItemNode.self
+//                                viewClassName = ChatMessageInstantVideoItemNode.self
+                                viewClassName = ChatMessageBubbleItemNode.self
                                 break loop
                             }
                         default:

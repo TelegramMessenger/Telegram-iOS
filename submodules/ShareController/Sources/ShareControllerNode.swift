@@ -397,7 +397,13 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
             }
             
-            if let peersContentNode = strongSelf.peersContentNode {
+            if let searchContentNode = strongSelf.contentNode as? ShareSearchContainerNode {
+                searchContentNode.setContentOffsetUpdated(nil)
+                let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.contentGridNode.scrollView.contentOffset.y
+                if let sourceFrame = searchContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
+                    topicsContentNode.animateIn(sourceFrame: sourceFrame, scrollDelta: scrollDelta)
+                }
+            } else if let peersContentNode = strongSelf.peersContentNode {
                 peersContentNode.setContentOffsetUpdated(nil)
                 let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - peersContentNode.contentGridNode.scrollView.contentOffset.y
                 if let sourceFrame = peersContentNode.animateOut(peerId: peer.peerId, scrollDelta: scrollDelta) {
@@ -413,8 +419,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func closePeerTopics(_ peerId: EnginePeer.Id) {
-        if let topicsContentNode = self.topicsContentNode, let peersContentNode = self.peersContentNode {
-            topicsContentNode.setContentOffsetUpdated(nil)
+        guard let topicsContentNode = self.topicsContentNode else {
+            return
+        }
+        topicsContentNode.setContentOffsetUpdated(nil)
+        
+        if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
+            topicsContentNode.supernode?.insertSubnode(topicsContentNode, belowSubnode: searchContentNode)
+        } else if let peersContentNode = self.peersContentNode {
             topicsContentNode.supernode?.insertSubnode(topicsContentNode, belowSubnode: peersContentNode)
         }
                     
@@ -422,14 +434,27 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
         }
 
-        if let peersContentNode = self.peersContentNode {
+        if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
+            searchContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
+                self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
+            })
+            self.contentNodeOffsetUpdated(searchContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+            
+            let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - searchContentNode.contentGridNode.scrollView.contentOffset.y
+            if let targetFrame = searchContentNode.animateIn(peerId: peerId, scrollDelta: scrollDelta) {
+                topicsContentNode.animateOut(targetFrame: targetFrame, scrollDelta: scrollDelta, completion: { [weak self] in
+                    if let topicsContentNode = self?.topicsContentNode {
+                        topicsContentNode.removeFromSupernode()
+                        self?.topicsContentNode = nil
+                    }
+                })
+            }
+        } else if let peersContentNode = self.peersContentNode {
             peersContentNode.setContentOffsetUpdated({ [weak self] contentOffset, transition in
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
             self.contentNodeOffsetUpdated(peersContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
-        }
-                                      
-        if let peersContentNode = self.peersContentNode, let topicsContentNode = self.topicsContentNode {
+            
             let scrollDelta = topicsContentNode.contentGridNode.scrollView.contentOffset.y - peersContentNode.contentGridNode.scrollView.contentOffset.y
             if let targetFrame = peersContentNode.animateIn(peerId: peerId, scrollDelta: scrollDelta) {
                 topicsContentNode.animateOut(targetFrame: targetFrame, scrollDelta: scrollDelta, completion: { [weak self] in

@@ -84,7 +84,7 @@ private func contentNodeMessagesAndClassesForItem(_ item: ChatMessageItem) -> ([
                 let isVideo = file.isVideo || (file.isAnimated && file.dimensions != nil)
                 if isVideo {
                     if file.isInstantVideo {
-//                        result.append((message, ChatMessageInstantVideoBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
+                        result.append((message, ChatMessageInstantVideoBubbleContentNode.self, itemAttributes, BubbleItemAttributes(isAttachment: false, neighborType: .freeform, neighborSpacing: .default)))
                     } else {
                         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported), message.text.isEmpty {
                             messageWithCaptionToAdd = (message, itemAttributes)
@@ -1213,10 +1213,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
+        var isInstantVideo = false
         if let forwardInfo = item.content.firstMessage.forwardInfo, forwardInfo.source == nil, forwardInfo.author?.id.namespace == Namespaces.Peer.CloudUser {
             for media in item.content.firstMessage.media {
-                if let file = media as? TelegramMediaFile, file.isMusic {
-                    ignoreForward = true
+                if let file = media as? TelegramMediaFile {
+                    if file.isMusic {
+                        ignoreForward = true
+                    } else if file.isInstantVideo {
+                        isInstantVideo = true
+                    }
                     break
                 }
             }
@@ -1329,12 +1334,22 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         tmpWidth -= deliveryFailedInset
         
-        let maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset * 3.0 - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+        let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
+        
+        var maximumContentWidth = floor(tmpWidth - layoutConstants.bubble.edgeInset * 3.0 - layoutConstants.bubble.contentInsets.left - layoutConstants.bubble.contentInsets.right - avatarInset)
+        
+        var hasInstantVideo = false
+        for contentNodeItemValue in contentNodeMessagesAndClasses {
+            let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
+            if contentNodeItem.type == ChatMessageInstantVideoBubbleContentNode.self, !contentNodeItem.bubbleAttributes.isAttachment {
+                maximumContentWidth = baseWidth - 20.0
+                hasInstantVideo = true
+                break
+            }
+        }
         
         var contentPropertiesAndPrepareLayouts: [(Message, Bool, ChatMessageEntryAttributes, BubbleItemAttributes, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))] = []
         var addedContentNodes: [(Message, Bool, ChatMessageBubbleContentNode)]?
-        
-        let (contentNodeMessagesAndClasses, needSeparateContainers, needReactions) = contentNodeMessagesAndClassesForItem(item)
         for contentNodeItemValue in contentNodeMessagesAndClasses {
             let contentNodeItem = contentNodeItemValue as (message: Message, type: AnyClass, attributes: ChatMessageEntryAttributes, bubbleAttributes: BubbleItemAttributes)
 
@@ -1505,6 +1520,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
+        var shareButtonOffset: CGPoint?
         var index = 0
         for (message, _, attributes, bubbleAttributes, prepareLayout) in contentPropertiesAndPrepareLayouts {
             let topPosition: ChatMessageBubbleRelativePosition
@@ -1559,6 +1575,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             let (properties, unboundSize, maxNodeWidth, nodeLayout) = prepareLayout(contentItem, layoutConstants, prepareContentPosition, itemSelection, CGSize(width: maximumContentWidth, height: CGFloat.greatestFiniteMagnitude))
             maximumNodeWidth = min(maximumNodeWidth, maxNodeWidth)
+            
+            if let offset = properties.shareButtonOffset {
+                shareButtonOffset = offset
+            }
             
             contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, bubbleAttributes, nodeLayout, needSeparateContainers && !bubbleAttributes.isAttachment ? message.stableId : nil, itemSelection))
             
@@ -1856,7 +1876,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 headerSize.height += nameNodeSizeApply.0.height
             }
 
-            if !ignoreForward, let forwardInfo = firstMessage.forwardInfo {
+            if !ignoreForward && !isInstantVideo, let forwardInfo = firstMessage.forwardInfo {
                 if headerSize.height.isZero {
                     headerSize.height += 5.0
                 }
@@ -1889,7 +1909,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 headerSize.height += forwardInfoSizeApply.0.height
             }
             
-            if let replyMessage = replyMessage {
+            if !isInstantVideo, let replyMessage = replyMessage {
                 if headerSize.height.isZero {
                     headerSize.height += 6.0
                 } else {
@@ -2234,6 +2254,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         var reactionButtonsSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageReactionButtonsNode)?
         if let reactionButtonsFinalize = reactionButtonsFinalize {
+            var maxContentWidth = maxContentWidth
+            if hasInstantVideo {
+                maxContentWidth += 64.0
+            }
             reactionButtonsSizeAndApply = reactionButtonsFinalize(maxContentWidth)
         }
         
@@ -2346,7 +2370,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 contentContainerNodeFrames: contentContainerNodeFrames,
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
-                needsShareButton: needsShareButton
+                needsShareButton: needsShareButton,
+                shareButtonOffset: shareButtonOffset
             )
         })
     }
@@ -2390,7 +2415,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         contentContainerNodeFrames: [(UInt32, CGRect, Bool?, CGFloat)],
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)?,
-        needsShareButton: Bool
+        needsShareButton: Bool,
+        shareButtonOffset: CGPoint?
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -2826,6 +2852,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     containerSupernode.addSubnode(contentNode)
                     
                     contentNode.bubbleBackgroundNode = strongSelf.backgroundNode
+                    contentNode.bubbleBackdropNode = strongSelf.backgroundWallpaperNode
                     contentNode.updateIsTextSelectionActive = { [weak contextSourceNode] value in
                         contextSourceNode?.updateDistractionFreeMode?(value)
                     }
@@ -2858,6 +2885,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.contentNodes = sortedContentNodes
         }
         
+        var shouldClipOnTransitions = true
         var contentNodeIndex = 0
         for (relativeFrame, _, useContentOrigin, apply) in contentNodeFramesPropertiesAndApply {
             apply(animation, synchronousLoads, applyInfo)
@@ -2867,9 +2895,14 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
+            
+            if contentNode.disablesClipping {
+                shouldClipOnTransitions = false
+            }
+            
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: useContentOrigin ? contentOrigin.y : 0.0)
             let previousContentNodeFrame = contentNode.frame
-                        
+            
             if case let .System(duration, _) = animation {
                 var animateFrame = false
                 var animateAlpha = false
@@ -3034,6 +3067,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
+        var isCurrentlyPlayingMedia = false
+        if item.associatedData.currentlyPlayingMessageId == item.message.index {
+            isCurrentlyPlayingMedia = true
+        }
+        
         if case let .System(duration, _) = animation/*, !strongSelf.mainContextSourceNode.isExtractedToContextPreview*/ {
             if !strongSelf.backgroundNode.frame.equalTo(backgroundFrame) {
                 if useDisplayLinkAnimations {
@@ -3052,7 +3090,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 } else {
                     animation.animator.updateFrame(layer: strongSelf.backgroundNode.layer, frame: backgroundFrame, completion: nil)
                     animation.animator.updatePosition(layer: strongSelf.clippingNode.layer, position: backgroundFrame.center, completion: nil)
-                    strongSelf.clippingNode.clipsToBounds = true
+                    strongSelf.clippingNode.clipsToBounds = shouldClipOnTransitions
                     animation.animator.updateBounds(layer: strongSelf.clippingNode.layer, bounds: CGRect(origin: CGPoint(x: backgroundFrame.minX, y: backgroundFrame.minY), size: backgroundFrame.size), completion: { [weak strongSelf] _ in
                         strongSelf?.clippingNode.clipsToBounds = false
                     })
@@ -3075,7 +3113,15 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let currentBackgroundFrame = strongSelf.backgroundNode.frame
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                animation.animator.updateFrame(layer: shareButtonNode.layer, frame: CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize), completion: nil)
+                
+                var buttonFrame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                if let shareButtonOffset = shareButtonOffset {
+                    buttonFrame = buttonFrame.offsetBy(dx: shareButtonOffset.x, dy: shareButtonOffset.y)
+                }
+                
+                animation.animator.updateFrame(layer: shareButtonNode.layer, frame: buttonFrame, completion: nil)
+                animation.animator.updateAlpha(layer: shareButtonNode.layer, alpha: isCurrentlyPlayingMedia ? 0.0 : 1.0, completion: nil)
+
             }
         } else {
             /*if let _ = strongSelf.backgroundFrameTransition {
@@ -3085,7 +3131,13 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             strongSelf.messageAccessibilityArea.frame = backgroundFrame
             if let shareButtonNode = strongSelf.shareButtonNode {
                 let buttonSize = shareButtonNode.update(presentationData: item.presentationData, controllerInteraction: item.controllerInteraction, chatLocation: item.chatLocation, subject: item.associatedData.subject, message: item.message, account: item.context.account, disableComments: true)
-                shareButtonNode.frame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                
+                var buttonFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
+                if let shareButtonOffset = shareButtonOffset {
+                    buttonFrame = buttonFrame.offsetBy(dx: shareButtonOffset.x, dy: shareButtonOffset.y)
+                }
+                shareButtonNode.frame = buttonFrame
+                shareButtonNode.alpha = isCurrentlyPlayingMedia ? 0.0 : 1.0
             }
             
             if case .System = animation, strongSelf.mainContextSourceNode.isExtractedToContextPreview {

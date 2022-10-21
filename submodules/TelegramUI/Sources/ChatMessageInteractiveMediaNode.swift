@@ -76,6 +76,53 @@ struct ChatMessageDateAndStatus {
     var dateText: String
 }
 
+public func roundedRectCgPath(roundRect rect: CGRect, topLeftRadius: CGFloat = 0.0, topRightRadius: CGFloat = 0.0, bottomLeftRadius: CGFloat = 0.0, bottomRightRadius: CGFloat = 0.0) -> CGPath {
+    let path = CGMutablePath()
+
+    let topLeft = rect.origin
+    let topRight = CGPoint(x: rect.maxX, y: rect.minY)
+    let bottomRight = CGPoint(x: rect.maxX, y: rect.maxY)
+    let bottomLeft = CGPoint(x: rect.minX, y: rect.maxY)
+
+    if topLeftRadius != .zero {
+        path.move(to: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y))
+    } else {
+        path.move(to: CGPoint(x: topLeft.x, y: topLeft.y))
+    }
+
+    if topRightRadius != .zero {
+        path.addLine(to: CGPoint(x: topRight.x-topRightRadius, y: topRight.y))
+        path.addCurve(to:  CGPoint(x: topRight.x, y: topRight.y+topRightRadius), control1: CGPoint(x: topRight.x, y: topRight.y), control2:CGPoint(x: topRight.x, y: topRight.y + topRightRadius))
+    } else {
+         path.addLine(to: CGPoint(x: topRight.x, y: topRight.y))
+    }
+
+    if bottomRightRadius != .zero {
+        path.addLine(to: CGPoint(x: bottomRight.x, y: bottomRight.y-bottomRightRadius))
+        path.addCurve(to: CGPoint(x: bottomRight.x-bottomRightRadius, y: bottomRight.y), control1: CGPoint(x: bottomRight.x, y: bottomRight.y), control2: CGPoint(x: bottomRight.x-bottomRightRadius, y: bottomRight.y))
+    } else {
+        path.addLine(to: CGPoint(x: bottomRight.x, y: bottomRight.y))
+    }
+
+    if bottomLeftRadius != .zero {
+        path.addLine(to: CGPoint(x: bottomLeft.x+bottomLeftRadius, y: bottomLeft.y))
+        path.addCurve(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y-bottomLeftRadius), control1: CGPoint(x: bottomLeft.x, y: bottomLeft.y), control2: CGPoint(x: bottomLeft.x, y: bottomLeft.y-bottomLeftRadius))
+    } else {
+        path.addLine(to: CGPoint(x: bottomLeft.x, y: bottomLeft.y))
+    }
+
+    if topLeftRadius != .zero {
+        path.addLine(to: CGPoint(x: topLeft.x, y: topLeft.y+topLeftRadius))
+        path.addCurve(to: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y) , control1: CGPoint(x: topLeft.x, y: topLeft.y) , control2: CGPoint(x: topLeft.x+topLeftRadius, y: topLeft.y))
+    } else {
+        path.addLine(to: CGPoint(x: topLeft.x, y: topLeft.y))
+    }
+
+    path.closeSubpath()
+            
+    return path
+}
+
 extension UIBezierPath {
     convenience init(roundRect rect: CGRect, topLeftRadius: CGFloat = 0.0, topRightRadius: CGFloat = 0.0, bottomLeftRadius: CGFloat = 0.0, bottomRightRadius: CGFloat = 0.0) {
         self.init()
