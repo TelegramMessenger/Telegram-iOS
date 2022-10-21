@@ -3519,7 +3519,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, displaySwipeToReplyHint: {  [weak self] in
             if let strongSelf = self, let validLayout = strongSelf.validLayout, min(validLayout.size.width, validLayout.size.height) > 320.0 {
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: false, action: { _ in return false }), in: .current)
+                strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .swipeToReply(title: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintTitle, text: strongSelf.presentationData.strings.Conversation_SwipeToReplyHintText), elevatedLayout: false, position: .top, action: { _ in return false }), in: .current)
             }
         }, dismissReplyMarkupMessage: { [weak self] message in
             guard let strongSelf = self, strongSelf.presentationInterfaceState.keyboardButtonsMessage?.id == message.id else {
@@ -4046,6 +4046,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.chatDisplayNode.cancelInteractiveKeyboardGestures()
         }, dismissTextInput: { [weak self] in
             self?.chatDisplayNode.dismissTextInput()
+        }, scrollToMessageId: { [weak self] index in
+            self?.chatDisplayNode.historyNode.scrollToMessage(index: index)
         }, automaticMediaDownloadSettings: self.automaticMediaDownloadSettings, pollActionState: ChatInterfacePollActionState(), stickerSettings: self.stickerSettings, presentationContext: ChatPresentationContext(context: context, backgroundNode: self.chatBackgroundNode))
         
         self.controllerInteraction = controllerInteraction
@@ -9977,7 +9979,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             self.tempVoicePlaylistItemChanged = { [weak self] previousItem, currentItem in
-                guard let strongSelf = self, case .peer = strongSelf.chatLocation else {
+                guard let strongSelf = self else {
                     return
                 }
                 
@@ -15139,7 +15141,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         })
                 }
             }
-            controller.peerSelected = { [weak self, weak controller] peer, _ in
+            controller.peerSelected = { [weak self, weak controller] peer, threadId in
                 guard let strongSelf = self, let strongController = controller else {
                     return
                 }
@@ -15226,34 +15228,46 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
 
-                    let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                    let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in
                         return currentState.withUpdatedForwardMessageIds(messages.map { $0.id }).withUpdatedForwardOptionsState(ChatInterfaceForwardOptionsState(hideNames: !hasNotOwnMessages, hideCaptions: false, unhideNamesOnCaptionChange: false))
                     })
                     |> deliverOnMainQueue).start(completed: {
                         if let strongSelf = self {
-                            strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
-                            
-                            let navigationController: NavigationController?
-                            if let parentController = strongSelf.parentController {
-                                navigationController = (parentController.navigationController as? NavigationController)
-                            } else {
-                                navigationController = strongSelf.effectiveNavigationController
-                            }
-                            
-                            if let navigationController = navigationController {
-                                let chatController = ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId))
-                                var viewControllers = navigationController.viewControllers
-                                viewControllers.insert(chatController, at: viewControllers.count - 1)
-                                navigationController.setViewControllers(viewControllers, animated: false)
+                            let proceed: (ChatController) -> Void = { chatController in
+                                strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: true, { $0.updatedInterfaceState({ $0.withoutSelectionState() }) })
                                 
-                                strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
-                                |> SwiftSignalKit.filter { $0 }
-                                |> take(1)
-                                |> deliverOnMainQueue).start(next: { _ in
-                                    if let strongController = controller {
-                                        strongController.dismiss()
+                                let navigationController: NavigationController?
+                                if let parentController = strongSelf.parentController {
+                                    navigationController = (parentController.navigationController as? NavigationController)
+                                } else {
+                                    navigationController = strongSelf.effectiveNavigationController
+                                }
+                                
+                                if let navigationController = navigationController {
+                                    var viewControllers = navigationController.viewControllers
+                                    if threadId != nil {
+                                        viewControllers.insert(chatController, at: viewControllers.count - 2)
+                                    } else {
+                                        viewControllers.insert(chatController, at: viewControllers.count - 1)
                                     }
-                                }))
+                                    navigationController.setViewControllers(viewControllers, animated: false)
+                                    
+                                    strongSelf.controllerNavigationDisposable.set((chatController.ready.get()
+                                    |> SwiftSignalKit.filter { $0 }
+                                    |> take(1)
+                                    |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                                        viewControllers.removeAll(where: { $0 is PeerSelectionController })
+                                        navigationController?.setViewControllers(viewControllers, animated: true)
+                                    }))
+                                }
+                            }
+                            if let threadId = threadId {
+                                let _ = (strongSelf.context.sharedContext.chatControllerForForumThread(context: strongSelf.context, peerId: peerId, threadId: threadId)
+                                |> deliverOnMainQueue).start(next: { chatController in
+                                    proceed(chatController)
+                                })
+                            } else {
+                                proceed(ChatControllerImpl(context: strongSelf.context, chatLocation: .peer(id: peerId)))
                             }
                         }
                     })
@@ -15356,7 +15370,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
                                 let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData))
-                                controller.peerSelected = { [weak self, weak controller] peer, _ in
+                                controller.peerSelected = { [weak self, weak controller] peer, threadId in
                                     let peerId = peer.id
                                     
                                     if let strongSelf = self, let strongController = controller {
@@ -15370,7 +15384,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                             })
                                             strongController.dismiss()
                                         } else {
-                                            let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                                            let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in
                                                 return currentState.withUpdatedComposeInputState(textInputState)
                                             })
                                             |> deliverOnMainQueue).start(completed: {

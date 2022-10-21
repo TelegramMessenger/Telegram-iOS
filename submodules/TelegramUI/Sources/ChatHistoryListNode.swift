@@ -555,6 +555,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    private var appliedScrollToMessageId: MessageIndex? = nil
+    private let scrollToMessageIdPromise = Promise<MessageIndex?>(nil)
+    
     private let currentlyPlayingMessageIdPromise = Promise<(MessageIndex, Bool)?>(nil)
     private var appliedPlayingMessageId: MessageIndex? = nil
     
@@ -1043,11 +1046,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             customChannelDiscussionReadState,
             customThreadOutgoingReadState,
             self.currentlyPlayingMessageIdPromise.get(),
+            self.scrollToMessageIdPromise.get(),
             adMessages,
             availableReactions,
             defaultReaction,
             accountPeer
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageIdAndType, adMessages, availableReactions, defaultReaction, accountPeer in
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageIdAndType, scrollToMessageId, adMessages, availableReactions, defaultReaction, accountPeer in
             let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
             
             func applyHole() {
@@ -1139,7 +1143,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         
                         strongSelf._cachedPeerDataAndMessages.set(.single((cachedData, cachedDataMessages)))
                         
-                        let loadState: ChatHistoryNodeLoadState = .loading
+                        let loadState: ChatHistoryNodeLoadState = .loading(false)
                         if strongSelf.loadState != loadState {
                             strongSelf.loadState = loadState
                             strongSelf.loadStateUpdated?(loadState, false)
@@ -1258,15 +1262,20 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 
                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
                 if let strongSelf = self, case .default = source {
-                    let wasPlaying = strongSelf.appliedPlayingMessageId != nil
-                    
-                    if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let (currentlyPlayingMessageId, currentlyPlayingVideo) = currentlyPlayingMessageIdAndType {
-                        if isFirstTime {
-                        } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
-                        } else {
-                            if wasPlaying || currentlyPlayingVideo {
-                                updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
-                                scrollAnimationCurve = .Spring(duration: 0.4)
+                    if strongSelf.appliedScrollToMessageId == nil, let scrollToMessageId = scrollToMessageId {
+                        updatedScrollPosition = .index(index: .message(scrollToMessageId), position: .center(.top), directionHint: .Up, animated: true, highlight: false, displayLink: true)
+                        scrollAnimationCurve = .Spring(duration: 0.4)
+                    } else {
+                        let wasPlaying = strongSelf.appliedPlayingMessageId != nil
+                        
+                        if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId, let (currentlyPlayingMessageId, currentlyPlayingVideo) = currentlyPlayingMessageIdAndType {
+                            if isFirstTime {
+                            } else if case let .peer(peerId) = chatLocation, currentlyPlayingMessageId.id.peerId != peerId {
+                            } else {
+                                if wasPlaying || currentlyPlayingVideo {
+                                    updatedScrollPosition = .index(index: .message(currentlyPlayingMessageId), position: .center(.bottom), directionHint: .Up, animated: true, highlight: true, displayLink: true)
+                                    scrollAnimationCurve = .Spring(duration: 0.4)
+                                }
                             }
                         }
                     }
@@ -1336,6 +1345,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     if strongSelf.appliedPlayingMessageId != currentlyPlayingMessageId {
                         strongSelf.appliedPlayingMessageId = currentlyPlayingMessageId
+                    }
+                    if strongSelf.appliedScrollToMessageId != scrollToMessageId {
+                        strongSelf.appliedScrollToMessageId = scrollToMessageId
                     }
                     strongSelf.enqueueHistoryViewTransition(mappedTransition)
                 }
@@ -2560,13 +2572,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         }
                     } else {
                         if historyView.originalView.isLoadingEarlier && strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser {
-                            loadState = .loading
+                            loadState = .loading(true)
                         } else {
                             loadState = .messages
                         }
                     }
                 } else {
-                    loadState = .loading
+                    loadState = .loading(false)
                 }
                 
                 var animateIn = false
@@ -3342,6 +3354,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         } else {
             self.currentlyPlayingMessageIdPromise.set(.single(nil))
         }
+    }
+    
+    func scrollToMessage(index: MessageIndex) {
+        self.appliedScrollToMessageId = nil
+        self.scrollToMessageIdPromise.set(.single(index))
     }
 
     private var currentSendAnimationCorrelationIds: Set<Int64>?

@@ -1161,7 +1161,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var insets = layout.insets(options: [.input])
         switch self.placementPosition {
         case .top:
-            insets.top = layout.statusBarHeight ?? 0.0
+            break
         case .bottom:
             if self.elevatedLayout {
                 insets.bottom += 49.0
@@ -1172,8 +1172,8 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         var panelWrapperFrame = CGRect(origin: CGPoint(x: margin + layout.safeInsets.left, y: layout.size.height - contentHeight - insets.bottom - margin), size: CGSize(width: layout.size.width - margin * 2.0 - layout.safeInsets.left - layout.safeInsets.right, height: contentHeight))
         
         if case .top = self.placementPosition {
-            panelFrame.origin.y = insets.top
-            panelWrapperFrame.origin.y = insets.top
+            panelFrame.origin.y = insets.top + margin
+            panelWrapperFrame.origin.y = insets.top + margin
         }
         
         transition.updateFrame(node: self.panelNode, frame: panelFrame)
@@ -1283,7 +1283,14 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
     
     func animateIn(asReplacement: Bool) {
         if asReplacement {
-            let offset = self.bounds.height - self.panelWrapperNode.frame.minY
+            let offset: CGFloat
+            switch self.placementPosition {
+            case .top:
+                offset = -self.panelWrapperNode.frame.maxY
+            case.bottom:
+                offset = self.bounds.height - self.panelWrapperNode.frame.minY
+            }
+            
             self.panelWrapperNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
             self.panelNode.layer.animatePosition(from: CGPoint(x: 0.0, y: offset), to: CGPoint(), duration: 0.35, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true, completion: nil)
         } else {

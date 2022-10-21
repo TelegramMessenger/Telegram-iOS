@@ -56,3 +56,20 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
         |> distinctUntilChanged
     }
 }
+
+
+func forumSelectionOptions(context: AccountContext, peerId: PeerId, threadIds: Set<Int64>, canDelete: Bool) -> Signal<ChatListSelectionOptions, NoError> {
+    if threadIds.isEmpty {
+        return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
+        |> map { counters -> ChatListSelectionOptions in
+            var hasUnread = false
+            if counters.isUnread {
+                hasUnread = true
+            }
+            return ChatListSelectionOptions(read: .all(enabled: hasUnread), delete: false)
+        }
+        |> distinctUntilChanged
+    } else {
+        return .single(ChatListSelectionOptions(read: .selective(enabled: false), delete: canDelete))
+    }
+}

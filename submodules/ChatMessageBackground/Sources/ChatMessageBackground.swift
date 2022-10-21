@@ -60,8 +60,8 @@ public enum ChatMessageBackgroundType: Equatable {
 }
 
 public class ChatMessageBackground: ASDisplayNode {
-    public weak var backdropNode: ASDisplayNode?
-    
+    public weak var backdropNode: ChatMessageBubbleBackdrop?
+        
     public private(set) var type: ChatMessageBackgroundType?
     private var currentHighlighted: Bool?
     private var hasWallpaper: Bool?
@@ -85,7 +85,7 @@ public class ChatMessageBackground: ASDisplayNode {
         self.outlineImageNode.displayWithoutProcessing = true
         
         super.init()
-        
+                
         self.isUserInteractionEnabled = false
         self.addSubnode(self.outlineImageNode)
         self.addSubnode(self.imageNode)
@@ -259,9 +259,9 @@ public class ChatMessageBackground: ASDisplayNode {
                 }
             }
         }
-        
+                
         self.imageNode.image = image
-        if highlighted && maskMode, let backdropNode = self.backdropNode {
+        if highlighted && maskMode, let backdropNode = self.backdropNode, backdropNode.hasImage {
             self.imageNode.layer.compositingFilter = "overlayBlendMode"
             self.imageNode.alpha = 1.0
             
@@ -435,10 +435,16 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
     private var essentialGraphics: PrincipalThemeEssentialGraphics?
     private weak var backgroundNode: WallpaperBackgroundNode?
     
-    private var maskView: UIImageView?
+    public var maskView: UIImageView?
     private var fixedMaskMode: Bool?
 
     private var absolutePosition: (CGRect, CGSize)?
+    
+    public var overrideMask: Bool = false {
+        didSet {
+            self.maskView?.image = nil
+        }
+    }
     
     public var hasImage: Bool {
         return self.backgroundContent != nil
@@ -475,7 +481,7 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             self.setType(type: currentType, theme: theme, essentialGraphics: essentialGraphics, maskMode: maskMode, backgroundNode: backgroundNode)
         }
     }
-    
+        
     public func setType(type: ChatMessageBackgroundType, theme: ChatPresentationThemeData, essentialGraphics: PrincipalThemeEssentialGraphics, maskMode inputMaskMode: Bool, backgroundNode: WallpaperBackgroundNode?) {
         let maskMode = self.fixedMaskMode ?? inputMaskMode
 
@@ -555,11 +561,11 @@ public final class ChatMessageBubbleBackdrop: ASDisplayNode {
             }
             
             if let maskView = self.maskView {
-                maskView.image = bubbleMaskForType(type, graphics: essentialGraphics)
+                maskView.image = self.overrideMask ? nil : bubbleMaskForType(type, graphics: essentialGraphics)
             }
         }
     }
-    
+        
     public func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
         self.absolutePosition = (rect, containerSize)
         if let backgroundContent = self.backgroundContent {

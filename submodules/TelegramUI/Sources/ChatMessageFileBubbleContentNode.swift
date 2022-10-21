@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import ComponentFlow
+import AudioTranscriptionButtonComponent
 
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     let interactiveFileNode: ChatMessageInteractiveFileNode
@@ -77,7 +79,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             self?.updateIsTextSelectionActive?(value)
         }
     }
-    
+        
     override func accessibilityActivate() -> Bool {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)

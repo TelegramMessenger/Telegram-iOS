@@ -1216,13 +1216,21 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
     }
     
     private func updateIsEmpty(animated: Bool = false) {
-        let isEmpty = (self.textField.text?.isEmpty ?? true) && self.tokens.isEmpty
+        let textIsEmpty = (self.textField.text?.isEmpty ?? true)
+        let isEmpty = textIsEmpty && self.tokens.isEmpty
 
         let transition: ContainedViewLayoutTransition = animated ? .animated(duration: 0.3, curve: .spring) : .immediate
         let placeholderTransition = !isEmpty ? .immediate : transition
         placeholderTransition.updateAlpha(node: self.textField.placeholderLabel, alpha: isEmpty ? 1.0 : 0.0)
 
-        let clearIsHidden = isEmpty && self.prefixString == nil
+        var tokensEmpty = true
+        for token in self.tokens {
+            if !token.permanent {
+                tokensEmpty = false
+            }
+        }
+        
+        let clearIsHidden = (textIsEmpty && tokensEmpty) && self.prefixString == nil
         transition.updateAlpha(node: self.clearButton.imageNode, alpha: clearIsHidden ? 0.0 : 1.0)
         transition.updateTransformScale(node: self.clearButton, scale: clearIsHidden ? 0.2 : 1.0)
         self.clearButton.isUserInteractionEnabled = !clearIsHidden

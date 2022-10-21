@@ -13,6 +13,8 @@ import PhotoResources
 import TelegramUniversalVideoContent
 import FileMediaResourceStatus
 import HierarchyTrackingLayer
+import ComponentFlow
+import AudioTranscriptionButtonComponent
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize
@@ -44,14 +46,27 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
+    var customIsHidden: Bool = false {
+        didSet {
+            if self.customIsHidden != oldValue {
+                Queue.mainQueue().justDispatch {
+                    self.videoNode?.canAttachContent = self.shouldAcquireVideoContext
+                }
+            }
+        }
+    }
+    
     private var videoNode: UniversalVideoNode?
     private let secretVideoPlaceholderBackground: ASImageNode
     private let secretVideoPlaceholder: TransformImageNode
+    
+    var audioTranscriptionButton: ComponentHostView<Empty>?
     
     private var statusNode: RadialStatusNode?
     private var disappearingStatusNode: RadialStatusNode?
     private var playbackStatusNode: InstantVideoRadialStatusNode?
     private(set) var videoFrame: CGRect?
+    private var imageScale: CGFloat = 1.0
     
     private var item: ChatMessageBubbleContentItem?
     private var automaticDownload: Bool?
@@ -80,7 +95,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private let fetchedThumbnailDisposable = MetaDisposable()
     
     private var shouldAcquireVideoContext: Bool {
-        if self.visibility && self.trackingIsInHierarchy {
+        if self.visibility && self.trackingIsInHierarchy && !self.customIsHidden {
             return true
         } else {
             return false
@@ -96,6 +111,20 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     var shouldOpen: () -> Bool = { return true }
+    
+    var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
+    var audioTranscriptionText: TranscribedText?
+    private var transcribeDisposable: Disposable?
+    var hasExpandedAudioTranscription: Bool {
+        if case .expanded = audioTranscriptionState {
+            return true
+        } else {
+            return false
+        }
+    }
+    private var isWaitingForCollapse: Bool = false
+    
+    var requestUpdateLayout: (Bool) -> Void = { _ in }
     
     override init() {
         self.secretVideoPlaceholderBackground = ASImageNode()
@@ -138,7 +167,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         super.didLoad()
         
         let recognizer = TapLongTapOrDoubleTapGestureRecognizer(target: self, action: #selector(self.tapLongTapOrDoubleTapGesture(_:)))
-        recognizer.tapActionAtPoint = { _ in
+        recognizer.tapActionAtPoint = { point in
             return .waitForSingleTap
         }
         self.view.addGestureRecognizer(recognizer)
@@ -169,6 +198,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
+        let audioTranscriptionState = self.audioTranscriptionState
+        
         return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusDisplayType, automaticDownload in
             var secretVideoPlaceholderBackgroundImage: UIImage?
             var updatedInfoBackgroundImage: UIImage?
@@ -176,9 +207,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
+            
             switch statusDisplayType {
                 case .free:
-                    instantVideoBackgroundImage = PresentationResourcesChat.chatInstantVideoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
+                    instantVideoBackgroundImage = nil
                 case .bubble:
                     instantVideoBackgroundImage = nil
             }
@@ -355,12 +387,32 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             let result = ChatMessageInstantVideoItemLayoutResult(contentSize: contentSize, overflowLeft: 0.0, overflowRight: dateAndStatusOverflow ? 0.0 : (max(0.0, floorToScreenPixels(videoFrame.midX) + 55.0 + dateAndStatusSize.width - videoFrame.width)))
             
+            var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
+            let transcribedText = transcribedText(message: item.message)
+            
+            switch audioTranscriptionState {
+            case .inProgress:
+                if transcribedText != nil {
+                    updatedAudioTranscriptionState = .expanded
+                }
+            default:
+                break
+            }
+            
+            let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
+            
             return (result, { [weak self] layoutData, animation in
                 if let strongSelf = self {
                     strongSelf.item = item
                     strongSelf.videoFrame = displayVideoFrame
                     strongSelf.secretProgressIcon = secretProgressIcon
                     strongSelf.automaticDownload = automaticDownload
+                    
+                    if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
+                        strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
+                        strongSelf.audioTranscriptionText = transcribedText
+                        strongSelf.updateTranscribeExpanded?(updatedAudioTranscriptionState, transcribedText)
+                    }
                                         
                     if let updatedInfoBackgroundImage = updatedInfoBackgroundImage {
                         strongSelf.infoBackgroundNode.image = updatedInfoBackgroundImage
@@ -383,7 +435,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if let infoBackgroundImage = strongSelf.infoBackgroundNode.image, let muteImage = strongSelf.muteIconNode.image {
                         let infoWidth = muteImage.size.width
                         let infoBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels(displayVideoFrame.minX + (displayVideoFrame.size.width - infoWidth) / 2.0), y: displayVideoFrame.maxY - infoBackgroundImage.size.height - 8.0), size: CGSize(width: infoWidth, height: infoBackgroundImage.size.height))
-                        strongSelf.infoBackgroundNode.frame = infoBackgroundFrame
+                        animation.animator.updateFrame(layer: strongSelf.infoBackgroundNode.layer, frame: infoBackgroundFrame, completion: nil)
+                        
                         let muteIconFrame = CGRect(origin: CGPoint(x: infoBackgroundFrame.width - muteImage.size.width, y: 0.0), size: muteImage.size)
                         strongSelf.muteIconNode.frame = muteIconFrame
                     }
@@ -395,40 +448,26 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.fetchedThumbnailDisposable.set(nil)
                         }
                     }
-                                        
-                    dateAndStatusApply(animation)
-                    switch layoutData {
-                    case let .unconstrained(width):
-                        let dateAndStatusOrigin: CGPoint
-                        if dateAndStatusOverflow {
-                            dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
-                        } else {
-                            dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
-                        }
-                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize), completion: nil)
-                    case let .constrained(_, right):
-                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize), completion: nil)
+                                                          
+                    var durationBlurColor: (UIColor, Bool)?
+                    let durationTextColor: UIColor
+                    switch statusDisplayType {
+                        case .free:
+                             let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
+                            durationTextColor = serviceColor.primaryText
+                            durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
+                        case .bubble:
+                            durationBlurColor = nil
+                            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                                durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
+                            } else {
+                                durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
+                            }
                     }
-                                        
+                    
                     var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
                     if let telegramFile = updatedFile {
                         if updatedMedia {
-                            let durationTextColor: UIColor
-                            let durationBlurColor: (UIColor, Bool)?
-                            switch statusDisplayType {
-                                case .free:
-                                     let serviceColor = serviceMessageColorComponents(theme: theme.theme, wallpaper: theme.wallpaper)
-                                    durationTextColor = serviceColor.primaryText
-                                    durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
-                                case .bubble:
-                                    durationBlurColor = nil
-                                    if item.message.effectivelyIncoming(item.context.account.peerId) {
-                                        durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
-                                    } else {
-                                        durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
-                                    }
-                            }
-
                             if let durationBlurColor = durationBlurColor {
                                 if let durationBackgroundNode = strongSelf.durationBackgroundNode {
                                     durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1, transition: .immediate)
@@ -525,28 +564,114 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }))
                     }
                     
+                    let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+                                 
+                    var canTranscribe = statusDisplayType == .free && item.associatedData.isPremium && item.message.id.peerId.namespace != Namespaces.Peer.SecretChat
+                    if canTranscribe, let durationBlurColor = durationBlurColor {
+                        let audioTranscriptionButton: ComponentHostView<Empty>
+                        if let current = strongSelf.audioTranscriptionButton {
+                            audioTranscriptionButton = current
+                        } else {
+                            audioTranscriptionButton = ComponentHostView<Empty>()
+                            strongSelf.audioTranscriptionButton = audioTranscriptionButton
+                            strongSelf.view.addSubview(audioTranscriptionButton)
+                        }
+                        let audioTranscriptionButtonSize = audioTranscriptionButton.update(
+                            transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
+                            component: AnyComponent(AudioTranscriptionButtonComponent(
+                                theme: .freeform(durationBlurColor),
+                                transcriptionState: effectiveAudioTranscriptionState,
+                                pressed: {
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.transcribe()
+                                }
+                            )),
+                            environment: {},
+                            containerSize: CGSize(width: 30.0, height: 30.0)
+                        )
+                        
+                        var audioTranscriptionButtonFrame: CGRect
+                        if incoming {
+                            audioTranscriptionButtonFrame = CGRect(origin: CGPoint(x: displayVideoFrame.maxX - 30.0, y: displayVideoFrame.maxY - 30.0), size: audioTranscriptionButtonSize)
+                            if !scaleProgress.isZero {
+                                audioTranscriptionButtonFrame.origin.x = displayVideoFrame.midX + 43.0
+                            }
+                        } else {
+                            audioTranscriptionButtonFrame = CGRect(origin: CGPoint(x: displayVideoFrame.minX, y: displayVideoFrame.maxY - 30.0), size: audioTranscriptionButtonSize)
+                            if !scaleProgress.isZero {
+                                audioTranscriptionButtonFrame.origin.x = displayVideoFrame.midX - 74.0
+                            }
+                        }
+                        
+                        animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: audioTranscriptionButtonFrame, completion: nil)
+                        
+                        animation.animator.updateAlpha(layer: audioTranscriptionButton.layer, alpha: scaleProgress.isZero ? 1.0 : 0.0, completion: nil)
+                        if !scaleProgress.isZero {
+                            canTranscribe = false
+                        }
+                    } else {
+                        if let audioTranscriptionButton = strongSelf.audioTranscriptionButton {
+                            strongSelf.audioTranscriptionButton = nil
+                            audioTranscriptionButton.removeFromSuperview()
+                        }
+                    }
+                    
                     if let durationNode = strongSelf.durationNode {
-                        durationNode.frame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
+                        var durationFrame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
+                        animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
+                        
                         durationNode.isSeen = !notConsumed
                         let size = durationNode.size
                         if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
-                            durationBackgroundNode.frame = CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size)
                             durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
+
+                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                                durationFrame.origin.x = audioTranscriptionButton.frame.minX - 7.0
+                            }
+                            animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
+                            animation.animator.updateFrame(layer: durationBackgroundNode.layer, frame: CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size), completion: nil)
                         }
+                    }
+                    
+                    dateAndStatusApply(animation)
+                    switch layoutData {
+                    case let .unconstrained(width):
+                        var dateAndStatusOrigin: CGPoint
+                        if dateAndStatusOverflow {
+                            dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
+                        } else {
+                            dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
+                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                                dateAndStatusOrigin.x = audioTranscriptionButton.frame.maxX + 7.0
+                            }
+                        }
+                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize), completion: nil)
+                    case let .constrained(_, right):
+                        var dateAndStatusFrame = CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
+                        if incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                            dateAndStatusFrame.origin.x = audioTranscriptionButton.frame.maxX + 7.0
+                        }
+                        animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
                     }
                     
                     if let videoNode = strongSelf.videoNode {
                         videoNode.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
-                        videoNode.transform = CATransform3DMakeScale(imageScale, imageScale, 1.0)
-                        videoNode.position = displayVideoFrame.center
-                        videoNode.updateLayout(size: arguments.boundingSize, transition: .immediate)
+                        if imageScale != strongSelf.imageScale {
+                            strongSelf.imageScale = imageScale
+                            animation.animator.updateScale(layer: videoNode.layer, scale: imageScale, completion: nil)
+                        }
+                        animation.animator.updatePosition(layer: videoNode.layer, position: displayVideoFrame.center, completion: nil)
+                        videoNode.updateLayout(size: arguments.boundingSize, transition: animation.transition)
                     }
-                    strongSelf.secretVideoPlaceholderBackground.frame = displayVideoFrame
+                    animation.animator.updateFrame(layer: strongSelf.secretVideoPlaceholderBackground.layer, frame: displayVideoFrame, completion: nil)
                     
                     let placeholderFrame = videoFrame.insetBy(dx: 2.0, dy: 2.0)
                     strongSelf.secretVideoPlaceholder.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
-                    strongSelf.secretVideoPlaceholder.transform = CATransform3DMakeScale(imageScale, imageScale, 1.0)
-                    strongSelf.secretVideoPlaceholder.position = displayVideoFrame.center
+                    animation.animator.updateScale(layer: strongSelf.secretVideoPlaceholder.layer, scale: imageScale, completion: nil)
+                    animation.animator.updatePosition(layer: strongSelf.secretVideoPlaceholder.layer, position: displayVideoFrame.center, completion: nil)
+                    
                     let makeSecretPlaceholderLayout = strongSelf.secretVideoPlaceholder.asyncLayout()
                     let arguments = TransformImageArguments(corners: ImageCorners(radius: placeholderFrame.size.width / 2.0), imageSize: placeholderFrame.size, boundingSize: placeholderFrame.size, intrinsicInsets: UIEdgeInsets())
                     let applySecretPlaceholder = makeSecretPlaceholderLayout(arguments)
@@ -748,6 +873,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                 }
                 self.addSubnode(playbackStatusNode)
+                
+                if let audioTranscriptionButton = self.audioTranscriptionButton {
+                    audioTranscriptionButton.superview?.bringSubviewToFront(audioTranscriptionButton)
+                }
+                
                 self.playbackStatusNode = playbackStatusNode
             }
             playbackStatusNode.frame = videoFrame.insetBy(dx: 1.5, dy: 1.5)
@@ -779,6 +909,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 if let (gesture, location) = recognizer.lastRecognizedGestureAndLocation {
                     switch gesture {
                         case .tap:
+                            if let audioTranscriptionButton = self.audioTranscriptionButton, !audioTranscriptionButton.isHidden, audioTranscriptionButton.frame.contains(location) {
+                                self.transcribe()
+                                return
+                            }
+                        
                             if let statusNode = self.statusNode, statusNode.supernode != nil, !statusNode.isHidden, statusNode.frame.contains(location) {
                                 self.progressPressed()
                                 return
@@ -822,6 +957,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if !self.bounds.contains(point) {
             return nil
         }
+        if let audioTranscriptionButton = self.audioTranscriptionButton, !audioTranscriptionButton.isHidden, audioTranscriptionButton.frame.contains(point) {
+            return audioTranscriptionButton
+        }
         if let playbackNode = self.playbackStatusNode, !self.isPlaying, !playbackNode.frame.insetBy(dx: 0.2 * playbackNode.frame.width, dy: 0.2 * playbackNode.frame.height).contains(point) {
             let distanceFromCenter = point.distanceTo(playbackNode.position)
             if distanceFromCenter < 0.2 * playbackNode.frame.width {
@@ -833,6 +971,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if let statusNode = self.statusNode, statusNode.supernode != nil, !statusNode.isHidden, statusNode.frame.contains(point) {
             return self.view
         }
+
         if let videoNode = self.videoNode, videoNode.frame.contains(point) {
             return self.view
         }
@@ -989,6 +1128,226 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 durationNode.layer.animateAlpha(from: 0.0, to: durationNode.alpha, duration: 0.15, delay: 0.18)
             }
         }
+    }
+    
+    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState, TranscribedText?) -> Void)?
+    private func transcribe() {
+        guard let context = self.item?.context, let message = self.item?.message else {
+            return
+        }
+        
+        var shouldBeginTranscription = false
+        var shouldExpandNow = false
+        
+        if case .expanded = self.audioTranscriptionState {
+            shouldExpandNow = true
+        } else {
+            if let result = transcribedText(message: message) {
+                shouldExpandNow = true
+                
+                if case let .success(_, isPending) = result {
+                    shouldBeginTranscription = isPending
+                } else {
+                    shouldBeginTranscription = true
+                }
+            } else {
+                shouldBeginTranscription = true
+            }
+        }
+        
+        if shouldBeginTranscription {
+            if self.transcribeDisposable == nil {
+                self.audioTranscriptionState = .inProgress
+                self.requestUpdateLayout(true)
+                
+                self.transcribeDisposable = (context.engine.messages.transcribeAudio(messageId: message.id)
+                |> deliverOnMainQueue).start(next: { [weak self] result in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.transcribeDisposable = nil
+                })
+            }
+        }
+        
+        if shouldExpandNow {
+            switch self.audioTranscriptionState {
+            case .expanded:
+                self.audioTranscriptionState = .collapsed
+                self.isWaitingForCollapse = true
+                self.requestUpdateLayout(true)
+            case .collapsed:
+                self.audioTranscriptionState = .inProgress
+                self.requestUpdateLayout(true)
+            default:
+                break
+            }
+        }
+        
+        self.updateTranscribeExpanded?(self.audioTranscriptionState, self.audioTranscriptionText)
+    }
+    
+    func animateTo(_ node: ChatMessageInteractiveFileNode, animator: ControlledTransitionAnimator) {
+        let duration: Double = 0.2
+        
+        node.alpha = 1.0
+        node.isHidden = false
+        
+        self.alpha = 0.0
+        self.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        
+        node.waveformView?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.1)
+        
+        if let videoNode = self.videoNode, let targetNode = node.statusNode, let videoSnapshotView = videoNode.view.snapshotView(afterScreenUpdates: false) {
+            videoSnapshotView.frame = videoNode.bounds
+            videoNode.view.insertSubview(videoSnapshotView, at: 1)
+            videoSnapshotView.alpha = 0.0
+            videoSnapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { [weak videoSnapshotView] _ in
+                videoSnapshotView?.removeFromSuperview()
+            })
+            
+            let targetFrame = targetNode.view.convert(targetNode.bounds, to: self.view)
+            animator.animatePosition(layer: videoNode.layer, from: videoNode.position, to: targetFrame.center, completion: { _ in
+                self.isHidden = true
+                self.customIsHidden = true
+            })
+            let targetScale = targetNode.frame.width / videoNode.bounds.width
+            animator.animateScale(layer: videoNode.layer, from: self.imageScale, to: targetScale, completion: nil)
+            
+            animator.animatePosition(layer: self.infoBackgroundNode.layer, from: self.infoBackgroundNode.position, to: targetFrame.center.offsetBy(dx: 0.0, dy: 19.0), completion: nil)
+            animator.animateScale(layer: self.infoBackgroundNode.layer, from: 1.0, to: targetScale / self.imageScale, completion: nil)
+            self.infoBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            
+            if let playbackStatusNode = self.playbackStatusNode {
+                animator.animatePosition(layer: playbackStatusNode.layer, from: playbackStatusNode.position, to: targetFrame.center, completion: nil)
+                animator.animateScale(layer: playbackStatusNode.layer, from: 1.0, to: targetScale / self.imageScale, completion: nil)
+                playbackStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            }
+            
+            let sourceFrame = self.view.convert(videoNode.frame, to: node.view)
+            animator.animatePosition(layer: targetNode.layer, from: sourceFrame.center, to: targetNode.position, completion: nil)
+            let sourceScale = (videoNode.bounds.width * self.imageScale) / targetNode.frame.width
+            animator.animateScale(layer: targetNode.layer, from: sourceScale, to: 1.0, completion: nil)
+            targetNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            
+            let verticalDelta = (videoNode.position.y - targetFrame.center.y) * 2.0
+            animator.animatePosition(layer: node.textNode.layer, from: node.textNode.position.offsetBy(dx: 0.0, dy: verticalDelta), to: node.textNode.position, completion: nil)
+            node.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        }
+        
+        if let audioTranscriptionButton = self.audioTranscriptionButton, let targetAudioTranscriptionButton = node.audioTranscriptionButton {
+            let sourceFrame = audioTranscriptionButton.convert(audioTranscriptionButton.bounds, to: node.view)
+            
+            animator.animatePosition(layer: targetAudioTranscriptionButton.layer, from: sourceFrame.center, to: targetAudioTranscriptionButton.center, completion: nil)
+            targetAudioTranscriptionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            
+            let targetFrame = targetAudioTranscriptionButton.convert(targetAudioTranscriptionButton.bounds, to: self.view)
+            animator.animatePosition(layer: audioTranscriptionButton.layer, from: audioTranscriptionButton.center, to: targetFrame.center, completion: nil)
+            audioTranscriptionButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        }
+        
+        let sourceDateFrame = self.dateAndStatusNode.view.convert(self.dateAndStatusNode.view.bounds, to: node.view)
+        let targetDateFrame = node.dateAndStatusNode.view.convert(node.dateAndStatusNode.view.bounds, to: self.view)
+                        
+        animator.animatePosition(layer: self.dateAndStatusNode.layer, from: self.dateAndStatusNode.position, to: CGPoint(x: targetDateFrame.maxX - self.dateAndStatusNode.frame.width / 2.0 + 2.0, y: targetDateFrame.midY - 7.0), completion: nil)
+        animator.animatePosition(layer: node.dateAndStatusNode.layer, from: CGPoint(x: sourceDateFrame.maxX - node.dateAndStatusNode.frame.width / 2.0, y: sourceDateFrame.midY + 7.0), to: node.dateAndStatusNode.position, completion: nil)
+        
+        self.dateAndStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        node.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration - 0.05, delay: 0.05)
+        
+        if let durationNode = self.durationNode, let durationBackgroundNode = self.durationBackgroundNode {
+            let sourceDurationFrame = durationNode.view.convert(durationNode.view.bounds, to: node.view)
+            let targetDurationFrame = node.fetchingTextNode.view.convert(node.fetchingTextNode.view.bounds, to: self.view)
+            
+            let delta = CGPoint(x: targetDurationFrame.center.x - durationNode.position.x, y: targetDurationFrame.center.y - durationNode.position.y)
+            animator.animatePosition(layer: durationNode.layer, from: durationNode.position, to: targetDurationFrame.center, completion: nil)
+            animator.animatePosition(layer: durationBackgroundNode.layer, from: durationBackgroundNode.position, to: durationBackgroundNode.position.offsetBy(dx: delta.x, dy: delta.y), completion: nil)
+            animator.animatePosition(layer: node.fetchingTextNode.layer, from: sourceDurationFrame.center, to: node.fetchingTextNode.position, completion: nil)
+            
+            durationNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            self.durationBackgroundNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            
+            node.fetchingTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration - 0.05, delay: 0.05)
+        }
+    }
+    
+    func animateFrom(_ node: ChatMessageInteractiveFileNode, animator: ControlledTransitionAnimator) {
+        let duration: Double = 0.2
+        
+        self.alpha = 1.0
+        self.isHidden = false
+        
+        node.alpha = 0.0
+        node.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration, completion: { _ in
+            node.isHidden = true
+        })
+        node.waveformView?.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+                
+        if let videoNode = self.videoNode, let sourceNode = node.statusNode {
+            videoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
+                        
+            let sourceFrame = sourceNode.view.convert(sourceNode.bounds, to: self.view)
+            animator.animatePosition(layer: videoNode.layer, from: sourceFrame.center, to: videoNode.position, completion: nil)
+            let sourceScale = sourceNode.frame.width / videoNode.bounds.width
+            animator.animateScale(layer: videoNode.layer, from: sourceScale, to: self.imageScale, completion: nil)
+            
+            animator.animatePosition(layer: self.infoBackgroundNode.layer, from: sourceFrame.center.offsetBy(dx: 0.0, dy: 19.0), to: self.infoBackgroundNode.position, completion: nil)
+            animator.animateScale(layer: self.infoBackgroundNode.layer, from: sourceScale / self.imageScale, to: 1.0, completion: nil)
+            self.infoBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            
+            if let playbackStatusNode = self.playbackStatusNode {
+                animator.animatePosition(layer: playbackStatusNode.layer, from: sourceFrame.center, to: playbackStatusNode.position, completion: nil)
+                animator.animateScale(layer: playbackStatusNode.layer, from: sourceScale / self.imageScale, to: 1.0, completion: nil)
+                playbackStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            }
+            
+            let targetFrame = self.view.convert(videoNode.frame, to: node.view)
+            animator.animatePosition(layer: sourceNode.layer, from: sourceNode.position, to: targetFrame.center, completion: nil)
+            let targetScale = (videoNode.bounds.width * self.imageScale) / sourceNode.frame.width
+            animator.animateScale(layer: sourceNode.layer, from: 1.0, to: targetScale, completion: nil)
+            sourceNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            
+            let verticalDelta = (videoNode.position.y - sourceFrame.center.y) * 2.0
+            animator.animatePosition(layer: node.textNode.layer, from: node.textNode.position, to: node.textNode.position.offsetBy(dx: 0.0, dy: verticalDelta), completion: nil)
+            node.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        }
+                
+        if let audioTranscriptionButton = self.audioTranscriptionButton, let sourceAudioTranscriptionButton = node.audioTranscriptionButton {
+            audioTranscriptionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            
+            let targetFrame = audioTranscriptionButton.convert(audioTranscriptionButton.bounds, to: node.view)
+            animator.animatePosition(layer: sourceAudioTranscriptionButton.layer, from: sourceAudioTranscriptionButton.center, to: targetFrame.center, completion: nil)
+            sourceAudioTranscriptionButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+            
+            let sourceFrame = sourceAudioTranscriptionButton.convert(sourceAudioTranscriptionButton.bounds, to: self.view)
+            animator.animatePosition(layer: audioTranscriptionButton.layer, from: sourceFrame.center, to: audioTranscriptionButton.center, completion: nil)
+        }
+        
+        let sourceDateFrame = node.dateAndStatusNode.view.convert(node.dateAndStatusNode.view.bounds, to: self.view)
+        let targetDateFrame = self.dateAndStatusNode.view.convert(self.dateAndStatusNode.view.bounds, to: node.view)
+        
+        animator.animatePosition(layer: self.dateAndStatusNode.layer, from: CGPoint(x: sourceDateFrame.maxX - self.dateAndStatusNode.frame.width / 2.0 + 2.0, y: sourceDateFrame.midY - 7.0), to: self.dateAndStatusNode.position, completion: nil)
+        animator.animatePosition(layer: node.dateAndStatusNode.layer, from: node.dateAndStatusNode.position, to: CGPoint(x: targetDateFrame.maxX - node.dateAndStatusNode.frame.width / 2.0, y: targetDateFrame.midY + 7.0), completion: nil)
+        
+        self.dateAndStatusNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+        node.dateAndStatusNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+                
+        if let durationNode = self.durationNode, let durationBackgroundNode = self.durationBackgroundNode {
+            let sourceDurationFrame = node.fetchingTextNode.view.convert(node.fetchingTextNode.view.bounds, to: self.view)
+            let targetDurationFrame = durationNode.view.convert(durationNode.view.bounds, to: node.view)
+            
+            let delta = CGPoint(x: sourceDurationFrame.center.x - durationNode.position.x, y: sourceDurationFrame.center.y - durationNode.position.y)
+            animator.animatePosition(layer: durationNode.layer, from: sourceDurationFrame.center, to: durationNode.position, completion: nil)
+            animator.animatePosition(layer: durationBackgroundNode.layer, from: durationBackgroundNode.position.offsetBy(dx: delta.x, dy: delta.y), to: durationBackgroundNode.position, completion: nil)
+            animator.animatePosition(layer: node.fetchingTextNode.layer, from: node.fetchingTextNode.position, to: targetDurationFrame.center, completion: nil)
+            
+            durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration)
+            self.durationBackgroundNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: duration - 0.05, delay: 0.05)
+            
+            node.fetchingTextNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: duration)
+        }
+        
+        self.customIsHidden = false
     }
 }
 

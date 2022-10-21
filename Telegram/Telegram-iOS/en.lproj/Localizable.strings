@@ -8150,3 +8150,8 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.MessagePreviousLinks" = "Previous links";
 
 "ShareMenu.SelectTopic" = "Select topic";
+
+"ChatList.Context.Select" = "Select";
+
+"ChatList.SelectedTopics_1" = "%@ Topic Selected";
+"ChatList.SelectedTopics_any" = "%@ Topics Selected";

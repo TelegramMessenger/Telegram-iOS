@@ -221,16 +221,28 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private var derivedLayoutState: ChatControllerNodeDerivedLayoutState?
     
     private var isLoadingValue: Bool = false
-    private func updateIsLoading(isLoading: Bool, animated: Bool) {
+    private var isLoadingEarlier: Bool = false
+    private func updateIsLoading(isLoading: Bool, earlier: Bool, animated: Bool) {
         let useLoadingPlaceholder = self.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser
         
-        if isLoading != self.isLoadingValue {
+        let updated = isLoading != self.isLoadingValue || (isLoading && earlier && !self.isLoadingEarlier)
+        
+        if updated {
+            let updatedIsLoading = self.isLoadingValue != isLoading
             self.isLoadingValue = isLoading
+            
+            let updatedIsEarlier = self.isLoadingEarlier != earlier && !updatedIsLoading
+            self.isLoadingEarlier = earlier
+            
             if isLoading {
                 if useLoadingPlaceholder {
                     let loadingPlaceholderNode: ChatLoadingPlaceholderNode
                     if let current = self.loadingPlaceholderNode {
                         loadingPlaceholderNode = current
+                        
+                        if updatedIsEarlier {
+                            loadingPlaceholderNode.setup(self.historyNode, updating: true)
+                        }
                     } else {
                         loadingPlaceholderNode = ChatLoadingPlaceholderNode(theme: self.chatPresentationInterfaceState.theme, chatWallpaper: self.chatPresentationInterfaceState.chatWallpaper, bubbleCorners: self.chatPresentationInterfaceState.bubbleCorners, backgroundNode: self.backgroundNode)
                         loadingPlaceholderNode.updatePresentationInterfaceState(self.chatPresentationInterfaceState)
@@ -238,7 +250,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         
                         self.loadingPlaceholderNode = loadingPlaceholderNode
                      
-                        loadingPlaceholderNode.setup(self.historyNode)
+                        loadingPlaceholderNode.setup(self.historyNode, updating: false)
                         
                         if let (layout, navigationHeight) = self.validLayout {
                             self.containerLayoutUpdated(layout, navigationBarHeight: navigationHeight, transition: .immediate, listViewTransaction: { _, _, _, _ in
@@ -509,10 +521,10 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
         self.historyNode.setLoadStateUpdated { [weak self] loadState, animated in
             if let strongSelf = self {
                 let wasLoading = strongSelf.isLoadingValue
-                if case .loading = loadState {
-                    strongSelf.updateIsLoading(isLoading: true, animated: animated)
+                if case let .loading(earlier) = loadState {
+                    strongSelf.updateIsLoading(isLoading: true, earlier: earlier, animated: animated)
                 } else {
-                    strongSelf.updateIsLoading(isLoading: false, animated: animated)
+                    strongSelf.updateIsLoading(isLoading: false, earlier: false, animated: animated)
                 }
                 
                 var emptyType: ChatHistoryNodeLoadState.EmptyType?
@@ -3192,8 +3204,13 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         var attributes: [MessageAttribute] = []
                         attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
 
+                        var replyThreadId: Int64?
+                        if case let .replyThread(replyThreadMessage) = self.chatPresentationInterfaceState.chatLocation {
+                            replyThreadId = Int64(replyThreadMessage.messageId.id)
+                        }
+                        
                         for id in forwardMessageIds.sorted() {
-                            messages.append(.forward(source: id, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil))
+                            messages.append(.forward(source: id, threadId: replyThreadId, grouping: .auto, attributes: attributes, correlationId: nil))
                         }
                     }
                     

@@ -17,7 +17,7 @@ import ContextUI
 
 private let subtitleFont = Font.regular(12.0)
 
-private extension CGPoint {
+extension CGPoint {
     func angle(to other: CGPoint) -> CGFloat {
         let originX = other.x - self.x
         let originY = other.y - self.y
@@ -377,22 +377,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             return nil
         }
     }
-    
-    func generateMaskImage() -> UIImage? {
-        return generateImage(CGSize(width: 100.0, height: 100.0), contextGenerator: { size, context in
-            context.clear(CGRect(origin: .zero, size: size))
-            
-            let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 16.0, dy: 16.0), cornerRadius: 16.0)
-            context.setFillColor(UIColor.white.cgColor)
-            context.setShadow(offset: .zero, blur: 40.0, color: UIColor.white.cgColor)
-            
-            for _ in 0 ..< 10 {
-                context.addPath(path.cgPath)
-                context.fillPath()
-            }
-        })?.stretchableImage(withLeftCapWidth: 49, topCapHeight: 49)
-    }
-    
+        
     func animateIn(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
         self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
@@ -420,7 +405,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
-            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentTitleNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
+            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.headerNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset + 15.0))
             self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
             
             clippedNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
@@ -429,7 +414,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskView.frame = clippedNode.bounds
             
             let maskImageView = UIImageView()
-            maskImageView.image = generateMaskImage()
+            maskImageView.image = generatePeersMaskImage()
             maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
             maskView.addSubview(maskImageView)
             clippedNode.view.mask = maskView
@@ -493,7 +478,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             let clippedNode = ASDisplayNode()
             clippedNode.clipsToBounds = true
             clippedNode.cornerRadius = 16.0
-            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.contentTitleNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset))
+            clippedNode.frame = CGRect(origin: CGPoint(x: 0.0, y: self.headerNode.frame.minY - 15.0), size: CGSize(width: size.width, height: size.height - bottomInset + 15.0))
             self.contentGridNode.view.superview?.insertSubview(clippedNode.view, aboveSubview: self.contentGridNode.view)
             
             clippedNode.layer.animatePosition(from: .zero, to: CGPoint(x: 0.0, y: -scrollDelta), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
@@ -502,7 +487,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskView.frame = clippedNode.bounds
             
             let maskImageView = UIImageView()
-            maskImageView.image = generateMaskImage()
+            maskImageView.image = generatePeersMaskImage()
             maskImageView.frame = maskView.bounds.offsetBy(dx: 0.0, dy: 36.0)
             maskView.addSubview(maskImageView)
             clippedNode.view.mask = maskView
@@ -726,4 +711,19 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             }
         }
     }
+}
+
+func generatePeersMaskImage() -> UIImage? {
+    return generateImage(CGSize(width: 100.0, height: 100.0), contextGenerator: { size, context in
+        context.clear(CGRect(origin: .zero, size: size))
+        
+        let path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: size).insetBy(dx: 16.0, dy: 16.0), cornerRadius: 16.0)
+        context.setFillColor(UIColor.white.cgColor)
+        context.setShadow(offset: .zero, blur: 40.0, color: UIColor.white.cgColor)
+        
+        for _ in 0 ..< 10 {
+            context.addPath(path.cgPath)
+            context.fillPath()
+        }
+    })?.stretchableImage(withLeftCapWidth: 49, topCapHeight: 49)
 }

@@ -14,7 +14,7 @@ public enum ChatHistoryNodeLoadState: Equatable {
         case topic
     }
     
-    case loading
+    case loading(Bool)
     case empty(EmptyType)
     case messages
 }

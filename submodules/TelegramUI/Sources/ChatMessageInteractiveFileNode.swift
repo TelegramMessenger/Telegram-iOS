@@ -32,12 +32,12 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
-private enum TranscribedText {
+enum TranscribedText {
     case success(text: String, isPending: Bool)
     case error(AudioTranscriptionMessageAttribute.TranscriptionError)
 }
 
-private func transcribedText(message: Message) -> TranscribedText? {
+func transcribedText(message: Message) -> TranscribedText? {
     for attribute in message.attributes {
         if let attribute = attribute as? AudioTranscriptionMessageAttribute {
             if !attribute.text.isEmpty {
@@ -127,10 +127,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let descriptionMeasuringNode: TextNode
-    private let fetchingTextNode: ImmediateTextNode
-    private let fetchingCompactTextNode: ImmediateTextNode
+    let fetchingTextNode: ImmediateTextNode
+    let fetchingCompactTextNode: ImmediateTextNode
     
-    private var waveformView: ComponentHostView<Empty>?
+    var waveformView: ComponentHostView<Empty>?
     
     /*private let waveformNode: AudioWaveformNode
     private let waveformForegroundNode: AudioWaveformNode
@@ -138,9 +138,9 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var waveformMaskNode: AudioWaveformNode?
     private var waveformScrubbingNode: MediaPlayerScrubbingNode?*/
     
-    private var audioTranscriptionButton: ComponentHostView<Empty>?
+    var audioTranscriptionButton: ComponentHostView<Empty>?
     private var transcriptionPendingIndicator: ComponentHostView<Empty>?
-    private let textNode: TextNode
+    let textNode: TextNode
     private let textClippingNode: ASDisplayNode
     private var textSelectionNode: TextSelectionNode?
     
@@ -151,7 +151,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     
     private var iconNode: TransformImageNode?
     let statusContainerNode: ContextExtractedContentContainingNode
-    private var statusNode: SemanticStatusNode?
+    var statusNode: SemanticStatusNode?
     private var playbackAudioLevelNode: VoiceBlobNode?
     private var streamingStatusNode: SemanticStatusNode?
     private var tapRecognizer: UITapGestureRecognizer?
@@ -199,6 +199,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
+    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    
     private var context: AccountContext?
     private var message: Message?
     private var arguments: Arguments?
@@ -208,7 +210,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     private var streamingCacheStatusFrame: CGRect?
     private var fileIconImage: UIImage?
     
-    private var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
+    var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
+    var forcedAudioTranscriptionText: TranscribedText?
     private var transcribeDisposable: Disposable?
     var hasExpandedAudioTranscription: Bool {
         if case .expanded = audioTranscriptionState {
@@ -444,6 +447,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .collapsed
                 self.isWaitingForCollapse = true
                 self.requestUpdateLayout(true)
+                self.updateTranscribeExpanded?(self.audioTranscriptionState)
             case .collapsed:
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
@@ -464,6 +468,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         
         let currentMessage = self.message
         let audioTranscriptionState = self.audioTranscriptionState
+        let forcedAudioTranscriptionText = self.forcedAudioTranscriptionText
         
         return { arguments in
             return (CGFloat.greatestFiniteMagnitude, { constrainedSize in
@@ -489,7 +494,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     statusUpdated = true
                 }
                 
-                let hasThumbnail = (!arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil) && !arguments.file.isMusic && !arguments.file.isVoice
+                let hasThumbnail = (!arguments.file.previewRepresentations.isEmpty || arguments.file.immediateThumbnailData != nil) && !arguments.file.isMusic && !arguments.file.isVoice && !arguments.file.isInstantVideo
                 
                 if mediaUpdated {
                     if largestImageRepresentation(arguments.file.previewRepresentations) != nil || arguments.file.immediateThumbnailData != nil {
@@ -549,9 +554,19 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
+                let isInstantVideo = arguments.file.isInstantVideo
                 for attribute in arguments.file.attributes {
+                    if case let .Video(videoDuration, _, flags) = attribute, flags.contains(.instantRoundVideo) {
+                        isAudio = true
+                        isVoice = true
+                        
+                        let durationString = stringForDuration(Int32(videoDuration))
+                        candidateDescriptionString = NSAttributedString(string: durationString, font: durationFont, textColor: messageTheme.fileDurationColor)
+                    }
                     if case let .Audio(voice, duration, title, performer, waveform) = attribute {
                         isAudio = true
+                        
+                        let voice = voice || isInstantVideo
                         
                         if let forcedResourceStatus = arguments.forcedResourceStatus, statusUpdated {
                             updatedStatusSignal = .single((forcedResourceStatus, nil))
@@ -591,7 +606,6 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                             candidateDescriptionString = NSAttributedString(string: descriptionText, font: descriptionFont, textColor: messageTheme.fileDescriptionColor)
                         }
-                        break
                     }
                 }
                 
@@ -639,7 +653,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var textString: NSAttributedString?
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
-                let transcribedText = transcribedText(message: arguments.message)
+                let transcribedText = forcedAudioTranscriptionText ?? transcribedText(message: arguments.message)
                 
                 switch audioTranscriptionState {
                 case .inProgress:
@@ -1352,13 +1366,16 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         var isVoice = false
         var audioDuration: Int32?
         for attribute in file.attributes {
-            if case let .Audio(voice, duration, _, _, _) = attribute {
+            if case let .Video(duration, _, flags) = attribute, flags.contains(.instantRoundVideo) {
+                isAudio = true
+                isVoice = true
+                audioDuration = Int32(duration)
+            } else if case let .Audio(voice, duration, _, _, _) = attribute {
                 isAudio = true
                 if voice {
                     isVoice = true
                     audioDuration = Int32(duration)
                 }
-                break
             }
         }
         
@@ -1432,7 +1449,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                         }
                     case .Local:
-                        if isAudio {
+                        if isAudio  {
                             state = .play
                         } else if let fileIconImage = self.fileIconImage {
                             state = .customIcon(fileIconImage)
@@ -1785,6 +1802,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
         if let view = self.waveformView?.componentView as? AudioWaveformComponent.View {
             view.animateIn()
         }
+    }
+    
+    func animateTo(_ node: ChatMessageInteractiveInstantVideoNode) {
+        
     }
 }
 

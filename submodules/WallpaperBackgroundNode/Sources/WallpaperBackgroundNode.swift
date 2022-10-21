@@ -1115,7 +1115,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
             if let strongSelf = self {
                 strongSelf.isAnimating = false
-                if strongSelf.isLooping {
+                if strongSelf.isLooping && strongSelf.validLayout != nil {
                     strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
                 }
             }
