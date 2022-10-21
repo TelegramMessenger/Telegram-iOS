@@ -1797,8 +1797,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         
             var inputActivitiesSize: CGSize?
             var inputActivitiesApply: (() -> Void)?
-            if let inputActivities = inputActivities, !inputActivities.isEmpty, case let .chatList(index) = item.index {
-                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, index.messageIndex.id.peerId, inputActivities)
+            var chatPeerId: EnginePeer.Id?
+            if case let .chatList(index) = item.index {
+                chatPeerId = index.messageIndex.id.peerId
+            } else if case let .forum(peerId) = item.chatListLocation {
+                chatPeerId = peerId
+            }
+            if let inputActivities = inputActivities, !inputActivities.isEmpty, let chatPeerId {
+                let (size, apply) = inputActivitiesLayout(CGSize(width: rawContentWidth - badgeSize, height: 40.0), item.presentationData, item.presentationData.theme.chatList.messageTextColor, chatPeerId, inputActivities)
                 inputActivitiesSize = size
                 inputActivitiesApply = apply
             } else {
