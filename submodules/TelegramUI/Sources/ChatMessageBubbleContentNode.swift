@@ -7,6 +7,7 @@ import TelegramCore
 import TelegramUIPreferences
 import TelegramPresentationData
 import AccountContext
+import ChatMessageBackground
 
 enum ChatMessageBubbleContentBackgroundHiding {
     case never
@@ -133,6 +134,8 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
     var supportsMosaic: Bool {
         return false
     }
+    
+    weak var bubbleBackgroundNode: ChatMessageBackground?
     
     var visibility: ListViewItemNodeVisibility = .none
     

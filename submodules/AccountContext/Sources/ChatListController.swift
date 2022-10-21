@@ -4,6 +4,11 @@ import Postbox
 import Display
 import TelegramCore
 
+public enum ChatListControllerLocation {
+    case chatList(groupId: EngineChatList.Group)
+    case forum(peerId: PeerId)
+}
+
 public protocol ChatListController: ViewController {
     var context: AccountContext { get }
     var lockViewFrame: CGRect? { get }

@@ -473,6 +473,10 @@ public struct MessageFlags: OptionSet {
             rawValue |= MessageFlags.CopyProtected.rawValue
         }
         
+        if flags.contains(StoreMessageFlags.IsForumTopic) {
+            rawValue |= MessageFlags.IsForumTopic.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -485,6 +489,7 @@ public struct MessageFlags: OptionSet {
     public static let WasScheduled = MessageFlags(rawValue: 128)
     public static let CountedAsIncoming = MessageFlags(rawValue: 256)
     public static let CopyProtected = MessageFlags(rawValue: 512)
+    public static let IsForumTopic = MessageFlags(rawValue: 1024)
     
     public static let IsIncomingMask = MessageFlags([.Incoming, .CountedAsIncoming])
 }
@@ -745,6 +750,10 @@ public struct StoreMessageFlags: OptionSet {
             rawValue |= StoreMessageFlags.CopyProtected.rawValue
         }
         
+        if flags.contains(.IsForumTopic) {
+            rawValue |= StoreMessageFlags.IsForumTopic.rawValue
+        }
+        
         self.rawValue = rawValue
     }
     
@@ -757,6 +766,7 @@ public struct StoreMessageFlags: OptionSet {
     public static let WasScheduled = StoreMessageFlags(rawValue: 128)
     public static let CountedAsIncoming = StoreMessageFlags(rawValue: 256)
     public static let CopyProtected = StoreMessageFlags(rawValue: 512)
+    public static let IsForumTopic = StoreMessageFlags(rawValue: 1024)
     
     public static let IsIncomingMask = StoreMessageFlags([.Incoming, .CountedAsIncoming])
 }

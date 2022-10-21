@@ -638,14 +638,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         default:
             break
         }
-        var adMessages: Signal<[Message], NoError>
+        var adMessages: Signal<(interPostInterval: Int32?, messages: [Message]), NoError>
         if case .bubbles = mode, let peerId = displayAdPeer {
             let adMessagesContext = context.engine.messages.adMessages(peerId: peerId)
             self.adMessagesContext = adMessagesContext
             adMessages = adMessagesContext.state
         } else {
             self.adMessagesContext = nil
-            adMessages = .single([])
+            adMessages = .single((nil, []))
         }
 
         /*if case .bubbles = mode, let peerId = sparseScrollPeerId {
@@ -661,7 +661,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         super.init()
 
         adMessages = adMessages
-        |> afterNext { [weak self] messages in
+        |> afterNext { [weak self] interPostInterval, messages in
             Queue.mainQueue().async {
                 guard let strongSelf = self else {
                     return
@@ -2527,15 +2527,43 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     } else if action.action == .historyCleared {
                                         emptyType = .clearedHistory
                                         break
+                                    } else if case .topicCreated = action.action {
+                                        emptyType = .topic
+                                        break
                                     }
                                 }
                             }
                             loadState = .empty(emptyType)
                         } else {
-                            loadState = .empty(.generic)
+                            var emptyType = ChatHistoryNodeLoadState.EmptyType.generic
+                            if case let .replyThread(replyThreadMessage) = strongSelf.chatLocation {
+                                loop: for entry in historyView.originalView.additionalData {
+                                    switch entry {
+                                        case let .message(id, messages) where id == replyThreadMessage.effectiveTopId:
+                                            if let message = messages.first {
+                                                for media in message.media {
+                                                    if let action = media as? TelegramMediaAction {
+                                                        if case .topicCreated = action.action {
+                                                            emptyType = .topic
+                                                            break
+                                                        }
+                                                    }
+                                                }
+                                                break loop
+                                            }
+                                        default:
+                                            break
+                                    }
+                                }
+                            }
+                            loadState = .empty(emptyType)
                         }
                     } else {
-                        loadState = .messages
+                        if historyView.originalView.isLoadingEarlier && strongSelf.chatLocation.peerId?.namespace != Namespaces.Peer.CloudUser {
+                            loadState = .loading
+                        } else {
+                            loadState = .messages
+                        }
                     }
                 } else {
                     loadState = .loading
@@ -2589,6 +2617,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 } else if case .empty(.joined) = loadState, let entry = transition.historyView.originalView.entries.first {
                     strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
+                } else if case .empty(.topic) = loadState, let entry = transition.historyView.originalView.entries.first {
+                    strongSelf.updateMaxVisibleReadIncomingMessageIndex(entry.message.index)
                 }
                 
                 if !strongSelf.didSetInitialData {
@@ -2615,12 +2645,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf._buttonKeyboardMessage.set(.single(transition.keyboardButtonsMessage))
                 }
                 
-                if transition.animateIn || animateIn {
+                if (transition.animateIn || animateIn) && !"".isEmpty {
                     let heightNorm = strongSelf.bounds.height - strongSelf.insets.top
                     strongSelf.forEachVisibleItemNode { itemNode in
                         let delayFactor = itemNode.frame.minY / heightNorm
                         let delay = Double(delayFactor * 0.1)
-                        
+
                         if let itemNode = itemNode as? ChatMessageItemView {
                             itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                             itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
@@ -2633,7 +2663,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     strongSelf.forEachItemHeaderNode { itemNode in
                         let delayFactor = itemNode.frame.minY / heightNorm
                         let delay = Double(delayFactor * 0.2)
-                        
+
                         itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, delay: delay)
                         itemNode.layer.animateScale(from: 0.94, to: 1.0, duration: 0.4, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
                     }

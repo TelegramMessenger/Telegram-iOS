@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import WallpaperBackgroundNode
 
 private let badgeFont = Font.regular(13.0)
 
@@ -16,6 +17,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     let containerNode: ContextExtractedContentContainingNode
     private let buttonNode: HighlightTrackingButtonNode
     private let backgroundNode: NavigationBackgroundNode
+    private var backgroundContent: WallpaperBubbleBackgroundNode?
     private let imageNode: ASImageNode
     private let badgeBackgroundNode: ASImageNode
     private let badgeTextNode: ASTextNode
@@ -43,7 +45,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
     private var theme: PresentationTheme
     private let type: ChatHistoryNavigationButtonType
     
-    init(theme: PresentationTheme, type: ChatHistoryNavigationButtonType) {
+    init(theme: PresentationTheme, backgroundNode: WallpaperBackgroundNode, type: ChatHistoryNavigationButtonType) {
         self.theme = theme
         self.type = type
         
@@ -102,7 +104,7 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
         self.frame = CGRect(origin: CGPoint(), size: size)
     }
     
-    func updateTheme(theme: PresentationTheme) {
+    func updateTheme(theme: PresentationTheme, backgroundNode: WallpaperBackgroundNode) {
         if self.theme !== theme {
             self.theme = theme
 
@@ -122,6 +124,34 @@ class ChatHistoryNavigationButtonNode: ContextControllerSourceNode {
                 self.badgeTextNode.redrawIfPossible()
             }
         }
+        
+        if backgroundNode.hasExtraBubbleBackground() {
+            if self.backgroundContent == nil {
+                if let backgroundContent = backgroundNode.makeBubbleBackground(for: .free) {
+                    backgroundContent.allowsGroupOpacity = true
+                    backgroundContent.clipsToBounds = true
+                    backgroundContent.alpha = 0.3
+                    backgroundContent.cornerRadius = 19.0
+                    backgroundContent.frame = self.backgroundNode.frame
+                    self.buttonNode.insertSubnode(backgroundContent, aboveSubnode: self.backgroundNode)
+                    self.backgroundContent = backgroundContent
+                }
+            }
+        } else {
+            self.backgroundContent?.removeFromSupernode()
+            self.backgroundContent = nil
+        }
+        
+        if let (rect, containerSize) = self.absoluteRect {
+            self.backgroundContent?.update(rect: rect, within: containerSize, transition: .immediate)
+        }
+    }
+    
+    private var absoluteRect: (CGRect, CGSize)?
+    func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition) {
+        self.absoluteRect = (rect, containerSize)
+        
+        self.backgroundContent?.update(rect: rect, within: containerSize, transition: transition)
     }
     
     @objc func onTap() {

@@ -10,7 +10,7 @@ protocol MutablePostboxView {
 }
 
 final class CombinedMutableView {
-    private let views: [PostboxViewKey: MutablePostboxView]
+    let views: [PostboxViewKey: MutablePostboxView]
     
     init(views: [PostboxViewKey: MutablePostboxView]) {
         self.views = views

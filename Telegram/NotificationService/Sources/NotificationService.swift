@@ -613,6 +613,7 @@ private final class NotificationServiceHandler {
     private let pollDisposable = MetaDisposable()
 
     init?(queue: Queue, updateCurrentContent: @escaping (NotificationContent) -> Void, completed: @escaping () -> Void, payload: [AnyHashable: Any]) {
+        //debug_linker_fail_test()
         self.queue = queue
 
         let episode = String(UInt32.random(in: 0 ..< UInt32.max), radix: 16)
@@ -986,6 +987,9 @@ private final class NotificationServiceHandler {
 
                             if let threadId = aps["thread-id"] as? String {
                                 content.threadId = threadId
+                            }
+                            if let threadIdValue = aps["topic_id"] as? String, let threadId = Int(threadIdValue) {
+                                content.userInfo["threadId"] = Int32(clamping: threadId)
                             }
 
                             if let ringtoneString = aps["ringtone"] as? String, let fileId = Int64(ringtoneString) {

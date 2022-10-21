@@ -126,7 +126,7 @@ func _internal_peerSendAsAvailablePeers(network: Network, postbox: Postbox, peer
                 for chat in chats {
                     if let groupOrChannel = parseTelegramGroupOrChannel(chat: chat) {
                         switch chat {
-                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCount):
+                        case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCount, _):
                             if let participantsCount = participantsCount {
                                 subscribers[groupOrChannel.id] = participantsCount
                             }

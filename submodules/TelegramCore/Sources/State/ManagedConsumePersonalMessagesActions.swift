@@ -377,7 +377,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadMentionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()
@@ -419,7 +419,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     }
                                     
                                     return postbox.transaction { transaction -> Void in
-                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
+                                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: nil, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: apiUnreadReactionsCount, maxId: apiTopMessage)
                                     }
                                 } else {
                                     return .complete()

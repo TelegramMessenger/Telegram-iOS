@@ -590,7 +590,8 @@ final class MediaBoxPartialFile {
             } else {
                 assertionFailure()
             }
-        } catch {
+        } catch let e {
+            postboxLog("moveLocalFile error: \(e)")
             assertionFailure()
         }
     }

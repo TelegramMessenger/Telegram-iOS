@@ -223,6 +223,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                         node.backgroundBlurNode.isHidden = false
                     }
                     
+                    
                     let rect = node.backgroundBlurNode.bounds
                     let maskPath: CGPath?
                     switch position {
@@ -246,7 +247,7 @@ private final class ChatMessageActionButtonNode: ASDisplayNode {
                             node.layer.mask = nil
                         }
                     }
-                    
+                                        
                     if iconImage != nil {
                         if node.iconNode == nil {
                             let iconNode = ASImageNode()

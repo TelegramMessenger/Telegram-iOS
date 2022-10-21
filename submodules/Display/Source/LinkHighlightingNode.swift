@@ -156,7 +156,7 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
 }
 
 public final class LinkHighlightingNode: ASDisplayNode {
-    private var rects: [CGRect] = []
+    public private(set) var rects: [CGRect] = []
     public let imageNode: ASImageNode
     
     public var innerRadius: CGFloat = 4.0

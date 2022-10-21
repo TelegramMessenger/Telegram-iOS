@@ -67,7 +67,7 @@ struct PasscodeKeyboardLayout {
                 self.topOffset = 226.0
                 self.biometricsOffset = 30.0
                 self.deleteOffset = 20.0
-            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro:
+            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed:
                 self.buttonSize = 75.0
                 self.horizontalSecond = 103.0
                 self.horizontalThird = 206.0
@@ -151,7 +151,7 @@ public struct PasscodeLayout {
                 self.titleOffset = 112.0
                 self.subtitleOffset = -6.0
                 self.inputFieldOffset = 156.0
-            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro:
+            case .iPhoneX, .iPhone12Mini, .iPhone12, .iPhone13Mini, .iPhone13, .iPhone13Pro, .iPhone14Pro, .iPhone14ProZoomed, .iPhone14ProMaxZoomed:
                 self.titleOffset = 162.0
                 self.subtitleOffset = 0.0
                 self.inputFieldOffset = 206.0

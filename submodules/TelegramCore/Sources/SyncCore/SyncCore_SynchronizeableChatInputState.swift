@@ -83,10 +83,16 @@ class InternalChatInterfaceState: Codable {
     }
 }
 
-func _internal_updateChatInputState(transaction: Transaction, peerId: PeerId, inputState: SynchronizeableChatInputState?) {
+func _internal_updateChatInputState(transaction: Transaction, peerId: PeerId, threadId: Int64?, inputState: SynchronizeableChatInputState?) {
     var previousState: InternalChatInterfaceState?
-    if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
-        previousState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))
+    if let threadId = threadId {
+        if let peerChatInterfaceState = transaction.getPeerChatThreadInterfaceState(peerId, threadId: threadId), let data = peerChatInterfaceState.data {
+            previousState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))
+        }
+    } else {
+        if let peerChatInterfaceState = transaction.getPeerChatInterfaceState(peerId), let data = peerChatInterfaceState.data {
+            previousState = (try? AdaptedPostboxDecoder().decode(InternalChatInterfaceState.self, from: data))
+        }
     }
 
     if let updatedStateData = try? AdaptedPostboxEncoder().encode(InternalChatInterfaceState(
@@ -100,6 +106,10 @@ func _internal_updateChatInputState(transaction: Transaction, peerId: PeerId, in
             associatedMessageIds: (inputState?.replyToMessageId).flatMap({ [$0] }) ?? [],
             data: updatedStateData
         )
-        transaction.setPeerChatInterfaceState(peerId, state: storedState)
+        if let threadId = threadId {
+            transaction.setPeerChatThreadInterfaceState(peerId, threadId: threadId, state: storedState)
+        } else {
+            transaction.setPeerChatInterfaceState(peerId, state: storedState)
+        }
     }
 }

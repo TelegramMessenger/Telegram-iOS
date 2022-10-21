@@ -17,6 +17,7 @@ import PresentationDataUtils
 import PhoneNumberFormat
 import AccountUtils
 import InstantPageCache
+import NotificationPeerExceptionController
 
 enum SettingsSearchableItemIcon {
     case profile

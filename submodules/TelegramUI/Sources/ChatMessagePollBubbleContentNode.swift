@@ -10,6 +10,7 @@ import SwiftSignalKit
 import AccountContext
 import AvatarNode
 import TelegramPresentationData
+import ChatMessageBackground
 
 func isPollEffectivelyClosed(message: Message, poll: TelegramMediaPoll) -> Bool {
     if poll.isClosed {
@@ -512,7 +513,7 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.percentageNode.isLayerBacked = true
         
         super.init()
-        
+                
         self.addSubnode(self.highlightedBackgroundNode)
         self.addSubnode(self.separatorNode)
         self.addSubnode(self.resultBarNode)
@@ -524,6 +525,12 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
                 if highlighted {
+                    if "".isEmpty, let contentNode = strongSelf.supernode as? ChatMessagePollBubbleContentNode, let backdropNode = contentNode.bubbleBackgroundNode?.backdropNode {
+                        strongSelf.highlightedBackgroundNode.layer.compositingFilter = "overlayBlendMode"
+                        strongSelf.highlightedBackgroundNode.frame = strongSelf.view.convert(strongSelf.highlightedBackgroundNode.frame, to: backdropNode.view)
+                        backdropNode.addSubnode(strongSelf.highlightedBackgroundNode)
+                    }
+                    
                     strongSelf.highlightedBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.highlightedBackgroundNode.alpha = 1.0
                     
@@ -534,7 +541,13 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     strongSelf.previousOptionNode?.separatorNode.alpha = 0.0
                 } else {
                     strongSelf.highlightedBackgroundNode.alpha = 0.0
-                    strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    strongSelf.highlightedBackgroundNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, completion: { finished in
+                        if finished && strongSelf.highlightedBackgroundNode.supernode != strongSelf {
+                            strongSelf.highlightedBackgroundNode.layer.compositingFilter = nil
+                            strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: strongSelf.highlightedBackgroundNode.frame.size)
+                            strongSelf.insertSubnode(strongSelf.highlightedBackgroundNode, at: 0)
+                        }
+                    })
                     
                     strongSelf.separatorNode.alpha = 1.0
                     strongSelf.separatorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
@@ -733,8 +746,9 @@ private final class ChatMessagePollOptionNode: ASDisplayNode {
                     }
                     
                     node.buttonNode.frame = CGRect(origin: CGPoint(x: 1.0, y: 0.0), size: CGSize(width: width - 2.0, height: contentHeight))
-                    node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
-                    
+                    if node.highlightedBackgroundNode.supernode == node {
+                        node.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: width, height: contentHeight + UIScreenPixel))
+                    }
                     node.separatorNode.backgroundColor = incoming ? presentationData.theme.theme.chat.message.incoming.polls.separator : presentationData.theme.theme.chat.message.outgoing.polls.separator
                     node.separatorNode.frame = CGRect(origin: CGPoint(x: leftInset, y: contentHeight - UIScreenPixel), size: CGSize(width: width - leftInset, height: UIScreenPixel))
                     

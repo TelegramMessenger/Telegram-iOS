@@ -55,7 +55,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private var strings: PresentationStrings
     private var nameDisplayOrder: PresentationPersonNameOrder
     private var theme: InstantPageTheme
-    private let openPeer: (PeerId) -> Void
+    private let openPeer: (EnginePeer) -> Void
     
     private let highlightedBackgroundNode: ASDisplayNode
     private let buttonNode: HighlightableButtonNode
@@ -70,7 +70,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     private let joinDisposable = MetaDisposable()
     private var joinState: JoinState = .none
     
-    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (PeerId) -> Void) {
+    init(context: AccountContext, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, initialPeer: Peer, safeInset: CGFloat, transparent: Bool, rtl: Bool, openPeer: @escaping (EnginePeer) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
@@ -149,7 +149,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
         let context = self.context
         let signal = actualizedPeer(postbox: account.postbox, network: account.network, peer: initialPeer)
         |> mapToSignal({ peer -> Signal<Peer, NoError> in
-            if let peer = peer as? TelegramChannel, let username = peer.username, peer.accessHash == nil {
+            if let peer = peer as? TelegramChannel, let username = peer.addressName, peer.accessHash == nil {
                 return .single(peer) |> then(context.engine.peers.resolvePeerByName(name: username)
                 |> mapToSignal({ updatedPeer -> Signal<Peer, NoError> in
                     if let updatedPeer = updatedPeer {
@@ -300,7 +300,7 @@ final class InstantPagePeerReferenceNode: ASDisplayNode, InstantPageNode {
     
     @objc func buttonPressed() {
         if let peer = self.peer {
-            self.openPeer(peer.id)
+            self.openPeer(EnginePeer(peer))
         }
     }
     

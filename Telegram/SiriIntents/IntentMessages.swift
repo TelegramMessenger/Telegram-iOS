@@ -36,7 +36,7 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
     |> mapToSignal { view -> Signal<[INMessage], NoError> in
         var signals: [Signal<[INMessage], NoError>] = []
         for entry in view.0.entries {
-            if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _) = entry {
+            if case let .MessageEntry(index, _, readState, isMuted, _, _, _, _, _, _, _) = entry {
                 if index.messageIndex.id.peerId.namespace != Namespaces.Peer.CloudUser {
                     continue
                 }
@@ -44,19 +44,19 @@ func unreadMessages(account: Account) -> Signal<[INMessage], NoError> {
                 var hasUnread = false
                 var fixedCombinedReadStates: MessageHistoryViewReadState?
                 if let readState = readState {
-                    hasUnread = readState.count != 0
-                    fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState])
+                    hasUnread = readState.state.count != 0
+                    fixedCombinedReadStates = .peer([index.messageIndex.id.peerId: readState.state])
                 }
                 
                 if !isMuted && hasUnread {
-                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: index.messageIndex.id.peerId), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: .combinedLocation)
+                    signals.append(account.postbox.aroundMessageHistoryViewForLocation(.peer(peerId: index.messageIndex.id.peerId, threadId: nil), anchor: .upperBound, ignoreMessagesInTimestampRange: nil, count: 10, fixedCombinedReadStates: fixedCombinedReadStates, topTaggedMessageIdNamespaces: Set(), tagMask: nil, appendMessagesFromTheSameGroup: false, namespaces: .not(Namespaces.Message.allScheduled), orderStatistics: .combinedLocation)
                     |> take(1)
                     |> map { view -> [INMessage] in
                         var messages: [INMessage] = []
                         for entry in view.0.entries {
                             var isRead = true
                             if let readState = readState {
-                                isRead = readState.isIncomingMessageIndexRead(entry.message.index)
+                                isRead = readState.state.isIncomingMessageIndexRead(entry.message.index)
                             }
                             
                             if !isRead {
@@ -129,7 +129,7 @@ private func callWithTelegramMessage(_ telegramMessage: Message, account: Accoun
     if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
-        if let username = user.username {
+        if let username = user.addressName {
             label = INPersonHandleLabel(rawValue: "@\(username)")
             type = .unknown
         } else if let phone = user.phone {
@@ -168,7 +168,7 @@ private func messageWithTelegramMessage(_ telegramMessage: Message) -> INMessage
     if #available(iOSApplicationExtension 10.2, iOS 10.2, *) {
         var type: INPersonHandleType
         var label: INPersonHandleLabel?
-        if let username = user.username {
+        if let username = user.addressName {
             label = INPersonHandleLabel(rawValue: "@\(username)")
             type = .unknown
         } else if let phone = user.phone {

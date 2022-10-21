@@ -11,6 +11,7 @@ import AccountContext
 import ItemListPeerActionItem
 import ChatListFilterSettingsHeaderItem
 import PremiumUI
+import UndoUI
 
 private final class ChatListFilterPresetListControllerArguments {
     let context: AccountContext
@@ -223,7 +224,7 @@ private func chatListFilterPresetListControllerEntries(presentationData: Present
         
         var folderCount = 0
         for (filter, chatCount) in filtersWithAppliedOrder(filters: filters, order: updatedFilterOrder) {
-            if isPremium, case .allChats = filter {
+            if case .allChats = filter {
                 entries.append(.preset(index: PresetIndex(value: entries.count), title: "", label: "", preset: filter, canBeReordered: filters.count > 1, canBeDeleted: false, isEditing: state.isEditing, isAllChats: true, isDisabled: false))
             }
             if case let .filter(_, title, _, _) = filter {
@@ -512,6 +513,8 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
     |> afterDisposed {
     }
     
+    var previousOrder: [Int32]?
+    
     let controller = ItemListController(context: context, state: signal)
     controller.isOpaqueWhenInOverlay = true
     controller.blocksBackgroundWhenInOverlay = true
@@ -597,6 +600,28 @@ public func chatListFilterPresetListController(context: AccountContext, mode: Ch
                 return .single(false)
             }
         }
+    })
+    controller.setReorderCompleted({ (entries: [ChatListFilterPresetListEntry]) -> Void in
+        let _ = (combineLatest(
+            updatedFilterOrder.get() |> take(1),
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+        )
+        |> deliverOnMainQueue).start(next: { order, peer in
+            let isPremium = peer?.isPremium ?? false
+            if !isPremium, let order = order, order.first != 0 {
+                updatedFilterOrder.set(.single(previousOrder))
+
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                    if case .undo = action {
+                        pushControllerImpl?(PremiumIntroScreen(context: context, source: .folders))
+                    }
+                    return false })
+                )
+            } else {
+                previousOrder = order
+            }
+        })
     })
     
     return controller

@@ -357,6 +357,16 @@ public func arePeerDictionariesEqual(_ lhs: [PeerId: Peer], _ rhs: [PeerId: Peer
     return true
 }
 
+public struct PeerSummaryCounterData: Equatable {
+    public var tags: PeerSummaryCounterTags
+    public var usesThreadSummary: Bool
+    
+    public init(tags: PeerSummaryCounterTags, usesThreadSummary: Bool) {
+        self.tags = tags
+        self.usesThreadSummary = usesThreadSummary
+    }
+}
+
 public struct PeerSummaryCounterTags: OptionSet, Sequence, Hashable {
     public var rawValue: Int32
     

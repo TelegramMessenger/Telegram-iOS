@@ -45,6 +45,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
         messageThreadHoles: messageThreadHoles,
         existingMessageTags: MessageTags.all,
         messageTagsWithSummary: [.unseenPersonalMessage, .pinned, .video, .photo, .gif, .music, .voiceOrInstantVideo, .webPage, .file, .unseenReaction],
+        messageTagsWithThreadSummary: [.unseenPersonalMessage, .unseenReaction],
         existingGlobalMessageTags: GlobalMessageTags.all,
         peerNamespacesRequiringMessageTextIndex: [Namespaces.Peer.SecretChat],
         peerSummaryCounterTags: { peer, isContact in
@@ -65,7 +66,7 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                 case .broadcast:
                     return .channel
                 case .group:
-                    if channel.username != nil {
+                    if channel.flags.contains(.isForum) {
                         return .group
                     } else {
                         return .group
@@ -74,6 +75,17 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
             } else {
                 assertionFailure()
                 return .nonContact
+            }
+        },
+        peerSummaryIsThreadBased: { peer in
+            if let channel = peer as? TelegramChannel {
+                if channel.flags.contains(.isForum) {
+                    return true
+                } else {
+                    return false
+                }
+            } else {
+                return false
             }
         },
         additionalChatListIndexNamespace: Namespaces.Message.Cloud,

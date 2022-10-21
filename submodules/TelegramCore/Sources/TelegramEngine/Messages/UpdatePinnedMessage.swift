@@ -170,7 +170,7 @@ func _internal_requestUnpinAllMessages(account: Account, peerId: PeerId) -> Sign
         }, delayIncrement: 0.0, maxDelay: 0.0, maxRetries: 100, onQueue: .concurrentDefaultQueue())
         |> mapToSignal { _ -> Signal<Never, InternalError> in
             let signal: Signal<Never, InternalError> = account.postbox.transaction { transaction -> Void in
-                for index in transaction.getMessageIndicesWithTag(peerId: peerId, namespace: Namespaces.Message.Cloud, tag: .pinned) {
+                for index in transaction.getMessageIndicesWithTag(peerId: peerId, threadId: nil, namespace: Namespaces.Message.Cloud, tag: .pinned) {
                     transaction.updateMessage(index.id, update: { currentMessage in
                         var storeForwardInfo: StoreMessageForwardInfo?
                         if let forwardInfo = currentMessage.forwardInfo {

@@ -202,7 +202,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                     |> deliverOnMainQueue).start(next: { result in
                                         switch result {
                                             case .generic:
-                                            interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                            interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                                             case let .limitExceeded(limit, premiumLimit):
                                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                                 let text: String
@@ -211,7 +211,7 @@ final class HorizontalListContextResultsChatInputContextPanelNode: ChatInputCont
                                                 } else {
                                                     text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                                 }
-                                                interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                                interfaceInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                                     if case .info = action {
                                                         let controller = PremiumIntroScreen(context: context, source: .savedGifs)
                                                         interfaceInteraction?.getNavigationController()?.pushViewController(controller)

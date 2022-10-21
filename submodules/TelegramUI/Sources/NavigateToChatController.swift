@@ -12,6 +12,7 @@ import PeerAvatarGalleryUI
 import SettingsUI
 import ChatPresentationInterfaceState
 import AttachmentUI
+import ForumCreateTopicScreen
 
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     var found = false
@@ -109,6 +110,9 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
             })
         } else {
             let viewControllers = params.navigationController.viewControllers.filter({ controller in
+                if controller is ForumCreateTopicScreen {
+                    return false
+                }
                 if controller is ChatListController {
                     if let parentGroupId = params.parentGroupId {
                         return parentGroupId != .root
@@ -221,4 +225,40 @@ public func isOverlayControllerForChatNotificationOverlayPresentation(_ controll
     }
     
     return false
+}
+
+public func navigateToForumThreadImpl(context: AccountContext, peerId: EnginePeer.Id, threadId: Int64, messageId: EngineMessage.Id?, navigationController: NavigationController, activateInput: ChatControllerActivateInput?) -> Signal<Never, NoError> {
+    return fetchAndPreloadReplyThreadInfo(context: context, subject: .groupMessage(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))), atMessageId: messageId, preload: false)
+    |> deliverOnMainQueue
+    |> beforeNext { [weak context, weak navigationController] result in
+        guard let context = context, let navigationController = navigationController else {
+            return
+        }
+        
+        let chatLocation: ChatLocation = .replyThread(message: result.message)
+        
+        let subject: ChatControllerSubject?
+        if let messageId = messageId {
+            subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+        } else {
+            subject = nil
+        }
+        
+        var actualActivateInput: ChatControllerActivateInput? = result.isEmpty ? .text : nil
+        if let activateInput = activateInput {
+            actualActivateInput = activateInput
+        }
+        
+        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: chatLocation, chatLocationContextHolder: result.contextHolder, subject: subject, activateInput: actualActivateInput, keepStack: .never))
+    }
+    |> ignoreValues
+    |> `catch` { _ -> Signal<Never, NoError> in
+        return .complete()
+    }
+}
+
+public func navigateToForumChannelImpl(context: AccountContext, peerId: EnginePeer.Id, navigationController: NavigationController) {
+    let controller = ChatListControllerImpl(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, enableDebugActions: false)
+    controller.navigationPresentation = .master
+    navigationController.pushViewController(controller)
 }

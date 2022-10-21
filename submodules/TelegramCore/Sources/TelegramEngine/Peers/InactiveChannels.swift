@@ -31,7 +31,7 @@ func _internal_inactiveChannelList(network: Network) -> Signal<[InactiveChannel]
             var participantsCounts: [PeerId: Int32] = [:]
             for chat in chats {
                 switch chat {
-                case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCountValue):
+                case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCountValue, _):
                     if let participantsCountValue = participantsCountValue {
                         participantsCounts[chat.peerId] = participantsCountValue
                     }
