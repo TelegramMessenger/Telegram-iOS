@@ -60,15 +60,20 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                 let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
             }
         }
-        self.interactiveVideoNode.updateTranscribeExpanded = { [weak self] state, text in
+        self.interactiveVideoNode.updateTranscriptionExpanded = { [weak self] state in
             if let strongSelf = self, let item = strongSelf.item {
                 strongSelf.audioTranscriptionState = state
                 strongSelf.interactiveFileNode.audioTranscriptionState = state
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+            }
+        }
+        self.interactiveVideoNode.updateTranscriptionText = { [weak self] text in
+            if let strongSelf = self, let item = strongSelf.item {
                 strongSelf.interactiveFileNode.forcedAudioTranscriptionText = text
                 let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
             }
         }
-        self.interactiveFileNode.updateTranscribeExpanded = { [weak self] state in
+        self.interactiveFileNode.updateTranscriptionExpanded = { [weak self] state in
             if let strongSelf = self, let item = strongSelf.item {
                 strongSelf.audioTranscriptionState = state
                 strongSelf.interactiveVideoNode.audioTranscriptionState = state

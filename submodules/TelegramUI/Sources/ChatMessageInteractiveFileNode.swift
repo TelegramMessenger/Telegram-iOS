@@ -32,7 +32,7 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
-enum TranscribedText {
+enum TranscribedText: Equatable {
     case success(text: String, isPending: Bool)
     case error(AudioTranscriptionMessageAttribute.TranscriptionError)
 }
@@ -199,7 +199,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
-    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
     
     private var context: AccountContext?
     private var message: Message?
@@ -447,7 +447,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .collapsed
                 self.isWaitingForCollapse = true
                 self.requestUpdateLayout(true)
-                self.updateTranscribeExpanded?(self.audioTranscriptionState)
+                self.updateTranscriptionExpanded?(self.audioTranscriptionState)
             case .collapsed:
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)

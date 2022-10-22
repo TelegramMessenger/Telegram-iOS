@@ -112,6 +112,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     
     var shouldOpen: () -> Bool = { return true }
     
+    var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    var updateTranscriptionText: ((TranscribedText?) -> Void)?
+    
     var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     var audioTranscriptionText: TranscribedText?
     private var transcribeDisposable: Disposable?
@@ -199,6 +202,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
         let audioTranscriptionState = self.audioTranscriptionState
+        let audioTranscriptionText = self.audioTranscriptionText
         
         return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusDisplayType, automaticDownload in
             var secretVideoPlaceholderBackgroundImage: UIImage?
@@ -399,6 +403,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 break
             }
             
+            var updatedTranscriptionText: TranscribedText?
+            if audioTranscriptionText != transcribedText {
+                updatedTranscriptionText = transcribedText
+            }
+            
             let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
             
             return (result, { [weak self] layoutData, animation in
@@ -410,10 +419,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                         strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
-                        strongSelf.audioTranscriptionText = transcribedText
-                        strongSelf.updateTranscribeExpanded?(updatedAudioTranscriptionState, transcribedText)
+                        strongSelf.updateTranscriptionExpanded?(strongSelf.audioTranscriptionState)
                     }
-                                        
+                    if let updatedTranscriptionText = updatedTranscriptionText {
+                        strongSelf.audioTranscriptionText = updatedTranscriptionText
+                        strongSelf.updateTranscriptionText?(strongSelf.audioTranscriptionText)
+                    }
+                    
                     if let updatedInfoBackgroundImage = updatedInfoBackgroundImage {
                         strongSelf.infoBackgroundNode.image = updatedInfoBackgroundImage
                     }
@@ -1151,7 +1163,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState, TranscribedText?) -> Void)?
     private func transcribe() {
         guard let context = self.item?.context, let message = self.item?.message, self.statusNode == nil else {
             return
@@ -1205,7 +1216,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
-        self.updateTranscribeExpanded?(self.audioTranscriptionState, self.audioTranscriptionText)
+        self.updateTranscriptionExpanded?(self.audioTranscriptionState)
     }
     
     func animateTo(_ node: ChatMessageInteractiveFileNode, animator: ControlledTransitionAnimator) {
