@@ -275,7 +275,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     return .invoice(component)
                 }
                 return .peer(.name(peerName), nil)
-            } else if pathComponents.count == 2 || pathComponents.count == 3 {
+            } else if pathComponents.count == 2 || pathComponents.count == 3 || pathComponents.count == 4 {
                 if pathComponents[0] == "addstickers" {
                     return .stickerPack(name: pathComponents[1], type: .stickers)
                 } else if pathComponents[0] == "addemoji" {
@@ -429,6 +429,24 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     } else {
                         return nil
                     }
+                } else if pathComponents.count == 4 && pathComponents[0] == "c" {
+                    if let channelId = Int64(pathComponents[1]), let threadId = Int32(pathComponents[2]), let messageId = Int32(pathComponents[3]) {
+                        var timecode: Double?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "t" {
+                                        if let doubleValue = Double(value) {
+                                            timecode = doubleValue
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        return .privateMessage(messageId: MessageId(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), namespace: Namespaces.Message.Cloud, id: messageId), threadId: threadId, timecode: timecode)
+                    } else {
+                        return nil
+                    }
                 } else if pathComponents.count == 2 && pathComponents[0] == "c" {
                     if let channelId = Int64(pathComponents[1]) {
                         var threadId: Int32?
@@ -475,7 +493,10 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                             }
                         }
                     }
-                    if let threadId = threadId {
+                    
+                    if pathComponents.count >= 3, let subMessageId = Int32(pathComponents[2]) {
+                        return .peer(.name(peerName), .replyThread(value, subMessageId))
+                    } else if let threadId = threadId {
                         return .peer(.name(peerName), .replyThread(threadId, value))
                     } else if let commentId = commentId {
                         return .peer(.name(peerName), .replyThread(value, commentId))
@@ -569,19 +590,42 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     }
                                 }
                             case let .channelMessage(id, timecode):
-                                return .single(.channelMessage(peer: peer, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
+                                if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                                    return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(id))
+                                    |> map { info -> ResolvedUrl? in
+                                        if let _ = info {
+                                            return .replyThread(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id))
+                                        } else {
+                                            return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                        }
+                                    }
+                                } else {
+                                    return .single(.channelMessage(peer: peer, messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id), timecode: timecode))
+                                }
                             case let .replyThread(id, replyId):
                                 let replyThreadMessageId = MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: id)
-                                return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
-                                |> map(Optional.init)
-                                |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
-                                    return .single(nil)
-                                }
-                                |> map { result -> ResolvedUrl? in
-                                    guard let result = result else {
-                                        return .channelMessage(peer: peer, messageId: replyThreadMessageId, timecode: nil)
+                            
+                                if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                                    return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(replyThreadMessageId.id))
+                                    |> map { info -> ResolvedUrl? in
+                                        if let _ = info {
+                                            return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: replyThreadMessageId.id)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: replyId))
+                                        } else {
+                                            return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                        }
                                     }
-                                    return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
+                                } else {
+                                    return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
+                                    |> map(Optional.init)
+                                    |> `catch` { _ -> Signal<ChatReplyThreadMessage?, NoError> in
+                                        return .single(nil)
+                                    }
+                                    |> map { result -> ResolvedUrl? in
+                                        guard let result = result else {
+                                            return .channelMessage(peer: peer, messageId: replyThreadMessageId, timecode: nil)
+                                        }
+                                        return .replyThreadMessage(replyThreadMessage: result, messageId: MessageId(peerId: result.messageId.peerId, namespace: Namespaces.Message.Cloud, id: replyId))
+                                    }
                                 }
                             case let .voiceChat(invite):
                                 return .single(.joinVoiceChat(peer.id, invite))
@@ -614,7 +658,27 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                 return foundPeer
                 |> mapToSignal { foundPeer -> Signal<ResolvedUrl?, NoError> in
                     if let foundPeer = foundPeer {
-                        if let threadId = threadId {
+                        if case let .channel(channel) = foundPeer, channel.flags.contains(.isForum) {
+                            if let threadId = threadId {
+                                return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(threadId))
+                                |> map { info -> ResolvedUrl? in
+                                    if let _ = info {
+                                        return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
+                                    } else {
+                                        return .peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                    }
+                                }
+                            } else {
+                                return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(messageId.id))
+                                |> map { info -> ResolvedUrl? in
+                                    if let _ = info {
+                                        return .replyThread(messageId: messageId)
+                                    } else {
+                                        return .peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                    }
+                                }
+                            }
+                        } else if let threadId = threadId {
                             let replyThreadMessageId = MessageId(peerId: foundPeer.id, namespace: Namespaces.Message.Cloud, id: threadId)
                             return context.engine.messages.fetchChannelReplyThreadMessage(messageId: replyThreadMessageId, atMessageId: nil)
                             |> map(Optional.init)

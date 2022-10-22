@@ -32,8 +32,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let forceInlineReactions: Bool
     public let alwaysDisplayTranscribeButton: Bool
     public let accountPeer: EnginePeer?
+    public let topicAuthorId: EnginePeer.Id?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: Bool = false) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: Bool = false, topicAuthorId: EnginePeer.Id? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -50,6 +51,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.isPremium = isPremium
         self.accountPeer = accountPeer
         self.forceInlineReactions = forceInlineReactions
+        self.topicAuthorId = topicAuthorId
         self.alwaysDisplayTranscribeButton = alwaysDisplayTranscribeButton
     }
     
@@ -97,6 +99,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.forceInlineReactions != rhs.forceInlineReactions {
+            return false
+        }
+        if lhs.topicAuthorId != rhs.topicAuthorId {
             return false
         }
         if lhs.alwaysDisplayTranscribeButton != rhs.alwaysDisplayTranscribeButton {

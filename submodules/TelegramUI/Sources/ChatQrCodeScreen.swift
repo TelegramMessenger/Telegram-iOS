@@ -1571,7 +1571,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             codeLink = ""
         }
         if let threadId = threadId {
-            codeLink += "?topic=\(threadId)"
+            codeLink += "/\(threadId)"
         }
         
         let codeReadyPromise = ValuePromise<Bool>()

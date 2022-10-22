@@ -70,6 +70,10 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                                 controller?.present(c, in: .window(.root), with: a)
                             }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
                         }
+                    case let .replyThread(messageId):
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+                        }
                     case let .stickerPack(name, _):
                         let packReference: StickerPackReference = .name(name)
                         controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))

@@ -901,6 +901,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         if let navigationController = strongSelf.getNavigationController() {
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .replyThread(message: replyThreadMessage), subject: .message(id: .id(messageId), highlight: true, timecode: nil)))
                         }
+                    case let .replyThread(messageId):
+                        if let navigationController = strongSelf.getNavigationController() {
+                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+                        }
                     case let .stickerPack(name, type):
                         let _ = type
                         let packReference: StickerPackReference = .name(name)

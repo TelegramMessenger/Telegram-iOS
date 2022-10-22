@@ -238,6 +238,32 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
     }
 }
 
+func _internal_fetchForumChannelTopic(account: Account, peerId: PeerId, threadId: Int64) -> Signal<EngineMessageHistoryThread.Info?, NoError> {
+    return account.postbox.transaction { transaction -> (info: EngineMessageHistoryThread.Info?, inputChannel: Api.InputChannel?) in
+        if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+            return (data.info, nil)
+        } else {
+            return (nil, transaction.getPeer(peerId).flatMap(apiInputChannel))
+        }
+    }
+    |> mapToSignal { info, _ -> Signal<EngineMessageHistoryThread.Info?, NoError> in
+        if let info = info {
+            return .single(info)
+        } else {
+            return resolveForumThreads(postbox: account.postbox, network: account.network, ids: [MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId))])
+            |> mapToSignal { _ -> Signal<EngineMessageHistoryThread.Info?, NoError> in
+                return account.postbox.transaction { transaction -> EngineMessageHistoryThread.Info?  in
+                    if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                        return data.info
+                    } else {
+                        return nil
+                    }
+                }
+            }
+        }
+    }
+}
+
 public enum EditForumChannelTopicError {
     case generic
 }
