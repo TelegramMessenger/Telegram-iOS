@@ -10,7 +10,7 @@ def remove_directory(path):
         shutil.rmtree(path)
 
 
-def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_app_arguments, target_name):
+def generate(build_environment: BuildEnvironment, disable_extensions, disable_provisioning_profiles, generate_dsym, configuration_path, bazel_startup_arguments, bazel_app_arguments, target_name):
     project_path = os.path.join(build_environment.base_path, 'build-input/gen/project')
 
     if '/' in target_name:
@@ -35,6 +35,7 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
 
     tulsi_build_command = []
     tulsi_build_command += [tulsi_build_bazel_path]
+    tulsi_build_command += bazel_startup_arguments
     tulsi_build_command += ['build', '//:tulsi']
     if is_apple_silicon():
         tulsi_build_command += ['--macos_cpus=arm64']
@@ -54,9 +55,10 @@ def generate(build_environment: BuildEnvironment, disable_extensions, disable_pr
 
     with open(bazel_wrapper_path, 'wb') as bazel_wrapper:
         bazel_wrapper.write('''#!/bin/sh
-{bazel} "$@" {arguments}
+{bazel} {startup_arguments} "$@" {arguments}
 '''.format(
             bazel=build_environment.bazel_path,
+            startup_arguments=' '.join(bazel_startup_arguments),
             arguments=' '.join(bazel_wrapper_arguments)
         ).encode('utf-8'))
 

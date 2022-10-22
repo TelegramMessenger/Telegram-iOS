@@ -452,6 +452,7 @@ def generate_project(bazel, arguments):
         disable_provisioning_profiles=disable_provisioning_profiles,
         generate_dsym=generate_dsym,
         configuration_path=bazel_command_line.configuration_path,
+        bazel_startup_arguments=bazel_command_line.get_startup_bazel_arguments(),
         bazel_app_arguments=bazel_command_line.get_project_generation_arguments(),
         target_name=target_name
     )
