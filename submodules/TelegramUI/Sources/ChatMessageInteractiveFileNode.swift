@@ -361,7 +361,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     let introController = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
                     arguments.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
                     
-                    ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager).start()
+                    let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager).start()
                 }
                 return false })
             arguments.controllerInteraction.presentControllerInCurrent(tipController, nil)

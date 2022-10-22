@@ -1189,7 +1189,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     let introController = item.context.sharedContext.makePremiumIntroController(context: item.context, source: .settings)
                     item.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
                     
-                    ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).start()
+                    let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).start()
                 }
                 return false })
             item.controllerInteraction.presentControllerInCurrent(tipController, nil)
