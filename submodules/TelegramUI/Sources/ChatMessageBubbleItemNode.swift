@@ -1527,6 +1527,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         }
         
+        var hidesHeaders = false
         var shareButtonOffset: CGPoint?
         var index = 0
         for (message, _, attributes, bubbleAttributes, prepareLayout) in contentPropertiesAndPrepareLayouts {
@@ -1586,6 +1587,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if let offset = properties.shareButtonOffset {
                 shareButtonOffset = offset
             }
+            if properties.hidesHeaders {
+                hidesHeaders = true
+            }
             
             contentPropertiesAndLayouts.append((unboundSize, properties, prepareContentPosition, bubbleAttributes, nodeLayout, needSeparateContainers && !bubbleAttributes.isAttachment ? message.stableId : nil, itemSelection))
             
@@ -1626,7 +1630,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var currentCredibilityIcon: EmojiStatusComponent.Content?
         
         var initialDisplayHeader = true
-        if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
+        if hidesHeaders {
+            initialDisplayHeader = false
+        } else if let backgroundHiding = backgroundHiding, case .always = backgroundHiding {
             initialDisplayHeader = false
         } else {
             if inlineBotNameString == nil && (ignoreForward || firstMessage.forwardInfo == nil) && replyMessage == nil {
@@ -2378,7 +2384,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 mosaicStatusOrigin: mosaicStatusOrigin,
                 mosaicStatusSizeAndApply: mosaicStatusSizeAndApply,
                 needsShareButton: needsShareButton,
-                shareButtonOffset: shareButtonOffset
+                shareButtonOffset: shareButtonOffset,
+                hidesHeaders: hidesHeaders
             )
         })
     }
@@ -2423,7 +2430,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         mosaicStatusOrigin: CGPoint?,
         mosaicStatusSizeAndApply: (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageDateAndStatusNode)?,
         needsShareButton: Bool,
-        shareButtonOffset: CGPoint?
+        shareButtonOffset: CGPoint?,
+        hidesHeaders: Bool
     ) -> Void {
         guard let strongSelf = selfReference.value else {
             return
@@ -2479,6 +2487,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         strongSelf.backgroundType = backgroundType
         
+        strongSelf.backgroundNode.backgroundFrame = backgroundFrame
+        
         let isFailed = item.content.firstMessage.effectivelyFailed(timestamp: item.context.account.network.getApproximateRemoteTimestamp())
         if isFailed {
             let deliveryFailedNode: ChatMessageDeliveryFailedNode
@@ -2523,6 +2533,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 strongSelf.clippingNode.addSubnode(nameNode)
                 nameNode.frame = nameNodeFrame
+                
+                if animation.isAnimated {
+                    nameNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             } else {
                 animation.animator.updateFrame(layer: nameNode.layer, frame: nameNodeFrame, completion: nil)
             }
@@ -2536,6 +2550,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     credibilityIconView.isUserInteractionEnabled = false
                     strongSelf.credibilityIconView = credibilityIconView
                     strongSelf.clippingNode.view.addSubview(credibilityIconView)
+                    
+                    if animation.isAnimated {
+                        credibilityIconView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
                 }
                 
                 let credibilityIconComponent = EmojiStatusComponent(
@@ -2570,6 +2588,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     strongSelf.clippingNode.addSubnode(adminBadgeNode)
                     adminBadgeNode.frame = adminBadgeFrame
+                    
+                    if animation.isAnimated {
+                        adminBadgeNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                    }
                 } else {
                     //let previousAdminBadgeFrame = adminBadgeNode.frame
                     animation.animator.updateFrame(layer: adminBadgeNode.layer, frame: adminBadgeFrame, completion: nil)
@@ -2579,12 +2601,33 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 strongSelf.adminBadgeNode = nil
             }
         } else {
-            strongSelf.nameNode?.removeFromSupernode()
-            strongSelf.nameNode = nil
-            strongSelf.adminBadgeNode?.removeFromSupernode()
-            strongSelf.adminBadgeNode = nil
-            strongSelf.credibilityIconView?.removeFromSuperview()
-            strongSelf.credibilityIconView = nil
+            if animation.isAnimated {
+                if let nameNode = strongSelf.nameNode {
+                    strongSelf.nameNode = nil
+                    nameNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak nameNode] _ in
+                        nameNode?.removeFromSupernode()
+                    })
+                }
+                if let adminBadgeNode = strongSelf.adminBadgeNode {
+                    strongSelf.adminBadgeNode = nil
+                    adminBadgeNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak adminBadgeNode] _ in
+                        adminBadgeNode?.removeFromSupernode()
+                    })
+                }
+                if let credibilityIconView = strongSelf.credibilityIconView {
+                    strongSelf.credibilityIconView = nil
+                    credibilityIconView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak credibilityIconView] _ in
+                        credibilityIconView?.removeFromSuperview()
+                    })
+                }
+            } else {
+                strongSelf.nameNode?.removeFromSupernode()
+                strongSelf.nameNode = nil
+                strongSelf.adminBadgeNode?.removeFromSupernode()
+                strongSelf.adminBadgeNode = nil
+                strongSelf.credibilityIconView?.removeFromSuperview()
+                strongSelf.credibilityIconView = nil
+            }
         }
         
         let beginAt = applyInfo.timestamp ?? CACurrentMediaTime()
@@ -2903,10 +2946,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
             
-            var useContentOrigin = useContentOrigin
             if contentNode.disablesClipping {
                 shouldClipOnTransitions = false
-                useContentOrigin = false
             }
             
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: useContentOrigin ? contentOrigin.y : 0.0)
