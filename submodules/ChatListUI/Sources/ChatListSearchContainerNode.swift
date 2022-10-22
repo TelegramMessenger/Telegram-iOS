@@ -92,6 +92,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
     private let openMessage: (EnginePeer, Int64?, EngineMessage.Id, Bool) -> Void
     private let navigationController: NavigationController?
     
+    private let dimNode: ASDisplayNode
     let filterContainerNode: ChatListSearchFiltersContainerNode
     private let paneContainerNode: ChatListSearchPaneContainerNode
     private var selectionPanelNode: ChatListSearchMessageSelectionPanelNode?
@@ -149,6 +150,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.present = present
         self.presentInGlobalOverlay = presentInGlobalOverlay
     
+        self.dimNode = ASDisplayNode()
+        self.dimNode.backgroundColor = UIColor.black.withAlphaComponent(0.5)
+        
         self.filterContainerNode = ChatListSearchFiltersContainerNode()
         self.paneContainerNode = ChatListSearchPaneContainerNode(context: context, animationCache: animationCache, animationRenderer: animationRenderer, updatedPresentationData: updatedPresentationData, peersFilter: self.peersFilter, location: location, searchQuery: self.searchQuery.get(), searchOptions: self.searchOptions.get(), navigationController: navigationController)
         self.paneContainerNode.clipsToBounds = true
@@ -157,6 +161,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
         self.backgroundColor = filter.contains(.excludeRecent) ? nil : self.presentationData.theme.chatList.backgroundColor
         
+        self.addSubnode(self.dimNode)
         self.addSubnode(self.paneContainerNode)
                 
         let interaction = ChatListSearchInteraction(openPeer: { peer, chatPeer, threadId, value in
@@ -483,8 +488,19 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.copyProtectionTooltipController?.dismiss()
     }
     
+    public override func didLoad() {
+        super.didLoad()
+        
+        
+        self.dimNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.dimTapGesture(_:))))
+    }
+    
     public override var hasDim: Bool {
         return self.peersFilter.contains(.excludeRecent)
+    }
+    
+    public override var animateBackgroundAppearance: Bool {
+        return !self.hasDim
     }
     
     private func updateState(_ f: (ChatListSearchContainerNodeSearchState) -> ChatListSearchContainerNodeSearchState) {
@@ -606,6 +622,12 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         }
         self.setQuery?(nil, tokens, query ?? "")
     }
+    
+    @objc private func dimTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.cancel?()
+        }
+    }
 
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: transition)
@@ -614,6 +636,8 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
         self.validLayout = (layout, navigationBarHeight)
         
         let topInset = navigationBarHeight
+        
+        transition.updateFrame(node: self.dimNode, frame: CGRect(origin: CGPoint(x: 0.0, y: topInset), size: CGSize(width: layout.size.width, height: layout.size.height - topInset)))
         transition.updateFrame(node: self.filterContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight + 6.0), size: CGSize(width: layout.size.width, height: 38.0)))
         
         var isForum = false

@@ -191,7 +191,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         self.searchQuery = searchQuery
         self.searchOptions = searchOptions
         self.navigationController = navigationController
-        
+                
         super.init()
     }
     
@@ -339,7 +339,7 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
             pane.pane.node.updateSelectedMessages(animated: animated)
         }
     }
-    
+        
     func update(size: CGSize, sideInset: CGFloat, bottomInset: CGFloat, visibleHeight: CGFloat, presentationData: PresentationData, availablePanes: [ChatListSearchPaneKey], transition: ContainedViewLayoutTransition) {
         let previousAvailablePanes = self.currentAvailablePanes ?? []
         self.currentAvailablePanes = availablePanes
@@ -376,8 +376,11 @@ final class ChatListSearchPaneContainerNode: ASDisplayNode, UIGestureRecognizerD
         
         self.currentParams = (size, sideInset, bottomInset, visibleHeight, presentationData, availablePanes)
                 
-        self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
-        
+        if case .forum = self.location {
+            self.backgroundColor = .clear
+        } else {
+            self.backgroundColor = presentationData.theme.list.itemBlocksBackgroundColor
+        }
         let paneFrame = CGRect(origin: CGPoint(), size: CGSize(width: size.width, height: size.height))
         
         var visiblePaneIndices: [Int] = []

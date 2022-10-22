@@ -348,7 +348,7 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
                 let messageContainer = self.messageContainers[k]
                 let messageSize = messageContainer.frame.size
                 
-                messageContainer.update(size: size, hasAvatar: self.isGroup, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
+                messageContainer.update(size: size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: offset - messageSize.height), size: messageSize), transition: transition)
                 offset -= messageSize.height
             }
         }
@@ -374,19 +374,28 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         }
     }
     
-    private var isGroup = false
+    enum ChatType: Equatable {
+        case generic
+        case group
+        case channel
+    }
+    private var chatType: ChatType = .channel
     func updatePresentationInterfaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState) {
-        var isGroup = false
+        var chatType: ChatType = .channel
         if let peer = chatPresentationInterfaceState.renderedPeer?.peer {
             if peer is TelegramGroup {
-                isGroup = true
-            } else if let channel = peer as? TelegramChannel, case .group = channel.info {
-                isGroup = true
+                chatType = .group
+            } else if let channel = peer as? TelegramChannel {
+                if case .group = channel.info {
+                    chatType = .group
+                } else {
+                    chatType = .channel
+                }
             }
         }
         
-        if self.isGroup != isGroup {
-            self.isGroup = isGroup
+        if self.chatType != chatType {
+            self.chatType = chatType
             if let (size, insets) = self.validLayout {
                 self.updateLayout(size: size, insets: insets, transition: .immediate)
             }
@@ -414,30 +423,33 @@ final class ChatLoadingPlaceholderNode: ASDisplayNode {
         
         let shortHeight: CGFloat = 71.0
         let tallHeight: CGFloat = 93.0
-        
+
         let dimensions: [CGSize] = [
             CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.57 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.73 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
             CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.57 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
-            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.57 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.73 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * size.width), height: shortHeight),
             CGSize(width: floorToScreenPixels(0.36 * size.width), height: tallHeight),
-            CGSize(width: floorToScreenPixels(0.57 * size.width), height: shortHeight),
-        ]
-        
+            CGSize(width: floorToScreenPixels(0.47 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.36 * size.width), height: shortHeight),
+            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.69 * size.width), height: tallHeight),
+            CGSize(width: floorToScreenPixels(0.58 * size.width), height: tallHeight),
+        ].map {
+            if self.chatType == .channel {
+                return CGSize(width: floor($0.width * 1.3), height: floor($0.height * 1.8))
+            } else {
+                return $0
+            }
+        }
+                
         var offset: CGFloat = 5.0
         var index = 0
-//        if let (insetCount, _) = self.bottomInset {
-//            index += insetCount
-//        }
         
         for messageContainer in self.messageContainers {
             let messageSize = dimensions[index % 11]
-            messageContainer.update(size: bounds.size, hasAvatar: self.isGroup, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
+            messageContainer.update(size: bounds.size, hasAvatar: self.chatType != .channel, rect: CGRect(origin: CGPoint(x: 0.0, y: bounds.size.height - insets.bottom - offset - messageSize.height), size: messageSize), transition: transition)
             offset += messageSize.height
             index += 1
         }

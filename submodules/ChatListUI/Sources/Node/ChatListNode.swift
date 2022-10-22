@@ -1834,6 +1834,10 @@ public final class ChatListNode: ListView {
             return strongSelf.isSelectionGestureEnabled
         }
         self.view.addGestureRecognizer(selectionRecognizer)
+        
+        if case .forum = location {
+            self.isSelectionGestureEnabled = false
+        }
     }
     
     deinit {

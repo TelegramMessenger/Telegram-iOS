@@ -213,7 +213,9 @@ public final class SearchDisplayController {
             if let placeholder = placeholder {
                 let initialTextBackgroundFrame = placeholder.convert(placeholder.backgroundNode.frame, to: nil)
                 let contentNodePosition = self.backgroundNode.layer.position
-                self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                if contentNode.animateBackgroundAppearance {
+                    self.backgroundNode.layer.animatePosition(from: CGPoint(x: contentNodePosition.x, y: contentNodePosition.y + (initialTextBackgroundFrame.maxY + 8.0 - contentNavigationBarHeight)), to: contentNodePosition, duration: 0.5, timingFunction: kCAMediaTimingFunctionSpring)
+                }
                 self.searchBar.placeholderString = placeholder.placeholderString
             }
         }
