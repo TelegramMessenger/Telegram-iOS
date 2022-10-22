@@ -29,6 +29,7 @@ final class ChatListEmptyNode: ASDisplayNode {
     private let activityIndicator: ActivityIndicator
     
     private var animationSize: CGSize = CGSize()
+    private var buttonIsHidden: Bool
     
     private var validLayout: CGSize?
     
@@ -65,6 +66,16 @@ final class ChatListEmptyNode: ASDisplayNode {
         
         self.activityIndicator = ActivityIndicator(type: .custom(theme.list.itemAccentColor, 22.0, 1.0, false))
         
+        var buttonIsHidden = false
+        let animationName: String
+        if case let .filter(showEdit) = subject {
+            animationName = "ChatListFilterEmpty"
+            buttonIsHidden = !showEdit
+        } else {
+            animationName = "ChatListEmpty"
+        }
+        self.buttonIsHidden = buttonIsHidden
+        
         super.init()
         
         self.addSubnode(self.animationNode)
@@ -73,15 +84,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.addSubnode(self.buttonNode)
         self.addSubnode(self.secondaryButtonNode)
         self.addSubnode(self.activityIndicator)
-        
-        let animationName: String
-        if case let .filter(showEdit) = subject {
-            animationName = "ChatListFilterEmpty"
-            self.buttonNode.isHidden = !showEdit
-        } else {
-            animationName = "ChatListEmpty"
-        }
-        
+
         self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 248, height: 248, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
         self.animationSize = CGSize(width: 124.0, height: 124.0)
         self.animationNode.visibility = true
@@ -89,7 +92,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading
         self.descriptionNode.isHidden = self.isLoading
-        self.buttonNode.isHidden = self.isLoading
+        self.buttonNode.isHidden = self.buttonIsHidden || self.isLoading
         self.activityIndicator.isHidden = !self.isLoading
         
         self.buttonNode.hitTestSlop = UIEdgeInsets(top: -10.0, left: -10.0, bottom: -10.0, right: -10.0)
@@ -138,9 +141,9 @@ final class ChatListEmptyNode: ASDisplayNode {
                 descriptionText = strings.ChatList_EmptyChatListFilterText
                 buttonText = strings.ChatList_EmptyChatListEditFilter
             case .forum:
-                text = "No topics here yet"
-                buttonText = "Create New Topic"
-                secondaryButtonText = "Show as Messages"
+                text = strings.ChatList_EmptyTopicsTitle
+                buttonText = strings.ChatList_EmptyTopicsCreate
+                secondaryButtonText = strings.ChatList_EmptyTopicsShowAsMessages
         }
         let string = NSMutableAttributedString(string: text, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
         let descriptionString = NSAttributedString(string: descriptionText, font: Font.regular(14.0), textColor: theme.list.itemSecondaryTextColor)
@@ -167,7 +170,7 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.animationNode.isHidden = self.isLoading
         self.textNode.isHidden = self.isLoading
         self.descriptionNode.isHidden = self.isLoading
-        self.buttonNode.isHidden = self.isLoading
+        self.buttonNode.isHidden = self.buttonIsHidden || self.isLoading
         self.activityIndicator.isHidden = !self.isLoading
     }
     

@@ -284,6 +284,7 @@ public final class SelectablePeerNode: ASDisplayNode {
                 self.checkNode = nil
                 checkNode.setSelected(false, animated: animated)
             }
+            self.setNeedsLayout()
         }
     }
     

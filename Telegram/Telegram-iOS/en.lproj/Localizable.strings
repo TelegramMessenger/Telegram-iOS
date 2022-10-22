@@ -8155,3 +8155,7 @@ Sorry for the inconvenience.";
 
 "ChatList.SelectedTopics_1" = "%@ Topic Selected";
 "ChatList.SelectedTopics_any" = "%@ Topics Selected";
+
+"ChatList.EmptyTopicsTitle" = "No topics here yet";
+"ChatList.EmptyTopicsCreate" = "Create New Topic";
+"ChatList.EmptyTopicsShowAsMessages" = "Show as Messages";

@@ -307,8 +307,14 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 
                 strongSelf.peersContentNode?.updateSelectedPeers(animated: false)
                 strongSelf.updateButton()
+                
+                if let peersContentNode = strongSelf.peersContentNode, strongSelf.contentNode !== peersContentNode {
+                    strongSelf.transitionToContentNode(peersContentNode, animated: true)
+                    peersContentNode.prepareForAnimateIn()
+                }
+                                
                 Queue.mainQueue().after(0.01, {
-                    strongSelf.closePeerTopics(peer.peerId)
+                    strongSelf.closePeerTopics(peer.peerId, selected: true)
                 })
             }
         })
@@ -387,7 +393,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             )
             topicsContentNode.backPressed = { [weak self] in
                 if let strongSelf = self {
-                    strongSelf.closePeerTopics(peer.peerId)
+                    strongSelf.closePeerTopics(peer.peerId, selected: false)
                 }
             }
             strongSelf.topicsContentNode = topicsContentNode
@@ -415,21 +421,23 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
                 self?.contentNodeOffsetUpdated(contentOffset, transition: transition)
             })
             strongSelf.contentNodeOffsetUpdated(topicsContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
+            
+            strongSelf.view.endEditing(true)
         })
     }
     
-    func closePeerTopics(_ peerId: EnginePeer.Id) {
+    func closePeerTopics(_ peerId: EnginePeer.Id, selected: Bool) {
         guard let topicsContentNode = self.topicsContentNode else {
             return
         }
         topicsContentNode.setContentOffsetUpdated(nil)
-        
+                
         if let searchContentNode = self.contentNode as? ShareSearchContainerNode {
             topicsContentNode.supernode?.insertSubnode(topicsContentNode, belowSubnode: searchContentNode)
         } else if let peersContentNode = self.peersContentNode {
             topicsContentNode.supernode?.insertSubnode(topicsContentNode, belowSubnode: peersContentNode)
         }
-                    
+                            
         if let (layout, navigationBarHeight, _) = self.containerLayout {
             self.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .animated(duration: 0.4, curve: .spring))
         }
@@ -677,7 +685,8 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
         
         if let topicsContentNode = self.topicsContentNode {
             transition.updateFrame(node: topicsContentNode, frame: CGRect(origin: CGPoint(x: floor((contentContainerFrame.size.width - contentFrame.size.width) / 2.0), y: titleAreaHeight), size: gridSize))
-            topicsContentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: bottomGridInset, transition: transition)
+            
+            topicsContentNode.updateLayout(size: gridSize, isLandscape: layout.size.width > layout.size.height, bottomInset: self.contentNode === self.peersContentNode ? bottomGridInset : 0.0, transition: transition)
         }
     }
     
