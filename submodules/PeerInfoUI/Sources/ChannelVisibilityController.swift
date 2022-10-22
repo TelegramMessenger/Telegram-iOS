@@ -1265,7 +1265,7 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                         case .privateChannel:
                             let invite = (view.cachedData as? CachedGroupData)?.exportedInvitation
                             entries.append(.privateLinkHeader(presentationData.theme, presentationData.strings.InviteLink_InviteLink.uppercased()))
-                        entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, !isInitialSetup))
+                            entries.append(.privateLink(presentationData.theme, invite, importers?.importers.prefix(3).compactMap { $0.peer.peer.flatMap(EnginePeer.init) } ?? [], importers?.count ?? 0, !isInitialSetup))
                             entries.append(.privateLinkInfo(presentationData.theme, presentationData.strings.Group_Username_CreatePrivateLinkHelp))
                             switch mode {
                                 case .initialSetup, .revokeNames:
@@ -1413,6 +1413,9 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
     let revokeAddressNameDisposable = MetaDisposable()
     actionsDisposable.add(revokeAddressNameDisposable)
     
+    let deactivateAllAddressNamesDisposable = MetaDisposable()
+    actionsDisposable.add(deactivateAllAddressNamesDisposable)
+    
     let revokeLinkDisposable = MetaDisposable()
     actionsDisposable.add(revokeLinkDisposable)
     
@@ -1433,17 +1436,20 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 queue: Queue.mainQueue(),
                 adminedPublicChannels.get() |> filter { $0 != nil } |> take(1),
                 context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId)),
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)),
                 context.engine.data.get(
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: false),
                     TelegramEngine.EngineData.Item.Configuration.UserLimits(isPremium: true)
                 )
-            ).start(next: { peers, accountPeer, data in
+            ).start(next: { peers, accountPeer, peer, data in
                 let (limits, premiumLimits) = data
                 let isPremium = accountPeer?.isPremium ?? false
                 
+                let hasAdditionalUsernames = (peer?._asPeer().usernames.firstIndex(where: { !$0.flags.contains(.isEditable) }) ?? nil) != nil
+                
                 if let peers = peers {
                     let count = Int32(peers.count)
-                    if count < limits.maxPublicLinksCount || (count < premiumLimits.maxPublicLinksCount && isPremium) {
+                    if count < limits.maxPublicLinksCount || (count < premiumLimits.maxPublicLinksCount && isPremium) || hasAdditionalUsernames {
                         updateState { state in
                             return state.withUpdatedSelectedType(type)
                         }
@@ -1818,6 +1824,10 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                     updateState { state in
                         updatedAddressNameValue = updatedAddressName(mode: mode, state: state, peer: peer, cachedData: view.cachedData)
                         return state
+                    }
+                    
+                    if let selectedType = state.selectedType, case .privateChannel = selectedType, peer.usernames.firstIndex(where: { $0.isActive && !$0.flags.contains(.isEditable) }) != nil {
+                        deactivateAllAddressNamesDisposable.set(context.engine.peers.deactivateAllAddressNames(peerId: peerId).start())
                     }
                     
                     if let updatedCopyProtection = state.forwardingEnabled {

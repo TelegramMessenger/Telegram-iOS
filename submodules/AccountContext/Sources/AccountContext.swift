@@ -793,6 +793,7 @@ public enum PremiumIntroSource {
     case deeplink(String?)
     case profile(PeerId)
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
+    case voiceToText
 }
 
 #if ENABLE_WALLET

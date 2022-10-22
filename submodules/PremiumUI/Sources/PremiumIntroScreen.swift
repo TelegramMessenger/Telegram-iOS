@@ -153,6 +153,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .voiceToText:
+            if case .voiceToText = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -177,6 +183,7 @@ public enum PremiumSource: Equatable {
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case gift(from: PeerId, to: PeerId, duration: Int32)
     case giftTerms
+    case voiceToText
     
     var identifier: String? {
         switch self {
@@ -216,6 +223,8 @@ public enum PremiumSource: Equatable {
                 return "profile__\(id.id._internalGetInt64Value())"
             case .emojiStatus:
                 return "emoji_status"
+            case .voiceToText:
+                return "voice_to_text"
             case .gift, .giftTerms:
                 return nil
             case let .deeplink(reference):

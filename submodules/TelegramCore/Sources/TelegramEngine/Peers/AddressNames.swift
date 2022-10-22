@@ -185,7 +185,7 @@ func _internal_deactivateAllAddressNames(account: Account, peerId: EnginePeer.Id
             }
             |> mapToSignal { result -> Signal<Never, DeactivateAllAddressNamesError> in
                 return account.postbox.transaction { transaction -> Signal<Void, DeactivateAllAddressNamesError> in
-                    if case .boolTrue = result, let peer = transaction.getPeer(account.peerId) as? TelegramChannel {
+                    if case .boolTrue = result, let peer = transaction.getPeer(peerId) as? TelegramChannel {
                         var updatedNames: [TelegramPeerUsername] = []
                         for username in peer.usernames {
                             var updatedFlags = username.flags

@@ -17,7 +17,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     private let maskForeground = SimpleLayer()
     
     private let backdropMaskLayer = SimpleLayer()
-    private let backdropMaskForeground = SimpleShapeLayer()
+    private let backdropMaskForeground = BubbleMaskLayer()
     
     private var isExpanded = false
     
@@ -48,10 +48,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         self.maskForeground.backgroundColor = UIColor.white.cgColor
         self.maskForeground.masksToBounds = true
         self.maskLayer.addSublayer(self.maskForeground)
-        
-        self.backdropMaskForeground.fillColor = UIColor.white.cgColor
-        self.backdropMaskForeground.masksToBounds = true
-    
+            
         self.addSubnode(self.interactiveFileNode)
         self.addSubnode(self.interactiveVideoNode)
                 
@@ -136,8 +133,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     required init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
-    
+        
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveVideoLayout = self.interactiveVideoNode.asyncLayout()
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
@@ -292,16 +288,37 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             let maskFrame = CGRect(origin: CGPoint(x: isExpanded ? 1.0 : (incoming ? 7.0 : 1.0), y: isExpanded ? 0.0 : 1.0), size: isExpanded ? finalSize : CGSize(width: radius * 2.0, height: radius * 2.0))
                             animation.animator.updateCornerRadius(layer: strongSelf.maskForeground, cornerRadius: maskCornerRadius, completion: nil)
                             animation.animator.updateFrame(layer: strongSelf.maskForeground, frame: maskFrame, completion: nil)
-
-                            let backdropMaskFrame = CGRect(origin: CGPoint(x: isExpanded ? (incoming ? 8.0 : 2.0) : (incoming ? 8.0 : 2.0), y: isExpanded ? 2.0 : 2.0), size: isExpanded ? CGSize(width: finalSize.width - 11.0, height: finalSize.height - 2.0) : CGSize(width: radius * 2.0, height: radius * 2.0))
-
-//                            let auxiliaryRadius = item.presentationData.chatBubbleCorners.auxiliaryRadius
-                            let backdropRadius = isExpanded ? item.presentationData.chatBubbleCorners.mainRadius : radius
-                            let path = CGPath(roundedRect: backdropMaskFrame, cornerWidth: backdropRadius, cornerHeight: backdropRadius, transform: nil)
-                            strongSelf.backdropMaskForeground.frame = strongSelf.maskLayer.frame
-                            animation.transition.updatePath(layer: strongSelf.backdropMaskForeground, path: path)
                             
-                                       
+                            let backdropMaskFrame = CGRect(origin: CGPoint(x: isExpanded ? (incoming ? 8.0 : 2.0) : (incoming ? 8.0 : 2.0), y: isExpanded ? 2.0 : 2.0), size: isExpanded ? CGSize(width: finalSize.width - 11.0, height: finalSize.height - 2.0) : CGSize(width: radius * 2.0, height: radius * 2.0))
+                           
+                            
+                            let topLeftCornerRadius: CGFloat
+                            let topRightCornerRadius: CGFloat
+                            let bottomLeftCornerRadius: CGFloat
+                            let bottomRightCornerRadius: CGFloat
+                            if let bubbleCorners = strongSelf.bubbleBackgroundNode?.currentCorners(bubbleCorners: item.presentationData.chatBubbleCorners) {
+                                topLeftCornerRadius = isExpanded ? bubbleCorners.topLeftRadius : radius
+                                topRightCornerRadius = isExpanded ? bubbleCorners.topRightRadius : radius
+                                bottomLeftCornerRadius = isExpanded ? bubbleCorners.bottomLeftRadius : radius
+                                bottomRightCornerRadius = isExpanded ? bubbleCorners.bottomRightRadius : radius
+                            } else {
+                                let backdropRadius = isExpanded ? item.presentationData.chatBubbleCorners.mainRadius : radius
+                                topLeftCornerRadius = backdropRadius
+                                topRightCornerRadius = backdropRadius
+                                bottomLeftCornerRadius = backdropRadius
+                                bottomRightCornerRadius = backdropRadius
+                            }
+                            
+                            strongSelf.backdropMaskForeground.update(
+                                size: backdropMaskFrame.size,
+                                topLeftCornerRadius: topLeftCornerRadius,
+                                topRightCornerRadius: topRightCornerRadius,
+                                bottomLeftCornerRadius: bottomLeftCornerRadius,
+                                bottomRightCornerRadius: bottomRightCornerRadius,
+                                animator: animation.animator
+                            )
+                            animation.animator.updateFrame(layer: strongSelf.backdropMaskForeground, frame: backdropMaskFrame, completion: nil)
+                                                        
                             let videoLayoutData: ChatMessageInstantVideoItemLayoutData
                             if incoming {
                                 videoLayoutData = .constrained(left: 0.0, right: 0.0) //max(0.0, availableContentWidth - videoFrame.width))
@@ -403,5 +420,94 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
     
     override var disablesClipping: Bool {
         return true
+    }
+}
+
+private class BubbleMaskLayer: SimpleLayer {
+    private class CornerLayer: SimpleLayer {
+        private let contentLayer = SimpleLayer()
+        
+        override init(layer: Any) {
+            super.init(layer: layer)
+        }
+        
+        init(cornerMask: CACornerMask) {
+            super.init()
+            self.masksToBounds = true
+            
+            self.contentLayer.backgroundColor = UIColor.white.cgColor
+            self.contentLayer.masksToBounds = true
+            self.contentLayer.maskedCorners = cornerMask
+            self.addSublayer(self.contentLayer)
+        }
+        
+        required init?(coder aDecoder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        func update(size: CGSize, cornerRadius: CGFloat, animator: ControlledTransitionAnimator) {
+            animator.updateCornerRadius(layer: self.contentLayer, cornerRadius: cornerRadius, completion: nil)
+            
+            let mask = self.contentLayer.maskedCorners
+            var origin = CGPoint()
+            if mask == .layerMinXMinYCorner {
+                origin = .zero
+            } else if mask == .layerMaxXMinYCorner {
+                origin = CGPoint(x: -size.width / 2.0, y: 0.0)
+            } else if mask == .layerMinXMaxYCorner {
+                origin = CGPoint(x: 0.0, y: -size.height / 2.0)
+            } else if mask == .layerMaxXMaxYCorner {
+                origin = CGPoint(x: -size.width / 2.0, y: -size.height / 2.0)
+            }
+            animator.updateFrame(layer: self.contentLayer, frame: CGRect(origin: origin, size: size), completion: nil)
+        }
+    }
+    
+    private let topLeft = CornerLayer(cornerMask: [.layerMinXMinYCorner])
+    private let topRight = CornerLayer(cornerMask: [.layerMaxXMinYCorner])
+    private let bottomLeft = CornerLayer(cornerMask: [.layerMinXMaxYCorner])
+    private let bottomRight = CornerLayer(cornerMask: [.layerMaxXMaxYCorner])
+    
+    override init(layer: Any) {
+        super.init(layer: layer)
+    }
+    
+    override init() {
+        super.init()
+        
+        self.addSublayer(self.topLeft)
+        self.addSublayer(self.topRight)
+        self.addSublayer(self.bottomLeft)
+        self.addSublayer(self.bottomRight)
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    func update(
+        size: CGSize,
+        topLeftCornerRadius: CGFloat,
+        topRightCornerRadius: CGFloat,
+        bottomLeftCornerRadius: CGFloat,
+        bottomRightCornerRadius: CGFloat,
+        animator: ControlledTransitionAnimator
+    ) {
+        var size = CGSize(width: floor(size.width), height: floor(size.height))
+        if Int(size.width) % 2 != 0 {
+            size.width += 1.0
+        }
+        if Int(size.height) % 2 != 0 {
+            size.height += 1.0
+        }
+        animator.updateFrame(layer: self.topLeft, frame: CGRect(origin: .zero, size: CGSize(width: size.width / 2.0, height: size.height / 2.0)), completion: nil)
+        animator.updateFrame(layer: self.topRight, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: 0.0), size: CGSize(width: size.width / 2.0, height: size.height / 2.0)), completion: nil)
+        animator.updateFrame(layer: self.bottomLeft, frame: CGRect(origin: CGPoint(x: 0.0, y: size.height / 2.0), size: CGSize(width: size.width / 2.0, height: size.height / 2.0)), completion: nil)
+        animator.updateFrame(layer: self.bottomRight, frame: CGRect(origin: CGPoint(x: size.width / 2.0, y: size.height / 2.0), size: CGSize(width: size.width / 2.0, height: size.height / 2.0)), completion: nil)
+        
+        self.topLeft.update(size: size, cornerRadius: topLeftCornerRadius, animator: animator)
+        self.topRight.update(size: size, cornerRadius: topRightCornerRadius, animator: animator)
+        self.bottomLeft.update(size: size, cornerRadius: bottomLeftCornerRadius, animator: animator)
+        self.bottomRight.update(size: size, cornerRadius: bottomRightCornerRadius, animator: animator)
     }
 }

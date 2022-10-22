@@ -1520,6 +1520,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .profile(peerId)
             case let .emojiStatus(peerId, fileId, file, packTitle):
                 mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
+            case .voiceToText:
+                mappedSource = .voiceToText
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }

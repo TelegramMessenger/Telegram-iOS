@@ -2903,8 +2903,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
             let contentNode = strongSelf.contentNodes[contentNodeIndex]
             
+            var useContentOrigin = useContentOrigin
             if contentNode.disablesClipping {
                 shouldClipOnTransitions = false
+                useContentOrigin = false
             }
             
             let contentNodeFrame = relativeFrame.offsetBy(dx: contentOrigin.x, dy: useContentOrigin ? contentOrigin.y : 0.0)

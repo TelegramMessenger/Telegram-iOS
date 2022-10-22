@@ -30,10 +30,11 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
     public let forceInlineReactions: Bool
+    public let alwaysDisplayTranscribeButton: Bool
     public let accountPeer: EnginePeer?
     public let topicAuthorId: EnginePeer.Id?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, topicAuthorId: EnginePeer.Id? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: Bool = false, topicAuthorId: EnginePeer.Id? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -51,6 +52,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.accountPeer = accountPeer
         self.forceInlineReactions = forceInlineReactions
         self.topicAuthorId = topicAuthorId
+        self.alwaysDisplayTranscribeButton = alwaysDisplayTranscribeButton
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -100,6 +102,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.topicAuthorId != rhs.topicAuthorId {
+            return false
+        }
+        if lhs.alwaysDisplayTranscribeButton != rhs.alwaysDisplayTranscribeButton {
             return false
         }
         return true
