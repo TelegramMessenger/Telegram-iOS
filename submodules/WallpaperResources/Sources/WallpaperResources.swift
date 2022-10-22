@@ -1337,6 +1337,8 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
         var defaultTheme = makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil)
         if let color = color {
             defaultTheme = customizePresentationTheme(defaultTheme, editing: false, accentColor: color.accentColor.flatMap { UIColor(rgb: $0) }, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
+        } else if case .night = theme {
+            defaultTheme = customizePresentationTheme(defaultTheme, editing: true, accentColor: UIColor(rgb: 0x3e88f7), outgoingAccentColor: nil, backgroundColors: [], bubbleColors: [], animateBubbleColors: nil)
         }
         themeSignal = .single(defaultTheme)
     } else if case let .cloud(theme) = theme, let settings = theme.theme.settings?.first {

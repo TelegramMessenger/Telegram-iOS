@@ -107,6 +107,50 @@ public class ChatMessageBackground: ASDisplayNode {
         }
     }
     
+    public func currentCorners(bubbleCorners: PresentationChatBubbleCorners) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool)? {
+        guard let type = self.type else {
+            return nil
+        }
+        
+        let maxRadius = bubbleCorners.mainRadius
+        let minRadius = bubbleCorners.auxiliaryRadius
+        
+        switch type {
+        case .none:
+            return nil
+        case let .incoming(mergeType):
+            switch mergeType {
+            case .None:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .none)
+            case let .Top(side):
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .top(side: side))
+            case .Bottom:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .bottom)
+            case .Both:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .both)
+            case .Side:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .side)
+            case .Extracted:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: true, neighbors: .extracted)
+            }
+        case let .outgoing(mergeType):
+            switch mergeType {
+            case .None:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .none)
+            case let .Top(side):
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .top(side: side))
+            case .Bottom:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .bottom)
+            case .Both:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .both)
+            case .Side:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .side)
+            case .Extracted:
+                return messageBubbleArguments(maxCornerRadius: maxRadius, minCornerRadius: minRadius, incoming: false, neighbors: .extracted)
+            }
+        }
+    }
+    
     public func setType(type: ChatMessageBackgroundType, highlighted: Bool, graphics: PrincipalThemeEssentialGraphics, maskMode: Bool, hasWallpaper: Bool, transition: ContainedViewLayoutTransition, backgroundNode: WallpaperBackgroundNode?) {
         let previousType = self.type
         if let currentType = previousType, currentType == type, self.currentHighlighted == highlighted, self.graphics === graphics, backgroundNode === self.backgroundNode, self.maskMode == maskMode, self.hasWallpaper == hasWallpaper {
