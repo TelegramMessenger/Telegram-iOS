@@ -509,7 +509,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         
         var items: [ContextMenuItem] = []
         
-        if channel.hasPermission(.pinMessages) {
+        if channel.hasPermission(.manageTopics) {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)

@@ -663,6 +663,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                 (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
                                 (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
                                 (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
+                                (.banManageTopics, self.presentationData.strings.Channel_AdminLog_ManageTopics),
                                 (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)
                             ]
                             
@@ -792,8 +793,8 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageLiveStreams)
                                 ]
-                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
-                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.broadcastSpecific)
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer)))
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer)))
                             } else {
                                 order = [
                                     (.canChangeInfo, self.presentationData.strings.Channel_AdminLog_CanChangeInfo),
@@ -801,12 +802,13 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                                     (.canBanUsers, self.presentationData.strings.Channel_AdminLog_CanBanUsers),
                                     (.canInviteUsers, self.presentationData.strings.Channel_AdminLog_CanInviteUsersViaLink),
                                     (.canPinMessages, self.presentationData.strings.Channel_AdminLog_CanPinMessages),
+                                    (.canManageTopics, self.presentationData.strings.Channel_AdminLog_CanManageTopics),
                                     (.canBeAnonymous, self.presentationData.strings.Channel_AdminLog_CanBeAnonymous),
                                     (.canAddAdmins, self.presentationData.strings.Channel_AdminLog_CanAddAdmins),
                                     (.canManageCalls, self.presentationData.strings.Channel_AdminLog_CanManageCalls)
                                 ]
-                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
-                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.groupSpecific)
+                                prevFlags = prevFlags.intersection(TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer)))
+                                newFlags = newFlags.intersection(TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(peer)))
                             }
                             
                             if prevFlags.isEmpty && newFlags.isEmpty && (prevAdminRights != nil) != (newAdminRights != nil) {
@@ -1016,6 +1018,7 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                     (.banSendPolls, self.presentationData.strings.Channel_AdminLog_SendPolls),
                     (.banAddMembers, self.presentationData.strings.Channel_AdminLog_AddMembers),
                     (.banPinMessages, self.presentationData.strings.Channel_AdminLog_PinMessages),
+                    (.banManageTopics, self.presentationData.strings.Channel_AdminLog_ManageTopics),
                     (.banChangeInfo, self.presentationData.strings.Channel_AdminLog_ChangeInfo)
                 ]
         

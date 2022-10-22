@@ -932,7 +932,7 @@ func canEditPeerInfo(context: AccountContext, peer: Peer?, threadData: MessageHi
     }
     if let channel = peer as? TelegramChannel {
         if let threadData = threadData {
-            if channel.hasPermission(.pinMessages) {
+            if channel.hasPermission(.manageTopics) {
                 return true
             }
             if threadData.author == context.account.peerId {
