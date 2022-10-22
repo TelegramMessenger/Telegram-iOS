@@ -493,6 +493,8 @@ private struct NotificationContent: CustomStringConvertible {
 
     func generate() -> UNNotificationContent {
         var content = UNMutableNotificationContent()
+        
+        //Logger.shared.log("NotificationService", "Generating final content: \(self.description)")
 
         if let title = self.title {
             if self.silent {
@@ -940,7 +942,15 @@ private final class NotificationServiceHandler {
                         if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
-                                content.title = alert["title"] as? String
+                                if let topicTitle = payloadJson["topic_title"] as? String {
+                                    if let title = alert["title"] as? String {
+                                        content.title = "\(topicTitle) (\(title))"
+                                    } else {
+                                        content.title = topicTitle
+                                    }
+                                } else {
+                                    content.title = alert["title"] as? String
+                                }
                                 content.subtitle = alert["subtitle"] as? String
                                 content.body = alert["body"] as? String
                             } else if let alert = aps["alert"] as? String {
@@ -988,8 +998,8 @@ private final class NotificationServiceHandler {
                             if let threadId = aps["thread-id"] as? String {
                                 content.threadId = threadId
                             }
-                            if let threadIdValue = aps["topic_id"] as? String, let threadId = Int(threadIdValue) {
-                                content.userInfo["threadId"] = Int32(clamping: threadId)
+                            if let topicIdValue = payloadJson["topic_id"] as? String, let topicId = Int(topicIdValue) {
+                                content.userInfo["threadId"] = Int32(clamping: topicId)
                             }
 
                             if let ringtoneString = aps["ringtone"] as? String, let fileId = Int64(ringtoneString) {
