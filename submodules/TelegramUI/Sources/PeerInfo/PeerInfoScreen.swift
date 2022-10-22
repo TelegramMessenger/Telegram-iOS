@@ -465,6 +465,11 @@ private enum PeerInfoReportType {
     case reaction(MessageId)
 }
 
+private enum TopicsLimitedReason {
+    case participants(Int)
+    case discussion
+}
+
 private final class PeerInfoInteraction {
     let openChat: () -> Void
     let openUsername: (String) -> Void
@@ -509,7 +514,7 @@ private final class PeerInfoInteraction {
     let editingOpenReactionsSetup: () -> Void
     let dismissInput: () -> Void
     let toggleForumTopics: (Bool) -> Void
-    let displayTopicsLimited: (Int) -> Void
+    let displayTopicsLimited: (TopicsLimitedReason) -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -555,7 +560,7 @@ private final class PeerInfoInteraction {
         editingOpenReactionsSetup: @escaping () -> Void,
         dismissInput: @escaping () -> Void,
         toggleForumTopics: @escaping (Bool) -> Void,
-        displayTopicsLimited: @escaping (Int) -> Void
+        displayTopicsLimited: @escaping (TopicsLimitedReason) -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -1615,26 +1620,30 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     }
                     
                     if isCreator, let appConfiguration = data.appConfiguration {
-                        var minParticipants = 5
-                        if let data = appConfiguration.data, let value = data["forum_min_participants"] as? Int {
+                        var minParticipants = 200
+                        if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Int {
                             minParticipants = value
                         }
                         
                         var canSetupTopics = false
-                        var areTopicsLocked = true
+                        var topicsLimitedReason: TopicsLimitedReason?
                         if channel.flags.contains(.isForum) {
                             canSetupTopics = true
-                            areTopicsLocked = false
+                        } else if case let .known(value) = cachedData.linkedDiscussionPeerId, value != nil {
+                            canSetupTopics = true
+                            topicsLimitedReason = .discussion
                         } else if let memberCount = cachedData.participantsSummary.memberCount {
                             canSetupTopics = true
-                            areTopicsLocked = Int(memberCount) < minParticipants
+                            if Int(memberCount) < minParticipants {
+                                topicsLimitedReason = .participants(minParticipants)
+                            }
                         }
                         
                         if canSetupTopics {
                             //TODO:localize
-                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/ChatListFilters"), isLocked: areTopicsLocked, toggled: { value in
-                                if areTopicsLocked {
-                                    interaction.displayTopicsLimited(minParticipants)
+                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
+                                if let topicsLimitedReason = topicsLimitedReason {
+                                    interaction.displayTopicsLimited(topicsLimitedReason)
                                 } else {
                                     interaction.toggleForumTopics(value)
                                 }
@@ -2075,15 +2084,21 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 let _ = strongSelf.context.engine.peers.setChannelForumMode(id: strongSelf.peerId, isForum: value).start()
             },
-            displayTopicsLimited: { [weak self] minCount in
+            displayTopicsLimited: { [weak self] reason in
                 guard let self else {
                     return
                 }
                 
                 //TODO:localize
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
-                let text = "Only groups with more than **\(minCount) members** can have topics enabled."
-                self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_mute_for", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+                let text: String
+                switch reason {
+                case let .participants(minCount):
+                    text = "Only groups with more than **\(minCount) members** can have topics enabled."
+                case .discussion:
+                    text = "Topics are currently unavailable in groups connected to channels."
+                }
+                self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }
         )
         
