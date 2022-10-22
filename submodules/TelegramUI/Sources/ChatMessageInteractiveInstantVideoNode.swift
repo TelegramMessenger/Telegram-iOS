@@ -600,6 +600,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if displayTranscribe, let durationBlurColor = durationBlurColor {
+                        var added = false
                         let audioTranscriptionButton: ComponentHostView<Empty>
                         if let current = strongSelf.audioTranscriptionButton {
                             audioTranscriptionButton = current
@@ -607,6 +608,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             audioTranscriptionButton = ComponentHostView<Empty>()
                             strongSelf.audioTranscriptionButton = audioTranscriptionButton
                             strongSelf.view.addSubview(audioTranscriptionButton)
+                            added = true
                         }
                         let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                             transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
@@ -637,8 +639,12 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }
                         
-                        animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: audioTranscriptionButtonFrame, completion: nil)
-                        
+                        if animation.isAnimated && added {
+                            audioTranscriptionButton.layer.frame = audioTranscriptionButtonFrame
+                            audioTranscriptionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                        } else {
+                            animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: audioTranscriptionButtonFrame, completion: nil)
+                        }
                         animation.animator.updateAlpha(layer: audioTranscriptionButton.layer, alpha: scaleProgress.isZero ? 1.0 : 0.0, completion: nil)
                         if !scaleProgress.isZero {
                             displayTranscribe = false

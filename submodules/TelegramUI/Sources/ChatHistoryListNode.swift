@@ -411,6 +411,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let context: AccountContext
     private let chatLocation: ChatLocation
     private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
+    private let source: ChatHistoryListSource
     private let subject: ChatControllerSubject?
     private let tagMask: MessageTags?
     private let controllerInteraction: ChatControllerInteraction
@@ -556,6 +557,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    private let justSentTextMessagePromise = ValuePromise<Bool>(false)
+    var justSentTextMessage: Bool = false {
+        didSet {
+            if self.justSentTextMessage != oldValue {
+                self.justSentTextMessagePromise.set(self.justSentTextMessage)
+            }
+        }
+    }
+    
     private var appliedScrollToMessageId: MessageIndex? = nil
     private let scrollToMessageIdPromise = Promise<MessageIndex?>(nil)
     
@@ -619,6 +629,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.context = context
         self.chatLocation = chatLocation
         self.chatLocationContextHolder = chatLocationContextHolder
+        self.source = source
         self.subject = subject
         self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
@@ -1044,10 +1055,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             topicAuthorId = .single(nil)
         }
 
-        let suggestAudioTranscription = context.engine.data.get(TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.audioTranscriptionSuggestionKey()))
-        |> map { entry -> Int32 in
-            return entry?.get(ApplicationSpecificCounterNotice.self)?.value ?? 0
-        }
+        let audioTranscriptionSuggestion = combineLatest(
+            ApplicationSpecificNotice.getAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager),
+            self.justSentTextMessagePromise.get()
+        )
         
         let promises = combineLatest(
             self.historyAppearsClearedPromise.get(),
@@ -1071,7 +1082,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             availableReactions,
             defaultReaction,
             accountPeer,
-            suggestAudioTranscription,
+            audioTranscriptionSuggestion,
             promises,
             topicAuthorId
         ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, adMessages, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId in
@@ -1209,7 +1220,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     isPremium = true
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: suggestAudioTranscription < 2, accountPeer: accountPeer, topicAuthorId: topicAuthorId)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: suggestAudioTranscription.0 < 2, accountPeer: accountPeer, topicAuthorId: topicAuthorId)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,
@@ -2551,7 +2562,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 strongSelf.historyView = transition.historyView
                 
                 let loadState: ChatHistoryNodeLoadState
-                if let historyView = strongSelf.historyView {
+                if case .custom = strongSelf.source {
+                    loadState = .messages
+                } else if let historyView = strongSelf.historyView {
                     if historyView.filteredEntries.isEmpty {
                         if let firstEntry = historyView.originalView.entries.first {
                             var emptyType = ChatHistoryNodeLoadState.EmptyType.generic

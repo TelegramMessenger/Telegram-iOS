@@ -1394,6 +1394,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             isSelectionEnabled = false
         } else if case .pinnedMessages = self.chatPresentationInterfaceState.subject {
             isSelectionEnabled = false
+        } else if case .forum = self.chatLocation {
+            isSelectionEnabled = false
         }
         self.historyNode.isSelectionGestureEnabled = isSelectionEnabled
                 

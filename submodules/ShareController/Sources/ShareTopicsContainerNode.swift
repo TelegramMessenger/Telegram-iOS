@@ -176,20 +176,23 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
     private var validLayout: (CGSize, CGFloat)?
     private var overrideGridOffsetTransition: ContainedViewLayoutTransition?
     
-    let peersValue = Promise<[EngineChatList.Item]>()
+    let topicsValue = Promise<[EngineChatList.Item]>()
     
     var backPressed: () -> Void = {}
     
-    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, topics: [EngineChatList.Item], controllerInteraction: ShareControllerInteraction) {
+    init(sharedContext: SharedAccountContext, context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, peer: EnginePeer, topics: Signal<EngineChatList, NoError>, controllerInteraction: ShareControllerInteraction) {
         self.sharedContext = sharedContext
         self.context = context
         self.theme = theme
         self.strings = strings
         self.controllerInteraction = controllerInteraction
         
-        self.peersValue.set(.single(topics))
+        self.topicsValue.set(topics
+        |> map {
+            return $0.items
+        })
         
-        let items: Signal<[ShareTopicEntry], NoError> = self.peersValue.get()
+        let items: Signal<[ShareTopicEntry], NoError> = self.topicsValue.get()
         |> map { topics -> [ShareTopicEntry] in
             var entries: [ShareTopicEntry] = []
             var index: Int32 = 0

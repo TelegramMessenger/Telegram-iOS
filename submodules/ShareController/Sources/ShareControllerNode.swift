@@ -371,32 +371,42 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
     }
     
     func transitionToPeerTopics(_ peer: EngineRenderedPeer) {
-        guard let context = self.context, let mainPeer = peer.chatMainPeer else {
+        guard let context = self.context, let mainPeer = peer.chatMainPeer, let controllerInteraction = self.controllerInteraction else {
             return
         }
         
-        let _ = (threadList(context: context, peerId: mainPeer.id)
-        |> take(1)
-        |> deliverOnMainQueue).start(next: { [weak self] threads in
-            guard let strongSelf = self, let context = strongSelf.context, let controllerInteraction = strongSelf.controllerInteraction else {
+        var didPresent = false
+        var presentImpl: (() -> Void)?
+        let threads = threadList(context: context, peerId: mainPeer.id)
+        |> deliverOnMainQueue
+        |> beforeNext { _ in
+            if !didPresent {
+                didPresent = true
+                presentImpl?()
+            }
+        }
+        
+        let topicsContentNode = ShareTopicsContainerNode(
+            sharedContext: self.sharedContext,
+            context: context,
+            theme: self.presentationData.theme,
+            strings: self.presentationData.strings,
+            peer: mainPeer,
+            topics: threads,
+            controllerInteraction: controllerInteraction
+        )
+        topicsContentNode.backPressed = { [weak self] in
+            if let strongSelf = self {
+                strongSelf.closePeerTopics(peer.peerId, selected: false)
+            }
+        }
+        self.topicsContentNode = topicsContentNode
+        
+        presentImpl = { [weak self] in
+            guard let strongSelf = self else {
                 return
             }
             
-            let topicsContentNode = ShareTopicsContainerNode(
-                sharedContext: strongSelf.sharedContext,
-                context: context,
-                theme: strongSelf.presentationData.theme,
-                strings: strongSelf.presentationData.strings,
-                peer: mainPeer,
-                topics: threads.items.reversed(),
-                controllerInteraction: controllerInteraction
-            )
-            topicsContentNode.backPressed = { [weak self] in
-                if let strongSelf = self {
-                    strongSelf.closePeerTopics(peer.peerId, selected: false)
-                }
-            }
-            strongSelf.topicsContentNode = topicsContentNode
             strongSelf.contentNode?.supernode?.addSubnode(topicsContentNode)
                         
             if let (layout, navigationBarHeight, _) = strongSelf.containerLayout {
@@ -423,7 +433,7 @@ final class ShareControllerNode: ViewControllerTracingNode, UIScrollViewDelegate
             strongSelf.contentNodeOffsetUpdated(topicsContentNode.contentGridNode.scrollView.contentOffset.y, transition: .animated(duration: 0.4, curve: .spring))
             
             strongSelf.view.endEditing(true)
-        })
+        }
     }
     
     func closePeerTopics(_ peerId: EnginePeer.Id, selected: Bool) {
@@ -1259,6 +1269,16 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
     )
 
     return context.account.postbox.combinedView(keys: [viewKey])
+    |> mapToSignal { view -> Signal<CombinedView, NoError> in
+        return context.account.postbox.transaction { transaction -> CombinedView in
+            if let peer = transaction.getPeer(context.account.peerId) {
+                transaction.updatePeersInternal([peer]) { current, _ in
+                    return current ?? peer
+                }
+            }
+            return view
+        }
+    }
     |> map { views -> EngineChatList in
         guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
             preconditionFailure()
@@ -1299,7 +1319,7 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
         }
         
         let list = EngineChatList(
-            items: items.reversed(),
+            items: items,
             groupItems: [],
             additionalItems: [],
             hasEarlier: false,

@@ -542,45 +542,32 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     }
                     updatedPlaybackStatusSignal = messageFileMediaPlaybackStatus(context: arguments.context, file: arguments.file, message: arguments.message, isRecentActions: arguments.isRecentActions, isGlobalSearch: false, isDownloadList: false)
                 }
+                                
+                var isAudio = false
+                var audioWaveform: AudioWaveform?
+                var isVoice = false
+                var audioDuration: Int32 = 0
+                var isConsumed: Bool?
                 
                 var consumableContentIcon: UIImage?
                 for attribute in arguments.message.attributes {
                     if let attribute = attribute as? ConsumableContentMessageAttribute {
-                        let isConsumed = attribute.consumed
-                        if !isConsumed {
+                        if !attribute.consumed {
                             if arguments.incoming {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentIncomingIcon(arguments.presentationData.theme.theme)
                             } else {
                                 consumableContentIcon = PresentationResourcesChat.chatBubbleConsumableContentOutgoingIcon(arguments.presentationData.theme.theme)
                             }
                         }
+                        isConsumed = attribute.consumed
                         break
                     }
                 }
-                
+                                
                 var candidateTitleString: NSAttributedString?
                 var candidateDescriptionString: NSAttributedString?
                 
-                var isAudio = false
-                var audioWaveform: AudioWaveform?
-                var isVoice = false
-                var audioDuration: Int32 = 0
-                
-                let displayTranscribe: Bool
-                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
-                    if arguments.associatedData.isPremium {
-                        displayTranscribe = true
-                    } else if arguments.associatedData.alwaysDisplayTranscribeButton {
-                        displayTranscribe = true
-                    } else {
-                        displayTranscribe = false
-                    }
-                } else {
-                    displayTranscribe = false
-                }
-                
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
-                
                 let isInstantVideo = arguments.file.isInstantVideo
                 for attribute in arguments.file.attributes {
                     if case let .Video(videoDuration, _, flags) = attribute, flags.contains(.instantRoundVideo) {
@@ -635,7 +622,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                 }
-                
+                                
                 var titleString: NSAttributedString?
                 var descriptionString: NSAttributedString?
                 
@@ -679,6 +666,25 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 let textFont = arguments.presentationData.messageFont
                 var textString: NSAttributedString?
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
+                
+                let displayTranscribe: Bool
+                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                    if arguments.associatedData.isPremium {
+                        displayTranscribe = true
+                    } else if arguments.associatedData.alwaysDisplayTranscribeButton {
+                        if audioDuration >= 60 {
+                            displayTranscribe = true
+                        } else if isConsumed == false {
+                            displayTranscribe = true
+                        } else {
+                            displayTranscribe = false
+                        }
+                    } else {
+                        displayTranscribe = false
+                    }
+                } else {
+                    displayTranscribe = false
+                }
                 
                 let transcribedText = forcedAudioTranscriptionText ?? transcribedText(message: arguments.message)
                 
@@ -1180,6 +1186,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 animation.animator.updateFrame(layer: waveformView.componentView!.layer, frame: CGRect(origin: CGPoint(), size: scrubbingFrame.size), completion: nil)
                                 
                                 if displayTranscribe {
+                                    var added = false
                                     let audioTranscriptionButton: ComponentHostView<Empty>
                                     if let current = strongSelf.audioTranscriptionButton {
                                         audioTranscriptionButton = current
@@ -1187,6 +1194,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         audioTranscriptionButton = ComponentHostView<Empty>()
                                         strongSelf.audioTranscriptionButton = audioTranscriptionButton
                                         strongSelf.view.addSubview(audioTranscriptionButton)
+                                        added = true
                                     }
                                     let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                                         transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
@@ -1203,7 +1211,14 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                         environment: {},
                                         containerSize: CGSize(width: 30.0, height: 30.0)
                                     )
-                                    animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: CGRect(origin: CGPoint(x: boundingWidth - 30.0 + 3.0, y: -6.0), size: audioTranscriptionButtonSize), completion: nil)
+                                    
+                                    let audioTranscriptionButtonFrame = CGRect(origin: CGPoint(x: boundingWidth - 30.0 + 3.0, y: -6.0), size: audioTranscriptionButtonSize)
+                                    if added {
+                                        audioTranscriptionButton.layer.frame = audioTranscriptionButtonFrame
+                                        audioTranscriptionButton.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                    } else {
+                                        animation.animator.updateFrame(layer: audioTranscriptionButton.layer, frame: audioTranscriptionButtonFrame, completion: nil)
+                                    }
                                 } else {
                                     if let audioTranscriptionButton = strongSelf.audioTranscriptionButton {
                                         strongSelf.audioTranscriptionButton = nil
