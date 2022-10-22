@@ -86,7 +86,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     private var playerStatus: MediaPlayerStatus? {
         didSet {
             if self.playerStatus != oldValue {
-                self.updateStatus()
+                self.updateStatus(animator: nil)
             }
         }
     }
@@ -111,6 +111,9 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     var shouldOpen: () -> Bool = { return true }
+    
+    var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    var updateTranscriptionText: ((TranscribedText?) -> Void)?
     
     var audioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState = .collapsed
     var audioTranscriptionText: TranscribedText?
@@ -199,6 +202,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let makeDateAndStatusLayout = self.dateAndStatusNode.asyncLayout()
         
         let audioTranscriptionState = self.audioTranscriptionState
+        let audioTranscriptionText = self.audioTranscriptionText
         
         return { item, width, displaySize, maximumDisplaySize, scaleProgress, statusDisplayType, automaticDownload in
             var secretVideoPlaceholderBackgroundImage: UIImage?
@@ -399,6 +403,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 break
             }
             
+            var updatedTranscriptionText: TranscribedText?
+            if audioTranscriptionText != transcribedText {
+                updatedTranscriptionText = transcribedText
+            }
+            
             let effectiveAudioTranscriptionState = updatedAudioTranscriptionState ?? audioTranscriptionState
             
             return (result, { [weak self] layoutData, animation in
@@ -410,10 +419,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let updatedAudioTranscriptionState = updatedAudioTranscriptionState {
                         strongSelf.audioTranscriptionState = updatedAudioTranscriptionState
-                        strongSelf.audioTranscriptionText = transcribedText
-                        strongSelf.updateTranscribeExpanded?(updatedAudioTranscriptionState, transcribedText)
+                        strongSelf.updateTranscriptionExpanded?(strongSelf.audioTranscriptionState)
                     }
-                                        
+                    if let updatedTranscriptionText = updatedTranscriptionText {
+                        strongSelf.audioTranscriptionText = updatedTranscriptionText
+                        strongSelf.updateTranscriptionText?(strongSelf.audioTranscriptionText)
+                    }
+                    
                     if let updatedInfoBackgroundImage = updatedInfoBackgroundImage {
                         strongSelf.infoBackgroundNode.image = updatedInfoBackgroundImage
                     }
@@ -465,9 +477,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                     }
                     
+                    var previousVideoNode: UniversalVideoNode?
                     var updatedPlayerStatusSignal: Signal<MediaPlayerStatus?, NoError>?
                     if let telegramFile = updatedFile {
                         if updatedMedia {
+                            previousVideoNode = strongSelf.videoNode
                             if let durationBlurColor = durationBlurColor {
                                 if let durationBackgroundNode = strongSelf.durationBackgroundNode {
                                     durationBackgroundNode.updateColor(color: durationBlurColor.0, enableBlur: durationBlurColor.1, transition: .immediate)
@@ -518,7 +532,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                     }
                                 }
                             }), content: NativeVideoContent(id: .message(item.message.stableId, telegramFile.fileId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), streamVideo: streamVideo ? .conservative : .none, enableSound: false, fetchAutomatically: false, captureProtected: item.message.isCopyProtected()), priority: .embedded, autoplay: true)
-                            let previousVideoNode = strongSelf.videoNode
+                            if let previousVideoNode = previousVideoNode {
+                                videoNode.bounds = previousVideoNode.bounds
+                                videoNode.position = previousVideoNode.position
+                                videoNode.transform = previousVideoNode.transform
+                            }
                             strongSelf.videoNode = videoNode
                             strongSelf.insertSubnode(videoNode, belowSubnode: previousVideoNode ?? strongSelf.dateAndStatusNode)
                             videoNode.canAttachContent = strongSelf.shouldAcquireVideoContext
@@ -548,7 +566,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         |> deliverOnMainQueue).start(next: { status in
                             if let strongSelf = self {
                                 strongSelf.status = status
-                                strongSelf.updateStatus()
+                                strongSelf.updateStatus(animator: nil)
                             }
                         }))
                     }
@@ -620,7 +638,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let durationNode = strongSelf.durationNode {
                         var durationFrame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
-                        animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                         
                         durationNode.isSeen = !notConsumed
                         let size = durationNode.size
@@ -632,6 +649,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                             animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                             animation.animator.updateFrame(layer: durationBackgroundNode.layer, frame: CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size), completion: nil)
+                        } else {
+                            animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                         }
                     }
                     
@@ -658,12 +677,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let videoNode = strongSelf.videoNode {
                         videoNode.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
-                        if imageScale != strongSelf.imageScale {
+                        if strongSelf.imageScale != imageScale {
                             strongSelf.imageScale = imageScale
                             animation.animator.updateScale(layer: videoNode.layer, scale: imageScale, completion: nil)
                         }
                         animation.animator.updatePosition(layer: videoNode.layer, position: displayVideoFrame.center, completion: nil)
                         videoNode.updateLayout(size: arguments.boundingSize, transition: animation.transition)
+                        
+                        if let previousVideoNode = previousVideoNode {
+                            animation.animator.updateScale(layer: previousVideoNode.layer, scale: imageScale, completion: nil)
+                            animation.animator.updatePosition(layer: previousVideoNode.layer, position: displayVideoFrame.center, completion: nil)
+                        }
                     }
                     animation.animator.updateFrame(layer: strongSelf.secretVideoPlaceholderBackground.layer, frame: displayVideoFrame, completion: nil)
                     
@@ -677,7 +701,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     let applySecretPlaceholder = makeSecretPlaceholderLayout(arguments)
                     applySecretPlaceholder()
                     
-                    strongSelf.updateStatus()
+                    strongSelf.updateStatus(animator: animation.animator)
                     
                     if let telegramFile = updatedFile, previousAutomaticDownload != automaticDownload, automaticDownload {
                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: item.context, message: item.message, file: telegramFile, userInitiated: false).start())
@@ -698,7 +722,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    private func updateStatus() {
+    private func updateStatus(animator: ControlledTransitionAnimator? = nil) {
         guard let item = self.item, let status = self.status, let videoFrame = self.videoFrame else {
             return
         }
@@ -800,8 +824,17 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
         
         let statusFrame = CGRect(origin: CGPoint(x: videoFrame.origin.x + floorToScreenPixels((videoFrame.size.width - 50.0) / 2.0), y: videoFrame.origin.y + floorToScreenPixels((videoFrame.size.height - 50.0) / 2.0)), size: CGSize(width: 50.0, height: 50.0))
-        self.statusNode?.frame = statusFrame
-        self.disappearingStatusNode?.frame = statusFrame
+        if let animator = animator {
+            if let statusNode = self.statusNode {
+                animator.updateFrame(layer: statusNode.layer, frame: statusFrame, completion: nil)
+            }
+            if let disappearingStatusNode = self.disappearingStatusNode {
+                animator.updateFrame(layer: disappearingStatusNode.layer, frame: statusFrame, completion: nil)
+            }
+        } else {
+            self.statusNode?.frame = statusFrame
+            self.disappearingStatusNode?.frame = statusFrame
+        }
         
         var state: RadialStatusNodeState
         switch status.mediaStatus {
@@ -1130,9 +1163,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
     }
     
-    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState, TranscribedText?) -> Void)?
     private func transcribe() {
-        guard let context = self.item?.context, let message = self.item?.message else {
+        guard let context = self.item?.context, let message = self.item?.message, self.statusNode == nil else {
             return
         }
         
@@ -1184,7 +1216,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             }
         }
         
-        self.updateTranscribeExpanded?(self.audioTranscriptionState, self.audioTranscriptionText)
+        self.updateTranscriptionExpanded?(self.audioTranscriptionState)
     }
     
     func animateTo(_ node: ChatMessageInteractiveFileNode, animator: ControlledTransitionAnimator) {
@@ -1350,4 +1382,3 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.customIsHidden = false
     }
 }
-

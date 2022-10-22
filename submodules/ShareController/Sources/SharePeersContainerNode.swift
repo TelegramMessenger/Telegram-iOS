@@ -118,7 +118,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
     let contentGridNode: GridNode
     private let headerNode: ASDisplayNode
     private let contentTitleNode: ASTextNode
-    private let contentSubtitleNode: ASTextNode
+    private let contentSubtitleNode: ImmediateTextNode
     private let contentTitleAccountNode: AvatarNode
     private let contentSeparatorNode: ASDisplayNode
     private let searchButtonNode: HighlightableButtonNode
@@ -199,7 +199,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentTitleNode = ASTextNode()
         self.contentTitleNode.attributedText = NSAttributedString(string: strings.ShareMenu_ShareTo, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
         
-        self.contentSubtitleNode = ASTextNode()
+        self.contentSubtitleNode = ImmediateTextNode()
         self.contentSubtitleNode.maximumNumberOfLines = 1
         self.contentSubtitleNode.isUserInteractionEnabled = false
         self.contentSubtitleNode.displaysAsynchronously = false
@@ -378,6 +378,14 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         }
     }
         
+    func prepareForAnimateIn() {
+        self.searchButtonNode.alpha = 0.0
+        self.shareButtonNode.alpha = 0.0
+        self.contentTitleNode.alpha = 0.0
+        self.contentSubtitleNode.alpha = 0.0
+        self.contentGridNode.alpha = 0.0
+    }
+    
     func animateIn(peerId: EnginePeer.Id, scrollDelta: CGFloat) -> CGRect? {
         self.headerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -scrollDelta), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
         
@@ -419,11 +427,10 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
             maskView.addSubview(maskImageView)
             clippedNode.view.mask = maskView
             
-            
             self.contentGridNode.alpha = 1.0
             self.contentGridNode.forEachItemNode { itemNode in
                 if let itemNode = itemNode as? ShareControllerPeerGridItemNode, itemNode.peerId == peerId {
-                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15, removeOnCompletion: false)
+                    itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                     itemNode.layer.animateScale(from: 1.35, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak clippedNode] _ in
                         clippedNode?.view.removeFromSuperview()
                     })
@@ -577,7 +584,7 @@ final class SharePeersContainerNode: ASDisplayNode, ShareContentContainerNode {
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 15.0), size: titleSize)
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         
-        let subtitleSize = self.contentSubtitleNode.measure(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: titleAreaHeight))
+        let subtitleSize = self.contentSubtitleNode.updateLayout(CGSize(width: size.width - 44.0 * 2.0 - 8.0 * 2.0, height: titleAreaHeight))
         let subtitleFrame = CGRect(origin: CGPoint(x: floor((size.width - subtitleSize.width) / 2.0), y: 40.0), size: subtitleSize)
         var originalSubtitleFrame = self.contentSubtitleNode.frame
         originalSubtitleFrame.origin.x = subtitleFrame.origin.x

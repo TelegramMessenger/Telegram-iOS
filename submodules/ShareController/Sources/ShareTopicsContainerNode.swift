@@ -128,7 +128,7 @@ private class CancelButtonNode: ASDisplayNode {
         
         let labelSize = self.labelNode.updateLayout(CGSize(width: 120.0, height: 56.0))
         
-        self.buttonNode.frame = CGRect(origin: .zero, size: CGSize(width: labelSize.width, height: self.buttonNode.frame.height))
+        self.buttonNode.frame = CGRect(origin: .zero, size: CGSize(width: labelSize.width + 16.0, height: self.buttonNode.frame.height))
         self.arrowNode.image = NavigationBarTheme.generateBackArrowImage(color: self.theme.rootController.navigationBar.accentTextColor)
         if let image = self.arrowNode.image {
             self.arrowNode.frame = CGRect(origin: self.arrowNode.frame.origin, size: image.size)
@@ -142,7 +142,7 @@ private class CancelButtonNode: ASDisplayNode {
         self.arrowNode.frame = CGRect(origin: CGPoint(x: -19.0, y: floorToScreenPixels((constrainedSize.height - self.arrowNode.frame.size.height) / 2.0)), size: self.arrowNode.frame.size)
         self.labelNode.frame = CGRect(origin: CGPoint(x: 0.0, y: floorToScreenPixels((constrainedSize.height - self.labelNode.frame.size.height) / 2.0)), size: self.labelNode.frame.size)
 
-        return CGSize(width: 70.0, height: 56.0)
+        return CGSize(width: self.buttonNode.frame.width, height: 56.0)
     }
 }
 
@@ -207,7 +207,9 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.headerNode = ASDisplayNode()
         
         self.contentTitleNode = ASTextNode()
+        self.contentTitleNode.maximumNumberOfLines = 1
         self.contentTitleNode.attributedText = NSAttributedString(string: peer.compactDisplayTitle, font: Font.medium(20.0), textColor: self.theme.actionSheet.primaryTextColor)
+        self.contentTitleNode.textAlignment = .center
         
         self.contentSubtitleNode = ASTextNode()
         self.contentSubtitleNode.maximumNumberOfLines = 1
@@ -425,7 +427,11 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         let headerFrame = CGRect(origin: CGPoint(x: 0.0, y: titleOffset), size: CGSize(width: size.width, height: 64.0))
         transition.updateFrame(node: self.headerNode, frame: headerFrame)
         
-        let titleSize = self.contentTitleNode.measure(size)
+        let backSize = self.backNode.measure(CGSize(width: size.width, height: 56.0))
+        let backFrame = CGRect(origin: CGPoint(x: 20.0, y: 6.0), size: CGSize(width: backSize.width, height: 56.0))
+        transition.updateFrame(node: self.backNode, frame: backFrame)
+        
+        let titleSize = self.contentTitleNode.measure(CGSize(width: size.width - (backSize.width * 2.0 + 40.0), height: size.height))
         let titleFrame = CGRect(origin: CGPoint(x: floor((size.width - titleSize.width) / 2.0), y: 15.0), size: titleSize)
         transition.updateFrame(node: self.contentTitleNode, frame: titleFrame)
         
@@ -437,8 +443,7 @@ final class ShareTopicsContainerNode: ASDisplayNode, ShareContentContainerNode {
         self.contentSubtitleNode.frame = originalSubtitleFrame
         transition.updateFrame(node: self.contentSubtitleNode, frame: subtitleFrame)
         
-        let backFrame = CGRect(origin: CGPoint(x: 30.0, y: 6.0), size: CGSize(width: 90.0, height: 56.0))
-        transition.updateFrame(node: self.backNode, frame: backFrame)
+
         
         self.contentOffsetUpdated?(presentationLayout.contentOffset.y, actualTransition)
     }

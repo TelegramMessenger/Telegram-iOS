@@ -32,7 +32,7 @@ private struct FetchControls {
     let cancel: () -> Void
 }
 
-enum TranscribedText {
+enum TranscribedText: Equatable {
     case success(text: String, isPending: Bool)
     case error(AudioTranscriptionMessageAttribute.TranscriptionError)
 }
@@ -199,7 +199,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     var displayImportedTooltip: (ASDisplayNode) -> Void = { _ in }
     
-    var updateTranscribeExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
+    var updateTranscriptionExpanded: ((AudioTranscriptionButtonComponent.TranscriptionState) -> Void)?
     
     private var context: AccountContext?
     private var message: Message?
@@ -447,7 +447,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .collapsed
                 self.isWaitingForCollapse = true
                 self.requestUpdateLayout(true)
-                self.updateTranscribeExpanded?(self.audioTranscriptionState)
+                self.updateTranscriptionExpanded?(self.audioTranscriptionState)
             case .collapsed:
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
@@ -1219,7 +1219,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 streamingStatusNode.frame = streamingCacheStatusFrame
                             }
                             
-                            if let updatedStatusSignal = updatedStatusSignal {
+                            if var updatedStatusSignal = updatedStatusSignal {
+                                if strongSelf.file?.isInstantVideo == true {
+                                    updatedStatusSignal = updatedStatusSignal
+                                    |> mapToThrottled { next -> Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError> in
+                                        return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
+                                    }
+                                }
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {
