@@ -220,9 +220,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let leftInset: CGFloat = 0.0
             let rightInset: CGFloat = 0.0
-            
-
-            
+        
             let (videoLayout, videoApply) = interactiveVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, topMessage: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.attributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), constrainedSize.width - leftInset - rightInset - avatarInset, displaySize, maximumDisplaySize, isPlaying ? 1.0 : 0.0, .free, automaticDownload)
             
             let videoFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: videoLayout.contentSize)
@@ -230,9 +228,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? .zero : CGPoint(x: -16.0, y: -24.0))
             
             let width = videoFrame.width + 2.0
-//            if isExpanded {
-//                width = normalDisplaySize.width + 32.0
-//            }
             
             return (contentProperties, nil, width, { constrainedSize, position in
                 var refinedWidth = videoFrame.width + 2.0
@@ -240,7 +235,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                 
                 if isExpanded || !didSetupFileNode {
                     (refinedWidth, finishLayout) = refineLayout(CGSize(width: constrainedSize.width - layoutConstants.file.bubbleInsets.left - layoutConstants.file.bubbleInsets.right, height: constrainedSize.height))
-//                    refinedWidth = refinedWidth//max(refinedWidth, normalDisplaySize.width)
                     refinedWidth += layoutConstants.file.bubbleInsets.left + layoutConstants.file.bubbleInsets.right
                 }
                 
