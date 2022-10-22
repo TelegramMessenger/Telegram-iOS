@@ -226,7 +226,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             
             let videoFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: videoLayout.contentSize)
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? .zero : CGPoint(x: -16.0, y: -24.0))
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? .zero : CGPoint(x: -16.0, y: -24.0), hidesHeaders: !isExpanded)
             
             let width = videoFrame.width + 2.0
             
@@ -282,16 +282,17 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             strongSelf.maskLayer.frame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: 640.0, height: 640.0))
                             strongSelf.backdropMaskLayer.frame = strongSelf.maskLayer.frame
-                                                
+                                          
+                            let bubbleSize = strongSelf.bubbleBackgroundNode?.backgroundFrame.size ?? finalSize
+                            
                             let radius: CGFloat = displaySize.width / 2.0
                             let maskCornerRadius = isExpanded ? 1.0 : radius
-                            let maskFrame = CGRect(origin: CGPoint(x: isExpanded ? 1.0 : (incoming ? 7.0 : 1.0), y: isExpanded ? 0.0 : 1.0), size: isExpanded ? finalSize : CGSize(width: radius * 2.0, height: radius * 2.0))
+                            let maskFrame = CGRect(origin: CGPoint(x: isExpanded ? 1.0 : (incoming ? 7.0 : 1.0), y: isExpanded ? 0.0 : 1.0), size: isExpanded ? bubbleSize : CGSize(width: radius * 2.0, height: radius * 2.0))
                             animation.animator.updateCornerRadius(layer: strongSelf.maskForeground, cornerRadius: maskCornerRadius, completion: nil)
                             animation.animator.updateFrame(layer: strongSelf.maskForeground, frame: maskFrame, completion: nil)
                             
-                            let backdropMaskFrame = CGRect(origin: CGPoint(x: isExpanded ? (incoming ? 8.0 : 2.0) : (incoming ? 8.0 : 2.0), y: isExpanded ? 2.0 : 2.0), size: isExpanded ? CGSize(width: finalSize.width - 11.0, height: finalSize.height - 2.0) : CGSize(width: radius * 2.0, height: radius * 2.0))
+                            let backdropMaskFrame = CGRect(origin: CGPoint(x: isExpanded ? (incoming ? 8.0 : 2.0) : (incoming ? 8.0 : 2.0), y: isExpanded ? 2.0 : 2.0), size: isExpanded ? CGSize(width: bubbleSize.width - 8.0, height: bubbleSize.height - 3.0) : CGSize(width: radius * 2.0, height: radius * 2.0))
                            
-                            
                             let topLeftCornerRadius: CGFloat
                             let topRightCornerRadius: CGFloat
                             let bottomLeftCornerRadius: CGFloat

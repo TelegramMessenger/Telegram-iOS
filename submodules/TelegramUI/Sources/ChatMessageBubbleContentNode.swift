@@ -27,6 +27,7 @@ struct ChatMessageBubbleContentProperties {
     let forceFullCorners: Bool
     let forceAlignment: ChatMessageBubbleContentAlignment
     let shareButtonOffset: CGPoint?
+    let hidesHeaders: Bool
     
     init(
         hidesSimpleAuthorHeader: Bool,
@@ -34,7 +35,8 @@ struct ChatMessageBubbleContentProperties {
         hidesBackground: ChatMessageBubbleContentBackgroundHiding,
         forceFullCorners: Bool,
         forceAlignment: ChatMessageBubbleContentAlignment,
-        shareButtonOffset: CGPoint? = nil
+        shareButtonOffset: CGPoint? = nil,
+        hidesHeaders: Bool = false
     ) {
         self.hidesSimpleAuthorHeader = hidesSimpleAuthorHeader
         self.headerSpacing = headerSpacing
@@ -42,6 +44,7 @@ struct ChatMessageBubbleContentProperties {
         self.forceFullCorners = forceFullCorners
         self.forceAlignment = forceAlignment
         self.shareButtonOffset = shareButtonOffset
+        self.hidesHeaders = hidesHeaders
     }
 }
 

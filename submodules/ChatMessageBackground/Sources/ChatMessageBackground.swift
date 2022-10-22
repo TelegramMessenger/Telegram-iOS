@@ -71,6 +71,8 @@ public class ChatMessageBackground: ASDisplayNode {
     private let outlineImageNode: ASImageNode
     private weak var backgroundNode: WallpaperBackgroundNode?
     
+    public var backgroundFrame: CGRect = .zero
+    
     public var hasImage: Bool {
         self.imageNode.image != nil
     }
