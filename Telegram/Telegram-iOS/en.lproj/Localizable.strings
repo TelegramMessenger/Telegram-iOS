@@ -2686,6 +2686,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.PinMessages" = "Pin Messages";
 "Channel.AdminLog.AddMembers" = "Add Members";
 "Channel.AdminLog.SendPolls" = "Send Polls";
+"Channel.AdminLog.ManageTopics" = "Manage Topics";
 
 "Channel.AdminLog.CanChangeInfo" = "Change Info";
 "Channel.AdminLog.CanSendMessages" = "Post Messages";
@@ -2693,6 +2694,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanBanUsers" = "Ban Users";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
+"Channel.AdminLog.CanManageTopics" = "Manage Topics";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
@@ -3982,6 +3984,7 @@ Unused sets are archived when you add more.";
 "GroupPermission.NoChangeInfo" = "no info";
 "GroupPermission.NoAddMembers" = "no add";
 "GroupPermission.NoPinMessages" = "no pin";
+"GroupPermission.NoManageTopics" = "no topics";
 
 "GroupPermission.Title" = "Exception";
 "GroupPermission.NewTitle" = "New Exception";
@@ -8137,7 +8140,7 @@ Sorry for the inconvenience.";
 "ChatList.StartAction" = "Start";
 "ChatList.CloseAction" = "Close";
 
-"Channel.EditAdmin.PermissionCreateTopics" = "Create Topics";
+"Channel.EditAdmin.PermissionManageTopics" = "Manage Topics";
 
 "ChatList.Search.FilterTopics" = "Topics";
 "DialogList.SearchSectionTopics" = "Topics";

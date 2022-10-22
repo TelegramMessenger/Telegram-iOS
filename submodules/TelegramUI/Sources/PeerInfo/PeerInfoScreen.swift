@@ -1654,7 +1654,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         var activePermissionCount: Int?
                         if let defaultBannedRights = channel.defaultBannedRights {
                             var count = 0
-                            for (right, _) in allGroupPermissionList {
+                            for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
                                 if !defaultBannedRights.flags.contains(right) {
                                     count += 1
                                 }
@@ -1666,7 +1666,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                             interaction.openParticipantsSection(.members)
                         }))
                         if !channel.flags.contains(.isGigagroup) {
-                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/Menu/SetPasscode"), action: {
+                            items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList(peer: .channel(channel)).count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/Menu/SetPasscode"), action: {
                                 interaction.openPermissions()
                             }))
                         }
@@ -1771,7 +1771,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                 var activePermissionCount: Int?
                 if let defaultBannedRights = group.defaultBannedRights {
                     var count = 0
-                    for (right, _) in allGroupPermissionList {
+                    for (right, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
                         if !defaultBannedRights.flags.contains(right) {
                             count += 1
                         }
@@ -1779,7 +1779,7 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     activePermissionCount = count
                 }
                 
-                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList.count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/Menu/SetPasscode"), action: {
+                items[.peerSettings]!.append(PeerInfoScreenDisclosureItem(id: ItemPermissions, label: .text(activePermissionCount.flatMap({ "\($0)/\(allGroupPermissionList(peer: .legacyGroup(group)).count)" }) ?? ""), text: presentationData.strings.GroupInfo_Permissions, icon: UIImage(bundleImageName: "Settings/Menu/SetPasscode"), action: {
                     interaction.openPermissions()
                 }))
                 

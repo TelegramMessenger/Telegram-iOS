@@ -2008,7 +2008,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 var canManage = false
                                 if channel.flags.contains(.isCreator) {
                                     canManage = true
-                                } else if channel.adminRights != nil {
+                                } else if channel.hasPermission(.pinMessages) {
                                     canManage = true
                                 } else if let threadInfo = threadInfo, threadInfo.isOwner {
                                     canManage = true

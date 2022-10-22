@@ -2652,7 +2652,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     sourceController?.beginMessageSearch("")
                 })))
-            } else if channel.hasPermission(.pinMessages) {
+            } else if channel.hasPermission(.manageTopics) {
                 items.append(.separator)
                 
                 //TODO:localize

@@ -259,6 +259,9 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 guard let strongSelf = self else {
                     return
                 }
+                guard let mainPeer = peerViewMainPeer(peerView) else {
+                    return
+                }
                 guard let cachedData = peerView.cachedData as? CachedGroupData, let participants = cachedData.participants else {
                     return
                 }
@@ -279,19 +282,17 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                 var entries: [ChannelMembersSearchEntry] = []
                 
                 var canInviteByLink = false
-                if let peer = peerViewMainPeer(peerView) {
-                    if !(peer.addressName?.isEmpty ?? true) {
+                if !(mainPeer.addressName?.isEmpty ?? true) {
+                    canInviteByLink = true
+                } else if let peer = mainPeer as? TelegramChannel {
+                    if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
                         canInviteByLink = true
-                    } else if let peer = peer as? TelegramChannel {
-                        if peer.flags.contains(.isCreator) || (peer.adminRights?.rights.contains(.canInviteUsers) == true) {
-                            canInviteByLink = true
-                        }
-                    } else if let peer = peer as? TelegramGroup {
-                        if case .creator = peer.role {
-                            canInviteByLink = true
-                        } else if case let .admin(rights, _) = peer.role, rights.rights.contains(.canInviteUsers) {
-                            canInviteByLink = true
-                        }
+                    }
+                } else if let peer = mainPeer as? TelegramGroup {
+                    if case .creator = peer.role {
+                        canInviteByLink = true
+                    } else if case let .admin(rights, _) = peer.role, rights.rights.contains(.canInviteUsers) {
+                        canInviteByLink = true
                     }
                 }
                 
@@ -399,7 +400,7 @@ class ChannelMembersSearchControllerNode: ASDisplayNode {
                             var peers: [PeerId: Peer] = [:]
                             peers[creator.id] = creator
                             peers[peer.id] = peer
-                            renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: .groupSpecific), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
+                        renderedParticipant = RenderedChannelParticipant(participant: .member(id: peer.id, invitedAt: 0, adminInfo: ChannelParticipantAdminInfo(rights: TelegramChatAdminRights(rights: TelegramChatAdminRightsFlags.peerSpecific(peer: EnginePeer(mainPeer))), promotedBy: creator.id, canBeEditedByAccountPeer: creator.id == context.account.peerId), banInfo: nil, rank: nil), peer: peer, peers: peers, presences: peerView.peerPresences)
                         case .member:
                             var peers: [PeerId: Peer] = [:]
                             peers[peer.id] = peer
