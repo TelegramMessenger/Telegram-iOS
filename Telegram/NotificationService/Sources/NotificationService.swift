@@ -464,13 +464,16 @@ private struct NotificationContent: CustomStringConvertible {
         return string
     }
 
-    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, contactIdentifier: String?) {
+    mutating func addSenderInfo(mediaBox: MediaBox, accountPeerId: PeerId, peer: Peer, topicTitle: String?, contactIdentifier: String?) {
         if #available(iOS 15.0, *) {
             let image = peerAvatar(mediaBox: mediaBox, accountPeerId: accountPeerId, peer: peer)
 
             self.senderImage = image
 
             var displayName: String = peer.debugDisplayTitle
+            if let topicTitle {
+                displayName = "\(topicTitle) (\(displayName))"
+            }
             if self.silent {
                 displayName = "\(displayName) 🔕"
             }
@@ -831,6 +834,7 @@ private final class NotificationServiceHandler {
                     var downloadNotificationSound: (file: TelegramMediaFile, path: String, fileName: String)?
 
                     var interactionAuthorId: PeerId?
+                    var topicTitle: String?
 
                     struct CallData {
                         var id: Int64
@@ -942,11 +946,12 @@ private final class NotificationServiceHandler {
                         if let aps = payloadJson["aps"] as? [String: Any], let peerId = peerId {
                             var content: NotificationContent = NotificationContent(isLockedMessage: isLockedMessage)
                             if let alert = aps["alert"] as? [String: Any] {
-                                if let topicTitle = payloadJson["topic_title"] as? String {
+                                if let topicTitleValue = payloadJson["topic_title"] as? String {
+                                    topicTitle = topicTitleValue
                                     if let title = alert["title"] as? String {
-                                        content.title = "\(topicTitle) (\(title))"
+                                        content.title = "\(topicTitleValue) (\(title))"
                                     } else {
-                                        content.title = topicTitle
+                                        content.title = topicTitleValue
                                     }
                                 } else {
                                     content.title = alert["title"] as? String
@@ -999,6 +1004,9 @@ private final class NotificationServiceHandler {
                                 content.threadId = threadId
                             }
                             if let topicIdValue = payloadJson["topic_id"] as? String, let topicId = Int(topicIdValue) {
+                                if let threadId = content.threadId {
+                                    content.threadId = "\(threadId):\(topicId)"
+                                }
                                 content.userInfo["threadId"] = Int32(clamping: topicId)
                             }
 
@@ -1399,7 +1407,7 @@ private final class NotificationServiceHandler {
                                                     return true
                                                 })
                                                 
-                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, contactIdentifier: foundLocalId)
+                                                content.addSenderInfo(mediaBox: stateManager.postbox.mediaBox, accountPeerId: stateManager.accountPeerId, peer: peer, topicTitle: topicTitle, contactIdentifier: foundLocalId)
                                             }
                                         }
                                         
