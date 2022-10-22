@@ -626,7 +626,6 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let durationNode = strongSelf.durationNode {
                         var durationFrame = CGRect(origin: CGPoint(x: displayVideoFrame.midX - 56.0 - 25.0 * scaleProgress, y: displayVideoFrame.maxY - 18.0), size: CGSize(width: 1.0, height: 1.0))
-                        animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                         
                         durationNode.isSeen = !notConsumed
                         let size = durationNode.size
@@ -638,6 +637,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                             animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                             animation.animator.updateFrame(layer: durationBackgroundNode.layer, frame: CGRect(origin: CGPoint(x: durationNode.frame.maxX - size.width, y: durationNode.frame.minY), size: size), completion: nil)
+                        } else {
+                            animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
                         }
                     }
                     
@@ -664,10 +665,10 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     if let videoNode = strongSelf.videoNode {
                         videoNode.bounds = CGRect(origin: CGPoint(), size: videoFrame.size)
-
-                        strongSelf.imageScale = imageScale
-                        animation.animator.updateScale(layer: videoNode.layer, scale: imageScale, completion: nil)
-
+                        if strongSelf.imageScale != imageScale {
+                            strongSelf.imageScale = imageScale
+                            animation.animator.updateScale(layer: videoNode.layer, scale: imageScale, completion: nil)
+                        }
                         animation.animator.updatePosition(layer: videoNode.layer, position: displayVideoFrame.center, completion: nil)
                         videoNode.updateLayout(size: arguments.boundingSize, transition: animation.transition)
                         
@@ -1370,4 +1371,3 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         self.customIsHidden = false
     }
 }
-

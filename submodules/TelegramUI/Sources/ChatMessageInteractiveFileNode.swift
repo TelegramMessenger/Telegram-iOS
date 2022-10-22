@@ -1219,7 +1219,13 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 streamingStatusNode.frame = streamingCacheStatusFrame
                             }
                             
-                            if let updatedStatusSignal = updatedStatusSignal {
+                            if var updatedStatusSignal = updatedStatusSignal {
+                                if strongSelf.file?.isInstantVideo == true {
+                                    updatedStatusSignal = updatedStatusSignal
+                                    |> mapToThrottled { next -> Signal<(FileMediaResourceStatus, MediaResourceStatus?), NoError> in
+                                        return .single(next) |> then(.complete() |> delay(0.1, queue: Queue.concurrentDefaultQueue()))
+                                    }
+                                }
                                 strongSelf.statusDisposable.set((updatedStatusSignal |> deliverOnMainQueue).start(next: { [weak strongSelf] status, actualFetchStatus in
                                     displayLinkDispatcher.dispatch {
                                         if let strongSelf = strongSelf {

@@ -126,7 +126,7 @@ func chatMessageItemLayoutConstants(_ constants: (ChatMessageItemLayoutConstants
     let textInset: CGFloat = min(maxInset, ceil(maxInset * radiusTransition + minInset * (1.0 - radiusTransition)))
     result.text.bubbleInsets.left = textInset
     result.text.bubbleInsets.right = textInset
-    result.instantVideo.dimensions = min(params.width, params.availableHeight) > 320.0 ? constants.1.instantVideo.dimensions : constants.0.instantVideo.dimensions
+    result.instantVideo.dimensions = params.width > 320.0 ? constants.1.instantVideo.dimensions : constants.0.instantVideo.dimensions
     return result
 }
 
