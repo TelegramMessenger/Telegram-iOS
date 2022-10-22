@@ -188,6 +188,7 @@ final class PeerInfoScreenData {
     let requests: PeerInvitationImportersState?
     let requestsContext: PeerInvitationImportersContext?
     let threadData: MessageHistoryThreadData?
+    let appConfiguration: AppConfiguration?
     
     init(
         peer: Peer?,
@@ -206,7 +207,8 @@ final class PeerInfoScreenData {
         invitations: PeerExportedInvitationsState?,
         requests: PeerInvitationImportersState?,
         requestsContext: PeerInvitationImportersContext?,
-        threadData: MessageHistoryThreadData?
+        threadData: MessageHistoryThreadData?,
+        appConfiguration: AppConfiguration?
     ) {
         self.peer = peer
         self.chatPeer = chatPeer
@@ -225,6 +227,7 @@ final class PeerInfoScreenData {
         self.requests = requests
         self.requestsContext = requestsContext
         self.threadData = threadData
+        self.appConfiguration = appConfiguration
     }
 }
 
@@ -435,7 +438,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
         })
         
         var enableQRLogin = false
-        if let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self), let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
+        let appConfiguration = accountPreferences.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self)
+        if let appConfiguration, let data = appConfiguration.data, let enableQR = data["qr_login_camera"] as? Bool, enableQR {
             enableQRLogin = true
         }
         
@@ -477,7 +481,8 @@ func peerInfoScreenSettingsData(context: AccountContext, peerId: EnginePeer.Id, 
             invitations: nil,
             requests: nil,
             requestsContext: nil,
-            threadData: nil
+            threadData: nil,
+            appConfiguration: appConfiguration
         )
     }
 }
@@ -504,7 +509,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitations: nil,
                 requests: nil,
                 requestsContext: nil,
-                threadData: nil
+                threadData: nil,
+                appConfiguration: nil
             ))
         case let .user(userPeerId, secretChatId, kind):
             let groupsInCommon: GroupsInCommonContext?
@@ -635,7 +641,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: nil,
                     requests: nil,
                     requestsContext: nil,
-                    threadData: nil
+                    threadData: nil,
+                    appConfiguration: nil
                 )
             }
         case .channel:
@@ -711,7 +718,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    threadData: nil
+                    threadData: nil,
+                    appConfiguration: nil
                 )
             }
         case let .group(groupId):
@@ -840,9 +848,10 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 invitationsStatePromise.get(),
                 requestsContextPromise.get(),
                 requestsStatePromise.get(),
-                threadData
+                threadData,
+                context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
             )
-            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData -> PeerInfoScreenData in
+            |> map { peerView, availablePanes, globalNotificationSettings, status, membersData, currentInvitationsContext, invitations, currentRequestsContext, requests, threadData, preferencesView -> PeerInfoScreenData in
                 var discussionPeer: Peer?
                 if case let .known(maybeLinkedDiscussionPeerId) = (peerView.cachedData as? CachedChannelData)?.linkedDiscussionPeerId, let linkedDiscussionPeerId = maybeLinkedDiscussionPeerId, let peer = peerView.peers[linkedDiscussionPeerId] {
                     discussionPeer = peer
@@ -889,6 +898,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 } else {
                     notificationSettings = peerView.notificationSettings as? TelegramPeerNotificationSettings
                 }
+                
+                let appConfiguration: AppConfiguration = preferencesView.values[PreferencesKeys.appConfiguration]?.get(AppConfiguration.self) ?? .defaultValue
               
                 return PeerInfoScreenData(
                     peer: peerView.peers[groupId],
@@ -907,7 +918,8 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                     invitations: invitations,
                     requests: requests,
                     requestsContext: currentRequestsContext,
-                    threadData: threadData
+                    threadData: threadData,
+                    appConfiguration: appConfiguration
                 )
             }
         }

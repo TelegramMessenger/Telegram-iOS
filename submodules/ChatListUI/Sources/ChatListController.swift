@@ -1372,7 +1372,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         strongSelf.context.sharedContext.navigateToForumChannel(context: strongSelf.context, peerId: channel.id, navigationController: navigationController)
                     } else {
                         if let threadId = threadId {
-                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil).start()
+                            let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             strongSelf.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
                         } else {
                             var navigationAnimationOptions: NavigationAnimationOptions = []
@@ -1473,7 +1473,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
                             if let threadId = threadId  {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil).start()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: actualPeerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
                                     if deactivateOnAction {
@@ -1506,7 +1506,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 navigationAnimationOptions = .removeOnMasterDetails
                             }
                             if let threadId = threadId  {
-                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil).start()
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
                                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), purposefulAction: { [weak self] in
                                     self?.deactivateSearch(animated: false)
@@ -1602,7 +1602,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
-                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text).start()
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()
                         }, error: { _ in
                             controller?.isInProgress = false
                         })
@@ -2670,7 +2670,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
                         |> deliverOnMainQueue).start(next: { topicId in
                             if let navigationController = (sourceController.navigationController as? NavigationController) {
-                                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text).start()
+                                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: topicId, messageId: nil, navigationController: navigationController, activateInput: .text, keepStack: .never).start()
                             }
                         }, error: { _ in
                             controller?.isInProgress = false

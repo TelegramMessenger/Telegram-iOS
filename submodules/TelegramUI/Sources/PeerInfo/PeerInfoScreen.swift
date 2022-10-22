@@ -509,6 +509,7 @@ private final class PeerInfoInteraction {
     let editingOpenReactionsSetup: () -> Void
     let dismissInput: () -> Void
     let toggleForumTopics: (Bool) -> Void
+    let displayTopicsLimited: (Int) -> Void
     
     init(
         openUsername: @escaping (String) -> Void,
@@ -553,7 +554,8 @@ private final class PeerInfoInteraction {
         openQrCode: @escaping () -> Void,
         editingOpenReactionsSetup: @escaping () -> Void,
         dismissInput: @escaping () -> Void,
-        toggleForumTopics: @escaping (Bool) -> Void
+        toggleForumTopics: @escaping (Bool) -> Void,
+        displayTopicsLimited: @escaping (Int) -> Void
     ) {
         self.openUsername = openUsername
         self.openPhone = openPhone
@@ -598,6 +600,7 @@ private final class PeerInfoInteraction {
         self.editingOpenReactionsSetup = editingOpenReactionsSetup
         self.dismissInput = dismissInput
         self.toggleForumTopics = toggleForumTopics
+        self.displayTopicsLimited = displayTopicsLimited
     }
 }
 
@@ -1094,7 +1097,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                 threadId = Int64(message.messageId.id)
             }
             
-            let linkText = "https://t.me/\(mainUsername)?topic=\(threadId)"
+            let linkText = "https://t.me/\(mainUsername)/\(threadId)"
             
             items[.peerInfo]!.append(
                 PeerInfoScreenLabeledValueItem(
@@ -1611,12 +1614,33 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }))
                     }
                     
-                    if isCreator {
-                        //TODO:localize
-                        items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/ChatListFilters"), toggled: { value in
-                            interaction.toggleForumTopics(value)
-                        }))
-                        items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: "The group chat will be divided into topics created by admins or users."))
+                    if isCreator, let appConfiguration = data.appConfiguration {
+                        var minParticipants = 5
+                        if let data = appConfiguration.data, let value = data["forum_min_participants"] as? Int {
+                            minParticipants = value
+                        }
+                        
+                        var canSetupTopics = false
+                        var areTopicsLocked = true
+                        if channel.flags.contains(.isForum) {
+                            canSetupTopics = true
+                            areTopicsLocked = false
+                        } else if let memberCount = cachedData.participantsSummary.memberCount {
+                            canSetupTopics = true
+                            areTopicsLocked = Int(memberCount) < minParticipants
+                        }
+                        
+                        if canSetupTopics {
+                            //TODO:localize
+                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/ChatListFilters"), isLocked: areTopicsLocked, toggled: { value in
+                                if areTopicsLocked {
+                                    interaction.displayTopicsLimited(minParticipants)
+                                } else {
+                                    interaction.toggleForumTopics(value)
+                                }
+                            }))
+                            items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: "The group chat will be divided into topics created by admins or users."))
+                        }
                     }
                     
                     var canViewAdminsAndBanned = false
@@ -2050,6 +2074,16 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 let _ = strongSelf.context.engine.peers.setChannelForumMode(id: strongSelf.peerId, isForum: value).start()
+            },
+            displayTopicsLimited: { [weak self] minCount in
+                guard let self else {
+                    return
+                }
+                
+                //TODO:localize
+                let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+                let text = "Only groups with more than **\(minCount) members** can have topics enabled."
+                self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_mute_for", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }
         )
         
@@ -6810,7 +6844,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
         
-        var threadId: Int64 = 0
+        var threadId: Int64?
         if case let .replyThread(message) = self.chatLocation {
             threadId = Int64(message.messageId.id)
         }
