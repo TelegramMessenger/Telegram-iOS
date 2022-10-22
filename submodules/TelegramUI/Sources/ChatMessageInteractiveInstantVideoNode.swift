@@ -15,6 +15,8 @@ import FileMediaResourceStatus
 import HierarchyTrackingLayer
 import ComponentFlow
 import AudioTranscriptionButtonComponent
+import UndoUI
+import TelegramNotices
 
 struct ChatMessageInstantVideoItemLayoutResult {
     let contentSize: CGSize
@@ -584,8 +586,20 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     
                     let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
                                  
-                    var canTranscribe = statusDisplayType == .free && item.associatedData.isPremium && item.message.id.peerId.namespace != Namespaces.Peer.SecretChat
-                    if canTranscribe, let durationBlurColor = durationBlurColor {
+                    var displayTranscribe: Bool
+                    if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
+                        if item.associatedData.isPremium {
+                            displayTranscribe = true
+                        } else if item.associatedData.alwaysDisplayTranscribeButton {
+                            displayTranscribe = true
+                        } else {
+                            displayTranscribe = false
+                        }
+                    } else {
+                        displayTranscribe = false
+                    }
+                    
+                    if displayTranscribe, let durationBlurColor = durationBlurColor {
                         let audioTranscriptionButton: ComponentHostView<Empty>
                         if let current = strongSelf.audioTranscriptionButton {
                             audioTranscriptionButton = current
@@ -627,7 +641,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         
                         animation.animator.updateAlpha(layer: audioTranscriptionButton.layer, alpha: scaleProgress.isZero ? 1.0 : 0.0, completion: nil)
                         if !scaleProgress.isZero {
-                            canTranscribe = false
+                            displayTranscribe = false
                         }
                     } else {
                         if let audioTranscriptionButton = strongSelf.audioTranscriptionButton {
@@ -644,7 +658,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         if let durationBackgroundNode = strongSelf.durationBackgroundNode, size.width > 1.0 {
                             durationBackgroundNode.update(size: size, cornerRadius: size.height / 2.0, transition: .immediate)
 
-                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
                                 durationFrame.origin.x = audioTranscriptionButton.frame.minX - 7.0
                             }
                             animation.animator.updateFrame(layer: durationNode.layer, frame: durationFrame, completion: nil)
@@ -662,14 +676,14 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             dateAndStatusOrigin = CGPoint(x: displayVideoFrame.minX - 4.0, y: displayVideoFrame.maxY + 2.0)
                         } else {
                             dateAndStatusOrigin = CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, width - dateAndStatusSize.width - 4.0), y: displayVideoFrame.height - dateAndStatusSize.height)
-                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                            if !incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
                                 dateAndStatusOrigin.x = audioTranscriptionButton.frame.maxX + 7.0
                             }
                         }
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: CGRect(origin: dateAndStatusOrigin, size: dateAndStatusSize), completion: nil)
                     case let .constrained(_, right):
                         var dateAndStatusFrame = CGRect(origin: CGPoint(x: min(floorToScreenPixels(displayVideoFrame.midX) + 55.0 + 25.0 * scaleProgress, displayVideoFrame.maxX + right - dateAndStatusSize.width - 4.0), y: displayVideoFrame.maxY - dateAndStatusSize.height), size: dateAndStatusSize)
-                        if incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, canTranscribe {
+                        if incoming, let audioTranscriptionButton = strongSelf.audioTranscriptionButton, displayTranscribe {
                             dateAndStatusFrame.origin.x = audioTranscriptionButton.frame.maxX + 7.0
                         }
                         animation.animator.updateFrame(layer: strongSelf.dateAndStatusNode.layer, frame: dateAndStatusFrame, completion: nil)
@@ -1164,7 +1178,21 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     
     private func transcribe() {
-        guard let context = self.item?.context, let message = self.item?.message, self.statusNode == nil else {
+        guard let item = self.item, self.statusNode == nil else {
+            return
+        }
+                
+        guard item.associatedData.isPremium else {
+            let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
+            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+                if case .undo = action {
+                    let introController = item.context.sharedContext.makePremiumIntroController(context: item.context, source: .settings)
+                    item.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
+                    
+                    ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager).start()
+                }
+                return false })
+            item.controllerInteraction.presentControllerInCurrent(tipController, nil)
             return
         }
         
@@ -1174,7 +1202,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         if case .expanded = self.audioTranscriptionState {
             shouldExpandNow = true
         } else {
-            if let result = transcribedText(message: message) {
+            if let result = transcribedText(message: item.message) {
                 shouldExpandNow = true
                 
                 if case let .success(_, isPending) = result {
@@ -1192,7 +1220,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
                 
-                self.transcribeDisposable = (context.engine.messages.transcribeAudio(messageId: message.id)
+                self.transcribeDisposable = (item.context.engine.messages.transcribeAudio(messageId: item.message.id)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return

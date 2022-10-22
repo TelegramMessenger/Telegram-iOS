@@ -26,6 +26,8 @@ import ConvertOpusToAAC
 import LocalAudioTranscription
 import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
+import UndoUI
+import TelegramNotices
 
 private struct FetchControls {
     let fetch: (Bool) -> Void
@@ -348,7 +350,21 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     }
     
     private func transcribe() {
-        guard let context = self.context, let message = self.message, let presentationData = self.presentationData else {
+        guard let arguments = self.arguments, let context = self.context, let message = self.message, let presentationData = self.presentationData else {
+            return
+        }
+        
+        guard arguments.associatedData.isPremium else {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
+                if case .undo = action {
+                    let introController = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                    arguments.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
+                    
+                    ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: context.sharedContext.accountManager).start()
+                }
+                return false })
+            arguments.controllerInteraction.presentControllerInCurrent(tipController, nil)
             return
         }
         
@@ -550,7 +566,18 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var isVoice = false
                 var audioDuration: Int32 = 0
                 
-                let canTranscribe = arguments.associatedData.isPremium && arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat
+                let displayTranscribe: Bool
+                if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
+                    if arguments.associatedData.isPremium {
+                        displayTranscribe = true
+                    } else if arguments.associatedData.alwaysDisplayTranscribeButton {
+                        displayTranscribe = true
+                    } else {
+                        displayTranscribe = false
+                    }
+                } else {
+                    displayTranscribe = false
+                }
                 
                 let messageTheme = arguments.incoming ? arguments.presentationData.theme.theme.chat.message.incoming : arguments.presentationData.theme.theme.chat.message.outgoing
                 
@@ -805,7 +832,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     
                     let calcDuration = max(minVoiceLength, min(maxVoiceLength, CGFloat(audioDuration)))
                     minLayoutWidth = minVoiceWidth + (maxVoiceWidth - minVoiceWidth) * (calcDuration - minVoiceLength) / (maxVoiceLength - minVoiceLength)
-                    if canTranscribe {
+                    if displayTranscribe {
                         minLayoutWidth += 30.0 + 8.0
                     }
                     minLayoutWidth = max(descriptionAndStatusWidth + 56, minLayoutWidth)
@@ -1093,7 +1120,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             
                             if isVoice {
                                 var scrubbingFrame = CGRect(origin: CGPoint(x: 57.0, y: 1.0), size: CGSize(width: boundingWidth - 60.0, height: 18.0))
-                                if canTranscribe {
+                                if displayTranscribe {
                                     scrubbingFrame.size.width -= 30.0 + 4.0
                                 }
                                 
@@ -1152,7 +1179,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                                 animation.animator.updateFrame(layer: waveformView.layer, frame: scrubbingFrame, completion: nil)
                                 animation.animator.updateFrame(layer: waveformView.componentView!.layer, frame: CGRect(origin: CGPoint(), size: scrubbingFrame.size), completion: nil)
                                 
-                                if canTranscribe {
+                                if displayTranscribe {
                                     let audioTranscriptionButton: ComponentHostView<Empty>
                                     if let current = strongSelf.audioTranscriptionButton {
                                         audioTranscriptionButton = current

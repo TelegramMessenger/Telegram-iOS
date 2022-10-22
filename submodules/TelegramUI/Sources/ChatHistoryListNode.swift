@@ -20,6 +20,7 @@ import ChatListUI
 import ComponentFlow
 import ReactionSelectionNode
 import ChatPresentationInterfaceState
+import TelegramNotices
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {
@@ -314,7 +315,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: Bool, accountPeer: EnginePeer?) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
@@ -363,7 +364,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         }
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton)
 }
 
 private extension ChatHistoryLocationInput {
@@ -1032,26 +1033,37 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
         |> distinctUntilChanged
         
+        let suggestAudioTranscription = context.engine.data.get(TelegramEngine.EngineData.Item.Notices.Notice(key: ApplicationSpecificNotice.audioTranscriptionSuggestionKey()))
+        |> map { entry -> Int32 in
+            return entry?.get(ApplicationSpecificCounterNotice.self)?.value ?? 0
+        }
+        
+        let promises = combineLatest(
+            self.historyAppearsClearedPromise.get(),
+            self.pendingUnpinnedAllMessagesPromise.get(),
+            self.pendingRemovedMessagesPromise.get(),
+            self.currentlyPlayingMessageIdPromise.get(),
+            self.scrollToMessageIdPromise.get()
+        )
+        
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
             historyViewUpdate,
             self.chatPresentationDataPromise.get(),
             selectedMessages,
             updatingMedia,
             automaticDownloadNetworkType,
-            self.historyAppearsClearedPromise.get(),
-            self.pendingUnpinnedAllMessagesPromise.get(),
-            self.pendingRemovedMessagesPromise.get(),
             animatedEmojiStickers,
             additionalAnimatedEmojiStickers,
             customChannelDiscussionReadState,
             customThreadOutgoingReadState,
-            self.currentlyPlayingMessageIdPromise.get(),
-            self.scrollToMessageIdPromise.get(),
             adMessages,
             availableReactions,
             defaultReaction,
-            accountPeer
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, currentlyPlayingMessageIdAndType, scrollToMessageId, adMessages, availableReactions, defaultReaction, accountPeer in
+            accountPeer,
+            suggestAudioTranscription,
+            promises
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, adMessages, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises in
+            let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId) = promises
             let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
             
             func applyHole() {
@@ -1185,7 +1197,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     isPremium = true
                 }
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: suggestAudioTranscription < 2, accountPeer: accountPeer)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,

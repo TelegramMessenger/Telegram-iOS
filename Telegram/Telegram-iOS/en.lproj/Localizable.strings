@@ -8159,3 +8159,6 @@ Sorry for the inconvenience.";
 "ChatList.EmptyTopicsTitle" = "No topics here yet";
 "ChatList.EmptyTopicsCreate" = "Create New Topic";
 "ChatList.EmptyTopicsShowAsMessages" = "Show as Messages";
+
+"Message.AudioTranscription.SubscribeToPremium" = "Subscribe to **Telegram Premium** to convert voice to text.";
+"Message.AudioTranscription.SubscribeToPremiumAction" = "More";
