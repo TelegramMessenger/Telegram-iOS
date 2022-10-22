@@ -410,7 +410,14 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         
         let baseAppBundleId = Bundle.main.bundleIdentifier!
         let appGroupName = "group.\(baseAppBundleId)"
+#if !DEBUG
         let maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+#else
+        var maybeAppGroupUrl = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroupName)
+        if maybeAppGroupUrl == nil, BuildConfig.isNonDevAccount() {
+            maybeAppGroupUrl = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false)
+        }
+#endif
         
         let buildConfig = BuildConfig(baseAppBundleId: baseAppBundleId)
         self.buildConfig = buildConfig
@@ -444,17 +451,10 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
             return data
         }, autolockDeadine: autolockDeadine, encryptionProvider: OpenSSLEncryptionProvider(), resolvedDeviceName: nil)
-
-        var appGroupUrl: URL!
-        if maybeAppGroupUrl != nil {
-            appGroupUrl = maybeAppGroupUrl!
-        } else {
-            guard BuildConfig.isNonDevAccount(),
-                  let appDocUrl = try? FileManager.default.url(for: .documentDirectory, in: .userDomainMask, appropriateFor: nil, create: false) else {
-                self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
-                return true
-            }
-            appGroupUrl = appDocUrl
+        
+        guard let appGroupUrl = maybeAppGroupUrl else {
+            self.mainWindow?.presentNative(UIAlertController(title: nil, message: "Error 2", preferredStyle: .alert))
+            return true
         }
         
         var isDebugConfiguration = false
