@@ -1627,8 +1627,8 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                     
                     if isCreator, let appConfiguration = data.appConfiguration {
                         var minParticipants = 200
-                        if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Int {
-                            minParticipants = value
+                        if let data = appConfiguration.data, let value = data["forum_upgrade_participants_min"] as? Double {
+                            minParticipants = Int(value)
                         }
                         
                         var canSetupTopics = false
@@ -1646,15 +1646,15 @@ private func editingItems(data: PeerInfoScreenData?, context: AccountContext, pr
                         }
                         
                         if canSetupTopics {
-                            //TODO:localize
-                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: "Topics", value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
+                            items[.peerDataSettings]!.append(PeerInfoScreenSwitchItem(id: ItemTopics, text: presentationData.strings.PeerInfo_OptionTopics, value: channel.flags.contains(.isForum), icon: UIImage(bundleImageName: "Settings/Menu/Topics"), isLocked: topicsLimitedReason != nil, toggled: { value in
                                 if let topicsLimitedReason = topicsLimitedReason {
                                     interaction.displayTopicsLimited(topicsLimitedReason)
                                 } else {
                                     interaction.toggleForumTopics(value)
                                 }
                             }))
-                            items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: "The group chat will be divided into topics created by admins or users."))
+                            
+                            items[.peerDataSettings]!.append(PeerInfoScreenCommentItem(id: ItemTopicsText, text: presentationData.strings.PeerInfo_OptionTopicsText))
                         }
                     }
                     
@@ -2095,14 +2095,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     return
                 }
                 
-                //TODO:localize
                 let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
                 let text: String
                 switch reason {
                 case let .participants(minCount):
-                    text = "Only groups with more than **\(minCount) members** can have topics enabled."
+                    text = self.presentationData.strings.PeerInfo_TopicsLimitedParticipantCountText(Int32(minCount))
                 case .discussion:
-                    text = "Topics are currently unavailable in groups connected to channels."
+                    text = self.presentationData.strings.PeerInfo_TopicsLimitedDiscussionGroups
                 }
                 self.controller?.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
             }
@@ -4257,13 +4256,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 if !self.forumTopicNotificationExceptions.isEmpty {
                     items.append(.separator)
                     
-                    //TODO:localize
-                    let text: String
-                    if self.forumTopicNotificationExceptions.count == 1 {
-                        text = "There is [1 topic]() that is listed as exception."
-                    } else {
-                        text = "There are [\(self.forumTopicNotificationExceptions.count) topics]() that are listed as exceptions."
-                    }
+                    let text: String = self.presentationData.strings.PeerInfo_TopicNotificationExceptions(Int32(self.forumTopicNotificationExceptions.count))
                     
                     items.append(.action(ContextMenuActionItem(
                         text: text,
@@ -9707,12 +9700,11 @@ func presentAddMembersImpl(context: AccountContext, updatedPresentationData: (in
                             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                             let peers = maybePeers.compactMap { $0.value }
                             
-                            //TODO:localize
                             let text: String
                             if peers.count == 1 {
-                                text = "**\(peers[0].displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))** added to the group."
+                                text = presentationData.strings.PeerInfo_NotificationMemberAdded(peers[0].displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)).string
                             } else {
-                                text = "**\(peers.count)** members added to the group."
+                                text = presentationData.strings.PeerInfo_NotificationMultipleMembersAdded(Int32(peers.count))
                             }
                             parentController?.present(UndoOverlayController(presentationData: presentationData, content: .peers(context: context, peers: peers, title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
                         })

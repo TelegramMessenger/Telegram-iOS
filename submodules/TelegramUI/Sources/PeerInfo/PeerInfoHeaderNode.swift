@@ -2646,12 +2646,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             } else if let _ = threadData {
                 let subtitleColor: UIColor = presentationData.theme.list.itemSecondaryTextColor
                 
-                //TODO:localize
-                var statusText = "in "
+                let statusText: String
                 if let addressName = peer.addressName {
-                    statusText += "@\(addressName)"
+                    statusText = presentationData.strings.PeerInfo_TopicHeaderLocation("@\(addressName)").string
                 } else {
-                    statusText += peer.debugDisplayTitle
+                    statusText = presentationData.strings.PeerInfo_TopicHeaderLocation(peer.debugDisplayTitle).string
                 }
                 
                 smallSubtitleString = NSAttributedString(string: statusText, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))

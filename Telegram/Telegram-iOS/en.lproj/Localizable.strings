@@ -8175,3 +8175,56 @@ Sorry for the inconvenience.";
 "CreateTopic.EnterTopicTitle" = "ENTER TOPIC TITLE";
 "CreateTopic.EnterTopicTitlePlaceholder" = "What do you want to discuss?";
 "CreateTopic.SelectTopicIcon" = "SELECT TOPIC ICON";
+
+"ChatList.Context.CloseTopic" = "Close";
+"ChatList.Context.ReopenTopic" = "Reopen";
+"Chat.ContextViewAsTopics" = "View as Topics";
+"Chat.ContextViewAsMessages" = "View as Messages";
+"Chat.CreateTopic" = "New Topic";
+
+"ChatList.DeleteTopicConfirmationText" = "This will delete the topic with all its messages";
+"ChatList.DeleteTopicConfirmationAction" = "Delete Topic";
+
+"Notification.TopicCreated" = "Topic created";
+"Notification.TopicClosed" = "Topic closed";
+"Notification.TopicReopened" = "Topic reopened";
+"Notification.TopicRenamed" = "Topic renamed to \"%1$@\"";
+"Notification.TopicIconChanged" = "Topic icon changed to %1$@";
+"Notification.TopicIconRemoved" = "Topic icon changed";
+
+"Chat.EmptyTopicPlaceholder.Title" = "Almost done!";
+"Chat.EmptyTopicPlaceholder.Text" = "Send the first message to\nstart this topic.";
+
+"Chat.Message.TopicAuthorBadge" = "Topic Author";
+
+"Chat.PanelRestartTopic" = "Restart Topic";
+"Chat.PanelTopicClosedText" = "The topic is closed by admin";
+"Chat.PanelForumModeReplyText" = "Swipe left on a message to reply";
+
+"PeerInfo.TopicHeaderLocation" = "in %1$@";
+"PeerInfo.OptionTopics" = "Topics";
+"PeerInfo.OptionTopicsText" = "The group chat will be divided into topics created by admins or users.";
+"PeerInfo.TopicsLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have topics enabled.";
+"PeerInfo.TopicsLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have topics enabled.";
+"PeerInfo.TopicsLimitedDiscussionGroups" = "Topics are currently unavailable in groups connected to channels.";
+
+"PeerInfo.TopicNotificationExceptions_1" = "There is [1 topic]() that is listed as exception.";
+"PeerInfo.TopicNotificationExceptions_any" = "There are [%d topics]() that are listed as exceptions.";
+
+"PeerInfo.NotificationMemberAdded" = "**%1$@** added to the group.";
+"PeerInfo.NotificationMultipleMembersAdded_1" = "**%d** member added to the group.";
+"PeerInfo.NotificationMultipleMembersAdded_any" = "**%d** members added to the group.";
+
+"Channel.AdminLog.TopicCreated" = "%1$@ created topic %2$@";
+"Channel.AdminLog.TopicDeleted" = "%1$@ deleted topic %2$@";
+"Channel.AdminLog.TopicPinned" = "%1$@ pinned topic %2$@";
+"Channel.AdminLog.TopicUnpinned" = "%1$@ pinned topic %2$@";
+"Channel.AdminLog.TopicsEnabled" = "%1$@ enabled topics";
+"Channel.AdminLog.TopicsDisabled" = "%1$@ disabled topics";
+"Channel.AdminLog.TopicReopened" = "%1$@ reopened topic %2$@";
+"Channel.AdminLog.TopicClosed" = "%1$@ closed topic %2$@";
+"Channel.AdminLog.TopicRenamed" = "%1$@ renamed topic %2$@ to %3$@";
+"Channel.AdminLog.TopicRenamedWithIcon" = "%1$@ renamed topic %2$@ to %3$@ and changed icon to %4$@";
+"Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
+"Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
+"Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";

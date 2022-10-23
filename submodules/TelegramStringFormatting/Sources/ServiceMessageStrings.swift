@@ -680,10 +680,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     attributedString = addAttributesToStringWithRanges(strings.Notification_PremiumGift_Sent(authorName, price)._tuple, body: bodyAttributes, argumentAttributes: attributes)
                 }
             case .topicCreated:
-                //TODO:localize
-                attributedString = NSAttributedString(string: "Topic created", font: titleFont, textColor: primaryTextColor)
+                attributedString = NSAttributedString(string: strings.Notification_TopicCreated, font: titleFont, textColor: primaryTextColor)
             case let .topicEdited(components):
-                //TODO:localize
                 if let isClosed = components.compactMap({ item -> Bool? in
                     switch item {
                     case let .isClosed(isClosed):
@@ -693,9 +691,9 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                     }
                 }).first {
                     if isClosed {
-                        attributedString = NSAttributedString(string: "Topic closed", font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: strings.Notification_TopicClosed, font: titleFont, textColor: primaryTextColor)
                     } else {
-                        attributedString = NSAttributedString(string: "Topic restarted", font: titleFont, textColor: primaryTextColor)
+                        attributedString = NSAttributedString(string: strings.Notification_TopicReopened, font: titleFont, textColor: primaryTextColor)
                     }
                 } else if let title = components.compactMap({ item -> String? in
                     switch item {
@@ -705,7 +703,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         return nil
                     }
                 }).first {
-                    attributedString = NSAttributedString(string: "Topic renamed to \"\(title)\"", font: titleFont, textColor: primaryTextColor)
+                    attributedString = NSAttributedString(string: strings.Notification_TopicRenamed(title).string, font: titleFont, textColor: primaryTextColor)
                 } else if let maybeFileId = components.compactMap({ item -> Int64? in
                     switch item {
                     case let .iconFileId(id):
@@ -714,9 +712,12 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         return nil
                     }
                 }).first {
-                    let _ = maybeFileId
-                    //TODO:localize
-                    attributedString = NSAttributedString(string: "Topic icon changed", font: titleFont, textColor: primaryTextColor)
+                    if maybeFileId != 0 {
+                        let bodyAttributes = MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [:])
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_TopicIconChanged(".")._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil)])])
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Notification_TopicIconRemoved, font: titleFont, textColor: primaryTextColor)
+                    }
                 }
             case .unknown:
                 attributedString = nil

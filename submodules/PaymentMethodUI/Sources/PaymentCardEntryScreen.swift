@@ -406,10 +406,8 @@ public final class PaymentCardEntryScreen: ViewControllerComponentContainer {
             updateModelKeyImpl?(key, value)
         }), navigationBarAppearance: .transparent)
         
-        //TODO:localize
         self.title = "Add Payment Method"
         
-        //TODO:localize
         self.doneItem = UIBarButtonItem(title: "Add", style: .done, target: self, action: #selector(self.donePressed))
         self.navigationItem.setRightBarButton(self.doneItem, animated: false)
         self.doneItem?.isEnabled = false

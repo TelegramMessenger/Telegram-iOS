@@ -1399,8 +1399,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             
                 if authorRank == nil {
                     if let topicAuthorId = item.associatedData.topicAuthorId, topicAuthorId == message.author?.id {
-                        //TODO:localize
-                        authorRank = .custom("Topic Author")
+                        authorRank = .custom(item.presentationData.strings.Chat_Message_TopicAuthorBadge)
                     }
                 }
             case .group:

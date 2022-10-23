@@ -49,8 +49,7 @@ private enum ChatReportPeerTitleButton: Equatable {
         case .addMembers:
             return strings.Conversation_AddMembers
         case .restartTopic:
-            //TODO:localize
-            return "Restart Topic"
+            return strings.Chat_PanelRestartTopic
         }
     }
 }

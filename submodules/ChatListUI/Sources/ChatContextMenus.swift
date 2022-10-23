@@ -516,8 +516,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         var items: [ContextMenuItem] = []
         
         if channel.hasPermission(.manageTopics) {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: isPinned ? "Unpin" : "Pin", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
                 
                 let _ = context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: !isPinned).start()
@@ -724,8 +723,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             canOpenClose = true
         }
         if canOpenClose {
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? "Restart" : "Close", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
                 
                 let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()

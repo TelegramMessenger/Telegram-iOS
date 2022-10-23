@@ -807,7 +807,6 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
                     let presentationData = context.sharedContext.currentPresentationData.with { $0 }
                     self.navigationItem.rightBarButtonItem = UIBarButtonItem(customDisplayNode: ProgressNavigationButtonNode(color: presentationData.theme.rootController.navigationBar.accentTextColor))
                 } else {
-                    //TODO:localize
                     self.navigationItem.rightBarButtonItem = self.doneBarItem
                 }
             }

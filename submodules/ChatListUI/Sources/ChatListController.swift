@@ -406,9 +406,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 title = self.presentationData.strings.ChatList_ArchivedChatsTitle
             }
         case let .forum(peerId):
-            //TODO:localize
-            title = "Forum"
-            
+            title = ""
             self.forumChannelTracker = ForumChannelTopics(account: self.context.account, peerId: peerId)
             
             self.moreBarButton.contextAction = { [weak self] sourceNode, gesture in
@@ -518,8 +516,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         case .member:
                             strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
                         default:
-                            //TODO:localize
-                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: "Join", isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
+                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: strongSelf.presentationData.strings.Channel_JoinChannel, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }
                     }
                 })
@@ -678,8 +675,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             defaultTitle = strongSelf.presentationData.strings.ChatList_ArchivedChatsTitle
                         }
                     case .forum:
-                        //TODO:localize
-                        defaultTitle = "Forum"
+                        defaultTitle = ""
                     }
                     let previousEditingAndNetworkState = previousEditingAndNetworkStateValue.swap((stateAndFilterId.state.editing, networkState))
                     if stateAndFilterId.state.editing {
@@ -2575,7 +2571,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: "View as Topics", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsTopics, icon: { theme in
                 if !isViewingAsTopics {
                     return nil
                 }
@@ -2590,7 +2586,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 let chatController = context.sharedContext.makeChatListController(context: context, location: .forum(peerId: peerId), controlsHistoryPreload: false, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: false)
                 navigationController.replaceController(sourceController, with: chatController, animated: false)
             })))
-            items.append(.action(ContextMenuActionItem(text: "View as Messages", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.Chat_ContextViewAsMessages, icon: { theme in
                 if isViewingAsTopics {
                     return nil
                 }
@@ -2607,8 +2603,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })))
             items.append(.separator)
             
-            //TODO:localize
-            items.append(.action(ContextMenuActionItem(text: "Group Info", icon: { theme in
+            items.append(.action(ContextMenuActionItem(text: strings.GroupInfo_Title, icon: { theme in
                 return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.contextMenu.primaryColor)
             }, action: { [weak sourceController] _, f in
                 f(.default)
@@ -2625,8 +2620,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             })))
             
             if channel.hasPermission(.inviteMembers) {
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "Add Member", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strings.GroupInfo_AddParticipant, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AddUser"), color: theme.contextMenu.primaryColor)
                 }, action: { [weak sourceController] _, f in
                     f(.default)
@@ -2655,8 +2649,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else if channel.hasPermission(.createTopics) {
                 items.append(.separator)
                 
-                //TODO:localize
-                items.append(.action(ContextMenuActionItem(text: "New Topic", icon: { theme in
+                items.append(.action(ContextMenuActionItem(text: strings.Chat_CreateTopic, icon: { theme in
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Edit"), color: theme.contextMenu.primaryColor)
                 }, action: { action in
                     action.dismissWithResult(.default)
@@ -3745,9 +3738,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         let actionSheet = ActionSheetController(presentationData: self.presentationData)
         var items: [ActionSheetItem] = []
         
-        //TODO:localize
-        items.append(ActionSheetTextItem(title: "This will delete the topic with all its messages", parseMarkdown: true))
-        items.append(ActionSheetButtonItem(title: "Delete", color: .destructive, action: { [weak self, weak actionSheet] in
+        items.append(ActionSheetTextItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
+        items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
             actionSheet?.dismissAnimated()
             self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)
         }))
