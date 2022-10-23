@@ -3204,7 +3204,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 var buttonFrame = CGRect(origin: CGPoint(x: currentBackgroundFrame.maxX + 8.0, y: currentBackgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 if let shareButtonOffset = shareButtonOffset {
-                    buttonFrame = buttonFrame.offsetBy(dx: shareButtonOffset.x, dy: shareButtonOffset.y - (buttonSize.height - 30.0))
+                    buttonFrame.origin.x = shareButtonOffset.x
+                    buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
                 }
                 
                 animation.animator.updateFrame(layer: shareButtonNode.layer, frame: buttonFrame, completion: nil)
@@ -3222,7 +3225,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 
                 var buttonFrame = CGRect(origin: CGPoint(x: backgroundFrame.maxX + 8.0, y: backgroundFrame.maxY - buttonSize.width - 1.0), size: buttonSize)
                 if let shareButtonOffset = shareButtonOffset {
-                    buttonFrame = buttonFrame.offsetBy(dx: shareButtonOffset.x, dy: shareButtonOffset.y - (buttonSize.height - 30.0))
+                    buttonFrame.origin.x = shareButtonOffset.x
+                    buttonFrame.origin.y = buttonFrame.origin.y + shareButtonOffset.y - (buttonSize.height - 30.0)
+                } else if !disablesComments {
+                    buttonFrame.origin.y = buttonFrame.origin.y - (buttonSize.height - 30.0)
                 }
                 shareButtonNode.frame = buttonFrame
                 shareButtonNode.alpha = isCurrentlyPlayingMedia ? 0.0 : 1.0
