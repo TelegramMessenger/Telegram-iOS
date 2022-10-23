@@ -401,7 +401,11 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
             themeReference = .builtin(.night)
         }
         let themeSpecificColor = themeSpecificAccentColors[themeReference.index]
-        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, baseTheme: nightMode ? .night : .classic, accentColor: themeSpecificColor?.accentColor.flatMap { UIColor(rgb: $0) }, bubbleColors: themeSpecificColor?.bubbleColors ?? []) {
+        var accentColor = themeSpecificColor?.accentColor.flatMap { UIColor(rgb: $0) }
+        if accentColor == nil, case .builtin(.night) = themeReference {
+            accentColor = themeSpecificColor?.colorFor(baseTheme: .night)
+        }
+        if let theme = makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: themeReference, baseTheme: nightMode ? .night : .classic, accentColor: accentColor, bubbleColors: themeSpecificColor?.bubbleColors ?? []) {
             let controller = ThemePreviewController(context: context, previewTheme: theme, source: .settings(themeReference, nil, false))
             if custom {
                 controller.customApply = {
@@ -527,7 +531,14 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         |> mapToSignal { accentColor, wallpaper -> Signal<(PresentationTheme?, TelegramWallpaper?), NoError> in
             return chatServiceBackgroundColor(wallpaper: wallpaper, mediaBox: context.sharedContext.accountManager.mediaBox)
             |> map { serviceBackgroundColor in
-                return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: accentColor?.color, bubbleColors: accentColor?.customBubbleColors ?? [], serviceBackgroundColor: serviceBackgroundColor), wallpaper)
+                var effectiveAccentColor: UIColor? = accentColor?.color
+                if case let .builtin(theme) = reference {
+                    effectiveAccentColor = accentColor?.colorFor(baseTheme: (theme).baseTheme)
+                }
+                if reference == .builtin(.night), effectiveAccentColor == nil {
+                    effectiveAccentColor = UIColor(rgb: 0x3e88f7)
+                }
+                return (makePresentationTheme(mediaBox: context.sharedContext.accountManager.mediaBox, themeReference: reference, accentColor: effectiveAccentColor, bubbleColors: accentColor?.customBubbleColors ?? [], serviceBackgroundColor: serviceBackgroundColor), wallpaper)
             }
         }
         |> deliverOnMainQueue).start(next: { theme, wallpaper in

@@ -1336,7 +1336,9 @@ public func themeIconImage(account: Account, accountManager: AccountManager<Tele
     } else if case let .builtin(theme) = theme {
         var defaultTheme = makeDefaultPresentationTheme(reference: theme, serviceBackgroundColor: nil)
         if let color = color {
-            defaultTheme = customizePresentationTheme(defaultTheme, editing: false, accentColor: color.accentColor.flatMap { UIColor(rgb: $0) }, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
+            let editing = color.accentColor == nil
+            let accentColor: UIColor = color.accentColor.flatMap { UIColor(rgb: $0) } ?? color.colorFor(baseTheme: theme.baseTheme)
+            defaultTheme = customizePresentationTheme(defaultTheme, editing: editing, accentColor: accentColor, outgoingAccentColor: nil, backgroundColors: [], bubbleColors: color.bubbleColors, animateBubbleColors: nil, baseColor: color.baseColor)
         } else if case .night = theme {
             defaultTheme = customizePresentationTheme(defaultTheme, editing: true, accentColor: UIColor(rgb: 0x3e88f7), outgoingAccentColor: nil, backgroundColors: [], bubbleColors: [], animateBubbleColors: nil)
         }
