@@ -143,7 +143,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
     var audioTranscriptionButton: ComponentHostView<Empty>?
     private var transcriptionPendingIndicator: ComponentHostView<Empty>?
     let textNode: TextNode
-    private let textClippingNode: ASDisplayNode
+    let textClippingNode: ASDisplayNode
     private var textSelectionNode: TextSelectionNode?
     
     var updateIsTextSelectionActive: ((Bool) -> Void)?

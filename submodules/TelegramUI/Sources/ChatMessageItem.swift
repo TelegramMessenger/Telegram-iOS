@@ -87,7 +87,7 @@ private func mediaMergeableStyle(_ media: Media) -> ChatMessageMerge {
                     return .semanticallyMerged
                 case let .Video(_, _, flags):
                     if flags.contains(.instantRoundVideo) {
-                        return .semanticallyMerged
+                        return .none
                     }
                 default:
                     break

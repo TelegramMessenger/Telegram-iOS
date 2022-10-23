@@ -29,14 +29,27 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             if case .visible = oldValue {
                 wasVisible = true
             }
-            var isVisible = false
-            if case .visible = self.visibility {
-                isVisible = true
-            }
+            let isVisible = self.isContentVisible
             if wasVisible != isVisible {
-                self.interactiveVideoNode.visibility = isVisible
+                if !isVisible {
+                    Queue.mainQueue().after(0.05) {
+                        if isVisible == self.isContentVisible {
+                            self.interactiveVideoNode.visibility = isVisible
+                        }
+                    }
+                } else {
+                    self.interactiveVideoNode.visibility = isVisible
+                }
             }
         }
+    }
+    
+    private var isContentVisible: Bool  {
+        var isVisible = false
+        if case .visible = self.visibility {
+            isVisible = true
+        }
+        return isVisible
     }
     
     required init() {
@@ -134,7 +147,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
         
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveVideoLayout = self.interactiveVideoNode.asyncLayout()
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
@@ -142,7 +155,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         let audioTranscriptionState = self.audioTranscriptionState
         let didSetupFileNode = self.item != nil
         
-        return { item, layoutConstants, preparePosition, selection, constrainedSize in
+        return { item, layoutConstants, preparePosition, selection, constrainedSize, avatarInset in
             var selectedFile: TelegramMediaFile?
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {
@@ -198,9 +211,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             if case .replyThread = item.chatLocation {
                 isReplyThread = true
             }
-            
-            let avatarInset: CGFloat = 0.0
-            
+                        
             var isExpanded = false
             if case .expanded = audioTranscriptionState {
                 isExpanded = true
@@ -210,23 +221,21 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
             let normalDisplaySize = layoutConstants.instantVideo.dimensions
             var displaySize = normalDisplaySize
             let maximumDisplaySize = CGSize(width: min(404, constrainedSize.width - 2.0), height: min(404, constrainedSize.width - 2.0))
-//            var effectiveAvatarInset = avatarInset
             if item.associatedData.currentlyPlayingMessageId == item.message.index {
                 isPlaying = true
                 if !isExpanded {
                     displaySize = maximumDisplaySize
                 }
-//                effectiveAvatarInset = 0.0
             }
             
             let leftInset: CGFloat = 0.0
             let rightInset: CGFloat = 0.0
         
-            let (videoLayout, videoApply) = interactiveVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, topMessage: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.attributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), constrainedSize.width - leftInset - rightInset - avatarInset, displaySize, maximumDisplaySize, isPlaying ? 1.0 : 0.0, .free, automaticDownload)
+            let (videoLayout, videoApply) = interactiveVideoLayout(ChatMessageBubbleContentItem(context: item.context, controllerInteraction: item.controllerInteraction, message: item.message, topMessage: item.message, read: item.read, chatLocation: item.chatLocation, presentationData: item.presentationData, associatedData: item.associatedData, attributes: item.attributes, isItemPinned: item.message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), constrainedSize.width - leftInset - rightInset - avatarInset, displaySize, maximumDisplaySize, isPlaying ? 1.0 : 0.0, .free, automaticDownload, avatarInset)
             
             let videoFrame = CGRect(origin: CGPoint(x: 1.0, y: 1.0), size: videoLayout.contentSize)
             
-            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? .zero : CGPoint(x: -16.0, y: -24.0), hidesHeaders: !isExpanded)
+            let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: false, headerSpacing: 0.0, hidesBackground: .never, forceFullCorners: false, forceAlignment: .none, shareButtonOffset: isExpanded ? .zero : CGPoint(x: -16.0, y: -24.0), hidesHeaders: !isExpanded, avatarOffset: !isExpanded && isPlaying ? -100.0 : 0.0)
             
             let width = videoFrame.width + 2.0
             
@@ -328,8 +337,10 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                             
                             var videoAnimation = animation
+                            var fileAnimation = animation
                             if currentExpanded != isExpanded {
                                 videoAnimation = .None
+                                fileAnimation = .None
                             }
 
                             animation.animator.updateFrame(layer: strongSelf.interactiveVideoNode.layer, frame: videoFrame, completion: nil)
@@ -337,7 +348,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             
                             if let fileSize = finalFileSize {
                                 strongSelf.interactiveFileNode.frame = CGRect(origin: CGPoint(x: layoutConstants.file.bubbleInsets.left, y: layoutConstants.file.bubbleInsets.top), size: fileSize)
-                                finalFileApply?(synchronousLoads, .None, applyInfo)
+                                finalFileApply?(synchronousLoads, fileAnimation, applyInfo)
                             }
                             
                             if currentExpanded != isExpanded {

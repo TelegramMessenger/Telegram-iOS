@@ -64,7 +64,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         self.view.addGestureRecognizer(tapRecognizer)
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeImageLayout = self.imageNode.asyncLayout()
         let makePinLayout = self.pinNode.asyncLayout()
         let statusLayout = self.dateAndStatusNode.asyncLayout()
@@ -73,7 +73,7 @@ class ChatMessageMapBubbleContentNode: ChatMessageBubbleContentNode {
         
         let previousMedia = self.media
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize in
+        return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
             var selectedMedia: TelegramMediaMap?
             var activeLiveBroadcastingTimeout: Int32?
             for media in item.message.media {

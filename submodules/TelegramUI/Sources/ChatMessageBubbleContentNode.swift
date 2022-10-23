@@ -28,6 +28,7 @@ struct ChatMessageBubbleContentProperties {
     let forceAlignment: ChatMessageBubbleContentAlignment
     let shareButtonOffset: CGPoint?
     let hidesHeaders: Bool
+    let avatarOffset: CGFloat?
     
     init(
         hidesSimpleAuthorHeader: Bool,
@@ -36,7 +37,8 @@ struct ChatMessageBubbleContentProperties {
         forceFullCorners: Bool,
         forceAlignment: ChatMessageBubbleContentAlignment,
         shareButtonOffset: CGPoint? = nil,
-        hidesHeaders: Bool = false
+        hidesHeaders: Bool = false,
+        avatarOffset: CGFloat? = nil
     ) {
         self.hidesSimpleAuthorHeader = hidesSimpleAuthorHeader
         self.headerSpacing = headerSpacing
@@ -45,6 +47,7 @@ struct ChatMessageBubbleContentProperties {
         self.forceAlignment = forceAlignment
         self.shareButtonOffset = shareButtonOffset
         self.hidesHeaders = hidesHeaders
+        self.avatarOffset = avatarOffset
     }
 }
 
@@ -172,7 +175,7 @@ class ChatMessageBubbleContentNode: ASDisplayNode {
         super.init()
     }
     
-    func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         preconditionFailure()
     }
     
