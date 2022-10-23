@@ -622,6 +622,11 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                         }
                     }
                 }
+                
+                if isInstantVideo && audioWaveform == nil {
+                    let waveformBase64 = "DAAOAAkACQAGAAwADwAMABAADQAPABsAGAALAA0AGAAfABoAHgATABgAGQAYABQADAAVABEAHwANAA0ACQAWABkACQAOAAwACQAfAAAAGQAVAAAAEwATAAAACAAfAAAAHAAAABwAHwAAABcAGQAAABQADgAAABQAHwAAAB8AHwAAAAwADwAAAB8AEwAAABoAFwAAAB8AFAAAAAAAHwAAAAAAHgAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAHwAAAAAAAAA="
+                    audioWaveform = AudioWaveform(bitstream: Data(base64Encoded: waveformBase64)!, bitsPerSample: 5)
+                }
                                 
                 var titleString: NSAttributedString?
                 var descriptionString: NSAttributedString?

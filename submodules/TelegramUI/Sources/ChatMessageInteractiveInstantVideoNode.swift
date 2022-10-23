@@ -235,11 +235,13 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var updatedInstantVideoBackgroundImage: UIImage?
             let instantVideoBackgroundImage: UIImage?
+            var ignoreHeaders = false
             switch statusDisplayType {
                 case .free:
                     instantVideoBackgroundImage = nil
                 case .bubble:
                     instantVideoBackgroundImage = nil
+                    ignoreHeaders = true
             }
             
             if item.presentationData.theme != currentItem?.presentationData.theme {
@@ -306,47 +308,49 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let availableWidth = max(60.0, width - 210.0 - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0)
             let availableContentWidth = width - bubbleEdgeInset * 2.0 - bubbleContentInsetsLeft - 20.0
             
-            for attribute in item.message.attributes {
-                if let attribute = attribute as? InlineBotMessageAttribute {
-                    var inlineBotNameString: String?
-                    if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
-                        inlineBotNameString = bot.addressName
-                    } else {
-                        inlineBotNameString = attribute.title
+            if !ignoreHeaders {
+                for attribute in item.message.attributes {
+                    if let attribute = attribute as? InlineBotMessageAttribute {
+                        var inlineBotNameString: String?
+                        if let peerId = attribute.peerId, let bot = item.message.peers[peerId] as? TelegramUser {
+                            inlineBotNameString = bot.addressName
+                        } else {
+                            inlineBotNameString = attribute.title
+                        }
+                        
+                        if let inlineBotNameString = inlineBotNameString {
+                            let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
+                            
+                            let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
+                            let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
+                            let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
+                            
+                            viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+                            
+                            ignoreForward = true
+                        }
                     }
                     
-                    if let inlineBotNameString = inlineBotNameString {
-                        let inlineBotNameColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
-                        
-                        let bodyAttributes = MarkdownAttributeSet(font: nameFont, textColor: inlineBotNameColor)
-                        let boldAttributes = MarkdownAttributeSet(font: inlineBotPrefixFont, textColor: inlineBotNameColor)
-                        let botString = addAttributesToStringWithRanges(item.presentationData.strings.Conversation_MessageViaUser("@\(inlineBotNameString)")._tuple, body: bodyAttributes, argumentAttributes: [0: boldAttributes])
-                        
-                        viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-                        
-                        ignoreForward = true
-                    }
-                }
-                
-                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
-                    } else {
-                        replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
-                            presentationData: item.presentationData,
-                            strings: item.presentationData.strings,
-                            context: item.context,
-                            type: .standalone,
-                            message: replyMessage,
-                            parentMessage: item.message,
-                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
-                            animationCache: item.controllerInteraction.presentationContext.animationCache,
-                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                        ))
+                    if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
+                        if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                        } else {
+                            replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                                presentationData: item.presentationData,
+                                strings: item.presentationData.strings,
+                                context: item.context,
+                                type: .standalone,
+                                message: replyMessage,
+                                parentMessage: item.message,
+                                constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                                animationCache: item.controllerInteraction.presentationContext.animationCache,
+                                animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                            ))
+                        }
                     }
                 }
             }
             
-            if !ignoreSource, !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
+            if !ignoreSource && !ignoreHeaders, !item.message.id.peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
                 for attribute in item.message.attributes {
                     if let attribute = attribute as? SourceReferenceMessageAttribute {
                         if let sourcePeer = item.message.peers[attribute.messageId.peerId] {
@@ -365,7 +369,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             
             var forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode)?
             
-            if !ignoreForward, let forwardInfo = item.message.forwardInfo {
+            if !ignoreForward && !ignoreHeaders, let forwardInfo = item.message.forwardInfo {
                 let forwardPsaType = forwardInfo.psaType
                 
                 if let source = forwardInfo.source {
@@ -930,7 +934,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
-                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? 12.0 : (width - messageInfoSize.width - bubbleEdgeInset - 8.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: forwardInfoSize)
+                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 8.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: forwardInfoSize)
                         animation.animator.updateFrame(layer: forwardInfoNode.layer, frame: forwardInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height - 1.0)
@@ -954,7 +958,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)
                         }
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (bubbleEdgeInset + 11.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
                         animation.animator.updateFrame(layer: replyInfoNode.layer, frame: replyInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: messageInfoSize.height + replyInfoSize.height)
@@ -964,7 +968,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        let replyBackgroundFrame = CGRect(origin: CGPoint(x: (!incoming ? (bubbleEdgeInset + 10.0) : (width - messageInfoSize.width - bubbleEdgeInset)) - 4.0, y: 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
+                        let replyBackgroundFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 4.0) : (width - messageInfoSize.width - bubbleEdgeInset)) - 4.0, y: 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
                         animation.animator.updateFrame(layer: replyBackgroundNode.layer, frame: replyBackgroundFrame, completion: nil)
                         
                         let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0

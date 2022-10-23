@@ -1082,12 +1082,13 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
         }
     } else if let channel = data.peer as? TelegramChannel {
         let ItemUsername = 1
-        let ItemAbout = 2
-        let ItemLocationHeader = 3
-        let ItemLocation = 4
-        let ItemAdmins = 5
-        let ItemMembers = 6
-        let ItemMemberRequests = 7
+        let ItemUsernameInfo = 2
+        let ItemAbout = 3
+        let ItemLocationHeader = 4
+        let ItemLocation = 5
+        let ItemAdmins = 6
+        let ItemMembers = 7
+        let ItemMemberRequests = 8
         
         if let _ = data.threadData {
             let mainUsername: String
@@ -1128,6 +1129,11 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
                     }
                 )
             )
+            if let _ = channel.addressName {
+                
+            } else {
+                items[.peerInfo]!.append(PeerInfoScreenCommentItem(id: ItemUsernameInfo, text: presentationData.strings.PeerInfo_PrivateShareLinkInfo))
+            }
         } else {
             if let location = (data.cachedData as? CachedChannelData)?.peerGeoLocation {
                 items[.groupLocation]!.append(PeerInfoScreenHeaderItem(id: ItemLocationHeader, text: presentationData.strings.GroupInfo_Location.uppercased()))
