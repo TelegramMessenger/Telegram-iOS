@@ -3111,7 +3111,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
-    func requestMessageUpdate(_ id: MessageId) {
+    func requestMessageUpdate(_ id: MessageId, andScrollToItem scroll: Bool = false) {
         if let historyView = self.historyView {
             var messageItem: ChatMessageItem?
             self.forEachItemNode({ itemNode in
@@ -3150,7 +3150,13 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         item = ListMessageItem(presentationData: presentationData, context: self.context, chatLocation: self.chatLocation, interaction: ListMessageItemInteraction(controllerInteraction: self.controllerInteraction), message: message, selection: selection, displayHeader: displayHeader, hintIsLink: hintLinks, isGlobalSearchResult: isGlobalSearch)
                                 }
                                 let updateItem = ListViewUpdateItem(index: index, previousIndex: index, item: item, directionHint: nil)
-                                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: nil, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+                                
+                                var scrollToItem: ListViewScrollToItem?
+                                if scroll {
+                                    scrollToItem = ListViewScrollToItem(index: index, position: .center(.top), animated: true, curve: .Spring(duration: 0.4), directionHint: .Down, displayLink: true)
+                                }
+                                
+                                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [updateItem], options: [.AnimateInsertion], scrollToItem: scrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
                                 break loop
                             }
                         default:

@@ -4037,9 +4037,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })], parseMarkdown: true), in: .window(.root), with: nil)
                 }
             })
-        }, requestMessageUpdate: { [weak self] id in
+        }, requestMessageUpdate: { [weak self] id, scroll in
             if let strongSelf = self {
-                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id)
+                strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
             }
         }, cancelInteractiveKeyboardGestures: { [weak self] in
             (self?.view.window as? WindowHost)?.cancelInteractiveKeyboardGestures()
