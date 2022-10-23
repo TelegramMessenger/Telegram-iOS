@@ -735,8 +735,12 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
                         if item.associatedData.isPremium {
                             displayTranscribe = true
-                        } else if item.associatedData.alwaysDisplayTranscribeButton {
-                            displayTranscribe = true
+                        } else if item.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
+                            if incoming && notConsumed && item.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
+                                displayTranscribe = true
+                            } else {
+                                displayTranscribe = false
+                            }
                         } else {
                             displayTranscribe = false
                         }
