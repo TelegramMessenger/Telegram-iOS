@@ -683,10 +683,10 @@ public class Window1 {
     }
     
     private func updateBadgeVisibility() {
-        let badgeIsHidden = !self.deviceMetrics.hasTopNotch || self.deviceMetrics.hasDynamicIsland || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+        let badgeIsHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
         if badgeIsHidden != self.badgeView.isHidden && !badgeIsHidden {
             Queue.mainQueue().after(0.4) {
-                let badgeShouldBeHidden = !self.deviceMetrics.hasTopNotch || self.deviceMetrics.hasDynamicIsland || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
+                let badgeShouldBeHidden = !self.deviceMetrics.showAppBadge || self.forceBadgeHidden || self.windowLayout.size.width > self.windowLayout.size.height
                 if badgeShouldBeHidden == badgeIsHidden {
                     self.badgeView.isHidden = badgeIsHidden
                 }
