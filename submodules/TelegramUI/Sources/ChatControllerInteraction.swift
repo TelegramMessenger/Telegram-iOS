@@ -142,7 +142,7 @@ public final class ChatControllerInteraction {
     let openJoinLink: (String) -> Void
     let openWebView: (String, String, Bool, Bool) -> Void
     
-    let requestMessageUpdate: (MessageId) -> Void
+    let requestMessageUpdate: (MessageId, Bool) -> Void
     let cancelInteractiveKeyboardGestures: () -> Void
     let dismissTextInput: () -> Void
     let scrollToMessageId: (MessageIndex) -> Void
@@ -248,7 +248,7 @@ public final class ChatControllerInteraction {
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,
         openJoinLink: @escaping (String) -> Void,
         openWebView: @escaping (String, String, Bool, Bool) -> Void,
-        requestMessageUpdate: @escaping (MessageId) -> Void,
+        requestMessageUpdate: @escaping (MessageId, Bool) -> Void,
         cancelInteractiveKeyboardGestures: @escaping () -> Void,
         dismissTextInput: @escaping () -> Void,
         scrollToMessageId: @escaping (MessageIndex) -> Void,

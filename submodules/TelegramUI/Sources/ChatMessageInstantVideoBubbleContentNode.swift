@@ -67,27 +67,29 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                 
         self.interactiveVideoNode.requestUpdateLayout = { [weak self] _ in
             if let strongSelf = self, let item = strongSelf.item {
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
             }
         }
         self.interactiveVideoNode.updateTranscriptionExpanded = { [weak self] state in
             if let strongSelf = self, let item = strongSelf.item {
+                let previous = strongSelf.audioTranscriptionState
                 strongSelf.audioTranscriptionState = state
                 strongSelf.interactiveFileNode.audioTranscriptionState = state
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, state != .inProgress && previous != state)
             }
         }
         self.interactiveVideoNode.updateTranscriptionText = { [weak self] text in
             if let strongSelf = self, let item = strongSelf.item {
                 strongSelf.interactiveFileNode.forcedAudioTranscriptionText = text
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
             }
         }
         self.interactiveFileNode.updateTranscriptionExpanded = { [weak self] state in
             if let strongSelf = self, let item = strongSelf.item {
+                let previous = strongSelf.audioTranscriptionState
                 strongSelf.audioTranscriptionState = state
                 strongSelf.interactiveVideoNode.audioTranscriptionState = state
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, previous != state)
             }
         }
         
@@ -105,7 +107,7 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveFileNode.requestUpdateLayout = { [weak self] _ in
             if let strongSelf = self, let item = strongSelf.item {
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
             }
         }
         
@@ -274,10 +276,6 @@ class ChatMessageInstantVideoBubbleContentNode: ChatMessageBubbleContentNode {
                             let firstTime = strongSelf.item == nil
                             strongSelf.item = item
                             strongSelf.isExpanded = isExpanded
-                            
-                            if currentExpanded != isExpanded {
-                                item.controllerInteraction.scrollToMessageId(item.message.index)
-                            }
                             
                             if firstTime {
                                 strongSelf.interactiveFileNode.isHidden = true
