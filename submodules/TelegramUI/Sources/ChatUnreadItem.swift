@@ -167,10 +167,7 @@ class ChatUnreadItemNode: ListViewItemNode {
                         strongSelf.backgroundNode.isHidden = true
                         backgroundContent.frame = strongSelf.backgroundNode.frame
                         if let (rect, containerSize) = strongSelf.absolutePosition {
-                            var backgroundFrame = backgroundContent.frame
-                            backgroundFrame.origin.x += rect.minX
-                            backgroundFrame.origin.y += rect.minY
-                            backgroundContent.update(rect: backgroundFrame, within: containerSize, transition: .immediate)
+                            strongSelf.updateAbsoluteRect(rect, within: containerSize)
                         }
                     } else {
                         strongSelf.backgroundNode.isHidden = false
