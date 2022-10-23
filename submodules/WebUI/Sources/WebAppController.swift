@@ -1116,10 +1116,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }, action: { [weak self] c, _ in
                     c.dismiss(completion: nil)
                     
-                    if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                        strongSelf.dismiss()
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: strongSelf.botId)))
+                    guard let strongSelf = self else {
+                        return
                     }
+                    
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.botId)
+                    )
+                    |> deliverOnMainQueue).start(next: { botPeer in
+                        guard let botPeer = botPeer else {
+                            return
+                        }
+                        if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                            strongSelf.dismiss()
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(botPeer)))
+                        }
+                    })
                 })))
             }
             

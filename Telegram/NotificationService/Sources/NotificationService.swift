@@ -1360,6 +1360,7 @@ private final class NotificationServiceHandler {
                                     Logger.shared.log("NotificationService \(episode)", "Will poll channel \(peerId)")
 
                                     pollSignal = standalonePollChannelOnce(
+                                        accountPeerId: stateManager.accountPeerId,
                                         postbox: stateManager.postbox,
                                         network: stateManager.network,
                                         peerId: peerId,

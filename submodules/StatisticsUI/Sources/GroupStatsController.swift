@@ -877,10 +877,15 @@ public func groupStatsController(context: AccountContext, updatedPresentationDat
     }
     openPeerHistoryImpl = { [weak controller] participantPeerId in
         if let navigationController = controller?.navigationController as? NavigationController {
-            let _ = (context.account.postbox.loadedPeerWithId(participantPeerId)
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { peer in
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer), ""), animated: true))
+            let _ = (context.engine.data.get(
+                TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+                TelegramEngine.EngineData.Item.Peer.Peer(id: participantPeerId)
+            )
+            |> deliverOnMainQueue).start(next: { chatPeer, peer in
+                guard let chatPeer, let peer else {
+                    return
+                }
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, chatController: nil, context: context, chatLocation: .peer(chatPeer), subject: nil, botStart: nil, updateTextInputState: nil, keepStack: .always, useExisting: false, purposefulAction: nil, scrollToEndIfExists: false, activateMessageSearch: (.member(peer._asPeer()), ""), animated: true))
             })
         }
     }

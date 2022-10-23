@@ -207,7 +207,7 @@ public class ComposeControllerImpl: ViewController, ComposeController {
                             if let peer = peer {
                                 DispatchQueue.main.async {
                                     if let navigationController = strongSelf.navigationController as? NavigationController {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id)))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer))))
                                     }
                                 }
                             } else {

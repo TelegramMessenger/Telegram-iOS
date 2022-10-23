@@ -344,6 +344,16 @@ private class ReplyThreadHistoryContextImpl {
                         data.maxIncomingReadId = messageIndex.id.id
                     }
                     
+                    if let topMessageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: messageId.peerId, threadId: Int64(messageId.id), namespaces: Set([Namespaces.Message.Cloud])) {
+                        if messageIndex.id.id >= topMessageIndex.id.id {
+                            let containingHole = transaction.getThreadIndexHole(peerId: messageId.peerId, threadId: Int64(messageId.id), namespace: topMessageIndex.id.namespace, containing: topMessageIndex.id.id)
+                            if let _ = containingHole[.everywhere] {
+                            } else {
+                                data.incomingUnreadCount = 0
+                            }
+                        }
+                    }
+                    
                     data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
                     
                     if let entry = StoredMessageHistoryThreadInfo(data) {

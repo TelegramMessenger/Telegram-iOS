@@ -264,9 +264,9 @@ func canReplyInChat(_ chatPresentationInterfaceState: ChatPresentationInterfaceS
                 var canManage = false
                 if channel.flags.contains(.isCreator) {
                     canManage = true
-                } else if channel.adminRights != nil {
+                } else if channel.hasPermission(.manageTopics) {
                     canManage = true
-                } else if threadData.isOwn {
+                } else if threadData.isOwnedByMe {
                     canManage = true
                 }
                 
@@ -1510,7 +1510,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                     guard let navigationController = controllerInteraction.navigationController() else {
                         return
                     }
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: messages[0].id.peerId), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
+                    guard let peer = messages[0].peers[messages[0].id.peerId] else {
+                        return
+                    }
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messages[0].id), highlight: true, timecode: nil), useExisting: true))
                 })
             })))
         }

@@ -1477,7 +1477,7 @@ public final class AccountViewTracker {
                 if context.subscribers.isEmpty {
                     if let account = self.account {
                         let queue = self.queue
-                        context.disposable.set(keepPollingChannel(postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start(next: { [weak context] isValidForTimeout in
+                        context.disposable.set(keepPollingChannel(accountPeerId: account.peerId, postbox: account.postbox, network: account.network, peerId: peerId, stateManager: account.stateManager).start(next: { [weak context] isValidForTimeout in
                             queue.async {
                                 guard let context = context else {
                                     return

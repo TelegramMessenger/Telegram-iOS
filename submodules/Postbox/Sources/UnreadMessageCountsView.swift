@@ -64,7 +64,15 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
             case let .totalInGroup(groupId):
                 return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
             case let .peer(peerId):
-                return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+                if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    var count: Int32 = 0
+                    if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                        count = summary.effectiveUnreadCount
+                    }
+                    return .peer(peerId, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
+                } else {
+                    return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+                }
             }
         }
     }
@@ -105,9 +113,20 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                         }
                     }
                 case let .peer(peerId, _):
-                    if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
-                        self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
-                        updated = true
+                    if let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                        if transaction.updatedPeerThreadsSummaries.contains(peerId) {
+                            var count: Int32 = 0
+                            if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                                count = summary.effectiveUnreadCount
+                            }
+                            self.entries[i] = .peer(peerId, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
+                            updated = true
+                        }
+                    } else {
+                        if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
+                            self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+                            updated = true
+                        }
                     }
                 }
             }
