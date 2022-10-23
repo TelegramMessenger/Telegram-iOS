@@ -8188,9 +8188,14 @@ Sorry for the inconvenience.";
 "Notification.TopicCreated" = "Topic created";
 "Notification.TopicClosed" = "Topic closed";
 "Notification.TopicReopened" = "Topic reopened";
+"Notification.TopicClosedAuthor" = "%1$@ closed the topic";
+"Notification.TopicReopenedAuthor" = "%1$@ reopened the topic";
 "Notification.TopicRenamed" = "Topic renamed to \"%1$@\"";
+"Notification.TopicRenamedAuthor" = "%1$@ changed the topic name to \"%2$@\"";
 "Notification.TopicIconChanged" = "Topic icon changed to %1$@";
 "Notification.TopicIconRemoved" = "Topic icon changed";
+"Notification.TopicIconChangedAuthor" = "%1$@ changed the topic icon to %2$@";
+"Notification.TopicIconRemovedAuthor" = "%1$@ changed the topic icon";
 
 "Chat.EmptyTopicPlaceholder.Title" = "Almost done!";
 "Chat.EmptyTopicPlaceholder.Text" = "Send the first message to\nstart this topic.";

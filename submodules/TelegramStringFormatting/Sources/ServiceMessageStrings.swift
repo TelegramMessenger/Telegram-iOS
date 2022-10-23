@@ -690,10 +690,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         return nil
                     }
                 }).first {
-                    if isClosed {
-                        attributedString = NSAttributedString(string: strings.Notification_TopicClosed, font: titleFont, textColor: primaryTextColor)
+                    if case let .user(user) = message.author {
+                        if isClosed {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_TopicClosedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id)])
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_TopicReopenedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id)])
+                        }
                     } else {
-                        attributedString = NSAttributedString(string: strings.Notification_TopicReopened, font: titleFont, textColor: primaryTextColor)
+                        if isClosed {
+                            attributedString = NSAttributedString(string: strings.Notification_TopicClosed, font: titleFont, textColor: primaryTextColor)
+                        } else {
+                            attributedString = NSAttributedString(string: strings.Notification_TopicReopened, font: titleFont, textColor: primaryTextColor)
+                        }
                     }
                 } else if let title = components.compactMap({ item -> String? in
                     switch item {
@@ -703,7 +711,11 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                         return nil
                     }
                 }).first {
-                    attributedString = NSAttributedString(string: strings.Notification_TopicRenamed(title).string, font: titleFont, textColor: primaryTextColor)
+                    if case let .user(user) = message.author {
+                        attributedString = addAttributesToStringWithRanges(strings.Notification_TopicRenamedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), title)._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id)])
+                    } else {
+                        attributedString = NSAttributedString(string: strings.Notification_TopicRenamed(title).string, font: titleFont, textColor: primaryTextColor)
+                    }
                 } else if let maybeFileId = components.compactMap({ item -> Int64? in
                     switch item {
                     case let .iconFileId(id):
@@ -714,9 +726,18 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }).first {
                     if maybeFileId != 0 {
                         let bodyAttributes = MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [:])
-                        attributedString = addAttributesToStringWithRanges(strings.Notification_TopicIconChanged(".")._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil)])])
+                        
+                        if case let .user(user) = message.author {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_TopicIconChangedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder), ".")._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id), 1: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil)])])
+                        } else {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_TopicIconChanged(".")._tuple, body: bodyAttributes, argumentAttributes: [0: MarkdownAttributeSet(font: titleFont, textColor: primaryTextColor, additionalAttributes: [ChatTextInputAttributes.customEmoji.rawValue: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: maybeFileId, file: nil)])])
+                        }
                     } else {
-                        attributedString = NSAttributedString(string: strings.Notification_TopicIconRemoved, font: titleFont, textColor: primaryTextColor)
+                        if case let .user(user) = message.author {
+                            attributedString = addAttributesToStringWithRanges(strings.Notification_TopicIconRemovedAuthor(EnginePeer.user(user).displayTitle(strings: strings, displayOrder: nameDisplayOrder))._tuple, body: bodyAttributes, argumentAttributes: [0: peerMentionAttributes(primaryTextColor: primaryTextColor, peerId: user.id)])
+                        } else {
+                            attributedString = NSAttributedString(string: strings.Notification_TopicIconRemoved, font: titleFont, textColor: primaryTextColor)
+                        }
                     }
                 }
             case .unknown:
