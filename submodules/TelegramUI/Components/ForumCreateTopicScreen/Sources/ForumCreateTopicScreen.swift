@@ -27,6 +27,7 @@ private final class TitleFieldComponent: Component {
     let fileId: Int64
     let iconColor: Int32
     let text: String
+    let placeholderText: String
     let textUpdated: (String) -> Void
     let iconPressed: () -> Void
     
@@ -38,6 +39,7 @@ private final class TitleFieldComponent: Component {
         fileId: Int64,
         iconColor: Int32,
         text: String,
+        placeholderText: String,
         textUpdated: @escaping (String) -> Void,
         iconPressed: @escaping () -> Void
     ) {
@@ -48,6 +50,7 @@ private final class TitleFieldComponent: Component {
         self.fileId = fileId
         self.iconColor = iconColor
         self.text = text
+        self.placeholderText = placeholderText
         self.textUpdated = textUpdated
         self.iconPressed = iconPressed
     }
@@ -72,6 +75,9 @@ private final class TitleFieldComponent: Component {
             return false
         }
         if lhs.text != rhs.text {
+            return false
+        }
+        if lhs.placeholderText != rhs.placeholderText {
             return false
         }
         return true
@@ -146,7 +152,7 @@ private final class TitleFieldComponent: Component {
                 transition: .easeInOut(duration: 0.2),
                 component: AnyComponent(
                     Text(
-                        text: "What do you want to discuss?",
+                        text: component.placeholderText,
                         font: Font.regular(17.0),
                         color: component.placeholderColor
                     )
@@ -599,7 +605,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             let titleHeader = titleHeader.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "ENTER TOPIC TITLE",
+                        string: environment.strings.CreateTopic_EnterTopicTitle,
                         font: Font.regular(13.0),
                         textColor: environment.theme.list.freeTextColor,
                         paragraphAlignment: .natural)
@@ -636,6 +642,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     fileId: state.fileId,
                     iconColor: state.iconColor,
                     text: state.title,
+                    placeholderText: environment.strings.CreateTopic_EnterTopicTitlePlaceholder,
                     textUpdated: { [weak state] text in
                         state?.updateTitle(text)
                     },
@@ -655,7 +662,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             let iconHeader = iconHeader.update(
                 component: MultilineTextComponent(
                     text: .plain(NSAttributedString(
-                        string: "SELECT TOPIC ICON",
+                        string: environment.strings.CreateTopic_SelectTopicIcon,
                         font: Font.regular(13.0),
                         textColor: environment.theme.list.freeTextColor,
                         paragraphAlignment: .natural)
@@ -823,23 +830,22 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
             openPremiumImpl?()
         }), navigationBarAppearance: .transparent)
         
-        //TODO:localize
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let title: String
         let doneTitle: String
         switch mode {
         case .create:
-            title = "New Topic"
-            doneTitle = "Create"
+            title = presentationData.strings.CreateTopic_CreateTitle
+            doneTitle = presentationData.strings.CreateTopic_Create
         case let .edit(topic):
-            title = "Edit Topic"
-            doneTitle = "Done"
+            title = presentationData.strings.CreateTopic_EditTitle
+            doneTitle =  presentationData.strings.Common_Done
             
             self.state = (topic.title, topic.icon)
         }
         
         self.title = title
         
-        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
         
         self.doneBarItem = UIBarButtonItem(title: doneTitle, style: .done, target: self, action: #selector(self.createPressed))

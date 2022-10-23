@@ -8165,3 +8165,13 @@ Sorry for the inconvenience.";
 
 "Message.AudioTranscription.SubscribeToPremium" = "Subscribe to **Telegram Premium** to convert voice to text.";
 "Message.AudioTranscription.SubscribeToPremiumAction" = "More";
+
+"PeerInfo.PrivateShareLinkInfo" = "This link will work only for group members.";
+
+"CreateTopic.CreateTitle" = "New Topic";
+"CreateTopic.EditTitle" = "Edit Topic";
+"CreateTopic.Create" = "Create";
+
+"CreateTopic.EnterTopicTitle" = "ENTER TOPIC TITLE";
+"CreateTopic.EnterTopicTitlePlaceholder" = "What do you want to discuss?";
+"CreateTopic.SelectTopicIcon" = "SELECT TOPIC ICON";
