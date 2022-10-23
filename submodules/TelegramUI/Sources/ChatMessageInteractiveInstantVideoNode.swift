@@ -930,7 +930,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                 forwardInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
                             }
                         }
-                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? 12.0 : (width - messageInfoSize.width - bubbleEdgeInset - 8.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: forwardInfoSize)
+                        let forwardInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 6.0) : (width - messageInfoSize.width - bubbleEdgeInset - 8.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: forwardInfoSize)
                         animation.animator.updateFrame(layer: forwardInfoNode.layer, frame: forwardInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: messageInfoSize.width, height: messageInfoSize.height + forwardInfoSize.height - 1.0)
@@ -954,7 +954,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             strongSelf.replyInfoNode = replyInfoNode
                             strongSelf.addSubnode(replyInfoNode)
                         }
-                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (bubbleEdgeInset + 11.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
+                        let replyInfoFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 5.0) : (width - messageInfoSize.width - bubbleEdgeInset - 9.0 + 10.0)), y: 8.0 + messageInfoSize.height), size: replyInfoSize)
                         animation.animator.updateFrame(layer: replyInfoNode.layer, frame: replyInfoFrame, completion: nil)
                         
                         messageInfoSize = CGSize(width: max(messageInfoSize.width, replyInfoSize.width), height: messageInfoSize.height + replyInfoSize.height)
@@ -964,7 +964,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     }
                     
                     if let replyBackgroundNode = strongSelf.replyBackgroundNode {
-                        let replyBackgroundFrame = CGRect(origin: CGPoint(x: (!incoming ? (bubbleEdgeInset + 10.0) : (width - messageInfoSize.width - bubbleEdgeInset)) - 4.0, y: 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
+                        let replyBackgroundFrame = CGRect(origin: CGPoint(x: (!incoming ? (displayVideoFrame.maxX - width + 4.0) : (width - messageInfoSize.width - bubbleEdgeInset)) - 4.0, y: 6.0), size: CGSize(width: messageInfoSize.width + 8.0, height: messageInfoSize.height + 5.0))
                         animation.animator.updateFrame(layer: replyBackgroundNode.layer, frame: replyBackgroundFrame, completion: nil)
                         
                         let cornerRadius = replyBackgroundNode.frame.height <= 22.0 ? replyBackgroundNode.frame.height / 2.0 : 8.0
