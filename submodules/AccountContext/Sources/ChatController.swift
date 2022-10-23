@@ -15,6 +15,19 @@ public final class ChatMessageItemAssociatedData: Equatable {
         case known(EnginePeer.Id?)
     }
     
+    public struct DisplayTranscribeButton: Equatable {
+        public let canBeDisplayed: Bool
+        public let displayForNotConsumed: Bool
+        
+        public init(
+            canBeDisplayed: Bool,
+            displayForNotConsumed: Bool
+        ) {
+            self.canBeDisplayed = canBeDisplayed
+            self.displayForNotConsumed = displayForNotConsumed
+        }
+    }
+    
     public let automaticDownloadPeerType: MediaAutoDownloadPeerType
     public let automaticDownloadNetworkType: MediaAutoDownloadNetworkType
     public let isRecentActions: Bool
@@ -30,11 +43,11 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let defaultReaction: MessageReaction.Reaction?
     public let isPremium: Bool
     public let forceInlineReactions: Bool
-    public let alwaysDisplayTranscribeButton: Bool
+    public let alwaysDisplayTranscribeButton: DisplayTranscribeButton
     public let accountPeer: EnginePeer?
     public let topicAuthorId: EnginePeer.Id?
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: Bool = false, topicAuthorId: EnginePeer.Id? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions

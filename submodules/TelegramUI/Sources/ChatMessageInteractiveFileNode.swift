@@ -676,10 +676,10 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat {
                     if arguments.associatedData.isPremium {
                         displayTranscribe = true
-                    } else if arguments.associatedData.alwaysDisplayTranscribeButton {
+                    } else if arguments.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
                         if audioDuration >= 60 {
                             displayTranscribe = true
-                        } else if isConsumed == false {
+                        } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                             displayTranscribe = true
                         } else {
                             displayTranscribe = false
