@@ -137,6 +137,11 @@ struct HoleFromPreviousState {
     }
 }
 
+enum StateResetForumTopics {
+    case result(LoadMessageHistoryThreadsResult)
+    case error(PeerId)
+}
+
 struct AccountMutableState {
     let initialState: AccountInitialState
     let branchOperationIndex: Int
@@ -153,7 +158,7 @@ struct AccountMutableState {
     var namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]]
     var updatedOutgoingUniqueMessageIds: [Int64: Int32]
     
-    var resetForumTopicLists: [PeerId: [MessageHistoryThreadData]] = [:]
+    var resetForumTopicLists: [PeerId: StateResetForumTopics] = [:]
     
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]
     var displayAlerts: [(text: String, isDropAuth: Bool)] = []

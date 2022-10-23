@@ -114,16 +114,22 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         } else {
                             let _ = (context.engine.messages.requestStartBotInGroup(botPeerId: botPeerId, groupPeerId: peerId, payload: payload)
                             |> deliverOnMainQueue).start(next: { result in
-                                if let navigationController = navigationController {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                                }
-                                switch result {
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    guard let peer = peer else {
+                                        return
+                                    }
+                                    if let navigationController = navigationController {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                    }
+                                    switch result {
                                     case let .channelParticipant(participant):
                                         context.peerChannelMemberCategoriesContextsManager.externallyAdded(peerId: peerId, participant: participant)
                                     case .none:
                                         break
-                                }
-                                controller?.dismiss()
+                                    }
+                                    controller?.dismiss()
+                                })
                             }, error: { _ in
                                 
                             })
@@ -508,17 +514,23 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                 }
             })
         case let .joinVoiceChat(peerId, invite):
-            dismissInput()
-            if let navigationController = navigationController {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), completion: { chatController in
-                    guard let chatController = chatController as? ChatControllerImpl else {
-                        return
-                    }
-                    navigationController.currentWindow?.present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { [weak chatController] call in
-                        chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
-                    }), on: .root, blockInteraction: false, completion: {})
-                }))
-            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer = peer else {
+                    return
+                }
+                dismissInput()
+                if let navigationController = navigationController {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), completion: { chatController in
+                        guard let chatController = chatController as? ChatControllerImpl else {
+                            return
+                        }
+                        navigationController.currentWindow?.present(VoiceChatJoinScreen(context: context, peerId: peerId, invite: invite, join: { [weak chatController] call in
+                            chatController?.joinGroupCall(peerId: peerId, invite: invite, activeCall: EngineGroupCallDescription(call))
+                        }), on: .root, blockInteraction: false, completion: {})
+                    }))
+                }
+            })
         case .importStickers:
             dismissInput()
             if let navigationController = navigationController, let data = UIPasteboard.general.data(forPasteboardType: "org.telegram.third-party.stickerset"), let stickerPack = ImportStickerPack(data: data), !stickerPack.stickers.isEmpty {
@@ -582,14 +594,23 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         
                         if let navigationController = navigationController {
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
-                            controller.peerSelected = { peer, _ in
-                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
+                            controller.peerSelected = { [weak navigationController] peer, _ in
+                                guard let navigationController else {
+                                    return
+                                }
+                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), attachBotStart: ChatControllerInitialAttachBotStart(botId: bot.peer.id, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
                             }
                             navigationController.pushViewController(controller)
                         }
                     } else {
-                        if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
+                        if case let .chat(chatPeerId, _) = urlContext {
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
+                            |> deliverOnMainQueue).start(next: { chatPeer in
+                                guard let navigationController = navigationController, let chatPeer else {
+                                    return
+                                }
+                                let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(chatPeer), attachBotStart: ChatControllerInitialAttachBotStart(botId: peerId, payload: payload, justInstalled: false), keepStack: .never, useExisting: true))
+                            })
                         } else {
                             presentError(presentationData.strings.WebApp_AddToAttachmentAlreadyAddedError)
                         }
@@ -625,14 +646,24 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                                     
                                     if let navigationController = navigationController {
                                         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, updatedPresentationData: updatedPresentationData, filter: filters, hasChatListSelector: true, hasContactSelector: false, title: presentationData.strings.WebApp_SelectChat))
-                                        controller.peerSelected = { peer, _ in
-                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
+                                        controller.peerSelected = { [weak navigationController] peer, _ in
+                                            guard let navigationController else {
+                                                return
+                                            }
+                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
                                         }
                                         navigationController.pushViewController(controller)
                                     }
                                 } else {
-                                    if let navigationController = navigationController, case let .chat(chatPeerId, _) = urlContext {
-                                        let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: chatPeerId), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
+                                    if case let .chat(chatPeerId, _) = urlContext {
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: chatPeerId))
+                                        |> deliverOnMainQueue).start(next: { chatPeer in
+                                            guard let navigationController = navigationController, let chatPeer else {
+                                                return
+                                            }
+                                            
+                                            let _ = context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(chatPeer), attachBotStart: ChatControllerInitialAttachBotStart(botId: botPeer.id, payload: payload, justInstalled: true), useExisting: true))
+                                        })
                                     }
                                 }
                             })

@@ -229,10 +229,19 @@ public func logoutOptionsController(context: AccountContext, navigationControlle
                 supportPeerDisposable.set((supportPeer.get()
                 |> take(1)
                 |> deliverOnMainQueue).start(next: { peerId in
-                    if let peerId = peerId, let navigationController = navigationController {
-                        dismissImpl?()
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
+                    guard let peerId = peerId else {
+                        return
                     }
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        if let navigationController = navigationController {
+                            dismissImpl?()
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                        }
+                    })
                 }))
             })
         ]), nil)

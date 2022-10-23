@@ -1216,7 +1216,7 @@ func peerInfoCanEdit(peer: Peer?, threadData: MessageHistoryThreadData?, cachedD
                 return true
             } else if let threadData = threadData, threadData.isOwnedByMe {
                 return true
-            } else if let _ = peer.adminRights {
+            } else if peer.hasPermission(.manageTopics) {
                 return true
             } else {
                 return false

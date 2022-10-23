@@ -963,9 +963,15 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
-        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
-        }
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+            }
+        })
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)

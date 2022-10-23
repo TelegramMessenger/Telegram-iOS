@@ -416,9 +416,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         openAccentColorPickerImpl?(themeReference, create)
     }, editTheme: { theme in
         let controller = editThemeController(context: context, mode: .edit(theme), navigateToChat: { peerId in
-            if let navigationController = getNavigationControllerImpl?() {
-                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-            }
+            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { peer in
+                guard let peer = peer else {
+                    return
+                }
+                if let navigationController = getNavigationControllerImpl?() {
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                }
+            })
         })
         pushControllerImpl?(controller)
     }, editCurrentTheme: {
@@ -438,9 +444,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         |> deliverOnMainQueue).start(next: { themeReference in
             if case let .cloud(cloudTheme) = themeReference, cloudTheme.theme.settings?.isEmpty ?? true {
                 let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
-                    if let navigationController = getNavigationControllerImpl?() {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                    }
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                    |> deliverOnMainQueue).start(next: { peer in
+                        guard let peer = peer else {
+                            return
+                        }
+                        if let navigationController = getNavigationControllerImpl?() {
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                        }
+                    })
                 })
                 pushControllerImpl?(controller)
             } else {
@@ -463,9 +475,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
         }
         |> deliverOnMainQueue).start(next: { themeReference in
             let controller = editThemeController(context: context, mode: .create(nil, nil), navigateToChat: { peerId in
-                if let navigationController = getNavigationControllerImpl?() {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                }
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer = peer else {
+                        return
+                    }
+                    if let navigationController = getNavigationControllerImpl?() {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                    }
+                })
             })
             pushControllerImpl?(controller)
         })
@@ -525,9 +543,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                 if theme.theme.isCreator {
                     items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_EditTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                         let controller = editThemeController(context: context, mode: .edit(theme), navigateToChat: { peerId in
-                            if let navigationController = getNavigationControllerImpl?() {
-                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                            }
+                            let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                            |> deliverOnMainQueue).start(next: { peer in
+                                guard let peer = peer else {
+                                    return
+                                }
+                                if let navigationController = getNavigationControllerImpl?() {
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                }
+                            })
                         })
                         
                         c.dismiss(completion: {
@@ -555,9 +579,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                             let controller = ThemeAccentColorController(context: context, mode: .edit(settings: nil, theme: theme, wallpaper: wallpaper, generalThemeReference: reference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
                                 let controller = editThemeController(context: context, mode: .create(result, settings
                                 ), navigateToChat: { peerId in
-                                    if let navigationController = getNavigationControllerImpl?() {
-                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                                    }
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        guard let peer = peer else {
+                                            return
+                                        }
+                                        if let navigationController = getNavigationControllerImpl?() {
+                                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                        }
+                                    })
                                 })
                                 updateControllersImpl?({ controllers in
                                     var controllers = controllers
@@ -761,9 +791,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                     if cloudTheme.theme.isCreator && cloudThemeExists {
                         items.append(.action(ContextMenuActionItem(text: presentationData.strings.Appearance_EditTheme, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/ApplyTheme"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             let controller = editThemeController(context: context, mode: .edit(cloudTheme), navigateToChat: { peerId in
-                                if let navigationController = getNavigationControllerImpl?() {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                                }
+                                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                |> deliverOnMainQueue).start(next: { peer in
+                                    guard let peer = peer else {
+                                        return
+                                    }
+                                    if let navigationController = getNavigationControllerImpl?() {
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                    }
+                                })
                             })
                             
                             c.dismiss(completion: {
@@ -796,9 +832,15 @@ public func themePickerController(context: AccountContext, focusOnItemTag: Theme
                                 }
                                 let controller = ThemeAccentColorController(context: context, mode: .edit(settings: settings, theme: theme, wallpaper: wallpaper, generalThemeReference: effectiveThemeReference.generalThemeReference, defaultThemeReference: nil, create: true, completion: { result, settings in
                                     let controller = editThemeController(context: context, mode: .create(hasSettings ? nil : result, hasSettings ? settings : nil), navigateToChat: { peerId in
-                                        if let navigationController = getNavigationControllerImpl?() {
-                                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                                        }
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                        |> deliverOnMainQueue).start(next: { peer in
+                                            guard let peer = peer else {
+                                                return
+                                            }
+                                            if let navigationController = getNavigationControllerImpl?() {
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                            }
+                                        })
                                     })
                                     updateControllersImpl?({ controllers in
                                         var controllers = controllers

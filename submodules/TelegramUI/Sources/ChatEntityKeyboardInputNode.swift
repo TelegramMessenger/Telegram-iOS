@@ -992,19 +992,26 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     return
                                 }
                                 
-                                if suggestSavedMessages, let navigationController = controllerInteraction.navigationController() {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                                        navigationController: navigationController,
-                                        chatController: nil,
-                                        context: context,
-                                        chatLocation: .peer(id: context.account.peerId),
-                                        subject: nil,
-                                        updateTextInputState: nil,
-                                        activateInput: .entityInput,
-                                        keepStack: .always,
-                                        completion: { _ in
-                                        })
-                                    )
+                                if suggestSavedMessages {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        guard let peer = peer, let navigationController = controllerInteraction.navigationController() else {
+                                            return
+                                        }
+                                        
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                            navigationController: navigationController,
+                                            chatController: nil,
+                                            context: context,
+                                            chatLocation: .peer(peer),
+                                            subject: nil,
+                                            updateTextInputState: nil,
+                                            activateInput: .entityInput,
+                                            keepStack: .always,
+                                            completion: { _ in
+                                            })
+                                        )
+                                    })
                                 } else {
                                     var replaceImpl: ((ViewController) -> Void)?
                                     let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {

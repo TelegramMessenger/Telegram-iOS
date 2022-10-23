@@ -164,9 +164,9 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         var canManage = false
                         if channel.flags.contains(.isCreator) {
                             canManage = true
-                        } else if channel.adminRights != nil {
+                        } else if channel.hasPermission(.manageTopics) {
                             canManage = true
-                        } else if threadData.isOwn {
+                        } else if threadData.isOwnedByMe {
                             canManage = true
                         }
                         

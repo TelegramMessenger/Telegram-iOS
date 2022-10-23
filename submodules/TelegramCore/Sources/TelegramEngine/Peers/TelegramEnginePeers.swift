@@ -775,8 +775,11 @@ public extension TelegramEngine {
             return _internal_deleteNotificationSound(account: self.account, fileId: fileId)
         }
         
-        public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer.Id, NoError> {
+        public func ensurePeerIsLocallyAvailable(peer: EnginePeer) -> Signal<EnginePeer, NoError> {
             return _internal_storedMessageFromSearchPeer(account: self.account, peer: peer._asPeer())
+            |> map { result -> EnginePeer in
+                return EnginePeer(result)
+            }
         }
         
         public func ensurePeersAreLocallyAvailable(peers: [EnginePeer]) -> Signal<Never, NoError> {

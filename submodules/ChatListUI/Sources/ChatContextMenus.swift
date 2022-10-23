@@ -457,9 +457,15 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                                             chatListController.present(textAlertController(context: context, title: nil, text: presentationData.strings.Login_UnknownError, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), in: .window(.root))
                                         }
                                     }, completed: {
-                                        if let navigationController = (chatListController?.navigationController as? NavigationController) {
-                                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-                                        }
+                                        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                                        |> deliverOnMainQueue).start(next: { peer in
+                                            guard let peer = peer else {
+                                                return
+                                            }
+                                            if let navigationController = (chatListController?.navigationController as? NavigationController) {
+                                                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+                                            }
+                                        })
                                     }))
                                     f(.default)
                                 })))
@@ -709,22 +715,23 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             }
         })))
         
-        var canManage = false
+        var canOpenClose = false
         if channel.flags.contains(.isCreator) {
-            canManage = true
-        } else if channel.adminRights != nil {
-            canManage = true
+            canOpenClose = true
+        } else if channel.hasPermission(.manageTopics) {
+            canOpenClose = true
         } else if threadData.isOwnedByMe {
-            canManage = true
+            canOpenClose = true
         }
-        if canManage {
+        if canOpenClose {
             //TODO:localize
             items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? "Restart" : "Close", icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
                 
                 let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
             })))
-            
+        }
+        if channel.hasPermission(.deleteAllMessages) {
             items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
                 f(.default)
                 

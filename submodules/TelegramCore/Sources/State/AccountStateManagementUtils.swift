@@ -527,7 +527,7 @@ func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Differ
     }
 }
 
-func finalStateWithUpdateGroups(postbox: Postbox, network: Network, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
+func finalStateWithUpdateGroups(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, groups: [UpdateGroup]) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var hadReset = false
@@ -651,10 +651,10 @@ func finalStateWithUpdateGroups(postbox: Postbox, network: Network, state: Accou
         collectedUpdates.append(Api.Update.updateDeleteChannelMessages(channelId: channelId, messages: [], pts: pts, ptsCount: ptsCount))
     }
     
-    return finalStateWithUpdates(postbox: postbox, network: network, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: false, updatesDate: updatesDate)
+    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: collectedUpdates, shouldPoll: hadReset, missingUpdates: !ptsUpdatesAfterHole.isEmpty || !qtsUpdatesAfterHole.isEmpty || !seqGroupsAfterHole.isEmpty, shouldResetChannels: false, updatesDate: updatesDate)
 }
 
-func finalStateWithDifference(postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
+func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, difference: Api.updates.Difference) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var messages: [Api.Message] = []
@@ -709,7 +709,7 @@ func finalStateWithDifference(postbox: Postbox, network: Network, state: Account
         updatedState.addSecretMessages(encryptedMessages)
     }
     
-    return finalStateWithUpdates(postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil)
+    return finalStateWithUpdates(accountPeerId: accountPeerId, postbox: postbox, network: network, state: updatedState, updates: updates, shouldPoll: false, missingUpdates: false, shouldResetChannels: true, updatesDate: nil)
 }
 
 private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
@@ -830,15 +830,15 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
     return result
 }
 
-private func finalStateWithUpdates(postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
+private func finalStateWithUpdates(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?) -> Signal<AccountFinalState, NoError> {
     return network.currentGlobalTime
     |> take(1)
     |> mapToSignal { serverTime -> Signal<AccountFinalState, NoError> in
-        return finalStateWithUpdatesAndServerTime(postbox: postbox, network: network, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
+        return finalStateWithUpdatesAndServerTime(accountPeerId: accountPeerId, postbox: postbox, network: network, state: state, updates: updates, shouldPoll: shouldPoll, missingUpdates: missingUpdates, shouldResetChannels: shouldResetChannels, updatesDate: updatesDate, serverTime: Int32(serverTime))
     }
 }
     
-private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
+private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: Postbox, network: Network, state: AccountMutableState, updates: [Api.Update], shouldPoll: Bool, missingUpdates: Bool, shouldResetChannels: Bool, updatesDate: Int32?, serverTime: Int32) -> Signal<AccountFinalState, NoError> {
     var updatedState = state
     
     var channelsToPoll = Set<PeerId>()
@@ -1585,7 +1585,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
             }
         }
         if !channelPeers.isEmpty {
-            let resetSignal = resetChannels(postbox: postbox, network: network, peers: channelPeers, state: updatedState)
+            let resetSignal = resetChannels(accountPeerId: accountPeerId, postbox: postbox, network: network, peers: channelPeers, state: updatedState)
             |> map { resultState -> (AccountMutableState, Bool, Int32?) in
                 return (resultState, true, nil)
             }
@@ -1596,7 +1596,7 @@ private func finalStateWithUpdatesAndServerTime(postbox: Postbox, network: Netwo
     } else {
         for peerId in channelsToPoll.union(missingUpdatesFromChannels) {
             if let peer = updatedState.peers[peerId] {
-                pollChannelSignals.append(pollChannel(postbox: postbox, network: network, peer: peer, state: updatedState.branch()))
+                pollChannelSignals.append(pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: updatedState.branch()))
             } else {
                 Logger.shared.log("State", "can't poll channel \(peerId): no peer found")
             }
@@ -2220,7 +2220,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
     }
 }
 
-func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager, delayCompletion: Bool) -> Signal<Int32, NoError> {
+func pollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager, delayCompletion: Bool) -> Signal<Int32, NoError> {
     return postbox.transaction { transaction -> Signal<Int32, NoError> in
         guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
             if delayCompletion {
@@ -2251,7 +2251,7 @@ func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateMa
             }
         }
         let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
-        return pollChannel(postbox: postbox, network: network, peer: peer, state: initialState)
+        return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
@@ -2279,7 +2279,7 @@ func pollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateMa
     |> switchToLatest
 }
 
-public func standalonePollChannelOnce(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Never, NoError> {
+public func standalonePollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Never, NoError> {
     return postbox.transaction { transaction -> Signal<Never, NoError> in
         guard let accountState = (transaction.getState() as? AuthorizedAccountState)?.state, let peer = transaction.getPeer(peerId) else {
             return .complete()
@@ -2305,7 +2305,7 @@ public func standalonePollChannelOnce(postbox: Postbox, network: Network, peerId
             }
         }
         let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
-        return pollChannel(postbox: postbox, network: network, peer: peer, state: initialState)
+        return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
             |> mapToSignal { resultingState -> Signal<AccountFinalState, NoError> in
@@ -2322,13 +2322,13 @@ public func standalonePollChannelOnce(postbox: Postbox, network: Network, peerId
     |> switchToLatest
 }
 
-func keepPollingChannel(postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Int32, NoError> {
-    return pollChannelOnce(postbox: postbox, network: network, peerId: peerId, stateManager: stateManager, delayCompletion: true)
+func keepPollingChannel(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, stateManager: AccountStateManager) -> Signal<Int32, NoError> {
+    return pollChannelOnce(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: peerId, stateManager: stateManager, delayCompletion: true)
     |> restart
     |> delay(1.0, queue: .concurrentDefaultQueue())
 }
 
-private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
+private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Network, peers: [Peer], state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
     var inputPeers: [Api.InputDialogPeer] = []
     for peer in peers {
         if let inputPeer = apiInputPeer(peer) {
@@ -2357,6 +2357,8 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
         var invalidateChannelStates: [PeerId: Int32] = [:]
         var channelSynchronizedUntilMessage: [PeerId: MessageId.Id] = [:]
         var notificationSettings: [PeerId: TelegramPeerNotificationSettings] = [:]
+        
+        var resetForumTopics = Set<PeerId>()
         
         if let result = result {
             switch result {
@@ -2415,7 +2417,7 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
                         
                         updatedState.updatePeerChatInclusion(peerId: peerId, groupId: groupId, changedGroup: false)
                         
-                        updatedState.resetForumTopicLists[peerId] = []
+                        resetForumTopics.insert(peerId)
                     }
                     
                     for message in messages {
@@ -2480,16 +2482,39 @@ private func resetChannels(postbox: Postbox, network: Network, peers: [Peer], st
             updatedState.updateNotificationSettings(.peer(peerId: peerId, threadId: nil), notificationSettings: settings)
         }
         
-        // TODO: delete messages later than top
-        
-        return resolveAssociatedMessages(postbox: postbox, network: network, state: updatedState)
-        |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
-            return .single(resultingState)
+        var resetTopicsSignals: [Signal<StateResetForumTopics, NoError>] = []
+        for resetForumTopicPeerId in resetForumTopics {
+            resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, offsetIndex: nil, limit: 20)
+            |> map(StateResetForumTopics.result)
+            |> `catch` { _ -> Signal<StateResetForumTopics, NoError> in
+                return .single(.error(resetForumTopicPeerId))
+            })
+        }
+        return combineLatest(resetTopicsSignals)
+        |> mapToSignal { results -> Signal<AccountMutableState, NoError> in
+            var updatedState = updatedState
+            
+            for result in results {
+                let peerId: PeerId
+                switch result {
+                case let .result(item):
+                    peerId = item.peerId
+                case let .error(peerIdValue):
+                    peerId = peerIdValue
+                }
+                updatedState.resetForumTopicLists[peerId] = result
+            }
+            
+            // TODO: delete messages later than top
+            return resolveAssociatedMessages(postbox: postbox, network: network, state: updatedState)
+            |> mapToSignal { resultingState -> Signal<AccountMutableState, NoError> in
+                return .single(resultingState)
+            }
         }
     }
 }
 
-private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
+private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Network, peer: Peer, state: AccountMutableState) -> Signal<(AccountMutableState, Bool, Int32?), NoError> {
     if let inputChannel = apiInputChannel(peer) {
         let limit: Int32
         #if DEBUG
@@ -2659,6 +2684,8 @@ private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: 
                     break
                 }
                 
+                var resetForumTopics = Set<PeerId>()
+                
                 if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount) = parameters {
                     updatedState.updateChannelState(peer.peerId, pts: pts)
                     updatedState.updateChannelInvalidationPts(peer.peerId, invalidationPts: pts)
@@ -2667,7 +2694,7 @@ private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: 
                     updatedState.mergeUsers(users)
                     
                     updatedState.setNeedsHoleFromPreviousState(peerId: peer.peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
-                    updatedState.resetForumTopicLists[peer.peerId] = []
+                    resetForumTopics.insert(peer.peerId)
                     
                     for apiMessage in messages {
                         if var message = StoreMessage(apiMessage: apiMessage) {
@@ -2700,7 +2727,31 @@ private func pollChannel(postbox: Postbox, network: Network, peer: Peer, state: 
                     assertionFailure()
                 }
                 
-                return .single((updatedState, true, apiTimeout))
+                var resetTopicsSignals: [Signal<StateResetForumTopics, NoError>] = []
+                for resetForumTopicPeerId in resetForumTopics {
+                    resetTopicsSignals.append(_internal_requestMessageHistoryThreads(accountPeerId: accountPeerId, postbox: postbox, network: network, peerId: resetForumTopicPeerId, offsetIndex: nil, limit: 20)
+                    |> map(StateResetForumTopics.result)
+                    |> `catch` { _ -> Signal<StateResetForumTopics, NoError> in
+                        return .single(.error(resetForumTopicPeerId))
+                    })
+                }
+                return combineLatest(resetTopicsSignals)
+                |> mapToSignal { results -> Signal<(AccountMutableState, Bool, Int32?), NoError> in
+                    var updatedState = updatedState
+                    
+                    for result in results {
+                        let peerId: PeerId
+                        switch result {
+                        case let .result(item):
+                            peerId = item.peerId
+                        case let .error(peerIdValue):
+                            peerId = peerIdValue
+                        }
+                        updatedState.resetForumTopicLists[peerId] = result
+                    }
+                    
+                    return .single((updatedState, true, apiTimeout))
+                }
             }
         }
     } else {
@@ -4039,7 +4090,8 @@ func replayFinalState(
         }
     }
     
-    for (peerId, _) in finalState.state.resetForumTopicLists {
+    var resetForumTopicResults: [LoadMessageHistoryThreadsResult] = []
+    for (peerId, result) in finalState.state.resetForumTopicLists {
         for item in transaction.getMessageHistoryThreadIndex(peerId: peerId, limit: 10000) {
             let holeLowerBound = transaction.holeLowerBoundForTopValidRange(peerId: peerId, threadId: item.threadId, namespace: Namespaces.Message.Cloud, space: .everywhere)
          
@@ -4049,7 +4101,15 @@ func replayFinalState(
             }
         }
         
-        transaction.setPeerThreadCombinedState(peerId: peerId, state: nil)
+        switch result {
+        case let .result(value):
+            resetForumTopicResults.append(value)
+        case .error:
+            transaction.setPeerThreadCombinedState(peerId: peerId, state: nil)
+        }
+    }
+    if !resetForumTopicResults.isEmpty {
+        applyLoadMessageHistoryThreadsResults(accountPeerId: accountPeerId, transaction: transaction, results: resetForumTopicResults)
     }
     
 //TODO Please do not forget fix holes space.

@@ -637,10 +637,17 @@ public func channelDiscussionGroupSetupController(context: AccountContext, updat
         controller?.present(c, in: .window(.root), with: a)
     }
     navigateToGroupImpl = { [weak controller] groupId in
-        guard let navigationController = controller?.navigationController as? NavigationController else {
-            return
-        }
-        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: groupId), keepStack: .always))
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: groupId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            
+            guard let navigationController = controller?.navigationController as? NavigationController else {
+                return
+            }
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+        })
     }
     return controller
 }

@@ -32,13 +32,13 @@ public enum ChatListItemContent {
     public struct ThreadInfo: Equatable {
         public var id: Int64
         public var info: EngineMessageHistoryThread.Info
-        public var isOwner: Bool
+        public var isOwnedByMe: Bool
         public var isClosed: Bool
         
-        public init(id: Int64, info: EngineMessageHistoryThread.Info, isOwner: Bool, isClosed: Bool) {
+        public init(id: Int64, info: EngineMessageHistoryThread.Info, isOwnedByMe: Bool, isClosed: Bool) {
             self.id = id
             self.info = info
-            self.isOwner = isOwner
+            self.isOwnedByMe = isOwnedByMe
             self.isClosed = isClosed
         }
     }
@@ -2010,9 +2010,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 var canOpenClose = false
                                 if channel.flags.contains(.isCreator) {
                                     canOpenClose = true
-                                } else if channel.hasPermission(.pinMessages) {
+                                } else if channel.hasPermission(.manageTopics) {
                                     canOpenClose = true
-                                } else if let threadInfo = threadInfo, threadInfo.isOwner {
+                                } else if let threadInfo = threadInfo, threadInfo.isOwnedByMe {
                                     canOpenClose = true
                                 }
                                 let canDelete = channel.hasPermission(.deleteAllMessages)

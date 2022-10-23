@@ -259,9 +259,17 @@ public func messageStatsController(context: AccountContext, messageId: MessageId
         controller?.clearItemNodesHighlight(animated: true)
     }
     navigateToMessageImpl = { [weak controller] messageId in
-        if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: messageId.peerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
-        }
+        let _ = (context.engine.data.get(
+            TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)
+        )
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            if let navigationController = controller?.navigationController as? NavigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {}, peekData: nil))
+            }
+        })
     }
     return controller
 }

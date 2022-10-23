@@ -472,9 +472,16 @@ public final class InviteLinkViewController: ViewController {
             self.isOpaque = false
         
             self.interaction = InviteLinkViewInteraction(context: context, openPeer: { [weak self] peerId in
-                if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
-                }
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer = peer else {
+                        return
+                    }
+                    
+                    if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+                    }
+                })
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
                 

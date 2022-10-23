@@ -1384,8 +1384,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 }
                             }
                             
-                            let chatLocation: ChatLocation
-                            chatLocation = .peer(id: peer.id)
+                            let chatLocation: NavigateToChatControllerParams.Location
+                            chatLocation = .peer(peer)
                             
                             strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: chatLocation, activateInput: (activateInput && !peer.isDeleted) ? .text : nil, scrollToEndIfExists: scrollToEndIfExists, animated: !scrollToEndIfExists, options: navigationAnimationOptions, parentGroupId: groupId._asGroup(), chatListFilter: strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id, completion: { [weak self] controller in
                                 self?.chatListDisplayNode.containerNode.currentItemNode.clearHighlightAnimated(true)
@@ -1461,7 +1461,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.chatListDisplayNode.requestOpenMessageFromSearch = { [weak self] peer, threadId, messageId, deactivateOnAction in
             if let strongSelf = self {
                 strongSelf.openMessageFromSearchDisposable.set((strongSelf.context.engine.peers.ensurePeerIsLocallyAvailable(peer: peer)
-                |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeerId in
+                |> deliverOnMainQueue).start(next: { [weak strongSelf] actualPeer in
                     if let strongSelf = strongSelf {
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             var scrollToEndIfExists = false
@@ -1475,7 +1475,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if let threadId = threadId  {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: actualPeerId), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(actualPeer), subject: .message(id: .id(messageId), highlight: true, timecode: nil), purposefulAction: {
                                     if deactivateOnAction {
                                         self?.deactivateSearch(animated: false)
                                     }
@@ -1508,7 +1508,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             if let threadId = threadId  {
                                 let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
                             } else {
-                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), purposefulAction: { [weak self] in
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), purposefulAction: { [weak self] in
                                     self?.deactivateSearch(animated: false)
                                 }, scrollToEndIfExists: scrollToEndIfExists, options: navigationAnimationOptions))
                             }
@@ -2652,7 +2652,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     
                     sourceController?.beginMessageSearch("")
                 })))
-            } else if channel.hasPermission(.manageTopics) {
+            } else if channel.hasPermission(.createTopics) {
                 items.append(.separator)
                 
                 //TODO:localize
