@@ -47,7 +47,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     }
     
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
-    var contextActionIsEnabled: Bool = true {
+    var contextActionIsEnabled: Bool = false {
         didSet {
             if self.contextActionIsEnabled != oldValue {
                 self.containerNode.isGestureEnabled = self.contextActionIsEnabled
@@ -57,6 +57,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
         
     override init() {
         self.containerNode = ContextControllerSourceNode()
+        self.containerNode.isGestureEnabled = false
         self.avatarNode = AvatarNode(font: normalFont)
         self.statusView = ComponentView()
         
