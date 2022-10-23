@@ -553,9 +553,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 if let topic = topic {
                     remainingWidth -= 22.0 + 2.0
                     
-                    arrowIconImage = PresentationResourcesChatList.topicArrowIcon(theme)
-                    if let arrowIconImage = arrowIconImage {
-                        remainingWidth -= arrowIconImage.size.width + 6.0 * 2.0
+                    if authorTitle != nil {
+                        arrowIconImage = PresentationResourcesChatList.topicArrowIcon(theme)
+                        if let arrowIconImage = arrowIconImage {
+                            remainingWidth -= arrowIconImage.size.width + 6.0 * 2.0
+                        }
                     }
                     
                     topicTitleArguments = TextNodeLayoutArguments(attributedString: topic.title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
@@ -565,6 +567,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 
                 var size = authorTitleLayout.0.size
                 if let topicTitleLayout = topicTitleLayout {
+                    size.height = max(size.height, topicTitleLayout.0.size.height)
                     size.width += 10.0 + topicTitleLayout.0.size.width
                 }
                 
@@ -578,7 +581,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     self.authorNode.frame = authorFrame
                     
                     var nextX = authorFrame.maxX - 1.0
-                    if let arrowIconImage = arrowIconImage, let topic = topic {
+                    if authorTitle == nil {
+                        nextX = 0.0
+                    }
+                    
+                    if let arrowIconImage = arrowIconImage {
                         let titleTopicArrowNode: ASImageNode
                         if let current = self.titleTopicArrowNode {
                             titleTopicArrowNode = current
@@ -591,7 +598,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         nextX += 6.0
                         titleTopicArrowNode.frame = CGRect(origin: CGPoint(x: nextX, y: 5.0), size: arrowIconImage.size)
                         nextX += arrowIconImage.size.width + 6.0
-                        
+                    } else {
+                        if let titleTopicArrowNode = self.titleTopicArrowNode {
+                            self.titleTopicArrowNode = nil
+                            titleTopicArrowNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let topic {
                         let titleTopicIconView: ComponentHostView<Empty>
                         if let current = self.titleTopicIconView {
                             titleTopicIconView = current
@@ -627,10 +641,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         titleTopicIconView.frame = CGRect(origin: CGPoint(x: nextX, y: UIScreenPixel), size: iconSize)
                         nextX += iconSize.width + 2.0
                     } else {
-                        if let titleTopicArrowNode = self.titleTopicArrowNode {
-                            self.titleTopicArrowNode = nil
-                            titleTopicArrowNode.removeFromSupernode()
-                        }
                         if let titleTopicIconView = self.titleTopicIconView {
                             self.titleTopicIconView = nil
                             titleTopicIconView.removeFromSuperview()
@@ -1315,6 +1325,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             var authorAttributedString: NSAttributedString?
+            var authorIsCurrentChat: Bool = false
             var textAttributedString: NSAttributedString?
             var textLeftCutout: CGFloat = 0.0
             var dateAttributedString: NSAttributedString?
@@ -1452,6 +1463,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 peerText = authorSignature
                             } else {
                                 peerText = author.id == account.peerId ? item.presentationData.strings.DialogList_You : EnginePeer(author).displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
+                                authorIsCurrentChat = author.id == peer.id
                             }
                         }
                     }
@@ -1919,14 +1931,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             badgeSize = max(badgeSize, reorderInset)
             
-            let authorTitle = (hideAuthor && !hasDraft) ? nil : authorAttributedString
+            var effectiveAuthorTitle = (hideAuthor && !hasDraft) ? nil : authorAttributedString
             
             var forumThreadTitle: (title: NSAttributedString, iconId: Int64?, iconColor: Int32)?
-            if let _ = authorTitle, let forumThread {
+            if let _ = effectiveAuthorTitle, let forumThread {
+                if authorIsCurrentChat {
+                    effectiveAuthorTitle = nil
+                }
                 forumThreadTitle = (NSAttributedString(string: forumThread.title, font: textFont, textColor: theme.authorNameColor), forumThread.iconId, forumThread.iconColor)
             }
-            
-            let (authorLayout, authorApply) = authorLayout(item.context, rawContentWidth - badgeSize, item.presentationData.theme, authorTitle, forumThreadTitle)
+            let (authorLayout, authorApply) = authorLayout(item.context, rawContentWidth - badgeSize, item.presentationData.theme, effectiveAuthorTitle, forumThreadTitle)
             
             var textCutout: TextNodeCutout?
             if !textLeftCutout.isZero {

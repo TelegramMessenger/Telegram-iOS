@@ -155,6 +155,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                             break
                         }
                     }
+                    
+                    if let titleValue = title, let threadData = item.threadData {
+                        title = "\(threadData.info.title) (\(titleValue))"
+                    }
                 }
             } else {
                 title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)

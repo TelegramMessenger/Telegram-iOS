@@ -1394,7 +1394,9 @@ public func messagesForNotification(transaction: Transaction, id: MessageId, alw
             }
         }
     }
-    
+    if threadData == nil, let threadId = message.threadId {
+        threadData = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self)
+    }
     
     for media in message.media {
         if let action = media as? TelegramMediaAction {
