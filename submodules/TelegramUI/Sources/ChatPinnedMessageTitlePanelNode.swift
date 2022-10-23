@@ -290,7 +290,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         let isReplyThread: Bool
-        if case .replyThread = interfaceState.chatLocation {
+        if case let .replyThread(message) = interfaceState.chatLocation, !message.isForumPost {
             isReplyThread = true
         } else {
             isReplyThread = false

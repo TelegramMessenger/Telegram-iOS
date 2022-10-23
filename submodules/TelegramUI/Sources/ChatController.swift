@@ -13817,7 +13817,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
 
         let replyMessageId = self.presentationInterfaceState.interfaceState.replyMessageId
 
-        if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
+        if self.context.engine.messages.enqueueOutgoingMessageWithChatContextResult(to: peerId, threadId: self.chatLocation.threadId, botId: results.botId, result: result, replyToMessageId: replyMessageId, hideVia: hideVia, silentPosting: silentPosting) {
             self.chatDisplayNode.setupSendActionOnViewUpdate({ [weak self] in
                 if let strongSelf = self {
                     strongSelf.chatDisplayNode.collapseInput()
