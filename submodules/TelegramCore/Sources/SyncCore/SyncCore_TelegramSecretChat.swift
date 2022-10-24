@@ -11,7 +11,7 @@ public final class TelegramSecretChat: Peer, Equatable {
     public let messageAutoremoveTimeout: Int32?
     
     public var indexName: PeerIndexNameRepresentation {
-        return .title(title: "", addressName: nil)
+        return .title(title: "", addressNames: [])
     }
     
     public var associatedMediaIds: [MediaId]? { return nil }

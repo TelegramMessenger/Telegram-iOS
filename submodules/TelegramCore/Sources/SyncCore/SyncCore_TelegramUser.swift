@@ -137,7 +137,11 @@ public final class TelegramUser: Peer, Equatable {
     }
     
     public var indexName: PeerIndexNameRepresentation {
-        return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressName: self.username, phoneNumber: self.phone)
+        var addressNames = self.usernames.map { $0.username }
+        if addressNames.isEmpty, let username = self.username, !username.isEmpty {
+            addressNames = [username]
+        }
+        return .personName(first: self.firstName ?? "", last: self.lastName ?? "", addressNames: addressNames, phoneNumber: self.phone)
     }
     
     public var associatedMediaIds: [MediaId]? {

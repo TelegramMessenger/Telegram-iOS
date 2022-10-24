@@ -168,7 +168,11 @@ public final class TelegramChannel: Peer, Equatable {
     public let usernames: [TelegramPeerUsername]
     
     public var indexName: PeerIndexNameRepresentation {
-        return .title(title: self.title, addressName: self.username)
+        var addressNames = self.usernames.map { $0.username }
+        if addressNames.isEmpty, let username = self.username, !username.isEmpty {
+            addressNames = [username]
+        }
+        return .title(title: self.title, addressNames: addressNames)
     }
     
     public var associatedMediaIds: [MediaId]? { return nil }

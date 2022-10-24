@@ -222,8 +222,12 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
         switch domain {
             case .account:
                 return account.network.request(Api.functions.account.toggleUsername(username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
-                |> mapError { _ -> ToggleAddressNameActiveError in
-                    return .generic
+                |> mapError { error -> ToggleAddressNameActiveError in
+                    if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
+                        return .activeLimitReached
+                    } else {
+                        return .generic
+                    }
                 }
                 |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
                     return account.postbox.transaction { transaction -> Void in
@@ -276,8 +280,12 @@ func _internal_toggleAddressNameActive(account: Account, domain: AddressNameDoma
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
                     return account.network.request(Api.functions.channels.toggleUsername(channel: inputChannel, username: name, active: active ? .boolTrue : .boolFalse), automaticFloodWait: false)
-                        |> mapError { _ -> ToggleAddressNameActiveError in
-                            return .generic
+                        |> mapError { error -> ToggleAddressNameActiveError in
+                            if error.errorDescription == "USERNAMES_ACTIVE_TOO_MUCH" {
+                                return .activeLimitReached
+                            } else {
+                                return .generic
+                            }
                         }
                         |> mapToSignal { result -> Signal<Void, ToggleAddressNameActiveError> in
                             return account.postbox.transaction { transaction -> Void in
