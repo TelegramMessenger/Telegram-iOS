@@ -2604,7 +2604,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             items.append(.separator)
             
             items.append(.action(ContextMenuActionItem(text: strings.GroupInfo_Title, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Contact List/CreateGroupActionIcon"), color: theme.contextMenu.primaryColor)
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Groups"), color: theme.contextMenu.primaryColor)
             }, action: { [weak sourceController] _, f in
                 f(.default)
                 
