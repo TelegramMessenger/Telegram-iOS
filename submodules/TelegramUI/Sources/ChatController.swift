@@ -830,12 +830,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            var openChatLocation = strongSelf.chatLocation
-            if case let .replyThread(replyThreadMessage) = openChatLocation {
+            let openChatLocation = strongSelf.chatLocation
+            /*if case let .replyThread(replyThreadMessage) = openChatLocation {
                 if message.threadId != makeMessageThreadId(replyThreadMessage.messageId) {
                     openChatLocation = .peer(id: message.id.peerId)
                 }
-            }
+            }*/
             
             return context.sharedContext.openChatMessage(OpenChatMessageParams(context: context, updatedPresentationData: strongSelf.updatedPresentationData, chatLocation: openChatLocation, chatLocationContextHolder: strongSelf.chatLocationContextHolder, message: message, standalone: false, reverseMessageGalleryOrder: false, mode: mode, navigationController: strongSelf.effectiveNavigationController, dismissInput: {
                 self?.chatDisplayNode.dismissInput()

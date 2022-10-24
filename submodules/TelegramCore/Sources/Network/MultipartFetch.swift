@@ -545,11 +545,11 @@ private final class MultipartFetchManager {
             }
         })
         
-        self.markSpeedRecord()
+        /*self.markSpeedRecord()
         self.speedTimer = SwiftSignalKit.Timer(timeout: 1.0, repeat: true, completion: { [weak self] in
             self?.markSpeedRecord()
         }, queue: self.queue)
-        self.speedTimer?.start()
+        self.speedTimer?.start()*/
     }
     
     deinit {

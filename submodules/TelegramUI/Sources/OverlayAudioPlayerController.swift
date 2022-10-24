@@ -11,7 +11,7 @@ import UndoUI
 
 final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayerController {
     private let context: AccountContext
-    let peerId: PeerId
+    let chatLocation: ChatLocation
     let type: MediaManagerPlayerType
     let initialMessageId: MessageId
     let initialOrder: MusicPlaybackSettingsOrder
@@ -27,9 +27,9 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     
     private var accountInUseDisposable: Disposable?
     
-    init(context: AccountContext, peerId: PeerId, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation? = nil, parentNavigationController: NavigationController?) {
+    init(context: AccountContext, chatLocation: ChatLocation, type: MediaManagerPlayerType, initialMessageId: MessageId, initialOrder: MusicPlaybackSettingsOrder, playlistLocation: SharedMediaPlaylistLocation? = nil, parentNavigationController: NavigationController?) {
         self.context = context
-        self.peerId = peerId
+        self.chatLocation = chatLocation
         self.type = type
         self.initialMessageId = initialMessageId
         self.initialOrder = initialOrder
@@ -54,7 +54,7 @@ final class OverlayAudioPlayerControllerImpl: ViewController, OverlayAudioPlayer
     }
     
     override public func loadDisplayNode() {
-        self.displayNode = OverlayAudioPlayerControllerNode(context: self.context, peerId: self.peerId, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, playlistLocation: self.playlistLocation, requestDismiss: { [weak self] in
+        self.displayNode = OverlayAudioPlayerControllerNode(context: self.context, chatLocation: self.chatLocation, type: self.type, initialMessageId: self.initialMessageId, initialOrder: self.initialOrder, playlistLocation: self.playlistLocation, requestDismiss: { [weak self] in
             self?.dismiss()
         }, requestShare: { [weak self] messageId in
             if let strongSelf = self {
