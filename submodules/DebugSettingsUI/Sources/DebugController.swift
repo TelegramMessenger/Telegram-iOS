@@ -31,8 +31,9 @@ private final class DebugControllerArguments {
     let pushController: (ViewController) -> Void
     let getRootController: () -> UIViewController?
     let getNavigationController: () -> NavigationController?
+    let toggleEnableQuickReaction: (Bool) -> Void
     
-    init(sharedContext: SharedAccountContext, context: AccountContext?, mailComposeDelegate: DebugControllerMailComposeDelegate, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?, getNavigationController: @escaping () -> NavigationController?) {
+    init(sharedContext: SharedAccountContext, context: AccountContext?, mailComposeDelegate: DebugControllerMailComposeDelegate, presentController: @escaping (ViewController, ViewControllerPresentationArguments?) -> Void, pushController: @escaping (ViewController) -> Void, getRootController: @escaping () -> UIViewController?, getNavigationController: @escaping () -> NavigationController?, toggleEnableQuickReaction: @escaping (Bool) -> Void) {
         self.sharedContext = sharedContext
         self.context = context
         self.mailComposeDelegate = mailComposeDelegate
@@ -40,6 +41,7 @@ private final class DebugControllerArguments {
         self.pushController = pushController
         self.getRootController = getRootController
         self.getNavigationController = getNavigationController
+        self.toggleEnableQuickReaction = toggleEnableQuickReaction
     }
 }
 
@@ -91,6 +93,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableReactionOverrides(Bool)
     case playerEmbedding(Bool)
     case playlistPlayback(Bool)
+    case enableQuickReactionSwitch(PresentationTheme, String, Bool)
     case voiceConference
     case preferredVideoCodec(Int, String, String?, Bool)
     case disableVideoAspectScaling(Bool)
@@ -111,7 +114,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .enableQuickReactionSwitch, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -200,10 +203,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 36
         case .playlistPlayback:
             return 37
-        case .voiceConference:
+        case .enableQuickReactionSwitch:
             return 38
+        case .voiceConference:
+            return 39
         case let .preferredVideoCodec(index, _, _, _):
-            return 39 + index
+            return 40 + index
         case .disableVideoAspectScaling:
             return 100
         case .enableVoipTcp:
@@ -1107,6 +1112,10 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
+        case let .enableQuickReactionSwitch(_, text, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                arguments.toggleEnableQuickReaction(value)
+            })
         case .voiceConference:
             return ItemListDisclosureItem(presentationData: presentationData, title: "Voice Conference (Test)", label: "", sectionId: self.section, style: .blocks, action: {
                 guard let _ = arguments.context else {
@@ -1171,7 +1180,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     }
 }
 
-private func debugControllerEntries(sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool) -> [DebugControllerEntry] {
+private func debugControllerEntries(sharedContext: SharedAccountContext, presentationData: PresentationData, loggingSettings: LoggingSettings, mediaInputSettings: MediaInputSettings, experimentalSettings: ExperimentalUISettings, networkSettings: NetworkSettings?, hasLegacyAppData: Bool, quickReactionSettings: QuickReactionSettings) -> [DebugControllerEntry] {
     var entries: [DebugControllerEntry] = []
 
     let isMainApp = sharedContext.applicationBindings.isMainApp
@@ -1227,6 +1236,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.restorePurchases(presentationData.theme))
         entries.append(.playerEmbedding(experimentalSettings.playerEmbedding))
         entries.append(.playlistPlayback(experimentalSettings.playlistPlayback))
+        entries.append(.enableQuickReactionSwitch(presentationData.theme, presentationData.strings.Settings_QuickReactionSetup_Switch, quickReactionSettings.enableQuickReaction))
     }
     
     let codecs: [(String, String?)] = [
@@ -1269,6 +1279,12 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         return getRootControllerImpl?()
     }, getNavigationController: {
         return getNavigationControllerImpl?()
+    }, toggleEnableQuickReaction: { value in
+        if let context = context {
+            let _ = updateQuickReactionSettingsInteractively(accountManager: context.sharedContext.accountManager, { current in
+                return current.withUpdatedQuickReactions(value)
+            }).start()
+        }
     })
     
     let appGroupName = "group.\(Bundle.main.bundleIdentifier!)"
@@ -1288,8 +1304,19 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         preferencesSignal = .single(nil)
     }
     
-    let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), preferencesSignal)
-    |> map { presentationData, sharedData, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
+    let quickReactionSettings: Signal<QuickReactionSettings, NoError>
+    if let context = context {
+        quickReactionSettings = context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.quickReactionSettings])
+        |> map { sharedData in
+            let quickReactionSettings: QuickReactionSettings = sharedData.entries[ApplicationSpecificSharedDataKeys.quickReactionSettings]?.get(QuickReactionSettings.self) ?? .defaultSettings
+            return quickReactionSettings
+        }
+    } else {
+        quickReactionSettings = .single(.defaultSettings)
+    }
+
+    let signal = combineLatest(sharedContext.presentationData, sharedContext.accountManager.sharedData(keys: Set([SharedDataKeys.loggingSettings, ApplicationSpecificSharedDataKeys.mediaInputSettings, ApplicationSpecificSharedDataKeys.experimentalUISettings])), quickReactionSettings, preferencesSignal)
+    |> map { presentationData, sharedData, quickReactionSettings, preferences -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let loggingSettings: LoggingSettings
         if let value = sharedData.entries[SharedDataKeys.loggingSettings]?.get(LoggingSettings.self) {
             loggingSettings = value
@@ -1316,7 +1343,7 @@ public func debugController(sharedContext: SharedAccountContext, context: Accoun
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text("Debug"), leftNavigationButton: leftNavigationButton, rightNavigationButton: nil, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back))
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData), style: .blocks)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: debugControllerEntries(sharedContext: sharedContext, presentationData: presentationData, loggingSettings: loggingSettings, mediaInputSettings: mediaInputSettings, experimentalSettings: experimentalSettings, networkSettings: networkSettings, hasLegacyAppData: hasLegacyAppData, quickReactionSettings: quickReactionSettings), style: .blocks)
         
         return (controllerState, (listState, arguments))
     }

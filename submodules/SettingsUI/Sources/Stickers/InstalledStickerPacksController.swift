@@ -430,13 +430,10 @@ private indirect enum InstalledStickerPacksEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openEmoji()
                 })
-            case let .quickReaction(title, _, _):
-                return ItemListDisclosureItem(presentationData: presentationData, title: title, label: "", sectionId: self.section, style: .blocks, action: {
+            case let .quickReaction(title, reaction, availableReactions):
+                return ItemListReactionItem(context: arguments.context, presentationData: presentationData, title: title, reaction: reaction, availableReactions: availableReactions, sectionId: self.section, style: .blocks, action: {
                     arguments.openQuickReaction()
                 })
-//                return ItemListReactionItem(context: arguments.context, presentationData: presentationData, title: title, reaction: reaction, availableReactions: availableReactions, sectionId: self.section, style: .blocks, action: {
-//                    arguments.openQuickReaction()
-//                })
             case let .archived(_, text, count, archived):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: count == 0 ? "" : "\(count)", sectionId: self.section, style: .blocks, action: {
                     arguments.openArchived(archived)

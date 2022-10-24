@@ -7257,7 +7257,6 @@ Sorry for the inconvenience.";
 "Settings.QuickReactionSetup.DemoMessageAuthor" = "Dino";
 "Settings.QuickReactionSetup.DemoMessageText" = "I hope you're enjoying your day as much as I am.";
 "Settings.QuickReactionSetup.Switch" = "Enable Quick Reaction";
-"Settings.QuickReactionSetup.SwitchInfo" = "Switch on to double tap on message for a quick reaction. Switch off to double tap on message for opening quick menu.";
 
 "Settings.QuickReactionSetup.ChooseQuickReaction" = "Choose Your Quick Reaction";
 "Settings.QuickReactionSetup.ChooseQuickReactionInfo" = "You can set any emoji as your quick reaction.";
