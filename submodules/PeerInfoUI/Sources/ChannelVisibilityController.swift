@@ -1679,7 +1679,8 @@ public func channelVisibilityController(context: AccountContext, updatedPresenta
                 action = presentationData.strings.Channel_Setup_ActivateAlertShow
             }
             presentControllerImpl?(textAlertController(context: context, title: title, text: text, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: action, action: {
-                let _ = context.engine.peers.toggleAddressNameActive(domain: .peer(peerId), name: name, active: true).start(error: { error in
+                let _ = (context.engine.peers.toggleAddressNameActive(domain: .peer(peerId), name: name, active: true)
+                |> deliverOnMainQueue).start(error: { error in
                     let errorText: String
                     switch error {
                     case .activeLimitReached:

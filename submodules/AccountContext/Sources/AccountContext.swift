@@ -599,7 +599,7 @@ public enum ContactListPeer: Equatable {
         case let .peer(peer, _, _):
             return peer.indexName
         case let .deviceContact(_, contact):
-            return .personName(first: contact.firstName, last: contact.lastName, addressName: "", phoneNumber: "")
+            return .personName(first: contact.firstName, last: contact.lastName, addressNames: [], phoneNumber: "")
         }
     }
     
