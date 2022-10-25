@@ -62,6 +62,32 @@ private func gallerySelectionItems(item: TGMediaSelectableItem, selectionContext
                     }
                     focusItem = galleryItem
                 }
+            } else if let asset = selectedItem as? UIImage {
+                let galleryItem: (TGModernGallerySelectableItem & TGModernGalleryEditableItem) = TGMediaPickerGalleryPhotoItem(asset: asset)
+                galleryItem.selectionContext = selectionContext
+                galleryItem.editingContext = editingContext
+                galleryItem.stickersContext = stickersContext
+                galleryItems.append(galleryItem)
+                
+                if selectedItem.uniqueIdentifier == item.uniqueIdentifier {
+                    if let galleryItem = galleryItem as? TGMediaPickerGalleryItem {
+                        galleryItem.immediateThumbnailImage = immediateThumbnail
+                    }
+                    focusItem = galleryItem
+                }
+            } else if let asset = selectedItem as? TGCameraCapturedVideo {
+                let galleryItem: (TGModernGallerySelectableItem & TGModernGalleryEditableItem) = TGMediaPickerGalleryVideoItem(asset: asset)
+                galleryItem.selectionContext = selectionContext
+                galleryItem.editingContext = editingContext
+                galleryItem.stickersContext = stickersContext
+                galleryItems.append(galleryItem)
+                
+                if selectedItem.uniqueIdentifier == item.uniqueIdentifier {
+                    if let galleryItem = galleryItem as? TGMediaPickerGalleryItem {
+                        galleryItem.immediateThumbnailImage = immediateThumbnail
+                    }
+                    focusItem = galleryItem
+                }
             }
         }
     }

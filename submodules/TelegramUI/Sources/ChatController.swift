@@ -84,6 +84,7 @@ import EntityKeyboard
 import ChatTitleView
 import EmojiStatusComponent
 import ChatTimerScreen
+import MediaPasteboardUI
 
 #if DEBUG
 import os.signpost
@@ -12609,11 +12610,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func presentMediaPicker(saveEditedPhotos: Bool, bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
+    private func presentMediaPicker(subject: MediaPickerScreen.Subject = .assets(nil), saveEditedPhotos: Bool, bannedSendMedia: (Int32, Bool)?, present: @escaping (MediaPickerScreen, AttachmentMediaPickerContext?) -> Void, updateMediaPickerContext: @escaping (AttachmentMediaPickerContext?) -> Void, completion: @escaping ([Any], Bool, Int32?, @escaping (String) -> UIView?, @escaping () -> Void) -> Void) {
         guard let peer = self.presentationInterfaceState.renderedPeer?.peer else {
             return
         }
-        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), chatLocation: self.chatLocation, bannedSendMedia: bannedSendMedia, saveEditedPhotos: saveEditedPhotos)
+        let controller = MediaPickerScreen(context: self.context, updatedPresentationData: self.updatedPresentationData, peer: EnginePeer(peer), chatLocation: self.chatLocation, bannedSendMedia: bannedSendMedia, subject: subject, saveEditedPhotos: saveEditedPhotos)
         let mediaPickerContext = controller.mediaPickerContext
         controller.openCamera = { [weak self] cameraView in
             self?.openCamera(cameraView: cameraView)
@@ -13699,43 +13700,23 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         |> deliverOnMainQueue).start(next: { [weak self] settings in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
                 strongSelf.chatDisplayNode.dismissInput()
-                let _ = presentLegacyPasteMenu(context: strongSelf.context, peer: peer, chatLocation: strongSelf.chatLocation, saveEditedPhotos: settings.storeEditedPhotos, allowGrouping: true, hasSchedule: strongSelf.presentationInterfaceState.subject != .scheduledMessages && peer.id.namespace != Namespaces.Peer.SecretChat, updatedPresentationData: strongSelf.updatedPresentationData, images: images, presentSchedulePicker: { [weak self] done in
-                    if let strongSelf = self {
-                        strongSelf.presentScheduleTimePicker(style: .media, completion: { [weak self] time in
-                            if let strongSelf = self {
-                                done(time)
-                                if strongSelf.presentationInterfaceState.subject != .scheduledMessages && time != scheduleWhenOnlineTimestamp {
-                                    strongSelf.openScheduledMessages()
-                                }
-                            }
-                        })
-                    }
-                }, presentTimerPicker: { [weak self] done in
-                    if let strongSelf = self {
-                        strongSelf.presentTimerPicker(style: .media, completion: { time in
-                            done(time)
-                        })
-                    }
-                }, sendMessagesWithSignals: { signals, silentPosting, scheduleTime in
-                    self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime > 0 ? scheduleTime : nil)
-                }, presentStickers: { [weak self] completion in
-                    if let strongSelf = self {
-                        let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
-                            return true
-                        })
-                        strongSelf.present(controller, in: .window(.root))
-                        return controller
-                    } else {
-                        return nil
-                    }
-                }, getCaptionPanelView: { [weak self] in
-                    return self?.getCaptionPanelView()
-                }, present: { [weak self] controller, arguments in
-                    if let strongSelf = self {
-                        strongSelf.present(controller, in: .window(.root), with: arguments)
-                    }
-                }, initialLayout: strongSelf.validLayout)
+                
+                let controller = mediaPasteboardScreen(
+                    context: strongSelf.context,
+                    updatedPresentationData: strongSelf.updatedPresentationData,
+                    peer: EnginePeer(peer),
+                    subjects: images,
+                    presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendMedia, present in
+                        if let strongSelf = self {
+                            strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendMedia: bannedSendMedia, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
+                                self?.enqueueMediaMessages(signals: signals, silentPosting: silentPosting, scheduleTime: scheduleTime, getAnimatedTransitionSource: getAnimatedTransitionSource, completion: completion)
+                            })
+                        }
+                    },
+                    getSourceRect: nil
+                )
+                controller.navigationPresentation = .flatModal
+                strongSelf.push(controller)
             }
         })
     }

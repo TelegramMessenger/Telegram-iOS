@@ -8234,3 +8234,6 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
 "Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
 "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";
+
+"Attachment.Pasteboard" = "Clipboard";
+"Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
