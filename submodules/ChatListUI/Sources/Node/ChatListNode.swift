@@ -1030,9 +1030,9 @@ public final class ChatListNode: ListView {
                 }
                 self?.setCurrentRemovingPeerId(nil)
             })
-        }, setPeerThreadMuted: { [weak self] peerId, threadId, _ in
+        }, setPeerThreadMuted: { [weak self] peerId, threadId, value in
             //self?.setCurrentRemovingPeerId(peerId)
-            let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: threadId)
+            let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: value ? Int32.max : 0)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
                     var state = state

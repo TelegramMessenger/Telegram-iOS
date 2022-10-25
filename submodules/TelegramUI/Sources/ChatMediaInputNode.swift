@@ -1618,18 +1618,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                     })))
                                                 }
                                             
-                                                menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                                                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                                                }, action: { _, f in
-                                                    if let strongSelf = self, let peekController = strongSelf.peekController {
-                                                        if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil, [])
-                                                        } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                            let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil, [])
+                                                if interfaceState.chatLocation.threadId == nil {
+                                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                                    }, action: { _, f in
+                                                        if let strongSelf = self, let peekController = strongSelf.peekController {
+                                                            if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil, [])
+                                                            } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil, [])
+                                                            }
                                                         }
-                                                    }
-                                                    f(.default)
-                                                })))
+                                                        f(.default)
+                                                    })))
+                                                }
                                             }
                                         }
                                     }
@@ -1770,18 +1772,20 @@ final class ChatMediaInputNode: ChatInputNode {
                                                         })))
                                                     }
                                                 
-                                                    menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
-                                                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
-                                                    }, action: { _, f in
-                                                        if let strongSelf = self, let peekController = strongSelf.peekController {
-                                                            if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil, [])
-                                                            } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
-                                                                let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil, [])
+                                                    if interfaceState.chatLocation.threadId == nil {
+                                                        menuItems.append(.action(ContextMenuActionItem(text: strongSelf.strings.Conversation_SendMessage_ScheduleMessage, icon: { theme in
+                                                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/ScheduleIcon"), color: theme.actionSheet.primaryTextColor)
+                                                        }, action: { _, f in
+                                                            if let strongSelf = self, let peekController = strongSelf.peekController {
+                                                                if let animationNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.animationNode {
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, animationNode.view, animationNode.bounds, nil, [])
+                                                                } else if let imageNode = (peekController.contentNode as? StickerPreviewPeekContentNode)?.imageNode {
+                                                                    let _ = strongSelf.controllerInteraction.sendSticker(.standalone(media: item.file), false, true, nil, false, imageNode.view, imageNode.bounds, nil, [])
+                                                                }
                                                             }
-                                                        }
-                                                        f(.default)
-                                                    })))
+                                                            f(.default)
+                                                        })))
+                                                    }
                                                 }
                                             }
                                         }

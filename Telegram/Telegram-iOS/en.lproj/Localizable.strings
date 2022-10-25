@@ -8141,6 +8141,7 @@ Sorry for the inconvenience.";
 "ChatList.CloseAction" = "Close";
 
 "Channel.EditAdmin.PermissionManageTopics" = "Manage Topics";
+"Channel.EditAdmin.PermissionCreateTopics" = "Create Topics";
 
 "ChatList.Search.FilterTopics" = "Topics";
 "DialogList.SearchSectionTopics" = "Topics";
@@ -8211,7 +8212,7 @@ Sorry for the inconvenience.";
 "PeerInfo.OptionTopicsText" = "The group chat will be divided into topics created by admins or users.";
 "PeerInfo.TopicsLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have topics enabled.";
 "PeerInfo.TopicsLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have topics enabled.";
-"PeerInfo.TopicsLimitedDiscussionGroups" = "Topics are currently unavailable in groups connected to channels.";
+"PeerInfo.TopicsLimitedDiscussionGroups" = "Topics can’t be enabled in discussion groups at the moment.";
 
 "PeerInfo.TopicNotificationExceptions_1" = "There is [1 topic]() that is listed as exception.";
 "PeerInfo.TopicNotificationExceptions_any" = "There are [%d topics]() that are listed as exceptions.";

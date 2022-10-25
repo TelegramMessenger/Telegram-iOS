@@ -203,11 +203,22 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     continue
                 }
                 
+                let defaultPeerNotificationSettings: TelegramPeerNotificationSettings = (view.peerNotificationSettings as? TelegramPeerNotificationSettings) ?? .defaultSettings
+                
                 var hasUnseenMentions = false
                 
                 var isMuted = false
-                if case .muted = data.notificationSettings.muteState {
+                switch data.notificationSettings.muteState {
+                case .muted:
                     isMuted = true
+                case .unmuted:
+                    isMuted = false
+                case .default:
+                    if case .default = data.notificationSettings.muteState {
+                        if case .muted = defaultPeerNotificationSettings.muteState {
+                            isMuted = true
+                        }
+                    }
                 }
                 
                 if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(

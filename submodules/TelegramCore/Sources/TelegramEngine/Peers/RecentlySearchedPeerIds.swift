@@ -46,7 +46,7 @@ func _internal_recentlySearchedPeers(postbox: Postbox) -> Signal<[RecentlySearch
             }
         }
         var keys: [PostboxViewKey] = []
-        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: peerIds.map(UnreadMessageCountsItem.peer))
+        let unreadCountsKey: PostboxViewKey = .unreadCounts(items: peerIds.map { UnreadMessageCountsItem.peer(id: $0, handleThreads: true) })
         keys.append(unreadCountsKey)
         keys.append(contentsOf: peerIds.map({ .peer(peerId: $0, components: .all) }))
         

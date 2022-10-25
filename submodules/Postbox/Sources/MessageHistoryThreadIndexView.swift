@@ -32,6 +32,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
     fileprivate let peerId: PeerId
     fileprivate let summaryComponents: ChatListEntrySummaryComponents
     fileprivate var peer: Peer?
+    fileprivate var peerNotificationSettings: PeerNotificationSettings?
     fileprivate var items: [Item] = []
     private var hole: ForumTopicListHolesEntry?
     fileprivate var isLoading: Bool = false
@@ -47,6 +48,8 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
         self.items.removeAll()
         
         self.peer = postbox.peerTable.get(self.peerId)
+        
+        self.peerNotificationSettings = postbox.peerNotificationSettingsTable.getEffective(self.peerId)
         
         let validIndexBoundary = postbox.peerThreadCombinedStateTable.get(peerId: peerId)?.validIndexBoundary
         self.isLoading = validIndexBoundary == nil
@@ -128,7 +131,7 @@ final class MutableMessageHistoryThreadIndexView: MutablePostboxView {
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.updatedPinnedThreads.contains(self.peerId) || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedPeerChatListEmbeddedStates.contains(self.peerId) {
+        if transaction.updatedMessageThreadPeerIds.contains(self.peerId) || transaction.updatedPinnedThreads.contains(self.peerId) || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) || transaction.currentUpdatedMessageTagSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedMessageActionsSummaries.contains(where: { $0.key.peerId == self.peerId }) || transaction.currentUpdatedPeerChatListEmbeddedStates.contains(self.peerId) || transaction.currentUpdatedPeerNotificationSettings[self.peerId] != nil {
             self.reload(postbox: postbox)
             updated = true
         }
@@ -216,11 +219,13 @@ public final class EngineMessageHistoryThread {
 
 public final class MessageHistoryThreadIndexView: PostboxView {
     public let peer: Peer?
+    public let peerNotificationSettings: PeerNotificationSettings?
     public let items: [EngineMessageHistoryThread.Item]
     public let isLoading: Bool
     
     init(_ view: MutableMessageHistoryThreadIndexView) {
         self.peer = view.peer
+        self.peerNotificationSettings = view.peerNotificationSettings
         
         var items: [EngineMessageHistoryThread.Item] = []
         for item in view.items {

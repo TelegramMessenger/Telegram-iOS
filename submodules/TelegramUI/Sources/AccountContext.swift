@@ -384,13 +384,13 @@ public final class AccountContextImpl: AccountContext {
     public func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError> {
         switch location {
         case let .peer(peerId):
-            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(id: peerId, handleThreads: false), .total(nil)])
             return self.account.postbox.combinedView(keys: [unreadCountsKey])
             |> map { views in
                 var unreadCount: Int32 = 0
                 
                 if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                    if let count = view.count(for: .peer(peerId)) {
+                    if let count = view.count(for: .peer(id: peerId, handleThreads: false)) {
                         unreadCount = count
                     }
                 }
