@@ -1556,25 +1556,7 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                             var demoSubject: PremiumDemoScreen.Subject
                             switch perk {
                             case .doubleLimits:
-                                let isPremium = state?.isPremium == true
-                                
-                                var dismissImpl: (() -> Void)?
-                                let controller = PremimLimitsListScreen(context: accountContext, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "–").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
-                                controller.action = { [weak state] in
-                                    dismissImpl?()
-                                    if state?.isPremium == false {
-                                        buy()
-                                    }
-                                }
-                                controller.disposed = {
-                                    updateIsFocused(false)
-                                }
-                                present(controller)
-                                dismissImpl = { [weak controller] in
-                                    controller?.dismiss(animated: true, completion: nil)
-                                }
-                                updateIsFocused(true)
-                                return
+                                demoSubject = .doubleLimits
                             case .moreUpload:
                                 demoSubject = .moreUpload
                             case .fasterDownload:
@@ -1601,22 +1583,41 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                                 demoSubject = .emojiStatus
                             }
                             
-                            let controller = PremiumDemoScreen(
-                                context: accountContext,
-                                subject: demoSubject,
-                                source: .intro(state?.price),
-                                order: state?.configuration.perks,
-                                action: {
-                                    if state?.isPremium == false {
-                                        buy()
-                                    }
+                            let isPremium = state?.isPremium == true
+                            
+                            var dismissImpl: (() -> Void)?
+                            let controller = PremiumLimitsListScreen(context: accountContext, subject: demoSubject, source: .intro(state?.price), order: state?.configuration.perks, buttonText: isPremium ? strings.Common_OK : (state?.isAnnual == true ? strings.Premium_SubscribeForAnnual(state?.price ?? "–").string :  strings.Premium_SubscribeFor(state?.price ?? "–").string), isPremium: isPremium)
+                            controller.action = { [weak state] in
+                                dismissImpl?()
+                                if state?.isPremium == false {
+                                    buy()
                                 }
-                            )
+                            }
                             controller.disposed = {
                                 updateIsFocused(false)
                             }
                             present(controller)
+                            dismissImpl = { [weak controller] in
+                                controller?.dismiss(animated: true, completion: nil)
+                            }
                             updateIsFocused(true)
+                            
+//                            let controller = PremiumDemoScreen(
+//                                context: accountContext,
+//                                subject: demoSubject,
+//                                source: .intro(state?.price),
+//                                order: state?.configuration.perks,
+//                                action: {
+//                                    if state?.isPremium == false {
+//                                        buy()
+//                                    }
+//                                }
+//                            )
+//                            controller.disposed = {
+//                                updateIsFocused(false)
+//                            }
+//                            present(controller)
+//                            updateIsFocused(true)
                             
                             addAppLogEvent(postbox: accountContext.account.postbox, type: "premium.promo_screen_tap", data: ["item": perk.identifier])
                         }
