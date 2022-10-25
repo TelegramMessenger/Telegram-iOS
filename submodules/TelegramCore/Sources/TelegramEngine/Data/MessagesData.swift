@@ -194,7 +194,7 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .unreadCounts(items: [.peer(self.id)])
+                return .unreadCounts(items: [.peer(id: self.id, handleThreads: true)])
             }
 
             public init(id: EnginePeer.Id) {
@@ -206,7 +206,7 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
 
-                return Int(view.count(for: .peer(self.id)) ?? 0)
+                return Int(view.count(for: .peer(id: self.id, handleThreads: true)) ?? 0)
             }
         }
 

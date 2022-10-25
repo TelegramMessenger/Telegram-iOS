@@ -71,10 +71,12 @@ func _internal_updatePeerMuteSetting(account: Account, peerId: PeerId, threadId:
 func _internal_updatePeerMuteSetting(account: Account, transaction: Transaction, peerId: PeerId, threadId: Int64?, muteInterval: Int32?) {
     if let peer = transaction.getPeer(peerId) {
         if let threadId = threadId {
+            let peerSettings: TelegramPeerNotificationSettings = (transaction.getPeerNotificationSettings(id: peerId) as? TelegramPeerNotificationSettings) ?? .defaultSettings
+            
             if var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                 let previousSettings: TelegramPeerNotificationSettings = data.notificationSettings
                 
-                let muteState: PeerMuteState
+                var muteState: PeerMuteState
                 if let muteInterval = muteInterval {
                     if muteInterval == 0 {
                         muteState = .unmuted
@@ -88,6 +90,9 @@ func _internal_updatePeerMuteSetting(account: Account, transaction: Transaction,
                         muteState = .muted(until: absoluteUntil)
                     }
                 } else {
+                    muteState = .unmuted
+                }
+                if peerSettings.muteState == muteState {
                     muteState = .default
                 }
                 

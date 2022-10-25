@@ -354,7 +354,7 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
     } else if right.contains(.banPinMessages) {
         return strings.Channel_EditAdmin_PermissionPinMessages
     } else if right.contains(.banManageTopics) {
-        return strings.Channel_EditAdmin_PermissionManageTopics
+        return strings.Channel_EditAdmin_PermissionCreateTopics
     } else {
         return ""
     }
