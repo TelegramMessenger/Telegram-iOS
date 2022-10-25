@@ -8224,7 +8224,7 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.TopicCreated" = "%1$@ created topic %2$@";
 "Channel.AdminLog.TopicDeleted" = "%1$@ deleted topic %2$@";
 "Channel.AdminLog.TopicPinned" = "%1$@ pinned topic %2$@";
-"Channel.AdminLog.TopicUnpinned" = "%1$@ pinned topic %2$@";
+"Channel.AdminLog.TopicUnpinned" = "%1$@ unpinned topic %2$@";
 "Channel.AdminLog.TopicsEnabled" = "%1$@ enabled topics";
 "Channel.AdminLog.TopicsDisabled" = "%1$@ disabled topics";
 "Channel.AdminLog.TopicReopened" = "%1$@ reopened topic %2$@";
