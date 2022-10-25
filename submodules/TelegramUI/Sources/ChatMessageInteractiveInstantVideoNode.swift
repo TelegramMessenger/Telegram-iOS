@@ -1316,7 +1316,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return self.view
         }
 
-        if let videoNode = self.videoNode, videoNode.frame.contains(point) {
+        if let videoNode = self.videoNode, videoNode.view.frame.contains(point) {
             return self.view
         }
         if !self.bounds.contains(point) {
