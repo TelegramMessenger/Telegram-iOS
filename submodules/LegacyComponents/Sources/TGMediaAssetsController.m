@@ -674,8 +674,10 @@
           if (strongSelf == nil)
               return;
           
-            [strongController dismissAnimated:true manual:false completion:nil];
-            [[[LegacyComponentsGlobals provider] applicationInstance] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString]];
+          [strongController dismissAnimated:true manual:false completion:nil];
+          [[[LegacyComponentsGlobals provider] applicationInstance] openURL:[NSURL URLWithString:UIApplicationOpenSettingsURLString] options:@{} completionHandler:^(BOOL success) {
+              
+          }];
       }],
      [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
       {
@@ -1383,6 +1385,159 @@
                 
             default:
                 break;
+        }
+        
+        if (groupedId != nil && i == 10)
+        {
+            i = 0;
+            groupedId = @([self generateGroupedId]);
+        }
+    }
+    return signals;
+}
+
++ (NSArray *)pasteboardResultSignalsForSelectionContext:(TGMediaSelectionContext *)selectionContext editingContext:(TGMediaEditingContext *)editingContext intent:(TGMediaAssetsControllerIntent)intent currentItem:(id<TGMediaSelectableItem>)currentItem descriptionGenerator:(id (^)(id, NSAttributedString *, NSString *, NSString *))descriptionGenerator
+{
+    NSMutableArray *signals = [[NSMutableArray alloc] init];
+    NSMutableArray *selectedItems = [selectionContext.selectedItems mutableCopy];
+    if (selectedItems.count == 0 && currentItem != nil)
+        [selectedItems addObject:currentItem];
+    
+    NSNumber *groupedId;
+    NSInteger i = 0;
+    NSInteger num = 0;
+    bool grouping = selectionContext.grouping;
+    
+    bool hasAnyTimers = false;
+    if (editingContext != nil || grouping)
+    {
+        for (UIImage *asset in selectedItems)
+        {
+            if ([editingContext timerForItem:asset] != nil) {
+                hasAnyTimers = true;
+            }
+            id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+            if ([adjustments isKindOfClass:[TGVideoEditAdjustments class]]) {
+                TGVideoEditAdjustments *videoAdjustments = (TGVideoEditAdjustments *)adjustments;
+                if (videoAdjustments.sendAsGif) {
+                    grouping = false;
+                }
+            }
+            for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
+                if (entity.animated) {
+                    grouping = true;
+                }
+            }
+        }
+    }
+    
+    if (grouping && selectedItems.count > 1)
+        groupedId = @([self generateGroupedId]);
+    
+    for (UIImage *asset in selectedItems)
+    {
+        NSAttributedString *caption = [editingContext captionForItem:asset];
+        if (editingContext.isForcedCaption) {
+            if (grouping && num > 0) {
+                caption = nil;
+            } else if (!grouping && num < selectedItems.count - 1) {
+                caption = nil;
+            }
+        }
+        
+        if (intent == TGMediaAssetsControllerSendFileIntent)
+        {
+            NSString *tempFileName = TGTemporaryFileName(nil);
+            NSData *imageData = UIImageJPEGRepresentation(asset, 1.0);
+            [imageData writeToURL:[NSURL fileURLWithPath:tempFileName] atomically:true];
+            
+            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+            dict[@"type"] = @"file";
+            dict[@"tempFileUrl"] = [NSURL fileURLWithPath:tempFileName];
+            dict[@"fileName"] = [NSString stringWithFormat:@"IMG%03ld.jpg", i];
+            dict[@"mimeType"] = TGMimeTypeForFileUTI(@"image/jpeg");
+            dict[@"previewImage"] = asset;
+            
+            if (groupedId != nil)
+                dict[@"groupedId"] = groupedId;
+            
+            id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+            [signals addObject:[SSignal single:generatedItem]];
+        
+            i++;
+            num++;
+        } else {
+            id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+            NSNumber *timer = [editingContext timerForItem:asset];
+            
+            SSignal *inlineSignal = [[SSignal single:asset] map:^id(UIImage *image)
+                                     {
+                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                dict[@"type"] = @"editedPhoto";
+                dict[@"image"] = image;
+                
+                if (timer != nil)
+                    dict[@"timer"] = timer;
+                
+                if (groupedId != nil && !hasAnyTimers)
+                    dict[@"groupedId"] = groupedId;
+                
+                id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                return generatedItem;
+            }];
+            
+            SSignal *assetSignal = inlineSignal;
+            SSignal *imageSignal = assetSignal;
+            if (editingContext != nil)
+            {
+                imageSignal = [[[[[editingContext imageSignalForItem:asset withUpdates:true] filter:^bool(id result)
+                                  {
+                    return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
+                }] take:1] mapToSignal:^SSignal *(id result)
+                                {
+                    if (result == nil)
+                    {
+                        return [SSignal fail:nil];
+                    }
+                    else if ([result isKindOfClass:[UIImage class]])
+                    {
+                        UIImage *image = (UIImage *)result;
+                        image.edited = true;
+                        return [SSignal single:image];
+                    }
+                    
+                    return [SSignal complete];
+                }] onCompletion:^
+                                   {
+                    __strong TGMediaEditingContext *strongEditingContext = editingContext;
+                    [strongEditingContext description];
+                }];
+            }
+            
+            [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
+                                 {
+                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                dict[@"type"] = @"editedPhoto";
+                dict[@"image"] = image;
+                
+                if (adjustments.paintingData.stickers.count > 0)
+                    dict[@"stickers"] = adjustments.paintingData.stickers;
+                
+                if (timer != nil)
+                    dict[@"timer"] = timer;
+                
+                if (groupedId != nil && !hasAnyTimers)
+                    dict[@"groupedId"] = groupedId;
+                
+                id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                return generatedItem;
+            }] catch:^SSignal *(__unused id error)
+                                {
+                return inlineSignal;
+            }]];
+            
+            i++;
+            num++;
         }
         
         if (groupedId != nil && i == 10)
