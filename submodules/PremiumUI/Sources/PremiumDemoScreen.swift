@@ -315,6 +315,9 @@ final class DemoPagerComponent: Component {
             self.scrollView.alwaysBounceHorizontal = false
             self.scrollView.bounces = false
             self.scrollView.layer.cornerRadius = 10.0
+            if #available(iOSApplicationExtension 11.0, iOS 11.0, *) {
+                self.scrollView.contentInsetAdjustmentBehavior = .never
+            }
             
             super.init(frame: frame)
             
