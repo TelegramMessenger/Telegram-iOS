@@ -3082,7 +3082,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             peers: peers,
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                         let readState = EnginePeerReadCounters()
                         return ChatListItem(presentationData: chatListPresentationData, context: context, chatListLocation: .chatList(groupId: .root), filterData: nil, index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: 0, messageIndex: EngineMessage.Index(id: EngineMessage.Id(peerId: peer1.id, namespace: 0, id: 0), timestamp: timestamp1))), content: .peer(messages: [message], peer: EngineRenderedPeer(peer: peer1), threadInfo: nil, combinedReadState: readState, isRemovedFromTotalUnreadCount: false, presence: nil, hasUnseenMentions: false, hasUnseenReactions: false, draftState: nil, inputActivities: nil, promoInfo: nil, ignoreUnreadBadge: false, displayAsMessage: false, hasFailedMessages: false, forumTopicData: nil), editing: false, hasActiveRevealControls: false, selected: false, header: nil, enableContextActions: false, hiddenOffset: false, interaction: interaction)
@@ -3112,7 +3113,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             peers: peers,
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: true, isGlobalSearchResult: true)
@@ -3140,7 +3142,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             peers: peers,
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3168,7 +3171,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             peers: peers,
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)
@@ -3196,7 +3200,8 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                             peers: peers,
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                         
                         return ListMessageItem(presentationData: ChatPresentationData(presentationData: presentationData), context: context, chatLocation: .peer(id: peer1.id), interaction: ListMessageItemInteraction.default, message: message._asMessage(), selection: hasSelection ? .selectable(selected: false) : .none, displayHeader: false, customHeader: nil, hintIsLink: false, isGlobalSearchResult: true)

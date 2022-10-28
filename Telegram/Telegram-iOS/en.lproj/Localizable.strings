@@ -8189,14 +8189,16 @@ Sorry for the inconvenience.";
 "Notification.TopicCreated" = "Topic created";
 "Notification.TopicClosed" = "Topic closed";
 "Notification.TopicReopened" = "Topic reopened";
-"Notification.TopicClosedAuthor" = "%1$@ closed the topic";
-"Notification.TopicReopenedAuthor" = "%1$@ reopened the topic";
+"Notification.TopicClosedAuthor" = "%1$@ closed topic";
+"Notification.TopicReopenedAuthor" = "%1$@ reopened topic";
 "Notification.TopicRenamed" = "Topic renamed to \"%1$@\"";
-"Notification.TopicRenamedAuthor" = "%1$@ changed the topic name to \"%2$@\"";
+"Notification.TopicRenamedAuthor" = "%1$@ changed the topic title to \"%2$@\"";
 "Notification.TopicIconChanged" = "Topic icon changed to %1$@";
-"Notification.TopicIconRemoved" = "Topic icon changed";
 "Notification.TopicIconChangedAuthor" = "%1$@ changed the topic icon to %2$@";
-"Notification.TopicIconRemovedAuthor" = "%1$@ changed the topic icon";
+"Notification.TopicRenamedIconChangedAuthor" = "%1$@ changed the topic title and icon to %2$@ %3$@";
+"Notification.OverviewTopicCreated" = "%1$@ %2$@ was created";
+"Notification.OverviewTopicClosed" = "%1$@ closed %2$@ %3$@";
+"Notification.OverviewTopicReopened" = "%1$@ reopened %2$@ %3$@";
 
 "Chat.EmptyTopicPlaceholder.Title" = "Almost done!";
 "Chat.EmptyTopicPlaceholder.Text" = "Send the first message to\nstart this topic.";
@@ -8237,3 +8239,5 @@ Sorry for the inconvenience.";
 
 "Attachment.Pasteboard" = "Clipboard";
 "Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
+
+"Undo.DeletedTopic" = "Topic Deleted";

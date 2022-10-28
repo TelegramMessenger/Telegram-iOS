@@ -506,7 +506,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     let prefetchManager: InChatPrefetchManager
     private var currentEarlierPrefetchMessages: [(Message, Media)] = []
     private var currentLaterPrefetchMessages: [(Message, Media)] = []
-    private var currentPrefetchDirectionIsToLater: Bool = true
+    private var currentPrefetchDirectionIsToLater: Bool = false
     
     private var maxVisibleMessageIndexReported: MessageIndex?
     var maxVisibleMessageIndexUpdated: ((MessageIndex) -> Void)?
@@ -608,6 +608,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let adMessagesContext: AdMessagesHistoryContext?
     private var preloadAdPeerId: PeerId?
     private let preloadAdPeerDisposable = MetaDisposable()
+    private var pendingDynamicAdMessages: [Message] = []
+    private var pendingDynamicAdMessageInterval: Int?
+    private var remainingDynamicAdMessageInterval: Int?
+    private var nextPendingDynamicMessageId: Int32 = 1
+    private var dynamicAdMessages: ([Message], Int) = ([], 0) {
+        didSet {
+            self.dynamicAdMessagesPromise.set(.single(self.dynamicAdMessages))
+        }
+    }
+    private let dynamicAdMessagesPromise = Promise<([Message], Int)>(([], 0))
+    private var seenMessageIds = Set<MessageId>()
     
     private var refreshDisplayedItemRangeTimer: SwiftSignalKit.Timer?
     
@@ -681,18 +692,25 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 guard let strongSelf = self else {
                     return
                 }
-                var adPeerId: PeerId?
-                adPeerId = messages.first?.author?.id
-
-                if strongSelf.preloadAdPeerId != adPeerId {
-                    strongSelf.preloadAdPeerId = adPeerId
-                    if let adPeerId = adPeerId {
-                        let combinedDisposable = DisposableSet()
-                        strongSelf.preloadAdPeerDisposable.set(combinedDisposable)
-                        combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: adPeerId).start())
-                        combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
-                    } else {
-                        strongSelf.preloadAdPeerDisposable.set(nil)
+                
+                if let interPostInterval = interPostInterval {
+                    strongSelf.pendingDynamicAdMessages = messages
+                    strongSelf.pendingDynamicAdMessageInterval = Int(interPostInterval)
+                    strongSelf.remainingDynamicAdMessageInterval = Int(interPostInterval)
+                } else {
+                    var adPeerId: PeerId?
+                    adPeerId = messages.first?.author?.id
+                    
+                    if strongSelf.preloadAdPeerId != adPeerId {
+                        strongSelf.preloadAdPeerId = adPeerId
+                        if let adPeerId = adPeerId {
+                            let combinedDisposable = DisposableSet()
+                            strongSelf.preloadAdPeerDisposable.set(combinedDisposable)
+                            combinedDisposable.add(strongSelf.context.account.viewTracker.polledChannel(peerId: adPeerId).start())
+                            combinedDisposable.add(strongSelf.context.account.addAdditionalPreloadHistoryPeerId(peerId: adPeerId))
+                        } else {
+                            strongSelf.preloadAdPeerDisposable.set(nil)
+                        }
                     }
                 }
             }
@@ -882,7 +900,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         
-        let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?)?>(value: nil)
+        let previousView = Atomic<(ChatHistoryView, Int, Set<MessageId>?, Int)?>(value: nil)
         let automaticDownloadNetworkType = context.account.networkType
         |> map { type -> MediaAutoDownloadNetworkType in
             switch type {
@@ -1084,8 +1102,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             accountPeer,
             audioTranscriptionSuggestion,
             promises,
-            topicAuthorId
-        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, adMessages, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId in
+            topicAuthorId,
+            self.dynamicAdMessagesPromise.get()
+        ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, adMessages, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, dynamicAdMessages in
             let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId) = promises
             let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
             
@@ -1246,11 +1265,12 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     customChannelDiscussionReadState: customChannelDiscussionReadState,
                     customThreadOutgoingReadState: customThreadOutgoingReadState,
                     cachedData: data.cachedData,
-                    adMessages: adMessages
+                    adMessages: adMessages,
+                    dynamicAdMessages: dynamicAdMessages.0
                 )
                 let lastHeaderId = filteredEntries.last.flatMap { listMessageDateHeaderId(timestamp: $0.index.timestamp) } ?? 0
                 let processedView = ChatHistoryView(originalView: view, filteredEntries: filteredEntries, associatedData: associatedData, lastHeaderId: lastHeaderId, id: id, locationInput: update.2, ignoreMessagesInTimestampRange: update.3)
-                let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages))
+                let previousValueAndVersion = previousView.swap((processedView, update.1, selectedMessages, dynamicAdMessages.1))
                 let previous = previousValueAndVersion?.0
                 let previousSelectedMessages = previousValueAndVersion?.2
                 
@@ -1274,7 +1294,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
                 
-                let reason: ChatHistoryViewTransitionReason
+                var reason: ChatHistoryViewTransitionReason
                 
                 let previousHistoryAppearsClearedValue = previousHistoryAppearsCleared.swap(historyAppearsCleared)
                 if previousHistoryAppearsClearedValue != nil && previousHistoryAppearsClearedValue != historyAppearsCleared && !historyAppearsCleared {
@@ -1300,6 +1320,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                 }
                 
+                var disableAnimations = false
+                var forceSynchronous = false
+                
+                if let previousValueAndVersion = previousValueAndVersion, dynamicAdMessages.1 != previousValueAndVersion.3 {
+                    reason = ChatHistoryViewTransitionReason.Reload
+                    disableAnimations = true
+                    forceSynchronous = true
+                }
+                
                 var scrollAnimationCurve: ListViewAnimationCurve? = nil
                 if let strongSelf = self, case .default = source {
                     if strongSelf.appliedScrollToMessageId == nil, let scrollToMessageId = scrollToMessageId {
@@ -1321,8 +1350,6 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     }
                     isFirstTime = false
                 }
-
-                var disableAnimations = false
 
                 if let strongSelf = self, updatedScrollPosition == nil, case .InteractiveChanges = reason, case let .known(offset) = strongSelf.visibleContentOffset(), abs(offset) <= 0.9, let previous = previous {
                     var fillsScreen = true
@@ -1377,6 +1404,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     mappedTransition.options.remove(.AnimateAlpha)
                     mappedTransition.options.remove(.AnimateTopItemPosition)
                     mappedTransition.options.remove(.RequestItemInsertionAnimations)
+                }
+                if forceSynchronous {
+                    mappedTransition.options.insert(.Synchronous)
                 }
                 
                 Queue.mainQueue().async {
@@ -1808,6 +1838,95 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         })
     }
     
+    private func maybeInsertPendingAdMessage(historyView: ChatHistoryView, toLaterRange: (Int, Int), toEarlierRange: (Int, Int)) {
+        if self.pendingDynamicAdMessages.isEmpty {
+            return
+        }
+        
+        let selectedRange: (Int, Int)
+        if self.currentPrefetchDirectionIsToLater {
+            selectedRange = (toLaterRange.0 + 1, toLaterRange.1)
+        } else {
+            selectedRange = (toEarlierRange.0, toEarlierRange.1 - 1)
+        }
+        
+        if selectedRange.0 <= selectedRange.1 {
+            var insertionTimestamp: Int32?
+            if self.currentPrefetchDirectionIsToLater {
+                outer: for i in selectedRange.0 ... selectedRange.1 {
+                    switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, _, _, _, _, _):
+                        if message.id.namespace == Namespaces.Message.Cloud {
+                            insertionTimestamp = message.timestamp
+                            break outer
+                        }
+                    case let .MessageGroupEntry(_, messages, _):
+                        for (message, _, _, _, _) in messages {
+                            if message.id.namespace == Namespaces.Message.Cloud {
+                                insertionTimestamp = message.timestamp
+                                break outer
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+            } else {
+                outer: for i in (selectedRange.0 ... selectedRange.1).reversed() {
+                    switch historyView.filteredEntries[i] {
+                    case let .MessageEntry(message, _, _, _, _, _):
+                        if message.id.namespace == Namespaces.Message.Cloud {
+                            insertionTimestamp = message.timestamp
+                            break outer
+                        }
+                    case let .MessageGroupEntry(_, messages, _):
+                        for (message, _, _, _, _) in messages {
+                            if message.id.namespace == Namespaces.Message.Cloud {
+                                insertionTimestamp = message.timestamp
+                                break outer
+                            }
+                        }
+                    default:
+                        break
+                    }
+                }
+            }
+            if let insertionTimestamp = insertionTimestamp {
+                let initialMessage = self.pendingDynamicAdMessages.removeFirst()
+                let message = Message(
+                    stableId: UInt32.max - 1 - UInt32(self.nextPendingDynamicMessageId),
+                    stableVersion: 1,
+                    id: MessageId(peerId: initialMessage.id.peerId, namespace: initialMessage.id.namespace, id: self.nextPendingDynamicMessageId),
+                    globallyUniqueId: nil,
+                    groupingKey: nil,
+                    groupInfo: nil,
+                    threadId: nil,
+                    timestamp: insertionTimestamp,
+                    flags: initialMessage.flags,
+                    tags: initialMessage.tags,
+                    globalTags: initialMessage.globalTags,
+                    localTags: initialMessage.localTags,
+                    forwardInfo: initialMessage.forwardInfo,
+                    author: initialMessage.author,
+                    text: initialMessage.text,
+                    attributes: initialMessage.attributes,
+                    media: initialMessage.media,
+                    peers: initialMessage.peers,
+                    associatedMessages: initialMessage.associatedMessages,
+                    associatedMessageIds: initialMessage.associatedMessageIds,
+                    associatedMedia: initialMessage.associatedMedia,
+                    associatedThreadInfo: initialMessage.associatedThreadInfo
+                )
+                self.nextPendingDynamicMessageId += 1
+                
+                var dynamicAdMessages = self.dynamicAdMessages
+                dynamicAdMessages.0.append(message)
+                dynamicAdMessages.1 += 1
+                self.dynamicAdMessages = dynamicAdMessages
+            }
+        }
+    }
+    
     private func processDisplayedItemRangeChanged(displayedRange: ListViewDisplayedItemRange, transactionState: ChatHistoryTransactionOpaqueState) {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
@@ -1833,6 +1952,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             var messageIdsWithUnseenReactions: [MessageId] = []
             var messageIdsWithInactiveExtendedMedia = Set<MessageId>()
             var downloadableResourceIds: [(messageId: MessageId, resourceId: String)] = []
+            var allVisibleAnchorMessageIds: [MessageId] = []
             
             if indexRange.0 <= indexRange.1 {
                 for i in (indexRange.0 ... indexRange.1) {
@@ -1923,6 +2043,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                         } else {
                             topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                         }
+                        if message.id.namespace == Namespaces.Message.Cloud, self.remainingDynamicAdMessageInterval != nil {
+                            allVisibleAnchorMessageIds.append(message.id)
+                        }
                     case let .MessageGroupEntry(_, messages, _):
                         for (message, _, _, _, _) in messages {
                             var hasUnconsumedMention = false
@@ -1972,6 +2095,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
                             } else {
                                 topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
+                            }
+                        }
+                        if let message = messages.first {
+                            if message.0.id.namespace == Namespaces.Message.Cloud, self.remainingDynamicAdMessageInterval != nil {
+                                allVisibleAnchorMessageIds.append(message.0.id)
                             }
                         }
                     default:
@@ -2141,6 +2269,24 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 if let maxOverallIndex = maxOverallIndex, maxOverallIndex != self.maxVisibleMessageIndexReported {
                     self.maxVisibleMessageIndexReported = maxOverallIndex
                     self.maxVisibleMessageIndexUpdated?(maxOverallIndex)
+                }
+            }
+            
+            if let visible = displayedRange.visibleRange {
+                let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
+                if indexRange.0 <= indexRange.1 {
+                    for messageId in allVisibleAnchorMessageIds {
+                        //TODO:loc optimize eviction
+                        if self.seenMessageIds.insert(messageId).inserted, let remainingDynamicAdMessageIntervalValue = self.remainingDynamicAdMessageInterval {
+                            let pendingInterval = remainingDynamicAdMessageIntervalValue - 1
+                            if pendingInterval <= 0 {
+                                self.remainingDynamicAdMessageInterval = self.pendingDynamicAdMessageInterval
+                                self.maybeInsertPendingAdMessage(historyView: historyView, toLaterRange: toLaterRange, toEarlierRange: toEarlierRange)
+                            } else {
+                                self.remainingDynamicAdMessageInterval = pendingInterval
+                            }
+                        }
+                    }
                 }
             }
         }

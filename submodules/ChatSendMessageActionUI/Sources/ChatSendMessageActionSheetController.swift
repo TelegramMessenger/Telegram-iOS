@@ -85,7 +85,7 @@ public final class ChatSendMessageActionSheetController: ViewController {
         var isSecret = false
         var canSchedule = false
         var hasEntityKeyboard = false
-        if case let .peer(peerId) = self.interfaceState.chatLocation {
+        if let peerId = self.interfaceState.chatLocation.peerId {
             reminders = peerId == context.account.peerId
             isSecret = peerId.namespace == Namespaces.Peer.SecretChat
             canSchedule = !isSecret

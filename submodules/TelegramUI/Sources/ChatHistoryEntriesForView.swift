@@ -25,7 +25,8 @@ func chatHistoryEntriesForView(
     customChannelDiscussionReadState: MessageId?,
     customThreadOutgoingReadState: MessageId?,
     cachedData: CachedPeerData?,
-    adMessages: (interPostInterval: Int32?, messages: [Message])
+    adMessages: (interPostInterval: Int32?, messages: [Message]),
+    dynamicAdMessages: [Message]
 ) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
         return []
@@ -72,7 +73,8 @@ func chatHistoryEntriesForView(
             peers: SimpleDictionary<PeerId, Peer>(),
             associatedMessages: SimpleDictionary<MessageId, Message>(),
             associatedMessageIds: [],
-            associatedMedia: [:]
+            associatedMedia: [:],
+            associatedThreadInfo: nil
         )
     }
             
@@ -327,9 +329,17 @@ func chatHistoryEntriesForView(
                 }
             }
         }
+        
+        if !dynamicAdMessages.isEmpty {
+            assert(entries.sorted() == entries)
+            for message in dynamicAdMessages {
+                entries.append(.MessageEntry(message, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))
+            }
+            entries.sort()
+        }
 
         if view.laterId == nil && !view.isLoading {
-            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.messages.isEmpty {
+            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.messages.isEmpty, adMessages.interPostInterval == nil {
                 var nextAdMessageId: Int32 = 1
                 if let message = adMessages.messages.first {
                     let updatedMessage = Message(
@@ -353,7 +363,8 @@ func chatHistoryEntriesForView(
                         peers: message.peers,
                         associatedMessages: message.associatedMessages,
                         associatedMessageIds: message.associatedMessageIds,
-                        associatedMedia: message.associatedMedia
+                        associatedMedia: message.associatedMedia,
+                        associatedThreadInfo: message.associatedThreadInfo
                     )
                     nextAdMessageId += 1
                     entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))

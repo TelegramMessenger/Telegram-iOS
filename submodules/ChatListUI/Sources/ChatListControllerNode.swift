@@ -209,7 +209,8 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     peers: peers,
                     associatedMessages: [:],
                     associatedMessageIds: [],
-                    associatedMedia: [:]
+                    associatedMedia: [:],
+                    associatedThreadInfo: nil
                 )
                 let readState = EnginePeerReadCounters()
 

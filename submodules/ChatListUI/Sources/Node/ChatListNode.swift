@@ -175,13 +175,23 @@ private func areFoundPeerArraysEqual(_ lhs: [(EnginePeer, EnginePeer?)], _ rhs: 
 }
 
 public struct ChatListNodeState: Equatable {
+    public struct ItemId: Hashable {
+        public var peerId: EnginePeer.Id
+        public var threadId: Int64?
+        
+        public init(peerId: EnginePeer.Id, threadId: Int64?) {
+            self.peerId = peerId
+            self.threadId = threadId
+        }
+    }
+    
     public var presentationData: ChatListPresentationData
     public var editing: Bool
-    public var peerIdWithRevealedOptions: EnginePeer.Id?
+    public var peerIdWithRevealedOptions: ItemId?
     public var selectedPeerIds: Set<EnginePeer.Id>
     public var peerInputActivities: ChatListNodePeerInputActivities?
-    public var pendingRemovalPeerIds: Set<EnginePeer.Id>
-    public var pendingClearHistoryPeerIds: Set<EnginePeer.Id>
+    public var pendingRemovalItemIds: Set<ItemId>
+    public var pendingClearHistoryPeerIds: Set<ItemId>
     public var archiveShouldBeTemporaryRevealed: Bool
     public var selectedAdditionalCategoryIds: Set<Int>
     public var hiddenPsaPeerId: EnginePeer.Id?
@@ -189,7 +199,21 @@ public struct ChatListNodeState: Equatable {
     public var selectedPeerMap: [EnginePeer.Id: EnginePeer]
     public var selectedThreadIds: Set<Int64>
     
-    public init(presentationData: ChatListPresentationData, editing: Bool, peerIdWithRevealedOptions: EnginePeer.Id?, selectedPeerIds: Set<EnginePeer.Id>, foundPeers: [(EnginePeer, EnginePeer?)], selectedPeerMap: [EnginePeer.Id: EnginePeer], selectedAdditionalCategoryIds: Set<Int>, peerInputActivities: ChatListNodePeerInputActivities?, pendingRemovalPeerIds: Set<EnginePeer.Id>, pendingClearHistoryPeerIds: Set<EnginePeer.Id>, archiveShouldBeTemporaryRevealed: Bool, hiddenPsaPeerId: EnginePeer.Id?, selectedThreadIds: Set<Int64>) {
+    public init(
+        presentationData: ChatListPresentationData,
+        editing: Bool,
+        peerIdWithRevealedOptions: ItemId?,
+        selectedPeerIds: Set<EnginePeer.Id>,
+        foundPeers: [(EnginePeer, EnginePeer?)],
+        selectedPeerMap: [EnginePeer.Id: EnginePeer],
+        selectedAdditionalCategoryIds: Set<Int>,
+        peerInputActivities: ChatListNodePeerInputActivities?,
+        pendingRemovalItemIds: Set<ItemId>,
+        pendingClearHistoryPeerIds: Set<ItemId>,
+        archiveShouldBeTemporaryRevealed: Bool,
+        hiddenPsaPeerId: EnginePeer.Id?,
+        selectedThreadIds: Set<Int64>
+    ) {
         self.presentationData = presentationData
         self.editing = editing
         self.peerIdWithRevealedOptions = peerIdWithRevealedOptions
@@ -198,7 +222,7 @@ public struct ChatListNodeState: Equatable {
         self.foundPeers = foundPeers
         self.selectedPeerMap = selectedPeerMap
         self.peerInputActivities = peerInputActivities
-        self.pendingRemovalPeerIds = pendingRemovalPeerIds
+        self.pendingRemovalItemIds = pendingRemovalItemIds
         self.pendingClearHistoryPeerIds = pendingClearHistoryPeerIds
         self.archiveShouldBeTemporaryRevealed = archiveShouldBeTemporaryRevealed
         self.hiddenPsaPeerId = hiddenPsaPeerId
@@ -230,7 +254,7 @@ public struct ChatListNodeState: Equatable {
         if lhs.peerInputActivities !== rhs.peerInputActivities {
             return false
         }
-        if lhs.pendingRemovalPeerIds != rhs.pendingRemovalPeerIds {
+        if lhs.pendingRemovalItemIds != rhs.pendingRemovalItemIds {
             return false
         }
         if lhs.pendingClearHistoryPeerIds != rhs.pendingClearHistoryPeerIds {
@@ -320,6 +344,13 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             } else {
                                 enabled = false
+                            }
+                            
+                            if let threadInfo, threadInfo.isClosed, case let .channel(channel) = itemPeer {
+                                if threadInfo.isOwnedByMe || channel.hasPermission(.manageTopics) {
+                                } else {
+                                    enabled = false
+                                }
                             }
                         }
                         if filter.contains(.onlyPrivateChats) {
@@ -534,6 +565,13 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 }
                             } else {
                                 enabled = false
+                            }
+                            
+                            if let threadInfo, threadInfo.isClosed, case let .channel(channel) = itemPeer {
+                                if threadInfo.isOwnedByMe || channel.hasPermission(.manageTopics) {
+                                } else {
+                                    enabled = false
+                                }
                             }
                         }
                         if filter.contains(.excludeChannels) {
@@ -811,9 +849,9 @@ public final class ChatListNode: ListView {
     
     public var addedVisibleChatsWithPeerIds: (([EnginePeer.Id]) -> Void)?
     
-    private let currentRemovingPeerId = Atomic<EnginePeer.Id?>(value: nil)
-    public func setCurrentRemovingPeerId(_ peerId: EnginePeer.Id?) {
-        let _ = self.currentRemovingPeerId.swap(peerId)
+    private let currentRemovingItemId = Atomic<ChatListNodeState.ItemId?>(value: nil)
+    public func setCurrentRemovingItemId(_ itemId: ChatListNodeState.ItemId?) {
+        let _ = self.currentRemovingItemId.swap(itemId)
     }
     
     private var hapticFeedback: HapticFeedback?
@@ -843,7 +881,7 @@ public final class ChatListNode: ListView {
             isSelecting = true
         }
         
-        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalPeerIds: Set(), pendingClearHistoryPeerIds: Set(), archiveShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set())
+        self.currentState = ChatListNodeState(presentationData: ChatListPresentationData(theme: theme, fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameSortOrder: nameSortOrder, nameDisplayOrder: nameDisplayOrder, disableAnimations: disableAnimations), editing: isSelecting, peerIdWithRevealedOptions: nil, selectedPeerIds: Set(), foundPeers: [], selectedPeerMap: [:], selectedAdditionalCategoryIds: Set(), peerInputActivities: nil, pendingRemovalItemIds: Set(), pendingClearHistoryPeerIds: Set(), archiveShouldBeTemporaryRevealed: false, hiddenPsaPeerId: nil, selectedThreadIds: Set())
         self.statePromise = ValuePromise(self.currentState, ignoreRepeated: true)
         
         self.theme = theme
@@ -948,9 +986,13 @@ public final class ChatListNode: ListView {
         }, setPeerIdWithRevealedOptions: { [weak self] peerId, fromPeerId in
             if let strongSelf = self {
                 strongSelf.updateState { state in
-                    if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions) || (peerId != nil && fromPeerId == nil) || (peerId == nil && fromPeerId == nil) {
+                    if (peerId == nil && fromPeerId == state.peerIdWithRevealedOptions?.peerId) || (peerId != nil && fromPeerId == nil) || (peerId == nil && fromPeerId == nil) {
                         var state = state
-                        state.peerIdWithRevealedOptions = peerId
+                        if let peerId = peerId {
+                            state.peerIdWithRevealedOptions = ChatListNodeState.ItemId(peerId: peerId, threadId: nil)
+                        } else {
+                            state.peerIdWithRevealedOptions = nil
+                        }
                         return state
                     } else {
                         return state
@@ -1020,7 +1062,7 @@ public final class ChatListNode: ListView {
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.setCurrentRemovingPeerId(peerId)
+            strongSelf.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
             let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
@@ -1028,10 +1070,10 @@ public final class ChatListNode: ListView {
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
-                self?.setCurrentRemovingPeerId(nil)
+                self?.setCurrentRemovingItemId(nil)
             })
         }, setPeerThreadMuted: { [weak self] peerId, threadId, value in
-            //self?.setCurrentRemovingPeerId(peerId)
+            self?.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
             let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: value ? Int32.max : 0)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
@@ -1039,7 +1081,7 @@ public final class ChatListNode: ListView {
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
-                //self?.setCurrentRemovingPeerId(nil)
+                self?.setCurrentRemovingItemId(nil)
             })
         }, deletePeer: { [weak self] peerId, joined in
             self?.deletePeerChat?(peerId, joined)
@@ -1055,7 +1097,7 @@ public final class ChatListNode: ListView {
             guard let context = context else {
                 return
             }
-            self?.setCurrentRemovingPeerId(peerId)
+            self?.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
             let _ = (context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil)
             |> deliverOnMainQueue).start(completed: {
                 self?.updateState { state in
@@ -1063,7 +1105,7 @@ public final class ChatListNode: ListView {
                     state.peerIdWithRevealedOptions = nil
                     return state
                 }
-                self?.setCurrentRemovingPeerId(nil)
+                self?.setCurrentRemovingItemId(nil)
             })
         }, toggleArchivedFolderHiddenByDefault: { [weak self] in
             self?.toggleArchivedFolderHiddenByDefault?()
@@ -1113,7 +1155,7 @@ public final class ChatListNode: ListView {
         let previousState = Atomic<ChatListNodeState>(value: self.currentState)
         let previousView = Atomic<ChatListNodeView?>(value: nil)
         let previousHideArchivedFolderByDefault = Atomic<Bool?>(value: nil)
-        let currentRemovingPeerId = self.currentRemovingPeerId
+        let currentRemovingItemId = self.currentRemovingItemId
         
         let savedMessagesPeer: Signal<EnginePeer?, NoError>
         if case let .peers(filter, _, _, _) = mode, filter.contains(.onlyWriteable), case .chatList = location {
@@ -1327,7 +1369,7 @@ public final class ChatListNode: ListView {
                 }
             }
             
-            let removingPeerId = currentRemovingPeerId.with { $0 }
+            let removingItemId = currentRemovingItemId.with { $0 }
             
             var disableAnimations = true
             if previousState.editing != state.editing {
@@ -1347,12 +1389,15 @@ public final class ChatListNode: ListView {
                                 if chatListIndex.pinningIndex != nil {
                                     previousPinnedChats.append(chatListIndex.messageIndex.id.peerId)
                                 }
-                                if chatListIndex.messageIndex.id.peerId == removingPeerId {
+                                if ChatListNodeState.ItemId(peerId: chatListIndex.messageIndex.id.peerId, threadId: nil) == removingItemId {
                                     didIncludeRemovingPeerId = true
                                 }
                             } else if case let .forum(pinnedIndex, _, threadId, _, _) = index {
                                 if case .index = pinnedIndex {
                                     previousPinnedThreads.append(threadId)
+                                }
+                                if case let .forum(peerId) = location, ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == removingItemId {
+                                    didIncludeRemovingPeerId = true
                                 }
                             }
                         } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
@@ -1373,8 +1418,12 @@ public final class ChatListNode: ListView {
                             }
                         }
                         
-                        if case let .chatList(index) = index, index.messageIndex.id.peerId == removingPeerId {
+                        if case let .chatList(index) = index, ChatListNodeState.ItemId(peerId: index.messageIndex.id.peerId, threadId: nil) == removingItemId {
                             doesIncludeRemovingPeerId = true
+                        } else if case let .forum(_, _, threadId, _, _) = index {
+                            if case let .forum(peerId) = location, ChatListNodeState.ItemId(peerId: peerId, threadId: threadId) == removingItemId {
+                                doesIncludeRemovingPeerId = true
+                            }
                         }
                     } else if case let .GroupReferenceEntry(_, _, _, _, _, _, _, _, hiddenByDefault) = entry {
                         doesIncludeArchive = true

@@ -16,6 +16,68 @@ import MultiAnimationRenderer
 import ShimmerEffect
 import TextFormat
 
+public func generateTopicIcon(title: String, backgroundColors: [UIColor], strokeColors: [UIColor], size: CGSize) -> UIImage? {
+    let realSize = size
+    return generateImage(realSize, rotatedContext: { realSize, context in
+        context.clear(CGRect(origin: .zero, size: realSize))
+
+        context.saveGState()
+        
+        let size = CGSize(width: 32.0, height: 32.0)
+        
+        let scale: CGFloat = realSize.width / size.width
+        context.scaleBy(x: scale, y: scale)
+        
+        context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
+        context.translateBy(x: -14.0 - UIScreenPixel, y: -14.0 - UIScreenPixel)
+        
+        let _ = try? drawSvgPath(context, path: "M24.1835,4.71703 C21.7304,2.42169 18.2984,0.995605 14.5,0.995605 C7.04416,0.995605 1.0,6.49029 1.0,13.2683 C1.0,17.1341 2.80572,20.3028 5.87839,22.5523 C6.27132,22.84 6.63324,24.4385 5.75738,25.7811 C5.39922,26.3301 5.00492,26.7573 4.70138,27.0861 C4.26262,27.5614 4.01347,27.8313 4.33716,27.967 C4.67478,28.1086 6.66968,28.1787 8.10952,27.3712 C9.23649,26.7392 9.91903,26.1087 10.3787,25.6842 C10.7588,25.3331 10.9864,25.1228 11.187,25.1688 C11.9059,25.3337 12.6478,25.4461 13.4075,25.5015 C13.4178,25.5022 13.4282,25.503 13.4386,25.5037 C13.7888,25.5284 14.1428,25.5411 14.5,25.5411 C21.9558,25.5411 28.0,20.0464 28.0,13.2683 C28.0,9.94336 26.5455,6.92722 24.1835,4.71703 ")
+        context.closePath()
+        context.clip()
+        
+        let colorsArray = backgroundColors.map { $0.cgColor } as NSArray
+        var locations: [CGFloat] = [0.0, 1.0]
+        let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        
+        context.resetClip()
+        
+        let _ = try? drawSvgPath(context, path: "M24.1835,4.71703 C21.7304,2.42169 18.2984,0.995605 14.5,0.995605 C7.04416,0.995605 1.0,6.49029 1.0,13.2683 C1.0,17.1341 2.80572,20.3028 5.87839,22.5523 C6.27132,22.84 6.63324,24.4385 5.75738,25.7811 C5.39922,26.3301 5.00492,26.7573 4.70138,27.0861 C4.26262,27.5614 4.01347,27.8313 4.33716,27.967 C4.67478,28.1086 6.66968,28.1787 8.10952,27.3712 C9.23649,26.7392 9.91903,26.1087 10.3787,25.6842 C10.7588,25.3331 10.9864,25.1228 11.187,25.1688 C11.9059,25.3337 12.6478,25.4461 13.4075,25.5015 C13.4178,25.5022 13.4282,25.503 13.4386,25.5037 C13.7888,25.5284 14.1428,25.5411 14.5,25.5411 C21.9558,25.5411 28.0,20.0464 28.0,13.2683 C28.0,9.94336 26.5455,6.92722 24.1835,4.71703 ")
+        context.closePath()
+        if let path = context.path {
+            let strokePath = path.copy(strokingWithWidth: 1.0 + UIScreenPixel, lineCap: .round, lineJoin: .round, miterLimit: 0.0)
+            context.beginPath()
+            context.addPath(strokePath)
+            context.clip()
+            
+            let colorsArray = strokeColors.map { $0.cgColor } as NSArray
+            var locations: [CGFloat] = [0.0, 1.0]
+            let gradient = CGGradient(colorsSpace: deviceColorSpace, colors: colorsArray, locations: &locations)!
+            context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: 0.0, y: size.height), options: CGGradientDrawingOptions())
+        }
+        
+        context.restoreGState()
+        
+        let fontSize = round(15.0 * scale)
+        
+        let attributedString = NSAttributedString(string: title, attributes: [NSAttributedString.Key.font: Font.with(size: fontSize, design: .round, weight: .bold), NSAttributedString.Key.foregroundColor: UIColor.white])
+        
+        let line = CTLineCreateWithAttributedString(attributedString)
+        let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        
+        let lineOffset = CGPoint(x: title == "B" ? 1.0 : 0.0, y: floorToScreenPixels(realSize.height * 0.05))
+        let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (realSize.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (realSize.height - lineBounds.size.height) / 2.0) + lineOffset.y)
+        
+        context.translateBy(x: realSize.width / 2.0, y: realSize.height / 2.0)
+        context.scaleBy(x: 1.0, y: -1.0)
+        context.translateBy(x: -realSize.width / 2.0, y: -realSize.height / 2.0)
+        
+        context.translateBy(x: lineOrigin.x, y: lineOrigin.y)
+        CTLineDraw(line, context)
+        context.translateBy(x: -lineOrigin.x, y: -lineOrigin.y)
+    })
+}
+
 public enum AnimationCacheAnimationType {
     case still
     case lottie
@@ -132,7 +194,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         
         super.init()
         
-        if let file = file {
+        if let topicInfo = emoji.topicInfo {
+            self.updateTopicInfo(topicInfo: topicInfo)
+        } else if let file = file {
             self.updateFile(file: file, attemptSynchronousLoad: attemptSynchronousLoad)
         } else {
             self.infoDisposable = (context.engine.stickers.resolveInlineStickers(fileIds: [emoji.fileId])
@@ -194,6 +258,26 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             if !shouldBePlaying {
                 self.currentLoopCount = 0
             }
+        }
+    }
+    
+    private func updateTopicInfo(topicInfo: EngineMessageHistoryThread.Info) {
+        func generateTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
+            return ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
+        }
+        
+        let topicColors: [Int32: ([UInt32], [UInt32])] = [
+            0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+            0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+            0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+            0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+            0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+            0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+        ]
+        let colors = topicColors[topicInfo.iconColor] ?? generateTopicColors(topicInfo.iconColor)
+        
+        if let image = generateTopicIcon(title: String(topicInfo.title.prefix(1)), backgroundColors: colors.0.map(UIColor.init(rgb:)), strokeColors: colors.1.map(UIColor.init(rgb:)), size: CGSize(width: 32.0, height: 32.0)) {
+            self.contents = image.cgImage
         }
     }
     

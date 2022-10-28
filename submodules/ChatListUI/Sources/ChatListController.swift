@@ -450,6 +450,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         (self.navigationController as? NavigationController)?.pushViewController(controller)
                     })
                 }
+                self.chatTitleView?.longPressed = { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.activateSearch()
+                }
                 
                 let peerView = Promise<PeerView>()
                 peerView.set(context.account.viewTracker.peerView(peerId))
@@ -516,7 +522,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         case .member:
                             strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
                         default:
-                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: strongSelf.presentationData.strings.Channel_JoinChannel, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
+                            let actionTitle: String
+                            if channel.flags.contains(.requestToJoin) {
+                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
+                            } else {
+                                actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
+                            }
+                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }
                     }
                 })
@@ -1244,7 +1256,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.navigationItem.backBarButtonItem = backBarButtonItem
         }
         
-        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: self.presentationData.strings.DialogList_SearchLabel, compactPlaceholder: self.presentationData.strings.DialogList_SearchLabelCompact)
+        let placeholder: String
+        let compactPlaceholder: String
+        if case .forum = location {
+            placeholder = self.presentationData.strings.Common_Search
+            compactPlaceholder = self.presentationData.strings.Common_Search
+        } else {
+            placeholder = self.presentationData.strings.DialogList_SearchLabel
+            compactPlaceholder = self.presentationData.strings.DialogList_SearchLabelCompact
+        }
+        self.searchContentNode?.updateThemeAndPlaceholder(theme: self.presentationData.theme, placeholder: placeholder, compactPlaceholder: compactPlaceholder)
+        
         let editing = self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing
         let editItem: UIBarButtonItem
         if editing {
@@ -1444,12 +1466,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if group {
                 strongSelf.archiveChats(peerIds: [peerId])
             } else {
-                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
                 let _ = strongSelf.context.engine.peers.updatePeersGroupIdInteractively(peerIds: [peerId], groupId: group ? .archive : .root).start(completed: {
                     guard let strongSelf = self else {
                         return
                     }
-                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                 })
             }
         }
@@ -2923,12 +2945,25 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     public private(set) var isSearchActive: Bool = false
     public func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil) {
+        self.activateSearch(filter: filter, query: query, skipScrolling: false)
+    }
+        
+    private func activateSearch(filter: ChatListSearchFilter = .chats, query: String? = nil, skipScrolling: Bool = false) {
         if self.displayNavigationBar {
+            if !skipScrolling, let searchContentNode = self.searchContentNode, searchContentNode.expansionProgress != 1.0 {
+                self.scrollToTop?()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 0.2, execute: { [weak self] in
+                    self?.activateSearch(filter: filter, query: query, skipScrolling: true)
+                })
+                return
+            }
+            
             let _ = (combineLatest(self.chatListDisplayNode.containerNode.currentItemNode.contentsReady |> take(1), self.context.account.postbox.tailChatListView(groupId: .root, count: 16, summaryComponents: ChatListEntrySummaryComponents(components: [:])) |> take(1))
             |> deliverOnMainQueue).start(next: { [weak self] _, chatListView in
                 guard let strongSelf = self else {
                     return
                 }
+                
                 if let scrollToTop = strongSelf.scrollToTop {
                     scrollToTop()
                 }
@@ -3165,9 +3200,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             let signal: Signal<Never, NoError>
             var completion: (() -> Void)?
             if !peerIds.isEmpty {
-                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                 completion = { [weak self] in
-                    self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                    self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                 }
                 signal = self.context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: Array(peerIds), setToValue: false)
             } else if case let .chatList(groupId) = self.location {
@@ -3206,7 +3241,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
                     var state = state
                     for peerId in peerIds {
-                        state.pendingRemovalPeerIds.insert(peerId)
+                        state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
                     }
                     return state
                 })
@@ -3251,15 +3286,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         
                         return true
                     } else if value == .undo {
-                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                         strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
                             var state = state
                             for peerId in peerIds {
-                                state.pendingRemovalPeerIds.remove(peerId)
+                                state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
                             }
                             return state
                         })
-                        self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                        self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                         return true
                     }
                     return false
@@ -3286,13 +3321,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         self.archiveChats(peerIds: Array(peerIds))
                     } else {
                         if !peerIds.isEmpty {
-                            self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds.first!)
+                            self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                             let _ = (self.context.engine.peers.updatePeersGroupIdInteractively(peerIds: Array(peerIds), groupId: .root)
                                      |> deliverOnMainQueue).start(completed: { [weak self] in
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                                 strongSelf.donePressed()
                             })
                         }
@@ -3532,7 +3567,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             }
                             strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                 var state = state
-                                state.pendingClearHistoryPeerIds.insert(peer.peerId)
+                                state.pendingClearHistoryPeerIds.insert(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
                                 return state
                             })
                             strongSelf.forEachController({ controller in
@@ -3553,7 +3588,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                         }
                                         strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                             var state = state
-                                            state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                            state.pendingClearHistoryPeerIds.remove(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
                                             return state
                                         })
                                     })
@@ -3561,7 +3596,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 } else if value == .undo {
                                     strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                                         var state = state
-                                        state.pendingClearHistoryPeerIds.remove(peer.peerId)
+                                        state.pendingClearHistoryPeerIds.remove(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
                                         return state
                                     })
                                     return true
@@ -3741,7 +3776,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         items.append(ActionSheetTextItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationText, parseMarkdown: true))
         items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteTopicConfirmationAction, color: .destructive, action: { [weak self, weak actionSheet] in
             actionSheet?.dismissAnimated()
-            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId)
+            self?.commitDeletePeerThread(peerId: peerId, threadId: threadId, completion: {})
         }))
         
         actionSheet.setItemGroups([ActionSheetItemGroup(items: items),
@@ -3754,18 +3789,61 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.present(actionSheet, in: .window(.root))
     }
     
-    private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64) {
-        let _ = self.context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).start(completed: { [weak self] in
-            guard let strongSelf = self else {
-                return
+    private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64, completion: @escaping () -> Void) {
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitActionAndReplacementAnimation()
             }
-            strongSelf.chatListDisplayNode.containerNode.updateState({ state in
-                var state = state
-                state.pendingRemovalPeerIds.remove(peerId)
-                return state
-            })
-            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+            return true
         })
+        
+        self.chatListDisplayNode.containerNode.updateState({ state in
+            var state = state
+            state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
+            return state
+        })
+        
+        let statusText = self.presentationData.strings.Undo_DeletedTopic
+        
+        self.present(UndoOverlayController(presentationData: self.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: statusText), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+            guard let self else {
+                return false
+            }
+            if value == .commit {
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
+                
+                let _ = self.context.engine.peers.removeForumChannelThread(id: peerId, threadId: threadId).start(completed: { [weak self] in
+                    guard let self else {
+                        return
+                    }
+                    self.chatListDisplayNode.containerNode.updateState({ state in
+                        var state = state
+                        state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
+                        return state
+                    })
+                    self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
+                })
+                
+                self.chatListDisplayNode.containerNode.updateState({ state in
+                    var state = state
+                    state.selectedThreadIds.remove(threadId)
+                    return state
+                })
+                
+                completion()
+                return true
+            } else if value == .undo {
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
+                self.chatListDisplayNode.containerNode.updateState({ state in
+                    var state = state
+                    state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peerId, threadId: threadId))
+                    return state
+                })
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
+                return true
+            }
+            return false
+        }), in: .current)
     }
     
     private func setPeerThreadStopped(peerId: EnginePeer.Id, threadId: Int64, isStopped: Bool) {
@@ -3870,7 +3948,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             return
         }
         let engine = self.context.engine
-        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds[0], threadId: nil))
         let _ = (ApplicationSpecificNotice.incrementArchiveChatTips(accountManager: self.context.sharedContext.accountManager, count: 1)
         |> deliverOnMainQueue).start(next: { [weak self] previousHintCount in
             let _ = (engine.peers.updatePeersGroupIdInteractively(peerIds: peerIds, groupId: .archive)
@@ -3878,7 +3956,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 guard let strongSelf = self else {
                     return
                 }
-                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
         
                 for peerId in peerIds {
                     deleteSendMessageIntents(peerId: peerId)
@@ -3889,13 +3967,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return false
                     }
                     if value == .undo {
-                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerIds[0])
+                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds[0], threadId: nil))
                         let _ = (engine.peers.updatePeersGroupIdInteractively(peerIds: peerIds, groupId: .root)
                         |> deliverOnMainQueue).start(completed: {
                             guard let strongSelf = self else {
                                 return
                             }
-                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                         })
                         return true
                     } else {
@@ -3941,13 +4019,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         
         let peerId = peer.peerId
-        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
         self.chatListDisplayNode.containerNode.updateState({ state in
             var state = state
-            state.pendingRemovalPeerIds.insert(peer.peerId)
+            state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
             return state
         })
-        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+        self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
         let statusText: String
         if case let .channel(channel) = chatPeer {
             if deleteGloballyIfPossible {
@@ -3991,7 +4069,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 return false
             }
             if value == .commit {
-                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
                 if case let .channel(channel) = chatPeer {
                     strongSelf.context.peerChannelMemberCategoriesContextsManager.externallyRemoved(peerId: channel.id, memberId: strongSelf.context.account.peerId)
                 }
@@ -4001,10 +4079,10 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                         var state = state
-                        state.pendingRemovalPeerIds.remove(peer.peerId)
+                        state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
                         return state
                     })
-                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                    strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                     
                     deleteSendMessageIntents(peerId: peerId)
                 })
@@ -4018,13 +4096,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 completion()
                 return true
             } else if value == .undo {
-                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(peerId)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
                 strongSelf.chatListDisplayNode.containerNode.updateState({ state in
                     var state = state
-                    state.pendingRemovalPeerIds.remove(peer.peerId)
+                    state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peer.peerId, threadId: nil))
                     return state
                 })
-                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingPeerId(nil)
+                strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
                 return true
             }
             return false

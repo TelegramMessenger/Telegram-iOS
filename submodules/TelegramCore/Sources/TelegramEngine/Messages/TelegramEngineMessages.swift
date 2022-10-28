@@ -289,8 +289,8 @@ public extension TelegramEngine {
             return SparseMessageList(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
         }
 
-        public func sparseMessageCalendar(peerId: EnginePeer.Id, tag: EngineMessage.Tags) -> SparseMessageCalendar {
-            return SparseMessageCalendar(account: self.account, peerId: peerId, messageTag: tag)
+        public func sparseMessageCalendar(peerId: EnginePeer.Id, threadId: Int64?, tag: EngineMessage.Tags) -> SparseMessageCalendar {
+            return SparseMessageCalendar(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
         }
 
         public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
@@ -461,6 +461,13 @@ public extension TelegramEngine {
                 for peerId in peerIds {
                     _internal_togglePeerUnreadMarkInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, setToValue: setToValue)
                 }
+            }
+            |> ignoreValues
+        }
+        
+        public func markForumThreadAsRead(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                _internal_markForumThreadAsReadInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, threadId: threadId)
             }
             |> ignoreValues
         }

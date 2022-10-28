@@ -1255,7 +1255,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 peers: SimpleDictionary<PeerId, Peer>(),
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
-                associatedMedia: [:]
+                associatedMedia: [:],
+                associatedThreadInfo: nil
             )
             let messageItem = ListMessageItem(
                 presentationData: self.chatPresentationData,
@@ -1733,7 +1734,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         if threadId == nil {
             switch contentType {
             case .photoOrVideo, .photo, .video:
-                self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, tag: tagMaskForType(self.contentType))
+                self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
             default:
                 self.calendarSource = nil
             }
@@ -2453,7 +2454,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     peers: SimpleDictionary<PeerId, Peer>(),
                     associatedMessages: SimpleDictionary<MessageId, Message>(),
                     associatedMessageIds: [],
-                    associatedMedia: [:]
+                    associatedMedia: [:],
+                    associatedThreadInfo: nil
                 )
                 let messageItem = ListMessageItem(
                     presentationData: self.itemGridBinding.chatPresentationData,
