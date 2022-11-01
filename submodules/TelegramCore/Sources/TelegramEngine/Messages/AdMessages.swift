@@ -256,7 +256,8 @@ private class AdMessagesHistoryContextImpl {
                 peers: messagePeers,
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
-                associatedMedia: [:]
+                associatedMedia: [:],
+                associatedThreadInfo: nil
             )
         }
     }

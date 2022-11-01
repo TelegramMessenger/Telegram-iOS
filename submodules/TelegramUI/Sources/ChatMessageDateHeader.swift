@@ -373,6 +373,7 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     let peerId: PeerId
     let peer: Peer?
     let messageReference: MessageReference?
+    let adMessageId: EngineMessage.Id?
     let effectiveTimestamp: Int32
     let presentationData: ChatPresentationData
     let context: AccountContext
@@ -382,6 +383,11 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
+        if message.adAttribute != nil {
+            self.adMessageId = message.id
+        } else {
+            self.adMessageId = nil
+        }
 
         var effectiveTimestamp = message.timestamp
         if let forwardInfo = message.forwardInfo, forwardInfo.flags.contains(.isImported) {
@@ -412,7 +418,7 @@ final class ChatMessageAvatarHeader: ListViewItemHeader {
     }
 
     func node(synchronousLoad: Bool) -> ListViewItemHeaderNode {
-        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
+        return ChatMessageAvatarHeaderNode(peerId: self.peerId, peer: self.peer, messageReference: self.messageReference, adMessageId: self.adMessageId, presentationData: self.presentationData, context: self.context, controllerInteraction: self.controllerInteraction, synchronousLoad: synchronousLoad)
     }
 
     func updateNode(_ node: ListViewItemHeaderNode, previous: ListViewItemHeader?, next: ListViewItemHeader?) {
@@ -435,6 +441,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
     private let peerId: PeerId
     private let messageReference: MessageReference?
     private let peer: Peer?
+    private let adMessageId: EngineMessage.Id?
 
     private let containerNode: ContextControllerSourceNode
     private let avatarNode: AvatarNode
@@ -459,10 +466,11 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
         }
     }
     
-    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
+    init(peerId: PeerId, peer: Peer?, messageReference: MessageReference?, adMessageId: EngineMessage.Id?, presentationData: ChatPresentationData, context: AccountContext, controllerInteraction: ChatControllerInteraction, synchronousLoad: Bool) {
         self.peerId = peerId
         self.peer = peer
         self.messageReference = messageReference
+        self.adMessageId = adMessageId
         self.presentationData = presentationData
         self.context = context
         self.controllerInteraction = controllerInteraction
@@ -636,10 +644,14 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
             if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, id, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else if let peer = self.peer {
-                if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                    self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false)
+                if let adMessageId = self.adMessageId {
+                    self.controllerInteraction.activateAdAction(adMessageId)
                 } else {
-                    self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, false)
+                    if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false)
+                    } else {
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, false)
+                    }
                 }
             }
         }

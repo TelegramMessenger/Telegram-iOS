@@ -19,12 +19,22 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
         for controller in params.navigationController.viewControllers.reversed() {
             if let controller = controller as? ChatListControllerImpl, case let .forum(peerId) = controller.location, peer.id == peerId {
                 let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                if let activateMessageSearch = params.activateMessageSearch {
+                    controller.activateSearch(query: activateMessageSearch.1)
+                }
                 return
             }
         }
         
         let controller = ChatListControllerImpl(context: params.context, location: .forum(peerId: peer.id), controlsHistoryPreload: false, enableDebugActions: false)
-        params.navigationController.pushViewController(controller)
+        
+        let activateMessageSearch = params.activateMessageSearch
+        params.navigationController.pushViewController(controller, completion: { [weak controller] in
+            guard let controller, let activateMessageSearch else {
+                return
+            }
+            controller.activateSearch(query: activateMessageSearch.1)
+        })
         
         return
     }

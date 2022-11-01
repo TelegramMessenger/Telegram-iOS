@@ -828,6 +828,7 @@ public final class SparseMessageCalendar {
         private let queue: Queue
         private let account: Account
         private let peerId: PeerId
+        private let threadId: Int64?
         private let messageTag: MessageTags
 
         private var state: InternalState
@@ -845,10 +846,11 @@ public final class SparseMessageCalendar {
             return self.isLoadingMorePromise.get()
         }
 
-        init(queue: Queue, account: Account, peerId: PeerId, messageTag: MessageTags) {
+        init(queue: Queue, account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags) {
             self.queue = queue
             self.account = account
             self.peerId = peerId
+            self.threadId = threadId
             self.messageTag = messageTag
 
             self.state = InternalState(nextRequestOffset: 0, minTimestamp: nil, messagesByDay: [:])
@@ -881,13 +883,16 @@ public final class SparseMessageCalendar {
 
             self.statePromise.set(.single(self.state))
 
-            return _internal_clearHistoryInRangeInteractively(postbox: self.account.postbox, peerId: self.peerId, threadId: nil, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type).start(completed: {
+            return _internal_clearHistoryInRangeInteractively(postbox: self.account.postbox, peerId: self.peerId, threadId: self.threadId, minTimestamp: minTimestamp, maxTimestamp: maxTimestamp, type: type).start(completed: {
                 completion()
             })
         }
 
         private func loadMore() {
             guard let nextRequestOffset = self.state.nextRequestOffset else {
+                return
+            }
+            if self.threadId != nil {
                 return
             }
 
@@ -1011,11 +1016,11 @@ public final class SparseMessageCalendar {
     public var minTimestamp: Int32?
     private var disposable: Disposable?
 
-    init(account: Account, peerId: PeerId, messageTag: MessageTags) {
+    init(account: Account, peerId: PeerId, threadId: Int64?, messageTag: MessageTags) {
         let queue = Queue()
         self.queue = queue
         self.impl = QueueLocalObject(queue: queue, generate: {
-            return Impl(queue: queue, account: account, peerId: peerId, messageTag: messageTag)
+            return Impl(queue: queue, account: account, peerId: peerId, threadId: threadId, messageTag: messageTag)
         })
 
         self.disposable = self.state.start(next: { [weak self] state in
