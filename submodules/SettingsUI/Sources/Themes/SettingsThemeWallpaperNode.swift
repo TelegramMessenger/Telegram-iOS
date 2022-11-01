@@ -207,7 +207,7 @@ final class SettingsThemeWallpaperNode: ASDisplayNode {
                     }
 
                     let fullDimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    let convertedFullRepresentations = [ImageRepresentationWithReference(representation: .init(dimensions: fullDimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource))]
+                    let convertedFullRepresentations = [ImageRepresentationWithReference(representation: .init(dimensions: fullDimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource))]
                     
                     let imageSignal: Signal<(TransformImageArguments) -> DrawingContext?, NoError>
                     if wallpaper.isPattern {
