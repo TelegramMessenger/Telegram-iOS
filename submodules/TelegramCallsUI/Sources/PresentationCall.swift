@@ -534,8 +534,12 @@ public final class PresentationCallImpl: PresentationCall {
         }
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
-            audioSessionControl.setup(synchronous: true)
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                audioSessionControl.setup(synchronous: true)
+            }
         }
         
         let mappedVideoState: PresentationCallState.VideoState
@@ -1031,7 +1035,11 @@ public final class PresentationCallImpl: PresentationCall {
         ))
         
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(.custom(output))
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(output))
+            }
         }
     }
     
