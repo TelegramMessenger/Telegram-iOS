@@ -26,9 +26,9 @@ let package = Package(
         .target(
             name: "TelegramVoip",
             dependencies: [
-                .productItem(name: "TgVoipWebrtc", package: "TgVoipWebrtc", condition: nil),
-                .productItem(name: "SwiftSignalKit", package: "SSignalKit", condition: nil),
-                .productItem(name: "TelegramCore", package: "TelegramCore", condition: nil),
+                .product(name: "TgVoipWebrtc", package: "TgVoipWebrtc", condition: nil),
+                .product(name: "SwiftSignalKit", package: "SSignalKit", condition: nil),
+                .product(name: "TelegramCore", package: "TelegramCore", condition: nil),
             ],
             path: "Sources",
             exclude: [
