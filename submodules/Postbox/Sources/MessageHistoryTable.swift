@@ -2980,6 +2980,9 @@ final class MessageHistoryTable: Table {
                     } else {
                         indices.append(index)
                     }
+                    if indices.count >= limit {
+                        break
+                    }
                 }
                 if indices.count >= limit {
                     break
