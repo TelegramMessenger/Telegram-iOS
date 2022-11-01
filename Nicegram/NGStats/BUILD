@@ -8,8 +8,10 @@ swift_library(
     ]),
     deps = [
         "//submodules/AccountContext:AccountContext",
+        "//Nicegram/EsimModule/FileStorage:FileStorage",
         "//Nicegram/NGApiClient:NGApiClient",
         "//Nicegram/NGData:NGData",
+        "//Nicegram/NGRemoteConfig:NGRemoteConfig",
         "//Nicegram/NGUtils:NGUtils",
     ],
     visibility = [

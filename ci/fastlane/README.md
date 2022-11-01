@@ -29,6 +29,14 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 
 
 
+### tg_report_release
+
+```sh
+[bundle exec] fastlane tg_report_release
+```
+
+
+
 ### build
 
 ```sh

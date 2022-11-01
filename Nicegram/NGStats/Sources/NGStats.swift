@@ -10,8 +10,9 @@ import Foundation
 private let thresholdGroupMemebrsCount: Int = 1000
 
 private let apiClient = createNicegramApiClient(auth: nil, trackMobileIdentifier: false)
+private let throttlingService = ChatStatsThrottlingService()
 
-public func shouldShareChannelsInfo() -> Bool {
+public func isShareChannelsInfoEnabled() -> Bool {
     return NGSettings.shareChannelsInfo
 }
 
@@ -20,7 +21,13 @@ public func setShareChannelsInfo(enabled: Bool) {
 }
 
 public func shareChannelInfo(peerId: PeerId, context: AccountContext) {
-    guard shouldShareChannelsInfo() else { return }
+    if !isShareChannelsInfoEnabled() {
+        return
+    }
+    
+    if throttlingService.shouldSkipShare(peerId: peerId) {
+        return
+    }
     
     _ = (context.account.viewTracker.peerView(peerId, updateData: true)
     |> take(1))
@@ -86,6 +93,7 @@ private func shareChannelInfo(peer: Peer, cachedData: CachedPeerData?, avatarIma
     
     let body = ProfileInfoBody(id: id, type: type, inviteLinks: inviteLinks, icon: profileImageBase64, payload: AnyProfilePayload(wrapped: payload))
     
+    throttlingService.markAsShared(peerId: peer.id)
     apiClient.send(.post(path: "telegram/chat", body: body), completion: nil)
 }
 

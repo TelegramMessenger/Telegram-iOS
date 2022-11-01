@@ -1,0 +1,9 @@
+protocol {{ module_info.name }}PresenterInput { }
+
+protocol {{ module_info.name }}PresenterOutput: AnyObject { }
+
+final class {{ module_info.name }}Presenter: {{ module_info.name }}PresenterInput {
+    weak var output: {{ module_info.name }}PresenterOutput!
+}
+
+extension {{ module_info.name }}Presenter: {{ module_info.name }}InteractorOutput { }

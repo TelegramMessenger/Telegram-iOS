@@ -1,0 +1,9 @@
+protocol {{ module_info.name }}InteractorInput { }
+
+protocol {{ module_info.name }}InteractorOutput { }
+
+class {{ module_info.name }}Interactor: {{ module_info.name }}InteractorInput {
+    var output: {{ module_info.name }}InteractorOutput!
+}
+
+extension {{ module_info.name }}Interactor: {{ module_info.name }}ViewControllerOutput { }

@@ -1,0 +1,31 @@
+image: atlassian/default-image:3
+
+pipelines:
+    branches:
+      '{master,beta}':
+        - step:
+           script:
+             - BB_REPO_PATH=$BITBUCKET_CLONE_DIR
+             - GH_REPO_PATH=$BITBUCKET_CLONE_DIR/../nicegram-ios-github
+
+             - BRANCH=$BITBUCKET_BRANCH
+             - COMMIT_MESSAGE=`git log --format=%B -n 1 $BITBUCKET_COMMIT`
+
+             - git clone --depth 1 -b $BRANCH git@github.com:nicegram/Nicegram-iOS.git $GH_REPO_PATH
+
+             - cd $GH_REPO_PATH
+             - git rm -rf .
+             - git clean -fxd
+
+             - cd $BB_REPO_PATH
+             - git submodule update --recursive --init
+             - cp -r .git/modules/. $GH_REPO_PATH/.git/modules
+             - rm -rf .git
+             - cp -r . $GH_REPO_PATH
+
+             - cd $GH_REPO_PATH
+             - git add .
+             - git config user.email "denis.shilovichhh@gmail.com"
+             - git config user.name "Denis Shilovich"
+             - git commit -m "$COMMIT_MESSAGE"
+             - git push origin $BRANCH

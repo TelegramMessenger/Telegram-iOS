@@ -1,5 +1,9 @@
 "AppName" = "Tên Ứng dụng";
 
+/*Common*/
+"Nicegram.PrivacyPolicy" = "Chính sách bảo mật";
+"Nicegram.EULA" = "Thỏa thuận giấy phép người dùng cuối";
+
 /*ChatFilter*/
 "ChatFilter.Bots" = "Lọc Chat";
 "ChatFilter.Channels" = "Kênh";
@@ -15,5 +19,28 @@
 "NiceFeatures.Tabs.ShowContacts" = "Hiện Liên hệ";
 "NiceFeatures.ChatScreen.Header" = "CHAT SCREEN";
 "NiceFeatures.ChatScreen.AnimatedStickers" = "Nhãn dán Đã lưu";
+"NiceFeatures.useBackCam" = "Sử dụng camera phía sau (Video dạng tròn)";
 
 "NiceFeatures.Folders.Header" = "Thư mục";
+"NiceFeatures.Account.Header" = "CÀI ĐẶT TÀI KHOẢN";
+"NiceFeatures.Folders.TgFolders" = "Đặt mục chia tin nhắn ở dưới cùng";
+"NiceFeatures.Folders.TgFolders.Notice" = "Danh sách thư mục kiểu cho hệ điều hành iOS";
+"NiceFeatures.RoundVideos.UseRearCamera" = "Bắt đầu với camera sau";
+
+"NiceFeatures.InstantLock" = "Tức thì";
+
+/*Save to Cloud*/
+"Chat.SaveToCloud" = "Lưu vào Đám mây";
+
+/*Open Pin*/
+"Chat.OpenPin" = "Hiển thị mục ghim";
+"ChatFilter.Admin" = "Quản trị";
+"NiceFeatures.Notifications.Fix" = "Tắt thông báo không mong muốn";
+"NiceFeatures.Notifications.FixNotice" = "Hữu ích nếu bạn nhận được thông báo từ các cuộc trò chuyện bị tắt tiếng.\nTính năng trả lời từ thông báo, tên tài khoản và nội dung xem trước sẽ không khả dụng.";
+"NiceFeatures.Filters.Header" = "BỘ LỌC (MỤC)";
+"NiceFeatures.Filters.Notice" = "Chọn số lượng mục tùy chỉnh.\nNhấn và giữ vào mục để thay đổi bộ lọc.";
+"NiceFeatures.Filters.ShowBadge" = "Hiển thị huy hiệu (Bộ lọc)";
+"NiceFeatures.UseClassicInfoUi" = "Sử dụng giao diện người dùng Thông tin người dùng cổ điển";
+
+/*Onboarding*/
+"NicegramOnboarding.Continue" = "Tiếp tục";

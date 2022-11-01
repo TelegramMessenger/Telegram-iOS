@@ -1,0 +1,47 @@
+import UIKit
+import SnapKit
+import NGExtensions
+
+protocol {{ module_info.name }}ViewControllerInput { }
+
+protocol {{ module_info.name }}ViewControllerOutput { }
+
+final class {{ module_info.name }}ViewController: UIViewController, {{ module_info.name }}ViewControllerInput {
+    var output: {{ module_info.name }}ViewControllerOutput!
+    var router: {{ module_info.name }}Router!
+
+    private let scrollView = UIScrollView()
+    private let containerView = UIView()
+
+
+    override func loadView() {
+        view = UIView()
+        view.addSubview(scrollView)
+        scrollView.snp.makeConstraints {
+            $0.top.equalTo(self.view.safeArea.top)
+            $0.leading.trailing.bottom.equalToSuperview()
+        }
+        scrollView.addSubview(containerView)
+        containerView.snp.makeConstraints {
+            $0.edges.equalToSuperview()
+            $0.width.equalToSuperview()
+            $0.height.equalToSuperview().priority(.low)
+        }
+    }
+
+    override func viewDidLoad() {
+        super.viewDidLoad()
+        if #available(iOS 11.0, *) {
+            scrollView.contentInsetAdjustmentBehavior = .never
+        } else {
+            automaticallyAdjustsScrollViewInsets = false
+        }
+    }
+
+
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+    }
+}
+
+extension {{ module_info.name }}ViewController: {{ module_info.name }}PresenterOutput { }

@@ -96,7 +96,7 @@ public struct NGSettings {
     @NGStorage(key: "shouldDownloadVideo", defaultValue: false)
     public static var shouldDownloadVideo: Bool
     
-    @NGStorage(key: "shareChannelsInfo", defaultValue: true)
+    @NGStorage(key: "shareChannelsInfo", defaultValue: false)
     public static var shareChannelsInfo: Bool
 }
 

@@ -92,7 +92,7 @@ jobs:
       - name: Send Telegram Message Ok
         run: |
           cd $SOURCE_PATH/ci
-          fastlane tg message:"New iOS build is available on: ${{ steps.create_release.outputs.html_url }}"
+          fastlane tg_report_release version:${{ env.APP_VERSION }} build:${{ env.BUILD_NUMBER }} release_url:${{ steps.create_release.outputs.html_url }}
     env:
       APP_STORE_CONNECT_API_KEY_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ID }}
       APP_STORE_CONNECT_API_KEY_ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_API_KEY_ISSUER_ID }}

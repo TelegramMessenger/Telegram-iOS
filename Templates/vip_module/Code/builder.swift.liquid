@@ -1,0 +1,27 @@
+import UIKit
+
+public protocol {{ module_info.name }}Builder {
+    func build() -> UIViewController
+}
+
+public class {{ module_info.name }}BuilderImpl: {{ module_info.name }}Builder {
+    public init() { }
+
+    public func build() -> UIViewController {
+        let controller = {{ module_info.name }}ViewController()
+
+        let router = {{ module_info.name }}Router()
+        router.parentViewController = controller
+
+        let presenter = {{ module_info.name }}Presenter()
+        presenter.output = controller
+
+        let interactor = {{ module_info.name }}Interactor()
+        interactor.output = presenter
+
+        controller.output = interactor
+        controller.router = router
+
+        return controller
+    }
+}

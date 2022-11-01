@@ -41,6 +41,7 @@ let niceLocales: [String : [String : String]] = [
     "ku": gd(locale: "ku"),
     "hi": gd(locale: "hi"),
     "id": gd(locale: "id"),
+    "uk": gd(locale: "uk"),
     "be": [:],
 ]
 

@@ -39,10 +39,12 @@ app_identifier_llc = [
 
 lane :beta_build do |options|
   build(
-    build_number: latest_testflight_build_number(
-      api_key: generate_app_store_connect_api_key(),
-      app_identifier: BUNDLE_ID
-    ) + 1,
+    # TODO: Delete hardcoded build number
+    # build_number: latest_testflight_build_number(
+    #   api_key: generate_app_store_connect_api_key(),
+    #   app_identifier: BUNDLE_ID
+    # ) + 1,
+    build_number: 72,
     upload_to_tf: true
   )
 end
@@ -58,6 +60,21 @@ lane :master_build do |options|
   build(
     build_number: build_number,
     upload_to_tf: false
+  )
+end
+
+lane :tg_report_release do |options|
+  version = options[:version]
+  build = options[:build]
+  release_url = options[:release_url]
+
+  install_ipa_guide_url = "https://medium.com/@pancakeufo/how-to-install-nicegram-on-your-jailbroken-ios-device-1b8f9f2b5afa"
+
+  tg(
+    message: ""\
+    "Nicegram v#{version} (#{build}) -> [Download](#{release_url})\n\n"\
+    "How to install .ipa -> [Read here](#{install_ipa_guide_url})",
+    parse_mode: "Markdown"
   )
 end
 
@@ -303,12 +320,13 @@ end
 
 lane :tg do |options|
   message = options[:message]
+  parse_mode = options[:parse_mode]
 
-  telegram(
-    token: TELEGRAM_BOT_TOKEN,
-    chat_id: TELEGRAM_CHAT_ID,
-    text: message
-  )
+  sh("curl -X POST \
+     -H 'Content-Type: application/json' \
+     -d '{\"chat_id\": \"#{TELEGRAM_CHAT_ID}\", \"text\": \"#{message}\", \"parse_mode\": \"#{parse_mode}\"}' \
+     https://api.telegram.org/bot#{TELEGRAM_BOT_TOKEN}/sendMessage"
+   )
 end
 
 

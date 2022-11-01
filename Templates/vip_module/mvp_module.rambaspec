@@ -1,0 +1,13 @@
+name: "vip_module"
+summary: "Swift UI Module template"
+author: "alex.yanski@mobyrix.com"
+version: "1.0.1"
+license: "MIT"
+
+code_files:
+# UI Module
+- {name: RouterImpl.swift, path: Code/router.swift.liquid}
+- {name: InteractorImpl.swift, path: Code/interactor.swift.liquid}
+- {name: PresenterImpl.swift, path: Code/presenter.swift.liquid}
+- {name: ViewController.swift, path: Code/view.swift.liquid}
+- {name: BuilderImpl.swift, path: Code/builder.swift.liquid}
