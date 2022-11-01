@@ -63,28 +63,8 @@ final class ChatMessageWebpageBubbleContentNode: ChatMessageBubbleContentNode {
         }
         self.contentNode.activateAction = { [weak self] in
             if let strongSelf = self, let item = strongSelf.item {
-                if let adAttribute = item.message.adAttribute {
-                    switch adAttribute.target {
-                    case let .peer(id, messageId, startParam):
-                        let navigationData: ChatControllerInteractionNavigateToPeer
-                        if let bot = item.message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
-                            navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
-                        } else {
-                            var subject: ChatControllerSubject?
-                            if let messageId = messageId {
-                                subject = .message(id: .id(messageId), highlight: true, timecode: nil)
-                            }
-                            navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
-                        }
-                        let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
-                        |> deliverOnMainQueue).start(next: { peer in
-                            if let peer = peer {
-                                item.controllerInteraction.openPeer(peer, navigationData, nil, false)
-                            }
-                        })
-                    case let .join(_, joinHash):
-                        item.controllerInteraction.openJoinLink(joinHash)
-                    }
+                if let _ = item.message.adAttribute {
+                    item.controllerInteraction.activateAdAction(item.message.id)
                 } else {
                     var webPageContent: TelegramMediaWebpageLoadedContent?
                     for media in item.message.media {

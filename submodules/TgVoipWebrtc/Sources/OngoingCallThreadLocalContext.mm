@@ -626,7 +626,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
             }
             std::shared_ptr<tgcalls::VideoCaptureInterface> interface = strongSelf->_interface;
 
-            if (false && requestClone) {
+            /*if (false && requestClone) {
                 VideoSampleBufferView *remoteRenderer = [[VideoSampleBufferView alloc] initWithFrame:CGRectZero];
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
 
@@ -643,7 +643,7 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
                 }
 
                 completion(remoteRenderer, cloneRenderer);
-            } else if ([VideoMetalView isSupported]) {
+            } else */if ([VideoMetalView isSupported]) {
                 VideoMetalView *remoteRenderer = [[VideoMetalView alloc] initWithFrame:CGRectZero];
                 remoteRenderer.videoContentMode = UIViewContentModeScaleAspectFill;
 

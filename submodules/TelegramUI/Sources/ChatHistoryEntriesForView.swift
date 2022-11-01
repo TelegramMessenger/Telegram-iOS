@@ -25,7 +25,7 @@ func chatHistoryEntriesForView(
     customChannelDiscussionReadState: MessageId?,
     customThreadOutgoingReadState: MessageId?,
     cachedData: CachedPeerData?,
-    adMessages: (interPostInterval: Int32?, messages: [Message]),
+    adMessage: Message?,
     dynamicAdMessages: [Message]
 ) -> [ChatHistoryEntry] {
     if historyAppearsCleared {
@@ -339,36 +339,34 @@ func chatHistoryEntriesForView(
         }
 
         if view.laterId == nil && !view.isLoading {
-            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], !adMessages.messages.isEmpty, adMessages.interPostInterval == nil {
-                var nextAdMessageId: Int32 = 1
-                if let message = adMessages.messages.first {
-                    let updatedMessage = Message(
-                        stableId: UInt32.max - 1 - UInt32(nextAdMessageId),
-                        stableVersion: message.stableVersion,
-                        id: MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: nextAdMessageId),
-                        globallyUniqueId: nil,
-                        groupingKey: nil,
-                        groupInfo: nil,
-                        threadId: nil,
-                        timestamp: lastMessage.timestamp,
-                        flags: message.flags,
-                        tags: message.tags,
-                        globalTags: message.globalTags,
-                        localTags: message.localTags,
-                        forwardInfo: message.forwardInfo,
-                        author: message.author,
-                        text: message.text,
-                        attributes: message.attributes,
-                        media: message.media,
-                        peers: message.peers,
-                        associatedMessages: message.associatedMessages,
-                        associatedMessageIds: message.associatedMessageIds,
-                        associatedMedia: message.associatedMedia,
-                        associatedThreadInfo: message.associatedThreadInfo
-                    )
-                    nextAdMessageId += 1
-                    entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))
-                }
+            if !entries.isEmpty, case let .MessageEntry(lastMessage, _, _, _, _, _) = entries[entries.count - 1], let message = adMessage {
+                var nextAdMessageId: Int32 = 10000
+                let updatedMessage = Message(
+                    stableId: ChatHistoryListNode.fixedAdMessageStableId,
+                    stableVersion: message.stableVersion,
+                    id: MessageId(peerId: message.id.peerId, namespace: message.id.namespace, id: nextAdMessageId),
+                    globallyUniqueId: nil,
+                    groupingKey: nil,
+                    groupInfo: nil,
+                    threadId: nil,
+                    timestamp: lastMessage.timestamp,
+                    flags: message.flags,
+                    tags: message.tags,
+                    globalTags: message.globalTags,
+                    localTags: message.localTags,
+                    forwardInfo: message.forwardInfo,
+                    author: message.author,
+                    text: /*"\(message.adAttribute!.opaqueId.hashValue)" + */message.text,
+                    attributes: message.attributes,
+                    media: message.media,
+                    peers: message.peers,
+                    associatedMessages: message.associatedMessages,
+                    associatedMessageIds: message.associatedMessageIds,
+                    associatedMedia: message.associatedMedia,
+                    associatedThreadInfo: message.associatedThreadInfo
+                )
+                nextAdMessageId += 1
+                entries.append(.MessageEntry(updatedMessage, presentationData, false, nil, .none, ChatMessageEntryAttributes(rank: nil, isContact: false, contentTypeHint: .generic, updatingMedia: nil, isPlaying: false, isCentered: false)))
             }
         }
     } else if includeSearchEntry {

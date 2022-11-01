@@ -93,11 +93,7 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                     
                     let combinedInitialData = ChatHistoryCombinedInitialData(initialData: initialData, buttonKeyboardMessage: view.topTaggedMessages.first, cachedData: cachedData, cachedDataMessages: cachedDataMessages, readStateData: readStateData)
                     
-                    if preloaded {
-                        if tagMask == nil && view.entries.isEmpty {
-                            print("")
-                        }
-                        
+                    if preloaded {                        
                         return .HistoryView(view: view, type: .Generic(type: updateType), scrollPosition: nil, flashIndicators: false, originalScrollPosition: nil, initialData: combinedInitialData, id: location.id)
                     } else {
                         if view.isLoading {
@@ -166,10 +162,6 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                                 fadeIn = true
                                 return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                             }
-                        }
-                        
-                        if tagMask == nil && view.entries.isEmpty {
-                            print("")
                         }
                         
                         preloaded = true

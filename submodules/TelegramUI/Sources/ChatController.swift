@@ -4038,6 +4038,32 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })], parseMarkdown: true), in: .window(.root), with: nil)
                 }
             })
+        }, activateAdAction: { [weak self] messageId in
+            guard let self, let message = self.chatDisplayNode.historyNode.messageInCurrentHistoryView(messageId), let adAttribute = message.adAttribute else {
+                return
+            }
+            
+            switch adAttribute.target {
+            case let .peer(id, messageId, startParam):
+                let navigationData: ChatControllerInteractionNavigateToPeer
+                if let bot = message.author as? TelegramUser, bot.botInfo != nil, let startParam = startParam {
+                    navigationData = .withBotStartPayload(ChatControllerInitialBotStart(payload: startParam, behavior: .interactive))
+                } else {
+                    var subject: ChatControllerSubject?
+                    if let messageId = messageId {
+                        subject = .message(id: .id(messageId), highlight: true, timecode: nil)
+                    }
+                    navigationData = .chat(textInputState: nil, subject: subject, peekData: nil)
+                }
+                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: id))
+                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                    if let self, let peer = peer {
+                        self.openPeer(peer: peer, navigation: navigationData, fromMessage: nil)
+                    }
+                })
+            case let .join(_, joinHash):
+                self.controllerInteraction?.openJoinLink(joinHash)
+            }
         }, requestMessageUpdate: { [weak self] id, scroll in
             if let strongSelf = self {
                 strongSelf.chatDisplayNode.historyNode.requestMessageUpdate(id, andScrollToItem: scroll)
@@ -6554,13 +6580,13 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var minOffsetForNavigation: CGFloat = 40.0
             strongSelf.chatDisplayNode.historyNode.enumerateItemNodes { itemNode in
                 if let itemNode = itemNode as? ChatMessageBubbleItemNode {
-                    if let message = itemNode.item?.content.firstMessage, message.adAttribute != nil {
+                    if let message = itemNode.item?.content.firstMessage, let adAttribute = message.adAttribute {
                         minOffsetForNavigation += itemNode.bounds.height
 
                         switch offset {
                         case let .known(offset):
                             if offset <= 50.0 {
-                                strongSelf.chatDisplayNode.historyNode.adSeenProcessingManager.add([message.id])
+                                strongSelf.chatDisplayNode.historyNode.markAdAsSeen(opaqueId: adAttribute.opaqueId)
                             }
                         default:
                             break
