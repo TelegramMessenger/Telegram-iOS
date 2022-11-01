@@ -293,7 +293,7 @@ func presentLegacyMediaPickerGallery(context: AccountContext, peer: EnginePeer?,
     model.interfaceView.setThumbnailSignalForItem { item in
         let imageSignal = SSignal(generator: { subscriber in
             var asset: PHAsset?
-            if let item = item as? TGCameraCapturedVideo {
+            if let item = item as? TGCameraCapturedVideo, item.originalAsset != nil {
                 asset = item.originalAsset.backingAsset
             } else if let item = item as? TGMediaAsset {
                 asset = item.backingAsset

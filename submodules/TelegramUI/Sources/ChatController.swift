@@ -6846,14 +6846,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         self.chatDisplayNode.paste = { [weak self] data in
             switch data {
-                case let .images(images):
-                   self?.displayPasteMenu(images)
-                case let .video(data):
-                    self?.enqueueVideoData(data)
-                case let .gif(data):
-                    self?.enqueueGifData(data)
-                case let .sticker(image, isMemoji):
-                    self?.enqueueStickerImage(image, isMemoji: isMemoji)
+            case let .images(images):
+                self?.displayPasteMenu(images.map { .image($0) })
+            case let .video(data):
+                let tempFilePath = NSTemporaryDirectory() + "\(Int64.random(in: 0...Int64.max)).mp4"
+                let url = NSURL(fileURLWithPath: tempFilePath) as URL
+                try? data.write(to: url)
+                self?.displayPasteMenu([.video(url)])
+            case let .gif(data):
+                self?.enqueueGifData(data)
+            case let .sticker(image, isMemoji):
+                self?.enqueueStickerImage(image, isMemoji: isMemoji)
             }
         }
         self.chatDisplayNode.updateTypingActivity = { [weak self] value in
@@ -13692,7 +13695,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }))
     }
     
-    private func displayPasteMenu(_ images: [UIImage]) {
+    private func displayPasteMenu(_ subjects: [MediaPickerScreen.Subject.Media]) {
         let _ = (self.context.sharedContext.accountManager.transaction { transaction -> GeneratedMediaStoreSettings in
             let entry = transaction.getSharedData(ApplicationSpecificSharedDataKeys.generatedMediaStoreSettings)?.get(GeneratedMediaStoreSettings.self)
             return entry ?? GeneratedMediaStoreSettings.defaultSettings
@@ -13705,7 +13708,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     context: strongSelf.context,
                     updatedPresentationData: strongSelf.updatedPresentationData,
                     peer: EnginePeer(peer),
-                    subjects: images,
+                    subjects: subjects,
                     presentMediaPicker: { [weak self] subject, saveEditedPhotos, bannedSendMedia, present in
                         if let strongSelf = self {
                             strongSelf.presentMediaPicker(subject: subject, saveEditedPhotos: saveEditedPhotos, bannedSendMedia: bannedSendMedia, present: present, updateMediaPickerContext: { _ in }, completion: { [weak self] signals, silentPosting, scheduleTime, getAnimatedTransitionSource, completion in
@@ -16312,7 +16315,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             strongSelf.chatDisplayNode.updateDropInteraction(isActive: false)
-            strongSelf.displayPasteMenu(images)
+            strongSelf.displayPasteMenu(images.map { .image($0) })
         }
     }
     
