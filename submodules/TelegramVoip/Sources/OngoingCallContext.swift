@@ -886,7 +886,7 @@ public final class OngoingCallContext {
                                 callSessionManager.sendSignalingData(internalId: internalId, data: data)
                             }
                         }
-                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "")
+                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "", useManualAudioSessionControl: true)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in
