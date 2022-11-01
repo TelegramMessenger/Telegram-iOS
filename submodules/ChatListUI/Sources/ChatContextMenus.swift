@@ -523,6 +523,18 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             })))
         }
         
+        var isUnread = false
+        if threadData.incomingUnreadCount != 0 {
+            isUnread = true
+        }
+        
+        if isUnread {
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                let _ = context.engine.messages.markForumThreadAsRead(peerId: peerId, threadId: threadId).start()
+                f(.default)
+            })))
+        }
+        
         var isMuted = false
         if case .muted = threadData.notificationSettings.muteState {
             isMuted = true

@@ -200,7 +200,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                 thumbnailItem = .animated(item.file.resource, item.file.dimensions ?? PixelDimensions(width: 100, height: 100), item.file.isVideoSticker)
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: item.file.resource)
             } else if let dimensions = item.file.dimensions, let resource = chatMessageStickerResource(file: item.file, small: true) as? TelegramMediaResource {
-                thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                thumbnailItem = .still(TelegramMediaImageRepresentation(dimensions: dimensions, resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                 resourceReference = MediaResourceReference.media(media: .standalone(media: item.file), resource: resource)
             }
         }

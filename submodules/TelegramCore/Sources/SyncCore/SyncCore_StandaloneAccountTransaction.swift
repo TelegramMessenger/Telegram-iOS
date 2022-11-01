@@ -127,6 +127,12 @@ public let telegramPostboxSeedConfiguration: SeedConfiguration = {
                     updated.append(audioTranscription)
                 }
             }
+        },
+        decodeMessageThreadInfo: { entry in
+            guard let data = entry.get(MessageHistoryThreadData.self) else {
+                return nil
+            }
+            return Message.AssociatedThreadInfo(title: data.info.title, icon: data.info.icon, iconColor: data.info.iconColor)
         }
     )
 }()

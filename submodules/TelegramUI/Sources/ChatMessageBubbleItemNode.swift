@@ -1426,6 +1426,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
                 if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == attribute.messageId {
+                } else if let threadId = firstMessage.threadId, Int64(attribute.messageId.id) == threadId, let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }
@@ -1462,6 +1463,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     authorRank = .custom(attribute.signature)
                 }
             }
+        }
+        
+        if firstMessage.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
+            replyMarkup = nil
         }
         
         if let forwardInfo = firstMessage.forwardInfo, forwardInfo.psaType != nil {
@@ -1758,7 +1763,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
                 var viewCount: Int?
                 var dateReplies = 0
-                let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: message)
+                var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: message)
+                if message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
+                    dateReactionsAndPeers = ([], [])
+                }
                 for attribute in message.attributes {
                     if let attribute = attribute as? EditedMessageAttribute {
                         edited = !attribute.isHidden

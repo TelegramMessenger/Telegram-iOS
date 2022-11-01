@@ -2012,7 +2012,7 @@ final class PostboxImpl {
     }
     
     func renderIntermediateMessage(_ message: IntermediateMessage) -> Message {
-        let renderedMessage = self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable)
+        let renderedMessage = self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable, threadIndexTable: self.messageHistoryThreadIndexTable)
         
         return renderedMessage
     }
@@ -2545,7 +2545,7 @@ final class PostboxImpl {
         var result: [Message] = []
         for messageId in self.textIndexTable.search(peerId: peerId, text: query, tags: tags) {
             if let index = self.messageHistoryIndexTable.getIndex(messageId), let message = self.messageHistoryTable.getMessage(index) {
-                result.append(self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable))
+                result.append(self.messageHistoryTable.renderMessage(message, peerTable: self.peerTable, threadIndexTable: self.messageHistoryThreadIndexTable))
             } else {
                 assertionFailure()
             }

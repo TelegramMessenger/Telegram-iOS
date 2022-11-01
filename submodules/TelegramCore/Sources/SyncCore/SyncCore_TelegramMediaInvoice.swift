@@ -17,7 +17,7 @@ public struct TelegramMediaInvoiceFlags: OptionSet {
 }
 
 public enum TelegramExtendedMedia: PostboxCoding, Equatable {
-    public static func == (lhs: TelegramExtendedMedia, rhs: TelegramExtendedMedia) -> Bool {
+    public static func ==(lhs: TelegramExtendedMedia, rhs: TelegramExtendedMedia) -> Bool {
         switch lhs {
             case let .preview(lhsDimensions, lhsImmediateThumbnailData, lhsVideoDuration):
                 if case let .preview(rhsDimensions, rhsImmediateThumbnailData, rhsVideoDuration) = rhs, lhsDimensions == rhsDimensions, lhsImmediateThumbnailData == rhsImmediateThumbnailData, lhsVideoDuration == rhsVideoDuration {
@@ -88,6 +88,8 @@ public enum TelegramExtendedMedia: PostboxCoding, Equatable {
 }
 
 public final class TelegramMediaInvoice: Media {
+    public static let lastVersion: Int32 = 1
+
     public var peerIds: [PeerId] = []
 
     public var id: MediaId? = nil
@@ -102,7 +104,9 @@ public final class TelegramMediaInvoice: Media {
     public let flags: TelegramMediaInvoiceFlags
     public let extendedMedia: TelegramExtendedMedia?
     
-    public init(title: String, description: String, photo: TelegramMediaWebFile?, receiptMessageId: MessageId?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: TelegramExtendedMedia?, flags: TelegramMediaInvoiceFlags) {
+    public let version: Int32
+    
+    public init(title: String, description: String, photo: TelegramMediaWebFile?, receiptMessageId: MessageId?, currency: String, totalAmount: Int64, startParam: String, extendedMedia: TelegramExtendedMedia?, flags: TelegramMediaInvoiceFlags, version: Int32) {
         self.title = title
         self.description = description
         self.photo = photo
@@ -112,6 +116,7 @@ public final class TelegramMediaInvoice: Media {
         self.startParam = startParam
         self.flags = flags
         self.extendedMedia = extendedMedia
+        self.version = version
     }
     
     public init(decoder: PostboxDecoder) {
@@ -129,6 +134,8 @@ public final class TelegramMediaInvoice: Media {
         } else {
             self.receiptMessageId = nil
         }
+        
+        self.version = decoder.decodeInt32ForKey("vrs", orElse: 0)
     }
     
     public func encode(_ encoder: PostboxEncoder) {
@@ -160,6 +167,8 @@ public final class TelegramMediaInvoice: Media {
             encoder.encodeNil(forKey: "r.n")
             encoder.encodeNil(forKey: "r.i")
         }
+        
+        encoder.encodeInt32(self.version, forKey: "vrs")
     }
     
     public func isEqual(to other: Media) -> Bool {
@@ -199,6 +208,10 @@ public final class TelegramMediaInvoice: Media {
             return false
         }
         
+        if self.version != other.version {
+            return false
+        }
+        
         return true
     }
     
@@ -216,6 +229,8 @@ public final class TelegramMediaInvoice: Media {
             totalAmount: self.totalAmount,
             startParam: self.startParam,
             extendedMedia: extendedMedia,
-            flags: self.flags)
+            flags: self.flags,
+            version: self.version
+        )
     }
 }

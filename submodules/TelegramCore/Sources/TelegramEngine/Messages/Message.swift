@@ -10,9 +10,9 @@ public final class EngineMessage: Equatable {
     public typealias GlobalTags = GlobalMessageTags
     public typealias LocalTags = LocalMessageTags
     public typealias ForwardInfo = MessageForwardInfo
-
+    
     private let impl: Message
-
+    
     public var stableId: UInt32 {
         return self.impl.stableId
     }
@@ -78,6 +78,9 @@ public final class EngineMessage: Equatable {
     public var associatedMedia: [MediaId: Media] {
         return self.impl.associatedMedia
     }
+    public var associatedThreadInfo: Message.AssociatedThreadInfo? {
+        return self.impl.associatedThreadInfo
+    }
     
     public var index: MessageIndex {
         return self.impl.index
@@ -104,7 +107,8 @@ public final class EngineMessage: Equatable {
         peers: [EnginePeer.Id: EnginePeer],
         associatedMessages: [EngineMessage.Id: EngineMessage],
         associatedMessageIds: [EngineMessage.Id],
-        associatedMedia: [MediaId: Media]
+        associatedMedia: [MediaId: Media],
+        associatedThreadInfo: Message.AssociatedThreadInfo?
     ) {
         var mappedPeers: [PeerId: Peer] = [:]
         for (id, peer) in peers {
@@ -137,7 +141,8 @@ public final class EngineMessage: Equatable {
             peers: SimpleDictionary(mappedPeers),
             associatedMessages: SimpleDictionary(mappedAssociatedMessages),
             associatedMessageIds: associatedMessageIds,
-            associatedMedia: associatedMedia
+            associatedMedia: associatedMedia,
+            associatedThreadInfo: associatedThreadInfo
         )
     }
 
@@ -190,6 +195,9 @@ public final class EngineMessage: Equatable {
             return false
         }
         if !areMediaArraysEqual(lhs.media, rhs.media) {
+            return false
+        }
+        if lhs.associatedThreadInfo != rhs.associatedThreadInfo {
             return false
         }
         return true

@@ -1077,7 +1077,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             var edited = false
             var viewCount: Int? = nil
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: item.associatedData.accountPeer, message: item.message)
+            if item.message.isRestricted(platform: "ios", contentSettings: item.context.currentContentSettings.with { $0 }) {
+                dateReactionsAndPeers = ([], [])
+            }
             for attribute in item.message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute, isEmoji {
                     edited = !attribute.isHidden
@@ -1161,8 +1164,10 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                         viaBotApply = viaBotLayout(TextNodeLayoutArguments(attributedString: botString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0, availableContentWidth), height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                     }
                 }
+                
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                    } else if let threadId = item.message.threadId, Int64(replyAttribute.messageId.id) == threadId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                             presentationData: item.presentationData,

@@ -115,6 +115,35 @@ func _internal_togglePeerUnreadMarkInteractively(postbox: Postbox, network: Netw
     }
 }
 
+func _internal_markForumThreadAsReadInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, threadId: Int64) {
+    guard let peer = transaction.getPeer(peerId) else {
+        return
+    }
+    guard let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) else {
+        return
+    }
+    guard var data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) else {
+        return
+    }
+    guard let messageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: peerId, threadId: threadId, namespaces: Set([Namespaces.Message.Cloud])) else {
+        return
+    }
+    if data.incomingUnreadCount != 0 {
+        data.incomingUnreadCount = 0
+        data.maxIncomingReadId = max(messageIndex.id.id, data.maxIncomingReadId)
+        data.maxKnownMessageId = max(data.maxKnownMessageId, messageIndex.id.id)
+        
+        if let entry = StoredMessageHistoryThreadInfo(data) {
+            transaction.setMessageHistoryThreadInfo(peerId: peerId, threadId: threadId, info: entry)
+        }
+        
+        if let inputPeer = apiInputPeer(channel) {
+            //TODO:loc
+            let _ = network.request(Api.functions.messages.readDiscussion(peer: inputPeer, msgId: Int32(clamping: threadId), readMaxId: messageIndex.id.id)).start()
+        }
+    }
+}
+
 func _internal_togglePeerUnreadMarkInteractively(transaction: Transaction, network: Network, viewTracker: AccountViewTracker, peerId: PeerId, setToValue: Bool? = nil) {
     guard let peer = transaction.getPeer(peerId) else {
         return
