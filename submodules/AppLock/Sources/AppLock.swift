@@ -52,7 +52,7 @@ private func getCoveringViewSnaphot(window: Window1) -> UIImage? {
             }
             return true
         })
-        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: true)
+        window.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
         window.forEachViewController({ controller in
             if let controller = controller as? PasscodeEntryController {
                 controller.displayNode.alpha = 1.0
