@@ -355,6 +355,15 @@ public extension Message {
         }
         return nil
     }
+    
+    var restrictedContentAttribute: RestrictedContentMessageAttribute? {
+        for attribute in self.attributes {
+            if let attribute = attribute as? RestrictedContentMessageAttribute {
+                return attribute
+            }
+        }
+        return nil
+    }
 }
 
 public func _internal_parseMediaAttachment(data: Data) -> Media? {

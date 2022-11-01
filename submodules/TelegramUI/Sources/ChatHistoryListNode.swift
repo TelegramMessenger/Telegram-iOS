@@ -2042,6 +2042,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 }
                             } else if let invoice = media as? TelegramMediaInvoice, let extendedMedia = invoice.extendedMedia, case .preview = extendedMedia {
                                 messageIdsWithInactiveExtendedMedia.insert(message.id)
+                                if invoice.version != TelegramMediaInvoice.lastVersion {
+                                    contentRequiredValidation = true
+                                }
                             }
                         }
                         if contentRequiredValidation {
