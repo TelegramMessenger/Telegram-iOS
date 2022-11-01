@@ -321,6 +321,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
+        print("provider didActivate default? \(audioSession === AVAudioSession.sharedInstance())")
         self.audioSessionActivationChanged?(true)
         self.audioSessionActivePromise?.set(true)
     }
@@ -330,4 +331,3 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         self.audioSessionActivePromise?.set(false)
     }
 }
-

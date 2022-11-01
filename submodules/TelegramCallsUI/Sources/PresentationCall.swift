@@ -437,7 +437,7 @@ public final class PresentationCallImpl: PresentationCall {
                         let audioSessionActive: Signal<Bool, NoError>
                         if let callKitIntegration = strongSelf.callKitIntegration {
                             audioSessionActive = callKitIntegration.audioSessionActive
-                            |> filter { $0 }
+                            /*|> filter { $0 }
                             |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
                                 if let strongSelf = self, let _ = strongSelf.audioSessionControl {
                                     //audioSessionControl.activate({ _ in })
@@ -445,7 +445,7 @@ public final class PresentationCallImpl: PresentationCall {
                                 subscriber.putNext(true)
                                 subscriber.putCompletion()
                                 return EmptyDisposable
-                            })
+                            })*/
                         } else {
                             audioSessionControl.activate({ _ in })
                             audioSessionActive = .single(true)

@@ -28,6 +28,9 @@
 
 #include "platform/darwin/iOS/tgcalls_audio_device_module_ios.h"
 
+#include "platform/darwin/iOS/RTCAudioSession.h"
+#include "platform/darwin/iOS/RTCAudioSessionConfiguration.h"
+
 #endif
 
 #import "group/GroupInstanceImpl.h"
@@ -870,6 +873,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         assert([[OngoingCallThreadLocalContextWebrtc versionsWithIncludeReference:true] containsObject:version]);
         
         _useManualAudioSessionControl = useManualAudioSessionControl;
+        [RTCAudioSession sharedInstance].useManualAudio = true;
         
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
@@ -1115,7 +1119,12 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive {
     if (_useManualAudioSessionControl) {
-        
+        if (isAudioSessionActive) {
+            [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+        } else {
+            [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+        }
+        [RTCAudioSession sharedInstance].isAudioEnabled = isAudioSessionActive;
     }
 }
 
