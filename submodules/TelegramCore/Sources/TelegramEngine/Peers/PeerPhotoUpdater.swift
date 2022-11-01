@@ -158,9 +158,9 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                                     for size in sizes {
                                                         switch size {
                                                             case let .photoSize(_, w, h, _):
-                                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: [], immediateThumbnailData: nil))
+                                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                                             case let .photoSizeProgressive(_, w, h, sizes):
-                                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: sizes, immediateThumbnailData: nil))
+                                                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: id, sizeSpec: w <= 200 ? .small : .fullSize, volumeId: nil, localId: nil), progressiveSizes: sizes, immediateThumbnailData: nil, hasVideo: false))
                                                             default:
                                                                 break
                                                         }

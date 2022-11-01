@@ -117,7 +117,7 @@ public struct InstantPageGalleryEntry: Equatable {
                 var representations: [TelegramMediaImageRepresentation] = []
                 representations.append(contentsOf: file.previewRepresentations)
                 if let dimensions = file.dimensions {
-                    representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil))
+                    representations.append(TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                 }
                 let image = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: file.immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
                 return InstantImageGalleryItem(context: context, presentationData: presentationData, itemId: self.index, imageReference: .webPage(webPage: WebpageReference(webPage), media: image), caption: caption, credit: credit, location: self.location, openUrl: openUrl, openUrlOptions: openUrlOptions)

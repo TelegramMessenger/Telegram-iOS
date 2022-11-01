@@ -949,7 +949,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: EngineMediaResource(representation.resource), media: EngineMedia(file.file))))
                     }
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
 
                     let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                     self.patternImageDisposable.set((signal
@@ -1801,7 +1801,7 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
                 gradientSpec = WallpaperGradiendComponentView.Spec(colors: file.settings.colors)
             }
             if let dimensions = file.file.dimensions {
-                let representation = TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: file.file.immediateThumbnailData)
+                let representation = TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: file.file.immediateThumbnailData, hasVideo: false)
                 imageSpec = WallpaperImageComponentView.Spec.image(representation: representation, isPattern: file.isPattern, intensity: CGFloat(file.settings.intensity ?? 100) / 100.0)
             }
         }

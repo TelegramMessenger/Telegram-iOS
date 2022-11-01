@@ -12600,7 +12600,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                     var previewRepresentations: [TelegramMediaImageRepresentation] = []
                                     if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
-                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil))
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                     }
                                     var attributes: [TelegramMediaFileAttribute] = []
                                     attributes.append(.FileName(fileName: item.fileName))

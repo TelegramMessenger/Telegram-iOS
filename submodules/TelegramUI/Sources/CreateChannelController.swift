@@ -329,7 +329,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                     uploadedAvatar.set(context.engine.peers.uploadedPeerPhoto(resource: resource))
                     uploadedVideoAvatar = nil
                     updateState { current in
@@ -344,7 +344,7 @@ public func createChannelController(context: AccountContext) -> ViewController {
                 if let data = image.jpegData(compressionQuality: 0.6) {
                     let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
                     context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
+                    let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
                     updateState { state in
                         var state = state
                         state.avatar = .image(representation, true)
