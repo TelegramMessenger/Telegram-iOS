@@ -178,9 +178,10 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         guard !self.animatedWave else {
             return
         }
-        
-        self.layer.animateScale(from: 0.0, to: 0.1, duration: 0.2, additive: true, completion: { [weak self] _ in
-            self?.layer.animateScale(from: 0.1, to: 0.0, duration: 0.15, additive: true)
+        self.layer.transform = CATransform3DMakeScale(1.1, 1.1, 1.0)
+        self.layer.animateScale(from: 1.0, to: 1.1, duration: 0.2, completion: { [weak self] _ in
+            self?.layer.transform = CATransform3DMakeScale(1.0, 1.0, 1.0)
+            self?.layer.animateScale(from: 1.1, to: 1.0, duration: 0.15)
         })
         
         self.animatedWave = true
