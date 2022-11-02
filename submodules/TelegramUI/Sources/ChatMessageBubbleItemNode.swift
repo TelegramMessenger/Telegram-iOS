@@ -1426,7 +1426,6 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             } else if let attribute = attribute as? ReplyMessageAttribute {
                 if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == attribute.messageId {
-                } else if let threadId = firstMessage.threadId, Int64(attribute.messageId.id) == threadId, let channel = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
                 } else {
                     replyMessage = firstMessage.associatedMessages[attribute.messageId]
                 }

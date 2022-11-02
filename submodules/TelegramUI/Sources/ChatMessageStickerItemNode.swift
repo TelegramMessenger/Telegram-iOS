@@ -611,7 +611,6 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 
                 if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
-                    } else if let threadId = item.message.threadId, Int64(replyAttribute.messageId.id) == threadId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
                     } else {
                         replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
                             presentationData: item.presentationData,
