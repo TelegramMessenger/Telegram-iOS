@@ -22,6 +22,7 @@ swift_library(
         "//submodules/TinyThumbnail:TinyThumbnail",
         "//Telegram:PresentationStrings",
         "//submodules/PtgSettings:PtgSettings",
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
     ],
     visibility = [
         "//visibility:public",

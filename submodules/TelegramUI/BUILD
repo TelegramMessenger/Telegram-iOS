@@ -298,6 +298,8 @@ swift_library(
         "//submodules/FakePasscode:FakePasscode",
         "//submodules/PtgSettings:PtgSettings",
         "//submodules/PtgForeignAgentNoticeSearchFiltering:PtgForeignAgentNoticeSearchFiltering",
+        "//submodules/PtgSecretPasscodes:PtgSecretPasscodes",
+        "//submodules/PtgSecretPasscodesUI:PtgSecretPasscodesUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],
         "@build_bazel_rules_apple//apple:ios_arm64": appcenter_targets,

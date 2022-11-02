@@ -13,6 +13,7 @@ import TemporaryCachedPeerDataManager
 import MeshAnimationCache
 import InAppPurchaseManager
 import PtgSettings
+import PtgSecretPasscodes
 
 public final class TelegramApplicationOpenUrlCompletion {
     public let completion: (Bool) -> Void
@@ -690,6 +691,7 @@ public protocol SharedAccountContext: AnyObject {
     var currentMediaInputSettings: Atomic<MediaInputSettings> { get }
     var ptgSettings: Signal<PtgSettings, NoError> { get }
     var currentPtgSettings: Atomic<PtgSettings> { get }
+    var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> { get }
     
     var applicationBindings: TelegramApplicationBindings { get }
     

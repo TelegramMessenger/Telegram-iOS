@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_1second" = "Через 1 секунду";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Немедленно";
 
 "PasscodeSettings.FakePasscodes" = "Ложные код-пароли";
 "PasscodeSettings.FakePasscode" = "Ложный код-пароль %1$d";
@@ -91,3 +91,22 @@
 "Settings.CopyId" = "Копировать ID";
 
 "SiriAndDictationAreDisabledAlert" = "Для расшифровки голосовых сообщений требуется включить Диктовку (Настройки системы > Основные > Клавиатура) или Siri (Настройки системы > Siri и Поиск).";
+
+"SecretPasscodeSettings.Title" = "Секретный код-пароль";
+"SecretPasscodeSettings.EnterPasscode" = "Введите секретный код-пароль";
+"SecretPasscodeSettings.EnterNewPasscode" = "Введите новый секретный код-пароль";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Повторите секретный код-пароль";
+"SecretPasscodeSettings.AutoHide" = "Авто-скрытие";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Удалить секретный код-пароль";
+"Settings.EnterSecretPasscode" = "Ввести секретный код-пароль";
+"Settings.ManageSecretPasscodes" = "Управлять секрет. кодами-паролями";
+"SecretPasscodeMenu.Add" = "Добавить секретный код-пароль";
+"SecretPasscodeMenu.Edit" = "Изменить секретный код-пароль";
+"SecretPasscodeMenu.HideAllSecrets" = "Скрыть все секреты";
+"SecretPasscodeStatus.SomeRevealed" = "Некоторые секреты открыты.";
+"SecretPasscodeStatus.AllHidden" = "Все секреты скрыты.";
+"SecretPasscodeStatus.Revealed" = "Секреты открыты.";
+"SecretPasscodeStatus.Hidden" = "Секреты скрыты.";
+
+"Share.LockedTitle" = "Разблокируйте Telegram";
+"Share.LockedDescription" = "Откройте и разблокируйте Telegram, чтобы поделиться.";

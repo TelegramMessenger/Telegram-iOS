@@ -82,6 +82,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 }
             case .setup:
                 passcodeType = .digits6
+            case .secretSetup, .secretEntry:
+                passcodeType = .digits6
         }
         
         self.inputFieldNode = PasscodeInputFieldNode(color: self.presentationData.theme.list.itemPrimaryTextColor, accentColor: self.presentationData.theme.list.itemAccentColor, fieldType: passcodeType, keyboardAppearance: self.presentationData.theme.rootController.keyboardColor.keyboardAppearance)
@@ -122,6 +124,10 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                     text = self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew
                 }
                 self.modeButtonNode.isHidden = !allowChangeMode
+            case .secretSetup:
+                text = self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode
+            case .secretEntry:
+                text = self.presentationData.strings.SecretPasscodeSettings_EnterPasscode
         }
         self.titleNode.attributedText = NSAttributedString(string: text, font: Font.regular(17.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
         
@@ -171,7 +177,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         self.mode = mode
         self.inputFieldNode.reset()
         
-        if case let .setup(_, _, type) = mode {
+        switch mode {
+        case let .setup(_, _, type), let .secretSetup(type), let .secretEntry(_, type):
             self.inputFieldNode.updateFieldType(type, animated: true)
             
             let fieldBackgroundAlpha: CGFloat
@@ -186,6 +193,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
             self.inputFieldBackgroundNode.alpha = fieldBackgroundAlpha
             self.inputFieldBackgroundNode.layer.animateAlpha(from: previousAlpha, to: fieldBackgroundAlpha, duration: 0.25)
             self.subtitleNode.isHidden = true
+        default:
+            break
         }
     }
     
@@ -196,40 +205,51 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
         }
         
         switch self.mode {
-            case .entry:
+            case .entry, .secretEntry:
                 if !(self.checkPasscode?(self.currentPasscode) ?? false) {
                     self.animateError()
                 }
-            case .setup:
+            case let .setup(_, _, type), let .secretSetup(type):
                 if let previousPasscode = self.previousPasscode {
                     if self.currentPasscode == previousPasscode {
                         var numerical = false
-                        if case let .setup(_, _, type) = mode {
-                            if case .alphanumeric = type {
-                            } else {
-                                numerical = true
-                            }
+                        if case .alphanumeric = type {
+                        } else {
+                            numerical = true
                         }
                         self.complete?(self.currentPasscode, numerical)
                     } else {
                         self.previousPasscode = nil
                         
-                        self.updateTitles(success: false, text: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
+                        if case let .setup(change, _, _) = self.mode {
+                            self.updateTitles(success: false, text: change ? self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange : self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: false, text: self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode, subtitle: self.presentationData.strings.PasscodeSettings_DoNotMatch)
+                        }
                     }
                 } else {
                     self.previousPasscode = self.currentPasscode
                     
                     if let failureReason = self.validatePasscode?(self.currentPasscode) {
                         self.previousPasscode = nil
-                        self.updateTitles(success: false, text: self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange, subtitle: failureReason, withAnimation: false)
+                        if case let .setup(change, _, _) = self.mode {
+                            self.updateTitles(success: false, text: change ? self.presentationData.strings.EnterPasscode_EnterNewPasscodeChange : self.presentationData.strings.EnterPasscode_EnterNewPasscodeNew, subtitle: failureReason, withAnimation: false)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: false, text: self.presentationData.strings.SecretPasscodeSettings_EnterNewPasscode, subtitle: failureReason, withAnimation: false)
+                        }
                     } else {
-                        self.updateTitles(success: true, text: self.presentationData.strings.EnterPasscode_RepeatNewPasscode)
+                        if case .setup = self.mode {
+                            self.updateTitles(success: true, text: self.presentationData.strings.EnterPasscode_RepeatNewPasscode)
+                        } else if case .secretSetup = self.mode {
+                            self.updateTitles(success: true, text: self.presentationData.strings.SecretPasscodeSettings_RepeatNewPasscode)
+                        }
                     }
                 }
         }
     }
     
     func activateInput() {
+        self.inputFieldNode.reset()
         self.inputFieldNode.activateInput()
         
         UIAccessibility.post(notification: UIAccessibility.Notification.announcement, argument: self.titleNode.attributedText?.string)
@@ -267,6 +287,8 @@ final class PasscodeSetupControllerNode: ASDisplayNode {
                 self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.regular(16.0), textColor: self.presentationData.theme.list.itemPrimaryTextColor)
             }
             if case let .setup(_, allowChange, _) = self.mode, allowChange {
+                self.modeButtonNode.isHidden = success
+            } else if case .secretSetup = self.mode {
                 self.modeButtonNode.isHidden = success
             } else {
                 self.modeButtonNode.isHidden = true

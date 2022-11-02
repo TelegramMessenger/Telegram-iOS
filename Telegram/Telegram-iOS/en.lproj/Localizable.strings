@@ -1264,7 +1264,7 @@
 
 "PasscodeSettings.AutoLock" = "Auto-Lock";
 "PasscodeSettings.AutoLock.Disabled" = "Disabled";
-"PasscodeSettings.AutoLock.IfAwayFor_1second" = "If away for 1 sec";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Immediately";
 "PasscodeSettings.AutoLock.IfAwayFor_1minute" = "If away for 1 min";
 "PasscodeSettings.AutoLock.IfAwayFor_5minutes" = "If away for 5 min";
 "PasscodeSettings.AutoLock.IfAwayFor_1hour" = "If away for 1 hour";
@@ -8050,3 +8050,22 @@ Sorry for the inconvenience.";
 "Settings.CopyId" = "Copy ID";
 
 "SiriAndDictationAreDisabledAlert" = "To transcribe voice messages, either Dictation (System Settings > General > Keyboard) or Siri (System Settings > Siri & Search) needs to be enabled.";
+
+"SecretPasscodeSettings.Title" = "Secret Passcode";
+"SecretPasscodeSettings.EnterPasscode" = "Enter secret passcode";
+"SecretPasscodeSettings.EnterNewPasscode" = "Enter new secret passcode";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Re-enter new secret passcode";
+"SecretPasscodeSettings.AutoHide" = "Auto-Hide";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Delete Secret Passcode";
+"Settings.EnterSecretPasscode" = "Enter Secret Passcode";
+"Settings.ManageSecretPasscodes" = "Manage Secret Passcodes";
+"SecretPasscodeMenu.Add" = "Add Secret Passcode";
+"SecretPasscodeMenu.Edit" = "Edit Secret Passcode";
+"SecretPasscodeMenu.HideAllSecrets" = "Hide All Secrets";
+"SecretPasscodeStatus.SomeRevealed" = "Some secrets are revealed.";
+"SecretPasscodeStatus.AllHidden" = "All secrets are hidden.";
+"SecretPasscodeStatus.Revealed" = "Secrets are revealed.";
+"SecretPasscodeStatus.Hidden" = "Secrets are hidden.";
+
+"Share.LockedTitle" = "Unlock Telegram";
+"Share.LockedDescription" = "Open and unlock Telegram to share.";

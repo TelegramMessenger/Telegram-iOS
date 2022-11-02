@@ -29,6 +29,7 @@ import PremiumUI
 import StickerPackPreviewUI
 
 import PtgSettings
+import PtgSecretPasscodes
 
 private final class AccountUserInterfaceInUseContext {
     let subscribers = Bag<(Bool) -> Void>()
@@ -165,6 +166,11 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     }
     public let currentPtgSettings: Atomic<PtgSettings>
     private var ptgSettingsDisposable: Disposable?
+    
+    private let _ptgSecretPasscodes = Promise<PtgSecretPasscodes>()
+    public var ptgSecretPasscodes: Signal<PtgSecretPasscodes, NoError> {
+        return self._ptgSecretPasscodes.get()
+    }
     
     public var presentGlobalController: (ViewController, Any?) -> Void = { _, _ in }
     public var presentCrossfadeController: () -> Void = {}
@@ -361,6 +367,13 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 let _ = strongSelf.currentPtgSettings.swap(next)
             }
         })
+
+        self._ptgSecretPasscodes.set(.single(initialPresentationDataAndSettings.ptgSecretPasscodes)
+        |> then(accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            |> map { sharedData in
+                return PtgSecretPasscodes(sharedData.entries[ApplicationSpecificSharedDataKeys.ptgSecretPasscodes])
+            }
+        ))
 
         let startTime = CFAbsoluteTimeGetCurrent()
         

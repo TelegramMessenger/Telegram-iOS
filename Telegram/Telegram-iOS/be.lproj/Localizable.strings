@@ -1,4 +1,4 @@
-"PasscodeSettings.AutoLock.IfAwayFor_1second" = "Пасля 1 секунды адсутнасці";
+"PasscodeSettings.AutoLock.IfAwayFor_10seconds" = "Неадкладна";
 
 "PasscodeSettings.FakePasscodes" = "Несапраўдныя кады доступу";
 "PasscodeSettings.FakePasscode" = "Несапраўдны код доступу %1$d";
@@ -91,3 +91,22 @@
 "Settings.CopyId" = "Капіяваць ID";
 
 "SiriAndDictationAreDisabledAlert" = "Каб транскрыбаваць галасавыя паведамленні, неабходна ўключыць дыктоўку (Налады сістэмы > Агульныя > Клавіятура) або Siri (Налады сістэмы > Siri і пошук).";
+
+"SecretPasscodeSettings.Title" = "Сакрэтны код доступу";
+"SecretPasscodeSettings.EnterPasscode" = "Увядзіце сакрэтны код доступу";
+"SecretPasscodeSettings.EnterNewPasscode" = "Увядзіце новы сакрэтны код доступу";
+"SecretPasscodeSettings.RepeatNewPasscode" = "Увядзіце сакрэтны код доступу яшчэ раз";
+"SecretPasscodeSettings.AutoHide" = "Аўта-схаванне";
+"SecretPasscodeSettings.DeleteSecretPasscode" = "Выдаліць сакрэтны код доступу";
+"Settings.EnterSecretPasscode" = "Увесці сакрэтны код доступу";
+"Settings.ManageSecretPasscodes" = "Кіраваць сакрэтнымі кадамі доступу";
+"SecretPasscodeMenu.Add" = "Дадаць сакрэтны код доступу";
+"SecretPasscodeMenu.Edit" = "Рэдагаваць сакрэтны код доступу";
+"SecretPasscodeMenu.HideAllSecrets" = "Схаваць усе сакрэты";
+"SecretPasscodeStatus.SomeRevealed" = "Некаторыя сакрэты адкрыты.";
+"SecretPasscodeStatus.AllHidden" = "Усе сакрэты схаваны.";
+"SecretPasscodeStatus.Revealed" = "Сакрэты адкрыты.";
+"SecretPasscodeStatus.Hidden" = "Сакрэты схаваны.";
+
+"Share.LockedTitle" = "Разблакіруйце Telegram";
+"Share.LockedDescription" = "Адкрыйце і разблакіруйце Telegram, каб абагуліць.";

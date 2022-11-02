@@ -1331,4 +1331,8 @@ public class Window1 {
             self.shouldNotAnimateLikelyKeyboardAutocorrectionSwitch = false
         }
     }
+    
+    public var keyboardHeight: CGFloat {
+        return self.keyboardManager?.getCurrentKeyboardHeight() ?? 0.0
+    }
 }

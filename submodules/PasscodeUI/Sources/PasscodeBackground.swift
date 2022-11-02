@@ -6,7 +6,7 @@ import ImageBlur
 import FastBlur
 import GradientBackground
 
-protocol PasscodeBackground {
+public protocol PasscodeBackground {
     var size: CGSize { get }
     var backgroundImage: UIImage? { get }
     var foregroundImage: UIImage? { get }
@@ -15,27 +15,27 @@ protocol PasscodeBackground {
     func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode?
 }
 
-final class CustomPasscodeBackground: PasscodeBackground {
+public final class CustomPasscodeBackground: PasscodeBackground {
     private let colors: [UIColor]
     private let backgroundNode: GradientBackgroundNode
-    let inverted: Bool
+    public let inverted: Bool
     
     public private(set) var size: CGSize
     public private(set) var backgroundImage: UIImage? = nil
     public private(set) var foregroundImage: UIImage? = nil
     
-    init(size: CGSize, colors: [UIColor], inverted: Bool) {
+    public init(size: CGSize, colors: [UIColor], inverted: Bool) {
         self.size = size
         self.colors = colors
         self.inverted = inverted
         self.backgroundNode = createGradientBackgroundNode(colors: self.colors)
     }
     
-    func makeBackgroundNode() -> ASDisplayNode? {
+    public func makeBackgroundNode() -> ASDisplayNode? {
         return self.backgroundNode
     }
     
-    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
+    public func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
         if self.inverted, let backgroundNode = backgroundNode as? GradientBackgroundNode {
             return GradientBackgroundNode.CloneNode(parentNode: backgroundNode)
         } else {
@@ -44,12 +44,12 @@ final class CustomPasscodeBackground: PasscodeBackground {
     }
 }
 
-final class GradientPasscodeBackground: PasscodeBackground {
+public final class GradientPasscodeBackground: PasscodeBackground {
     public private(set) var size: CGSize
     public private(set) var backgroundImage: UIImage?
     public private(set) var foregroundImage: UIImage?
     
-    init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor) {
+    public init(size: CGSize, backgroundColors: (UIColor, UIColor), buttonColor: UIColor) {
         self.size = size
         self.backgroundImage = generateImage(CGSize(width: 8.0, height: size.height), contextGenerator: { size, context in
             let gradientColors = [backgroundColors.1.cgColor, backgroundColors.0.cgColor] as CFArray
@@ -70,21 +70,21 @@ final class GradientPasscodeBackground: PasscodeBackground {
         })!
     }
     
-    func makeBackgroundNode() -> ASDisplayNode? {
+    public func makeBackgroundNode() -> ASDisplayNode? {
         return nil
     }
     
-    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
+    public func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
         return nil
     }
 }
 
-final class ImageBasedPasscodeBackground: PasscodeBackground {
+public final class ImageBasedPasscodeBackground: PasscodeBackground {
     public private(set) var size: CGSize
     public private(set) var backgroundImage: UIImage?
     public private(set) var foregroundImage: UIImage?
     
-    init(image: UIImage, size: CGSize) {
+    public init(image: UIImage, size: CGSize) {
         self.size = size
         
         let contextSize = size.aspectFilled(CGSize(width: 320.0, height: 320.0))
@@ -125,11 +125,11 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
         self.backgroundImage = backgroundContext.generateImage()!
     }
 
-    func makeBackgroundNode() -> ASDisplayNode? {
+    public func makeBackgroundNode() -> ASDisplayNode? {
         return nil
     }
     
-    func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
+    public func makeForegroundNode(backgroundNode: ASDisplayNode?) -> ASDisplayNode? {
         return nil
     }
 }

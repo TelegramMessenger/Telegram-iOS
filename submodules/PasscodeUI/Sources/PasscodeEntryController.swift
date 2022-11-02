@@ -342,17 +342,25 @@ public final class PasscodeEntryController: ViewController {
     }
     
     public override func dismiss(completion: (() -> Void)? = nil) {
+        self.dismiss(animated: true, completion: completion)
+    }
+    
+    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.statusBarHost?.shouldChangeStatusBarStyle = nil
         if let statusBarHost = self.statusBarHost, let previousStatusBarStyle = self.previousStatusBarStyle {
-            statusBarHost.setStatusBarStyle(previousStatusBarStyle, animated: true)
+            statusBarHost.setStatusBarStyle(previousStatusBarStyle, animated: flag)
         }
         self.view.endEditing(true)
-        self.controllerNode.animateOut { [weak self] in
-            guard let strongSelf = self else {
-                return
+        if flag {
+            self.controllerNode.animateOut { [weak self] in
+                guard let strongSelf = self else {
+                    return
+                }
+                strongSelf.view.endEditing(true)
+                strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
             }
-            strongSelf.view.endEditing(true)
-            strongSelf.presentingViewController?.dismiss(animated: false, completion: completion)
+        } else {
+            self.presentingViewController?.dismiss(animated: false, completion: completion)
         }
     }
 }

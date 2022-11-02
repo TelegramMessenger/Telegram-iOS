@@ -17,8 +17,6 @@ import TelegramNotices
 import LegacyUI
 import TelegramPermissionsUI
 import PasscodeUI
-import ImageBlur
-import FastBlur
 import WatchBridge
 import SettingsUI
 import AppLock
@@ -92,7 +90,6 @@ final class UnauthorizedApplicationContext {
 final class AuthorizedApplicationContext {
     let sharedApplicationContext: SharedApplicationContext
     let mainWindow: Window1
-    let lockedCoveringView: LockedWindowCoveringView
     
     let context: AccountContextImpl
     
@@ -155,7 +152,6 @@ final class AuthorizedApplicationContext {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         self.mainWindow = mainWindow
-        self.lockedCoveringView = LockedWindowCoveringView(theme: presentationData.theme)
         
         self.context = context
         
@@ -723,7 +719,6 @@ final class AuthorizedApplicationContext {
                 if previousTheme.swap(presentationData.theme) !== presentationData.theme {
                     strongSelf.mainWindow.previewThemeAccentColor = presentationData.theme.rootController.navigationBar.accentTextColor
                     strongSelf.mainWindow.previewThemeDarkBlur = presentationData.theme.rootController.keyboardColor == .dark
-                    strongSelf.lockedCoveringView.updateTheme(presentationData.theme)
                     strongSelf.rootController.updateTheme(NavigationControllerTheme(presentationTheme: presentationData.theme))
                 }
             }
@@ -898,22 +893,5 @@ final class AuthorizedApplicationContext {
             }
             strongSelf.context.sharedContext.switchToAccount(id: context.account.id, fromSettingsController: nil, withChatListController: nil)
         })
-    }
-    
-    private func updateCoveringViewSnaphot(_ visible: Bool) {
-        if visible {
-            let scale: CGFloat = 0.5
-            let unscaledSize = self.mainWindow.hostView.containerView.frame.size
-            let image = generateImage(CGSize(width: floor(unscaledSize.width * scale), height: floor(unscaledSize.height * scale)), rotatedContext: { size, context in
-                context.clear(CGRect(origin: CGPoint(), size: size))
-                context.scaleBy(x: scale, y: scale)
-                UIGraphicsPushContext(context)
-                self.mainWindow.hostView.containerView.drawHierarchy(in: CGRect(origin: CGPoint(), size: unscaledSize), afterScreenUpdates: false)
-                UIGraphicsPopContext()
-            }).flatMap(applyScreenshotEffectToImage)
-            self.lockedCoveringView.updateSnapshot(image)
-        } else {
-            self.lockedCoveringView.updateSnapshot(nil)
-        }
     }
 }
