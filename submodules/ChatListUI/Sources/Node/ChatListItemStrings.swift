@@ -53,6 +53,9 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
     if let restrictionReason = message?._asMessage().restrictionReason(platform: "ios", contentSettings: contentSettings) {
         return (nil, false, restrictionReason, nil, nil)
     }
+    if let restrictionReason = chatPeer.chatMainPeer?.restrictionText(platform: "ios", contentSettings: contentSettings) {
+        return (nil, false, restrictionReason, nil, nil)
+    }
     
     var hideAuthor = false
     var messageText: String
