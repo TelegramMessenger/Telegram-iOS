@@ -413,6 +413,9 @@ public final class PresentationCallImpl: PresentationCall {
                     return
                 }
                 strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                if let currentOutput = currentOutput {
+                    strongSelf.currentAudioOutputValue = currentOutput
+                }
                 
                 var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
                 if !didReceiveAudioOutputs {

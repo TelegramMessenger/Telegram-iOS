@@ -171,7 +171,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private func requestTransaction(_ transaction: CXTransaction, completion: ((Bool) -> Void)? = nil) {
         self.callController.request(transaction) { error in
             if let error = error {
-                print("Error requesting transaction: \(error)")
+                print("Error requesting transaction \(transaction): \(error)")
             }
             completion?(error == nil)
         }
