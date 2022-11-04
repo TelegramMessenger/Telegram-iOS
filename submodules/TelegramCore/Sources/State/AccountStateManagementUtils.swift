@@ -114,6 +114,11 @@ private func peerIdsRequiringLocalChatStateFromUpdates(_ updates: [Api.Update]) 
             case let .updateChannelTooLong(_, channelId, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                 peerIds.insert(peerId)
+            case let .updateChannelPinnedTopics(_, channelId, order):
+                if order == nil {
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    peerIds.insert(peerId)
+                }
             case let .updateFolderPeers(folderPeers, _, _):
                 for peer in folderPeers {
                     switch peer {
@@ -337,11 +342,16 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
                     peerIds.insert(messageId.peerId)
                 }
                 switch update {
-                    case let .updateChannelTooLong(_, channelId, _):
+                case let .updateChannelTooLong(_, channelId, _):
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    peerIds.insert(peerId)
+                case let .updateChannelPinnedTopics(_, channelId, order):
+                    if order == nil {
                         let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                         peerIds.insert(peerId)
-                    default:
-                        break
+                    }
+                default:
+                    break
                 }
             }
         case .differenceEmpty:
@@ -359,11 +369,16 @@ private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.upda
                     peerIds.insert(messageId.peerId)
                 }
                 switch update {
-                    case let .updateChannelTooLong(_, channelId, _):
+                case let .updateChannelTooLong(_, channelId, _):
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    peerIds.insert(peerId)
+                case let .updateChannelPinnedTopics(_, channelId, order):
+                    if order == nil {
                         let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                         peerIds.insert(peerId)
-                    default:
-                        break
+                    }
+                default:
+                    break
                 }
             }
         case .differenceTooLong:
@@ -725,6 +740,20 @@ private func sortedUpdates(_ updates: [Api.Update]) -> [Api.Update] {
                 } else {
                     updatesByChannel[peerId]!.append(update)
                 }
+            case let .updateChannelPinnedTopic(_, channelId, _):
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                if updatesByChannel[peerId] == nil {
+                    updatesByChannel[peerId] = [update]
+                } else {
+                    updatesByChannel[peerId]!.append(update)
+                }
+            case let .updateChannelPinnedTopics(_, channelId, _):
+                let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                if updatesByChannel[peerId] == nil {
+                    updatesByChannel[peerId] = [update]
+                } else {
+                    updatesByChannel[peerId]!.append(update)
+                }
             case let .updateDeleteChannelMessages(channelId, _, _, _):
                 let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
                 if updatesByChannel[peerId] == nil {
@@ -857,6 +886,15 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     if let channelPts = channelPts, let channelState = state.channelStates[peerId], channelState.pts >= channelPts {
                         Logger.shared.log("State", "channel \(peerId) (\((updatedState.peers[peerId] as? TelegramChannel)?.title ?? "nil")) skip updateChannelTooLong by pts")
                     } else {
+                        channelsToPoll.insert(peerId)
+                    }
+                }
+            case let .updateChannelPinnedTopics(_, channelId, order):
+                if let order = order {
+                    updatedState.addUpdatePinnedTopicOrder(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadIds: order.map(Int64.init))
+                } else {
+                    let peerId = PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId))
+                    if !channelsToPoll.contains(peerId) {
                         channelsToPoll.insert(peerId)
                     }
                 }
@@ -1375,8 +1413,9 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 } else {
                     updatedState.addUpdatePinnedItemIds(groupId: groupId, operation: .sync)
                 }
-            case let .updateChannelPinnedTopic(_, channelId, topicId):
-                updatedState.addUpdatePinnedTopic(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: topicId.flatMap(Int64.init))
+            case let .updateChannelPinnedTopic(flags, channelId, topicId):
+                let isPinned = (flags & (1 << 0)) != 0
+                updatedState.addUpdatePinnedTopic(peerId: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(channelId)), threadId: Int64(topicId), isPinned: isPinned)
             case let .updateReadMessagesContents(messages, _, _):
                 updatedState.addReadMessagesContents((nil, messages))
             case let .updateChannelReadMessagesContents(_, channelId, topMsgId, messages):
@@ -2847,7 +2886,7 @@ private func optimizedOperations(_ operations: [AccountStateMutationOperation]) 
     var currentAddScheduledMessages: OptimizeAddMessagesState?
     for operation in operations {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .MergeApiChats, .MergeApiUsers, .MergePeerPresences, .UpdatePeer, .ReadInbox, .ReadOutbox, .ReadGroupFeedInbox, .ResetReadState, .ResetIncomingReadState, .UpdatePeerChatUnreadMark, .ResetMessageTagSummary, .UpdateNotificationSettings, .UpdateGlobalNotificationSettings, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilter, .UpdateChatListFilterOrder, .UpdateReadThread, .UpdateMessagesPinned, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
                 if let currentAddMessages = currentAddMessages, !currentAddMessages.messages.isEmpty {
                     result.append(.AddMessages(currentAddMessages.messages, currentAddMessages.location))
                 }
@@ -3757,12 +3796,18 @@ func replayFinalState(
                     case .sync:
                         addSynchronizePinnedChatsOperation(transaction: transaction, groupId: groupId)
                 }
-            case let .UpdatePinnedTopic(peerId, threadId):
-                if let threadId = threadId {
-                    transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [threadId])
+            case let .UpdatePinnedTopic(peerId, threadId, isPinned):
+                var currentThreadIds = transaction.getPeerPinnedThreads(peerId: peerId)
+                if isPinned {
+                    if !currentThreadIds.contains(threadId) {
+                        currentThreadIds.insert(threadId, at: 0)
+                    }
                 } else {
-                    transaction.setPeerPinnedThreads(peerId: peerId, threadIds: [])
+                    currentThreadIds.removeAll(where: { $0 == threadId })
                 }
+                transaction.setPeerPinnedThreads(peerId: peerId, threadIds: currentThreadIds)
+            case let .UpdatePinnedTopicOrder(peerId, threadIds):
+                transaction.setPeerPinnedThreads(peerId: peerId, threadIds: threadIds)
             case let .ReadMessageContents(peerIdAndMessageIds):
                 let (peerId, messageIds) = peerIdAndMessageIds
 
