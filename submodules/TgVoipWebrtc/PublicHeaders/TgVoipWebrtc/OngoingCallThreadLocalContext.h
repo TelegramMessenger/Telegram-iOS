@@ -377,6 +377,8 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 
 - (void)stop;
 
+- (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 
 - (void)emitJoinPayload:(void (^ _Nonnull)(NSString * _Nonnull, uint32_t))completion;

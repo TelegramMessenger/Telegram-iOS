@@ -875,6 +875,22 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         _useManualAudioSessionControl = useManualAudioSessionControl;
         [RTCAudioSession sharedInstance].useManualAudio = true;
         
+#ifdef WEBRTC_IOS
+        RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
+        if (useManualAudioSessionControl) {
+            sharedConfiguration.mode = AVAudioSessionModeDefault;
+        } else {
+            sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
+        }
+        sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+        sharedConfiguration.outputNumberOfChannels = 1;
+        [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
+        
+        /*[RTCAudioSession sharedInstance].useManualAudio = true;
+         [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+         [RTCAudioSession sharedInstance].isAudioEnabled = true;*/
+#endif
+        
         _callReceiveTimeout = 20.0;
         _callRingTimeout = 90.0;
         _callConnectTimeout = 30.0;
@@ -1463,6 +1479,22 @@ private:
             }
         }
         
+#ifdef WEBRTC_IOS
+        RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
+        sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
+        sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+        if (disableAudioInput) {
+            sharedConfiguration.outputNumberOfChannels = 2;
+        } else {
+            sharedConfiguration.outputNumberOfChannels = 1;
+        }
+        [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
+        
+        /*[RTCAudioSession sharedInstance].useManualAudio = true;
+         [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+         [RTCAudioSession sharedInstance].isAudioEnabled = true;*/
+#endif
+        
         std::vector<tgcalls::VideoCodecName> videoCodecPreferences;
 
         int minOutgoingVideoBitrateKbit = 500;
@@ -1644,6 +1676,15 @@ private:
         _instance->stop();
         _instance.reset();
     }
+}
+
+- (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive {
+    if (isAudioSessionActive) {
+        [[RTCAudioSession sharedInstance] audioSessionDidActivate:[AVAudioSession sharedInstance]];
+    } else {
+        [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
+    }
+    [RTCAudioSession sharedInstance].isAudioEnabled = isAudioSessionActive;
 }
 
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast {

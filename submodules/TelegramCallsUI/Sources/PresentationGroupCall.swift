@@ -1648,7 +1648,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                         outgoingAudioBitrateKbit = Int32(value)
                     }
 
-                    genericCallContext = .call(OngoingGroupCallContext(video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
+                    genericCallContext = .call(OngoingGroupCallContext(audioSessionActive: self.audioSessionActive.get(), video: self.videoCapturer, requestMediaChannelDescriptions: { [weak self] ssrcs, completion in
                         let disposable = MetaDisposable()
                         Queue.mainQueue().async {
                             guard let strongSelf = self else {
@@ -2966,7 +2966,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         
         self.hasScreencast = true
 
-        let screencastCallContext = OngoingGroupCallContext(video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, preferX264: false, logPath: "")
+        let screencastCallContext = OngoingGroupCallContext(audioSessionActive: .single(true), video: self.screencastCapturer, requestMediaChannelDescriptions: { _, _ in EmptyDisposable }, rejoinNeeded: { }, outgoingAudioBitrateKbit: nil, videoContentType: .screencast, enableNoiseSuppression: false, disableAudioInput: true, preferX264: false, logPath: "")
         self.screencastCallContext = screencastCallContext
 
         self.screencastJoinDisposable.set((screencastCallContext.joinPayload
