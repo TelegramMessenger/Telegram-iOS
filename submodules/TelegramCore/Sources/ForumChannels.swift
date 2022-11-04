@@ -386,6 +386,12 @@ func _internal_setForumChannelPinnedTopics(account: Account, id: EnginePeer.Id, 
             return .fail(.generic)
         }
         
+        #if DEBUG
+        if "".isEmpty {
+            return .complete()
+        }
+        #endif
+        
         return account.network.request(Api.functions.channels.reorderPinnedForumTopics(
             channel: inputChannel,
             order: threadIds.map(Int32.init(clamping:))

@@ -878,6 +878,12 @@ public extension TelegramEngine {
             }
         }
         
+        public func getForumChannelPinnedTopics(id: EnginePeer.Id) -> Signal<[Int64], NoError> {
+            return self.account.postbox.transaction { transcation -> [Int64] in
+                return transcation.getPeerPinnedThreads(peerId: id)
+            }
+        }
+        
         public func setForumChannelPinnedTopics(id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
             return _internal_setForumChannelPinnedTopics(account: self.account, id: id, threadIds: threadIds)
         }
