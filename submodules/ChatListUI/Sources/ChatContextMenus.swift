@@ -519,7 +519,7 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
                 
-                let _ = context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: !isPinned).start()
+                let _ = context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId).start()
             })))
         }
         

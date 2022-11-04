@@ -338,7 +338,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var viewCount: Int?
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+            if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
+                dateReactionsAndPeers = ([], [])
+            }
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden

@@ -3851,7 +3851,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func setPeerThreadPinned(peerId: EnginePeer.Id, threadId: Int64, isPinned: Bool) {
-        self.actionDisposables.add(self.context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: isPinned).start())
+        self.actionDisposables.add(self.context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId).start())
     }
     
     public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {

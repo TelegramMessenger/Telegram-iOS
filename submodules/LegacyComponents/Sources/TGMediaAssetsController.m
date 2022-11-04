@@ -1411,7 +1411,7 @@
     bool hasAnyTimers = false;
     if (editingContext != nil || grouping)
     {
-        for (UIImage *asset in selectedItems)
+        for (id<TGMediaEditableItem> asset in selectedItems)
         {
             if ([editingContext timerForItem:asset] != nil) {
                 hasAnyTimers = true;
@@ -1434,7 +1434,7 @@
     if (grouping && selectedItems.count > 1)
         groupedId = @([self generateGroupedId]);
     
-    for (UIImage *asset in selectedItems)
+    for (id<TGMediaEditableItem> asset in selectedItems)
     {
         NSAttributedString *caption = [editingContext captionForItem:asset];
         if (editingContext.isForcedCaption) {
@@ -1445,97 +1445,173 @@
             }
         }
         
-        if (intent == TGMediaAssetsControllerSendFileIntent)
-        {
-            NSString *tempFileName = TGTemporaryFileName(nil);
-            NSData *imageData = UIImageJPEGRepresentation(asset, 1.0);
-            [imageData writeToURL:[NSURL fileURLWithPath:tempFileName] atomically:true];
+        if ([asset isKindOfClass:[UIImage class]]) {
+            if (intent == TGMediaAssetsControllerSendFileIntent)
+            {
+                NSString *tempFileName = TGTemporaryFileName(nil);
+                NSData *imageData = UIImageJPEGRepresentation((UIImage *)asset, 1.0);
+                [imageData writeToURL:[NSURL fileURLWithPath:tempFileName] atomically:true];
+                
+                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                dict[@"type"] = @"file";
+                dict[@"tempFileUrl"] = [NSURL fileURLWithPath:tempFileName];
+                dict[@"fileName"] = [NSString stringWithFormat:@"IMG%03ld.jpg", i];
+                dict[@"mimeType"] = TGMimeTypeForFileUTI(@"image/jpeg");
+                dict[@"previewImage"] = asset;
+                
+                if (groupedId != nil)
+                    dict[@"groupedId"] = groupedId;
+                
+                id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                [signals addObject:[SSignal single:generatedItem]];
+                
+                i++;
+                num++;
+            } else {
+                id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+                NSNumber *timer = [editingContext timerForItem:asset];
+                
+                SSignal *inlineSignal = [[SSignal single:asset] map:^id(UIImage *image)
+                                         {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    dict[@"type"] = @"editedPhoto";
+                    dict[@"image"] = image;
+                    
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    
+                    if (groupedId != nil && !hasAnyTimers)
+                        dict[@"groupedId"] = groupedId;
+                    
+                    id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                    return generatedItem;
+                }];
+                
+                SSignal *assetSignal = inlineSignal;
+                SSignal *imageSignal = assetSignal;
+                if (editingContext != nil)
+                {
+                    imageSignal = [[[[[editingContext imageSignalForItem:asset withUpdates:true] filter:^bool(id result)
+                                      {
+                        return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
+                    }] take:1] mapToSignal:^SSignal *(id result)
+                                    {
+                        if (result == nil)
+                        {
+                            return [SSignal fail:nil];
+                        }
+                        else if ([result isKindOfClass:[UIImage class]])
+                        {
+                            UIImage *image = (UIImage *)result;
+                            image.edited = true;
+                            return [SSignal single:image];
+                        }
+                        
+                        return [SSignal complete];
+                    }] onCompletion:^
+                                       {
+                        __strong TGMediaEditingContext *strongEditingContext = editingContext;
+                        [strongEditingContext description];
+                    }];
+                }
+                
+                [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
+                                     {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    dict[@"type"] = @"editedPhoto";
+                    dict[@"image"] = image;
+                    
+                    if (adjustments.paintingData.stickers.count > 0)
+                        dict[@"stickers"] = adjustments.paintingData.stickers;
+                    
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    
+                    if (groupedId != nil && !hasAnyTimers)
+                        dict[@"groupedId"] = groupedId;
+                    
+                    id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                    return generatedItem;
+                }] catch:^SSignal *(__unused id error)
+                                    {
+                    return inlineSignal;
+                }]];
+                
+                i++;
+                num++;
+            }
+        } else if ([asset isKindOfClass:[TGCameraCapturedVideo class]]) {
+            TGCameraCapturedVideo *video = (TGCameraCapturedVideo *)asset;
             
-            NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-            dict[@"type"] = @"file";
-            dict[@"tempFileUrl"] = [NSURL fileURLWithPath:tempFileName];
-            dict[@"fileName"] = [NSString stringWithFormat:@"IMG%03ld.jpg", i];
-            dict[@"mimeType"] = TGMimeTypeForFileUTI(@"image/jpeg");
-            dict[@"previewImage"] = asset;
-            
-            if (groupedId != nil)
-                dict[@"groupedId"] = groupedId;
-            
-            id generatedItem = descriptionGenerator(dict, caption, nil, nil);
-            [signals addObject:[SSignal single:generatedItem]];
-        
-            i++;
-            num++;
-        } else {
-            id<TGMediaEditAdjustments> adjustments = [editingContext adjustmentsForItem:asset];
+            TGVideoEditAdjustments *adjustments = (TGVideoEditAdjustments *)[editingContext adjustmentsForItem:asset];
+            NSAttributedString *caption = [editingContext captionForItem:asset];
             NSNumber *timer = [editingContext timerForItem:asset];
             
-            SSignal *inlineSignal = [[SSignal single:asset] map:^id(UIImage *image)
-                                     {
-                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                dict[@"type"] = @"editedPhoto";
-                dict[@"image"] = image;
+            UIImage *(^cropVideoThumbnail)(UIImage *, CGSize, CGSize, bool) = ^UIImage *(UIImage *image, CGSize targetSize, CGSize sourceSize, bool resize)
+            {
+                if ([adjustments cropAppliedForAvatar:false] || adjustments.hasPainting || adjustments.toolsApplied)
+                {
+                    CGRect scaledCropRect = CGRectMake(adjustments.cropRect.origin.x * image.size.width / adjustments.originalSize.width, adjustments.cropRect.origin.y * image.size.height / adjustments.originalSize.height, adjustments.cropRect.size.width * image.size.width / adjustments.originalSize.width, adjustments.cropRect.size.height * image.size.height / adjustments.originalSize.height);
+                    UIImage *paintingImage = adjustments.paintingData.stillImage;
+                    if (paintingImage == nil) {
+                        paintingImage = adjustments.paintingData.image;
+                    }
+                    if (adjustments.toolsApplied) {
+                        image = [PGPhotoEditor resultImageForImage:image adjustments:adjustments];
+                    }
+                    return TGPhotoEditorCrop(image, paintingImage, adjustments.cropOrientation, 0, scaledCropRect, adjustments.cropMirrored, targetSize, sourceSize, resize);
+                }
                 
-                if (timer != nil)
-                    dict[@"timer"] = timer;
-                
-                if (groupedId != nil && !hasAnyTimers)
-                    dict[@"groupedId"] = groupedId;
-                
-                id generatedItem = descriptionGenerator(dict, caption, nil, nil);
-                return generatedItem;
+                return image;
+            };
+            
+            CGSize imageSize = TGFillSize(asset.originalSize, CGSizeMake(512, 512));
+            SSignal *trimmedVideoThumbnailSignal = [[video avAsset] mapToSignal:^SSignal *(AVURLAsset *avAsset) {
+                return [[TGMediaAssetImageSignals videoThumbnailForAVAsset:avAsset size:imageSize timestamp:CMTimeMakeWithSeconds(adjustments.trimStartValue, NSEC_PER_SEC)] map:^UIImage *(UIImage *image)
+                        {
+                    return cropVideoThumbnail(image, TGScaleToFill(asset.originalSize, CGSizeMake(512, 512)), asset.originalSize, true);
+                }];
             }];
             
-            SSignal *assetSignal = inlineSignal;
-            SSignal *imageSignal = assetSignal;
-            if (editingContext != nil)
+            SSignal *(^inlineThumbnailSignal)(id<TGMediaEditableItem>) = ^SSignal *(id<TGMediaEditableItem> item)
             {
-                imageSignal = [[[[[editingContext imageSignalForItem:asset withUpdates:true] filter:^bool(id result)
-                                  {
-                    return result == nil || ([result isKindOfClass:[UIImage class]] && !((UIImage *)result).degraded);
-                }] take:1] mapToSignal:^SSignal *(id result)
-                                {
-                    if (result == nil)
-                    {
-                        return [SSignal fail:nil];
-                    }
-                    else if ([result isKindOfClass:[UIImage class]])
-                    {
-                        UIImage *image = (UIImage *)result;
-                        image.edited = true;
-                        return [SSignal single:image];
-                    }
-                    
-                    return [SSignal complete];
-                }] onCompletion:^
-                                   {
-                    __strong TGMediaEditingContext *strongEditingContext = editingContext;
-                    [strongEditingContext description];
-                }];
-            }
+                return [item thumbnailImageSignal];
+            };
             
-            [signals addObject:[[imageSignal map:^NSDictionary *(UIImage *image)
-                                 {
-                NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
-                dict[@"type"] = @"editedPhoto";
-                dict[@"image"] = image;
-                
-                if (adjustments.paintingData.stickers.count > 0)
-                    dict[@"stickers"] = adjustments.paintingData.stickers;
-                
-                if (timer != nil)
-                    dict[@"timer"] = timer;
-                
-                if (groupedId != nil && !hasAnyTimers)
-                    dict[@"groupedId"] = groupedId;
-                
-                id generatedItem = descriptionGenerator(dict, caption, nil, nil);
-                return generatedItem;
-            }] catch:^SSignal *(__unused id error)
+            SSignal *videoThumbnailSignal = [inlineThumbnailSignal(asset) map:^UIImage *(UIImage *image) {
+                return cropVideoThumbnail(image, image.size, image.size, false);
+            }];
+            
+            SSignal *thumbnailSignal = adjustments.trimStartValue > FLT_EPSILON ? trimmedVideoThumbnailSignal : videoThumbnailSignal;
+            
+            TGMediaVideoConversionPreset preset = [TGMediaVideoConverter presetFromAdjustments:adjustments];
+            CGSize dimensions = [TGMediaVideoConverter dimensionsFor:asset.originalSize adjustments:adjustments preset:preset];
+            NSTimeInterval duration = adjustments.trimApplied ? (adjustments.trimEndValue - adjustments.trimStartValue) : video.videoDuration;
+            
+            [signals addObject:[thumbnailSignal mapToSignal:^id(UIImage *image)
                                 {
-                return inlineSignal;
+                return [video.avAsset map:^id(AVURLAsset *avAsset) {
+                    NSMutableDictionary *dict = [[NSMutableDictionary alloc] init];
+                    dict[@"type"] = @"cameraVideo";
+                    dict[@"url"] = avAsset.URL;
+                    dict[@"previewImage"] = image;
+                    dict[@"adjustments"] = adjustments;
+                    dict[@"dimensions"] = [NSValue valueWithCGSize:dimensions];
+                    dict[@"duration"] = @(duration);
+                    
+                    if (adjustments.paintingData.stickers.count > 0)
+                        dict[@"stickers"] = adjustments.paintingData.stickers;
+                    if (timer != nil)
+                        dict[@"timer"] = timer;
+                    else if (groupedId != nil && !hasAnyTimers)
+                        dict[@"groupedId"] = groupedId;
+                    
+                    id generatedItem = descriptionGenerator(dict, caption, nil, nil);
+                    return generatedItem;
+                }];
             }]];
             
+            i++;
             i++;
             num++;
         }

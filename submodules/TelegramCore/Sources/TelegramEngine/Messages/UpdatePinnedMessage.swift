@@ -109,7 +109,7 @@ func _internal_requestUpdatePinnedMessage(account: Account, peerId: PeerId, upda
     }
 }
 
-func _internal_requestUnpinAllMessages(account: Account, peerId: PeerId) -> Signal<Never, UpdatePinnedMessageError> {
+func _internal_requestUnpinAllMessages(account: Account, peerId: PeerId, threadId: Int64?) -> Signal<Never, UpdatePinnedMessageError> {
     return account.postbox.transaction { transaction -> (Peer?, CachedPeerData?) in
         return (transaction.getPeer(peerId), transaction.getPeerCachedData(peerId: peerId))
     }
@@ -147,7 +147,11 @@ func _internal_requestUnpinAllMessages(account: Account, peerId: PeerId) -> Sign
             case restart
         }
         
-        let request: Signal<Never, InternalError> = account.network.request(Api.functions.messages.unpinAllMessages(peer: inputPeer))
+        var flags: Int32 = 0
+        if threadId != nil {
+            flags |= (1 << 0)
+        }
+        let request: Signal<Never, InternalError> = account.network.request(Api.functions.messages.unpinAllMessages(flags: flags, peer: inputPeer, topMsgId: threadId.flatMap(Int32.init(clamping:))))
         |> mapError { error -> InternalError in
             return .error(error.errorDescription)
         }

@@ -367,21 +367,16 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
 
 public enum SetForumChannelTopicPinnedError {
     case generic
+    case limitReached(Int)
 }
 
-func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
+func _internal_setForumChannelPinnedTopics(account: Account, id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
             return nil
         }
         
-        if isPinned {
-            transaction.setPeerPinnedThreads(peerId: id, threadIds: [threadId])
-        } else {
-            if transaction.getPeerPinnedThreads(peerId: id).contains(threadId) {
-                transaction.setPeerPinnedThreads(peerId: id, threadIds: [])
-            }
-        }
+        transaction.setPeerPinnedThreads(peerId: id, threadIds: threadIds)
         
         return inputChannel
     }
@@ -390,13 +385,10 @@ func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, t
         guard let inputChannel = inputChannel else {
             return .fail(.generic)
         }
-        var flags: Int32 = 0
-        flags |= (1 << 2)
         
-        return account.network.request(Api.functions.channels.updatePinnedForumTopic(
+        return account.network.request(Api.functions.channels.reorderPinnedForumTopics(
             channel: inputChannel,
-            topicId: Int32(clamping: threadId),
-            pinned: isPinned ? .boolTrue : .boolFalse
+            order: threadIds.map(Int32.init(clamping:))
         ))
         |> mapError { _ -> SetForumChannelTopicPinnedError in
             return .generic

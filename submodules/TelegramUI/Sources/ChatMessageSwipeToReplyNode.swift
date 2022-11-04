@@ -178,19 +178,26 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
         guard !self.animatedWave else {
             return
         }
+        self.layer.transform = CATransform3DMakeScale(1.1, 1.1, 1.0)
+        self.layer.animateScale(from: 1.0, to: 1.1, duration: 0.2, completion: { [weak self] _ in
+            self?.layer.transform = CATransform3DMakeScale(1.0, 1.0, 1.0)
+            self?.layer.animateScale(from: 1.1, to: 1.0, duration: 0.15)
+        })
         
         self.animatedWave = true
         
         var lineWidth = self.progressLayer.lineWidth
-        self.progressLayer.lineWidth = 1.0
-        self.progressLayer.animate(from: lineWidth as NSNumber, to: 1.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.2, completion: { [weak self] _ in
-            self?.progressLayer.animate(from: 1.0 as NSNumber, to: 0.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.1, removeOnCompletion: false)
+        self.progressLayer.lineWidth = 0.0
+        self.progressLayer.animate(from: lineWidth as NSNumber, to: 0.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3, completion: { _ in
+            
         })
         
         var path = self.progressLayer.path
         var targetPath = UIBezierPath(arcCenter: CGPoint(x: self.progressLayer.frame.width / 2.0, y: self.progressLayer.frame.height / 2.0), radius: 35.0, startAngle: CGFloat(-0.5 * .pi), endAngle: CGFloat(-0.5 * .pi + 2.0 * .pi), clockwise: true).cgPath
         self.progressLayer.path = targetPath
-        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.25)
+        self.progressLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: kCAMediaTimingFunctionSpring, duration: 0.3)
+        
+        self.progressLayer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
         
         self.fillLayer.isHidden = false
         self.fillLayer.path = UIBezierPath(ovalIn: CGRect(origin: .zero, size: size)).cgPath
@@ -198,12 +205,12 @@ final class ChatMessageSwipeToReplyNode: ASDisplayNode {
                 
         lineWidth = self.fillLayer.lineWidth
         self.fillLayer.lineWidth = 18.0
-        self.fillLayer.animate(from: lineWidth as NSNumber, to: 18.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.25)
+        self.fillLayer.animate(from: lineWidth as NSNumber, to: 18.0 as NSNumber, keyPath: "lineWidth", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
         
         path = self.fillLayer.path
         targetPath = UIBezierPath(ovalIn: CGRect(origin: .zero, size: size).insetBy(dx: 9.0, dy: 9.0)).cgPath
         self.fillLayer.path = targetPath
-        self.fillLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.25)
+        self.fillLayer.animate(from: path, to: targetPath, keyPath: "path", timingFunction: CAMediaTimingFunctionName.linear.rawValue, duration: 0.3)
     }
     
     func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {

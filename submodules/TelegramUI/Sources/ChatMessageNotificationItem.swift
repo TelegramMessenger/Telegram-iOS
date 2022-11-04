@@ -84,9 +84,6 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private var compact: Bool?
     private var validLayout: CGFloat?
     
-    private var animationCache: AnimationCache?
-    private var multiAnimationRenderer: MultiAnimationRenderer?
-    
     override init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         
@@ -114,8 +111,6 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     
     func setupItem(_ item: ChatMessageNotificationItem, compact: Bool) {
         self.item = item
-        
-        self.animationCache = item.context.animationCache
         
         self.compact = compact
         if compact {
@@ -412,12 +407,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         
-        if let item = self.item, let cache = self.animationCache, let renderer = self.multiAnimationRenderer {
+        if let item = self.item {
             let theme = item.context.sharedContext.currentPresentationData.with({ $0 }).theme
             let _ = textApply(TextNodeWithEntities.Arguments(
                 context: item.context,
-                cache: cache,
-                renderer: renderer,
+                cache: item.context.animationCache,
+                renderer: item.context.animationRenderer,
                 placeholderColor: theme.list.mediaPlaceholderColor,
                 attemptSynchronous: false
             ))

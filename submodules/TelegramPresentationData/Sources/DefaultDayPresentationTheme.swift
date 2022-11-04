@@ -1278,7 +1278,8 @@ public func defaultBuiltinWallpaper(data: BuiltinWallpaperData, colors: [UInt32]
                         fileReference: Data()
                     ),
                     progressiveSizes: [],
-                    immediateThumbnailData: nil
+                    immediateThumbnailData: nil,
+                    hasVideo: false
                 )
             ],
             videoThumbnails: [],
