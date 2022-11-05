@@ -187,11 +187,11 @@ public final class DeviceContactInstantMessagingProfileData: Equatable, Hashable
 }
 
 public let phonebookUsernamePathPrefix = "@id"
-private let phonebookUsernamePrefix = "https://t.me/" + phonebookUsernamePathPrefix
+private let phonebookUsernamePrefix = "https://t.me/"
 
 public extension DeviceContactUrlData {
-    convenience init(appProfile: PeerId) {
-        self.init(label: "Telegram", value: "\(phonebookUsernamePrefix)\(appProfile.id)")
+    convenience init(addressName: String) {
+        self.init(label: "Telegram", value: "\(phonebookUsernamePrefix)\(addressName)")
     }
 }
 
