@@ -330,14 +330,14 @@ public final class AccountViewTracker {
     
     private let externallyUpdatedPeerIdDisposable = MetaDisposable()
     
-    public let chatListPreloadItems = Promise<[ChatHistoryPreloadItem]>([])
+    public let chatListPreloadItems = Promise<Set<ChatHistoryPreloadItem>>([])
     
     init(account: Account) {
         self.account = account
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
-        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged)
+        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged |> map { Array($0) })
         
         self.externallyUpdatedPeerIdDisposable.set((account.stateManager.externallyUpdatedPeerIds
         |> deliverOn(self.queue)).start(next: { [weak self] peerIds in
