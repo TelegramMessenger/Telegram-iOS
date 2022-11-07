@@ -2765,7 +2765,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                     } else if action.action == .historyCleared {
                                         emptyType = .clearedHistory
                                         break
-                                    } else if case .topicCreated = action.action {
+                                    } else if case .topicCreated = action.action, firstEntry.message.author?.id == strongSelf.context.account.peerId {
                                         emptyType = .topic
                                         break
                                     }

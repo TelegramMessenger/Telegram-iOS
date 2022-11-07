@@ -63,9 +63,9 @@ public func generateTopicIcon(title: String, backgroundColors: [UIColor], stroke
         let attributedString = NSAttributedString(string: title, attributes: [NSAttributedString.Key.font: Font.with(size: fontSize, design: .round, weight: .bold), NSAttributedString.Key.foregroundColor: UIColor.white])
         
         let line = CTLineCreateWithAttributedString(attributedString)
-        let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
+        let lineBounds = CTLineGetBoundsWithOptions(line, [.useOpticalBounds])
         
-        let lineOffset = CGPoint(x: title == "B" ? 1.0 : 0.0, y: floorToScreenPixels(realSize.height * 0.05))
+        let lineOffset = CGPoint(x: 1.0 - UIScreenPixel, y: floorToScreenPixels(realSize.height * 0.05))
         let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (realSize.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (realSize.height - lineBounds.size.height) / 2.0) + lineOffset.y)
         
         context.translateBy(x: realSize.width / 2.0, y: realSize.height / 2.0)

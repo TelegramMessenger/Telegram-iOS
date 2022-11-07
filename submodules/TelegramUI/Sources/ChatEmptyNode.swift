@@ -896,7 +896,7 @@ private enum ChatEmptyNodeContentType: Equatable {
     case cloud
     case peerNearby
     case greeting
-    case topic(Int64?)
+    case topic
 }
 
 final class ChatEmptyNode: ASDisplayNode {
@@ -973,7 +973,7 @@ final class ChatEmptyNode: ASDisplayNode {
         let contentType: ChatEmptyNodeContentType
         if case .replyThread = interfaceState.chatLocation {
             if case .topic = emptyType {
-                contentType = .topic(nil)
+                contentType = .topic
             } else {
                 contentType = .regular
             }

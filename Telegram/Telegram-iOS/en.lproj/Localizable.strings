@@ -8241,3 +8241,6 @@ Sorry for the inconvenience.";
 "Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
 
 "Undo.DeletedTopic" = "Topic Deleted";
+
+"EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
+"EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";

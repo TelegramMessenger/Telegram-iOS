@@ -718,7 +718,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             if self.titleRightIconNode.supernode == nil {
                 self.titleTextNode.addSubnode(self.titleRightIconNode)
             }
-            rightIconWidth = image.size.width + 3.0
+            rightIconWidth = max(24.0, image.size.width) + 3.0
         } else if self.titleRightIconNode.supernode != nil {
             self.titleRightIconNode.removeFromSupernode()
         }

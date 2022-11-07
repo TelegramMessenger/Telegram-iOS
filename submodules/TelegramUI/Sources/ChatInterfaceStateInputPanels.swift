@@ -152,13 +152,13 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 isMember = true
             case .left:
                 if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    if !channel.flags.contains(.joinToSend) {
+                    if !channel.flags.contains(.joinToSend) && !channel.flags.contains(.isForum) {
                         isMember = true
                     }
                 }
             }
             
-            if channel.flags.contains(.isForum) {
+            if channel.flags.contains(.isForum) && isMember {
                 if let threadData = chatPresentationInterfaceState.threadData {
                     if threadData.isClosed {
                         var canManage = false

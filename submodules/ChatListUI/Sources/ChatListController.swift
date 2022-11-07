@@ -524,9 +524,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         default:
                             let actionTitle: String
                             if channel.flags.contains(.requestToJoin) {
-                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
-                            } else {
                                 actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
+                            } else {
+                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
                             }
                             strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }
@@ -1871,10 +1871,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         self.tabContainerNode.presentPremiumTip = { [weak self] in
             if let strongSelf = self {
-                let context = strongSelf.context
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
-                        strongSelf.push(PremiumIntroScreen(context: context, source: .folders))
+                        let context = strongSelf.context
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumDemoScreen(context: context, subject: .advancedChatManagement, action: {
+                            let controller = PremiumIntroScreen(context: context, source: .folders)
+                            replaceImpl?(controller)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        strongSelf.push(controller)
                     }
                     return false }), in: .current)
             }
@@ -2980,6 +2988,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     displaySearchFilters = false
                 }
                 
+                if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = strongSelf.tabContainerNode.frame
+                    strongSelf.tabContainerNode.view.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                
                 if let searchContentNode = strongSelf.searchContentNode {                    
                     if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
@@ -2996,13 +3013,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             searchContentNode.search(filter: filter, query: query)
                         }
                         
-                        if !tabsIsEmpty {
-                            Queue.mainQueue().after(0.01) {
-                                filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 38.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                
-                                strongSelf.tabContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            }
+                        Queue.mainQueue().justDispatch {
+                            filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 30.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                         }
                     }
                 }
@@ -3033,15 +3046,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !self.displayNavigationBar {
             var completion: (() -> Void)?
             
-            var filterContainerNode: ASDisplayNode?
-            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
-                filterContainerNode = searchContentNode.filterContainerNode
-            }
-            
-            if let searchContentNode = self.searchContentNode {
-                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
-            }
-            
             let tabsIsEmpty: Bool
             if let (resolvedItems, displayTabsAtBottom, _) = self.tabContainerData {
                 tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
@@ -3049,6 +3053,33 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 tabsIsEmpty = true
             }
             
+            
+            var filterContainerNode: ASDisplayNode?
+            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                filterContainerNode = searchContentNode.filterContainerNode
+                
+                if let filterContainerNode = filterContainerNode, let snapshotView = filterContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = filterContainerNode.frame
+                    filterContainerNode.view.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    
+                    if !tabsIsEmpty {
+                        Queue.mainQueue().after(0.01) {
+                            self.tabContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                            self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -74.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        }
+                    }
+                }
+            }
+            
+            if let searchContentNode = self.searchContentNode {
+                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            }
+            
+
             self.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: false)
             if let parentController = self.parent as? TabBarController {
                 parentController.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: animated)
@@ -3060,14 +3091,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             completion?()
             
             (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
-            
-            if let filterContainerNode = filterContainerNode {
-                filterContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -44.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                
-                if !tabsIsEmpty {
-                    self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                }
-            }
             
             self.isSearchActive = false
             if let navigationController = self.navigationController as? NavigationController {
