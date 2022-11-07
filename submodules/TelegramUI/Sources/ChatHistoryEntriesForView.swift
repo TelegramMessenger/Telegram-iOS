@@ -35,7 +35,7 @@ func chatHistoryEntriesForView(
     var adminRanks: [PeerId: CachedChannelAdminRank] = [:]
     var stickersEnabled = true
     var channelPeer: Peer?
-    if case let .peer(peerId) = location, peerId.namespace == Namespaces.Peer.CloudChannel {
+    if let peerId = location.peerId, peerId.namespace == Namespaces.Peer.CloudChannel {
         for additionalEntry in view.additionalData {
             if case let .cacheEntry(id, data) = additionalEntry {
                 if id == cachedChannelAdminRanksEntryId(peerId: peerId), let data = data?.get(CachedChannelAdminRanks.self) {

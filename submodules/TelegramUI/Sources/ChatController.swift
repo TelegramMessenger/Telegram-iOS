@@ -4933,7 +4933,37 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.chatTitleView?.titleContent = .replyThread(type: replyThreadType, count: count)
                         }
                         
+                        var wasGroupChannel: Bool?
+                        if let previousPeerView = strongSelf.peerView, let info = (previousPeerView.peers[previousPeerView.peerId] as? TelegramChannel)?.info {
+                            if case .group = info {
+                                wasGroupChannel = true
+                            } else {
+                                wasGroupChannel = false
+                            }
+                        }
+                        var isGroupChannel: Bool?
+                        if let info = (peerView.peers[peerView.peerId] as? TelegramChannel)?.info {
+                            if case .group = info {
+                                isGroupChannel = true
+                            } else {
+                                isGroupChannel = false
+                            }
+                        }
                         let firstTime = strongSelf.peerView == nil
+                        
+                        if wasGroupChannel != isGroupChannel {
+                            if let isGroupChannel = isGroupChannel, isGroupChannel {
+                                let (recentDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.recent(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let (adminsDisposable, _) = strongSelf.context.peerChannelMemberCategoriesContextsManager.admins(engine: strongSelf.context.engine, postbox: strongSelf.context.account.postbox, network: strongSelf.context.account.network, accountPeerId: context.account.peerId, peerId: peerView.peerId, updated: { _ in })
+                                let disposable = DisposableSet()
+                                disposable.add(recentDisposable)
+                                disposable.add(adminsDisposable)
+                                strongSelf.chatAdditionalDataDisposable.set(disposable)
+                            } else {
+                                strongSelf.chatAdditionalDataDisposable.set(nil)
+                            }
+                        }
+                        
                         strongSelf.peerView = peerView
                         strongSelf.threadInfo = messageAndTopic.threadData?.info
                         
@@ -5679,6 +5709,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             
             struct ReferenceMessage {
                 var id: MessageId
+                var minId: MessageId
                 var isScrolled: Bool
             }
             
@@ -5692,18 +5723,18 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
                 )
                 |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
-                    let topVisibleMessage: MessageId?
-                    topVisibleMessage = topVisibleMessageRange?.upperBound.id
+                    let bottomVisibleMessage = topVisibleMessageRange?.lowerBound.id
+                    let topVisibleMessage = topVisibleMessageRange?.upperBound.id
                     
                     if let scrolledToMessageId = scrolledToMessageId {
-                        if let topVisibleMessage = topVisibleMessage {
+                        if let topVisibleMessage, let bottomVisibleMessage {
                             if scrolledToMessageId.allowedReplacementDirection.contains(.up) && topVisibleMessage < scrolledToMessageId.id {
-                                return ReferenceMessage(id: topVisibleMessage, isScrolled: false)
+                                return ReferenceMessage(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false)
                             }
                         }
-                        return ReferenceMessage(id: scrolledToMessageId.id, isScrolled: true)
-                    } else if let topVisibleMessage = topVisibleMessage {
-                        return ReferenceMessage(id: topVisibleMessage, isScrolled: false)
+                        return ReferenceMessage(id: scrolledToMessageId.id, minId: scrolledToMessageId.id, isScrolled: true)
+                    } else if let topVisibleMessage, let bottomVisibleMessage {
+                        return ReferenceMessage(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false)
                     } else {
                         return nil
                     }
@@ -5917,6 +5948,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }
                     
+                    if threadId != nil {
+                        if referenceMessage.minId <= topMessage.message.id {
+                            return nil
+                        }
+                    }
                     return ChatPinnedMessage(message: topMessage.message, index: index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId)
                 }
                 
@@ -5940,6 +5976,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         matches = true
                     }
                     if matches {
+                        if threadId != nil, let referenceMessage {
+                            if referenceMessage.minId <= entry.message.id {
+                                continue
+                            }
+                        }
                         message = ChatPinnedMessage(message: entry.message, index: entry.index, totalCount: pinnedMessages.totalCount, topMessageId: topMessageId)
                     }
                 }

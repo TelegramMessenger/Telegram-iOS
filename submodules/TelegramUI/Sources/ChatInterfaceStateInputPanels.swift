@@ -151,8 +151,8 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             case .member:
                 isMember = true
             case .left:
-                if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    if !channel.flags.contains(.joinToSend) && !channel.flags.contains(.isForum) {
+                if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
+                    if !message.isForumPost && !channel.flags.contains(.joinToSend) {
                         isMember = true
                     }
                 }

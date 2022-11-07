@@ -741,7 +741,6 @@ public final class OngoingCallContext {
         return OngoingCallThreadLocalContext.maxLayer()
     }
     
-    private let tempLogFile: EngineTempBoxFile
     private let tempStatsLogFile: EngineTempBoxFile
     
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
@@ -774,8 +773,8 @@ public final class OngoingCallContext {
         self.callSessionManager = callSessionManager
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
-        self.tempLogFile = EngineTempBox.shared.tempFile(fileName: "CallLog.txt")
-        let tempLogPath = self.tempLogFile.path
+        
+        let _ = try? FileManager.default.createDirectory(atPath: callLogsPath(account: account), withIntermediateDirectories: true, attributes: nil)
         
         self.tempStatsLogFile = EngineTempBox.shared.tempFile(fileName: "CallStats.json")
         let tempStatsLogPath = self.tempStatsLogFile.path
@@ -880,7 +879,7 @@ public final class OngoingCallContext {
                         }
                     }
                     
-                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: Data(), key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: tempLogPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
+                    let context = OngoingCallThreadLocalContextWebrtc(version: version, queue: OngoingCallThreadLocalContextQueueImpl(queue: queue), proxy: voipProxyServer, networkType: ongoingNetworkTypeForTypeWebrtc(initialNetworkType), dataSaving: ongoingDataSavingForTypeWebrtc(dataSaving), derivedState: Data(), key: key, isOutgoing: isOutgoing, connections: filteredConnections, maxLayer: maxLayer, allowP2P: allowP2P, allowTCP: enableTCP, enableStunMarking: enableStunMarking, logPath: logPath, statsLogPath: tempStatsLogPath, sendSignalingData: { [weak callSessionManager] data in
                         queue.async {
                             guard let strongSelf = self else {
                                 return
@@ -1068,7 +1067,6 @@ public final class OngoingCallContext {
         if !logPath.isEmpty {
             statsLogPath = logPath + ".json"
         }
-        let tempLogPath = self.tempLogFile.path
         let tempStatsLogPath = self.tempStatsLogFile.path
         
         self.withContextThenDeallocate { context in
@@ -1081,12 +1079,6 @@ public final class OngoingCallContext {
                         incoming: bytesReceivedWifi,
                         outgoing: bytesSentWifi))
                 updateAccountNetworkUsageStats(account: self.account, category: .call, delta: delta)
-                
-                if !logPath.isEmpty {
-                    let logsPath = callLogsPath(account: account)
-                    let _ = try? FileManager.default.createDirectory(atPath: logsPath, withIntermediateDirectories: true, attributes: nil)
-                    let _ = try? FileManager.default.moveItem(atPath: tempLogPath, toPath: logPath)
-                }
                 
                 if !statsLogPath.isEmpty {
                     let logsPath = callLogsPath(account: account)

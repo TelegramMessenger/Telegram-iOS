@@ -1396,9 +1396,17 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     authorRank = attributes.rank
                 }
-        
-                if authorRank == nil, let topicAuthorId = item.associatedData.topicAuthorId, topicAuthorId == message.author?.id {
-                    authorRank = .custom(item.presentationData.strings.Chat_Message_TopicAuthorBadge)
+            
+                var enableAutoRank = false
+                if case .admin = authorRank {
+                } else if case .owner = authorRank {
+                } else if authorRank == nil {
+                    enableAutoRank = true
+                }
+                if enableAutoRank {
+                    if let topicAuthorId = item.associatedData.topicAuthorId, topicAuthorId == message.author?.id {
+                        authorRank = .custom(item.presentationData.strings.Chat_Message_TopicAuthorBadge)
+                    }
                 }
             case .group:
                 break
