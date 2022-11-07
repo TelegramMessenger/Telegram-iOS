@@ -50,6 +50,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     private let temporaryHiddenGalleryMediaDisposable = MetaDisposable()
     
+    private var chatPresentationData: ChatPresentationData
     private var chatPresentationDataPromise: Promise<ChatPresentationData>
     
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
@@ -120,6 +121,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.emptyNode = ChatRecentActionsEmptyNode(theme: self.presentationData.theme, chatWallpaper: self.presentationData.chatWallpaper, chatBubbleCorners: self.presentationData.chatBubbleCorners)
         self.emptyNode.alpha = 0.0
                 
+        self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
         self.chatPresentationDataPromise = Promise()
         
         self.eventLogContext = self.context.engine.peers.channelAdminEventLog(peerId: self.peer.id)
@@ -628,7 +630,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.chatPresentationDataPromise.set(.single(ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)))
+        self.chatPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners)
+        self.chatPresentationDataPromise.set(.single(self.chatPresentationData))
         
         self.backgroundNode.update(wallpaper: presentationData.chatWallpaper)
         self.backgroundNode.updateBubbleTheme(bubbleTheme: presentationData.theme, bubbleCorners: presentationData.chatBubbleCorners)
@@ -667,7 +670,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         let emptyFrame = CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight), size: CGSize(width: layout.size.width, height: layout.size.height - navigationBarHeight - panelHeight))
         transition.updateFrame(node: self.emptyNode, frame: emptyFrame)
         self.emptyNode.update(rect: emptyFrame, within: layout.size)
-        self.emptyNode.updateLayout(backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
+        self.emptyNode.updateLayout(presentationData: self.chatPresentationData, backgroundNode: self.backgroundNode, size: emptyFrame.size, transition: transition)
         
         let contentBottomInset: CGFloat = panelHeight + 4.0
         let listInsets = UIEdgeInsets(top: contentBottomInset, left: layout.safeInsets.right, bottom: insets.top, right: layout.safeInsets.left)
