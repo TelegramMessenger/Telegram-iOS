@@ -6916,6 +6916,8 @@ public final class EmojiPagerContentComponent: Component {
                 displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
             } else if isStatusSelection {
                 displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
+            } else if isTopicIconSelection {
+                displaySearchWithPlaceholder = strings.EmojiSearch_SearchTopicIconsPlaceholder
             }
             
             return EmojiPagerContentComponent(
@@ -7014,8 +7016,7 @@ func generateTopicIcon(backgroundColors: [UIColor], strokeColors: [UIColor], tit
         let line = CTLineCreateWithAttributedString(attributedString)
         let lineBounds = CTLineGetBoundsWithOptions(line, .useGlyphPathBounds)
         
-        let lineOffset = CGPoint(x: title == "B" ? 1.0 : 0.0, y: 0.0)
-        let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0) + lineOffset.x, y: floorToScreenPixels(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0) + 1.0)
+        let lineOrigin = CGPoint(x: floorToScreenPixels(-lineBounds.origin.x + (size.width - lineBounds.size.width) / 2.0), y: floorToScreenPixels(-lineBounds.origin.y + (size.height - lineBounds.size.height) / 2.0) + 1.0)
         
         context.translateBy(x: size.width / 2.0, y: size.height / 2.0)
         context.scaleBy(x: 1.0, y: -1.0)

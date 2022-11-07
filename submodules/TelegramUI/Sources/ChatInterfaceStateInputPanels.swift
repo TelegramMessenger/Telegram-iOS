@@ -158,7 +158,7 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                 }
             }
             
-            if channel.flags.contains(.isForum) {
+            if channel.flags.contains(.isForum) && isMember {
                 if let threadData = chatPresentationInterfaceState.threadData {
                     if threadData.isClosed {
                         var canManage = false
