@@ -524,9 +524,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         default:
                             let actionTitle: String
                             if channel.flags.contains(.requestToJoin) {
-                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
-                            } else {
                                 actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
+                            } else {
+                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
                             }
                             strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }

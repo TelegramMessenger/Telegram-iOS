@@ -1211,10 +1211,10 @@ func peerInfoCanEdit(peer: Peer?, threadData: MessageHistoryThreadData?, cachedD
         }
         return true
     } else if let peer = peer as? TelegramChannel {
-        if peer.flags.contains(.isForum) {
+        if peer.flags.contains(.isForum), let threadData = threadData {
             if peer.flags.contains(.isCreator) {
                 return true
-            } else if let threadData = threadData, threadData.isOwnedByMe {
+            } else if threadData.isOwnedByMe {
                 return true
             } else if peer.hasPermission(.manageTopics) {
                 return true

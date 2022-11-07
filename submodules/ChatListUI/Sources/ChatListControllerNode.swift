@@ -1257,6 +1257,7 @@ final class ChatListControllerNode: ASDisplayNode {
         insets.top += navigationBarHeight
         insets.left += layout.safeInsets.left
         insets.right += layout.safeInsets.right
+        var additionalPanelInset: CGFloat = 0.0
         
         if let toolbar = self.toolbar {
             var tabBarHeight: CGFloat
@@ -1268,9 +1269,11 @@ final class ChatListControllerNode: ASDisplayNode {
             if !layout.safeInsets.left.isZero {
                 tabBarHeight = 34.0 + bottomInset
                 insets.bottom += 34.0
+                additionalPanelInset += 34.0
             } else {
                 tabBarHeight = 49.0 + bottomInset
                 insets.bottom += 49.0
+                additionalPanelInset += 49.0
             }
             
             let tabBarFrame = CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - tabBarHeight), size: CGSize(width: layout.size.width, height: tabBarHeight))
@@ -1302,11 +1305,13 @@ final class ChatListControllerNode: ASDisplayNode {
         }
         
         var childrenLayout = layout
-        childrenLayout.intrinsicInsets = UIEdgeInsets(top: visualNavigationHeight, left: childrenLayout.intrinsicInsets.left, bottom: childrenLayout.intrinsicInsets.bottom, right: childrenLayout.intrinsicInsets.right)
+        childrenLayout.intrinsicInsets = UIEdgeInsets(top: visualNavigationHeight, left: childrenLayout.intrinsicInsets.left, bottom: childrenLayout.intrinsicInsets.bottom + additionalPanelInset, right: childrenLayout.intrinsicInsets.right)
         self.controller?.presentationContext.containerLayoutUpdated(childrenLayout, transition: transition)
         
         transition.updateFrame(node: self.containerNode, frame: CGRect(origin: CGPoint(), size: layout.size))
-        self.containerNode.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, transition: transition)
+        var containerLayout = layout
+        containerLayout.intrinsicInsets.bottom += additionalPanelInset
+        self.containerNode.update(layout: containerLayout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, transition: transition)
         
         transition.updateFrame(node: self.inlineTabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - layout.intrinsicInsets.bottom - 8.0 - 40.0), size: CGSize(width: layout.size.width, height: 40.0)))
         

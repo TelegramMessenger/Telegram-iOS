@@ -1729,7 +1729,8 @@ public final class AccountViewTracker {
                             tagMask: tagMask,
                             appendMessagesFromTheSameGroup: false,
                             namespaces: .not(Namespaces.Message.allScheduled),
-                            orderStatistics: orderStatistics
+                            orderStatistics: orderStatistics,
+                            additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData)
                         )
                     }
                     

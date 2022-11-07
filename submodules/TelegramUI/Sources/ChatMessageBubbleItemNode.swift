@@ -1398,8 +1398,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             
                 var enableAutoRank = false
-                if let authorRank = authorRank, case .admin = authorRank {
-                    enableAutoRank = true
+                if case .admin = authorRank {
+                } else if case .owner = authorRank {
                 } else if authorRank == nil {
                     enableAutoRank = true
                 }
