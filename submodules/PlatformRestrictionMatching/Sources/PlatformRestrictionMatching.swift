@@ -4,10 +4,16 @@ import Postbox
 
 public extension Message {
     func isRestricted(platform: String, contentSettings: ContentSettings) -> Bool {
+        return self.restrictionReason(platform: platform, contentSettings: contentSettings) != nil
+    }
+    
+    func restrictionReason(platform: String, contentSettings: ContentSettings) -> String? {
         if let attribute = self.restrictedContentAttribute {
-            return attribute.platformText(platform: platform, contentSettings: contentSettings) != nil
+            if let value = attribute.platformText(platform: platform, contentSettings: contentSettings) {
+                return value
+            }
         }
-        return false
+        return nil
     }
 }
 

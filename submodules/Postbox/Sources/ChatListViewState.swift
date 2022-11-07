@@ -268,7 +268,7 @@ private final class ChatListViewSpaceState {
                 }
                 postboxLog("allIndices not unique, repeated: \(debugRepeatedIndices)")
                 
-                assert(false)
+                //assert(false)
                 //preconditionFailure()
             }
             if Set(allEntityIds).count != allEntityIds.count {

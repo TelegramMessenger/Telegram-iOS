@@ -179,6 +179,8 @@ public class ManagedAudioSessionControl {
 }
 
 public final class ManagedAudioSession {
+    public private(set) static var shared: ManagedAudioSession?
+    
     private var nextId: Int32 = 0
     private let queue: Queue
     private let hasLoudspeaker: Bool
@@ -256,6 +258,8 @@ public final class ManagedAudioSession {
             self.isHeadsetPluggedInValue = self.isHeadsetPluggedIn()
             self.updateCurrentAudioRouteInfo()
         }
+        
+        ManagedAudioSession.shared = self
     }
     
     deinit {
@@ -781,6 +785,61 @@ public final class ManagedAudioSession {
         
         if activateNow {
             self.activate()
+        }
+    }
+    
+    public func applyVoiceChatOutputModeInCurrentAudioSession(outputMode: AudioSessionOutputMode) {
+        managedAudioSessionLog("applyVoiceChatOutputModeInCurrentAudioSession \(outputMode)")
+        
+        do {
+            var resetToBuiltin = false
+            switch outputMode {
+            case .system:
+                resetToBuiltin = true
+            case let .custom(output):
+                switch output {
+                case .builtin:
+                    resetToBuiltin = true
+                case .speaker:
+                    if let routes = AVAudioSession.sharedInstance().availableInputs {
+                        for route in routes {
+                            if route.portType == .builtInMic {
+                                let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                break
+                            }
+                        }
+                    }
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.speaker)
+                case .headphones:
+                    break
+                case let .port(port):
+                    try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                    if let routes = AVAudioSession.sharedInstance().availableInputs {
+                        for route in routes {
+                            if route.uid == port.uid {
+                                let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                                break
+                            }
+                        }
+                    }
+                }
+            case .speakerIfNoHeadphones:
+                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+            }
+            
+            if resetToBuiltin {
+                try AVAudioSession.sharedInstance().overrideOutputAudioPort(.none)
+                if let routes = AVAudioSession.sharedInstance().availableInputs {
+                    for route in routes {
+                        if route.portType == .builtInMic {
+                            let _ = try? AVAudioSession.sharedInstance().setPreferredInput(route)
+                            break
+                        }
+                    }
+                }
+            }
+        } catch let e {
+            managedAudioSessionLog("applyVoiceChatOutputModeInCurrentAudioSession error: \(e)")
         }
     }
     

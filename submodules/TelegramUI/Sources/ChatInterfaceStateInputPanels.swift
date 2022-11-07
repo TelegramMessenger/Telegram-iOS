@@ -181,17 +181,6 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                             }
                         }
                     }
-                } else {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
-                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                            return (currentPanel, nil)
-                        } else {
-                            let panel = ChatRestrictedInputPanelNode()
-                            panel.context = context
-                            panel.interfaceInteraction = interfaceInteraction
-                            return (panel, nil)
-                        }
-                    }
                 }
             }
                         
@@ -245,6 +234,22 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         }
                     } else {
                         break
+                    }
+                }
+            }
+            
+            if channel.flags.contains(.isForum) {
+                if let _ = chatPresentationInterfaceState.threadData {
+                } else {
+                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
+                        }
                     }
                 }
             }

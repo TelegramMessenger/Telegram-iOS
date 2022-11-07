@@ -8242,5 +8242,8 @@ Sorry for the inconvenience.";
 
 "Undo.DeletedTopic" = "Topic Deleted";
 
+"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than **%@** thread to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than **%@** threads to the top. Unpin some that are currently pinned.";
+
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";

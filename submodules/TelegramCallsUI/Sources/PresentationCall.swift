@@ -413,6 +413,9 @@ public final class PresentationCallImpl: PresentationCall {
                     return
                 }
                 strongSelf.audioOutputStateValue = (availableOutputs, currentOutput)
+                if let currentOutput = currentOutput {
+                    strongSelf.currentAudioOutputValue = currentOutput
+                }
                 
                 var signal: Signal<([AudioSessionOutput], AudioSessionOutput?), NoError> = .single((availableOutputs, currentOutput))
                 if !didReceiveAudioOutputs {
@@ -437,7 +440,7 @@ public final class PresentationCallImpl: PresentationCall {
                         let audioSessionActive: Signal<Bool, NoError>
                         if let callKitIntegration = strongSelf.callKitIntegration {
                             audioSessionActive = callKitIntegration.audioSessionActive
-                            |> filter { $0 }
+                            /*|> filter { $0 }
                             |> timeout(2.0, queue: Queue.mainQueue(), alternate: Signal { subscriber in
                                 if let strongSelf = self, let _ = strongSelf.audioSessionControl {
                                     //audioSessionControl.activate({ _ in })
@@ -445,7 +448,7 @@ public final class PresentationCallImpl: PresentationCall {
                                 subscriber.putNext(true)
                                 subscriber.putCompletion()
                                 return EmptyDisposable
-                            })
+                            })*/
                         } else {
                             audioSessionControl.activate({ _ in })
                             audioSessionActive = .single(true)
@@ -534,8 +537,12 @@ public final class PresentationCallImpl: PresentationCall {
         }
         
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
-            audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
-            audioSessionControl.setup(synchronous: true)
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(self.currentAudioOutputValue))
+                audioSessionControl.setup(synchronous: true)
+            }
         }
         
         let mappedVideoState: PresentationCallState.VideoState
@@ -1031,7 +1038,11 @@ public final class PresentationCallImpl: PresentationCall {
         ))
         
         if let audioSessionControl = self.audioSessionControl {
-            audioSessionControl.setOutputMode(.custom(output))
+            if let callKitIntegration = self.callKitIntegration {
+                callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
+            } else {
+                audioSessionControl.setOutputMode(.custom(output))
+            }
         }
     }
     

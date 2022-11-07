@@ -621,6 +621,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let components = URLComponents(string: "/?" + query) {
                         var channelId: Int64?
                         var postId: Int32?
+                        var threadId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -628,12 +629,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         channelId = Int64(value)
                                     } else if queryItem.name == "post" {
                                         postId = Int32(value)
+                                    } else if queryItem.name == "thread" {
+                                        threadId = Int64(value)
                                     }
                                 }
                             }
                         }
-                        if let channelId = channelId, let postId = postId {
-                            convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                        if let channelId = channelId {
+                            if let postId = postId {
+                                if let threadId = threadId {
+                                    convertedUrl = "https://t.me/c/\(channelId)/\(threadId)/\(postId)"
+                                } else {
+                                    convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                                }
+                            } else if let threadId = threadId {
+                                convertedUrl = "https://t.me/c/\(channelId)/\(threadId)"
+                            }
                         }
                     }
                 }
@@ -652,6 +663,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var attach: String?
                         var startAttach: String?
                         var choose: String?
+                        var threadId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -677,6 +689,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         startAttach = value
                                     } else if queryItem.name == "choose" {
                                         choose = value
+                                    } else if queryItem.name == "thread" {
+                                        threadId = Int64(value)
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -694,8 +708,15 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/+\(phone)"
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
-                            if let post = post, let postValue = Int(post) {
-                                result += "/\(postValue)"
+                            if let threadId = threadId {
+                                result += "/\(threadId)"
+                                if let post = post, let postValue = Int(post) {
+                                    result += "/\(postValue)"
+                                }
+                            } else {
+                                if let post = post, let postValue = Int(post) {
+                                    result += "/\(postValue)"
+                                }
                             }
                             if let start = start {
                                 result += "?start=\(start)"

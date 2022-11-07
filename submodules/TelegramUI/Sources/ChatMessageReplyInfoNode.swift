@@ -97,8 +97,6 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
         let previousMediaReference = maybeNode?.previousMediaReference
         
         return { arguments in
-            //presentationData, strings, context, type, message, parentMessage, constrainedSize
-            
             let fontSize = floor(arguments.presentationData.fontSize.baseDisplaySize * 14.0 / 17.0)
             let titleFont = Font.medium(fontSize)
             let textFont = Font.regular(fontSize)
@@ -114,7 +112,12 @@ class ChatMessageReplyInfoNode: ASDisplayNode {
                 }
             }
             
-            let (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(arguments.message), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
+            var (textString, isMedia, isText) = descriptionStringForMessage(contentSettings: arguments.context.currentContentSettings.with { $0 }, message: EngineMessage(arguments.message), strings: arguments.strings, nameDisplayOrder: arguments.presentationData.nameDisplayOrder, dateTimeFormat: arguments.presentationData.dateTimeFormat, accountPeerId: arguments.context.account.peerId)
+            
+            if let threadId = arguments.parentMessage.threadId, Int64(arguments.message.id.id) == threadId, let channel = arguments.parentMessage.peers[arguments.parentMessage.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), let threadInfo = arguments.parentMessage.associatedThreadInfo {
+                titleString = "\(threadInfo.title)"
+                textString = NSAttributedString()
+            }
             
             let placeholderColor: UIColor = arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             let titleColor: UIColor

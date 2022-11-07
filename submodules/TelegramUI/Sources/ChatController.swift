@@ -6132,12 +6132,17 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 }
                 
+                var buttonKeyboardMessage = combinedInitialData.buttonKeyboardMessage
+                if let buttonKeyboardMessageValue = buttonKeyboardMessage, buttonKeyboardMessageValue.isRestricted(platform: "ios", contentSettings: strongSelf.context.currentContentSettings.with({ $0 })) {
+                    buttonKeyboardMessage = nil
+                }
+                
                 strongSelf.updateChatPresentationInterfaceState(animated: false, interactive: false, { updated in
                     var updated = updated
                 
                     updated = updated.updatedInterfaceState({ _ in return interfaceState })
                     
-                    updated = updated.updatedKeyboardButtonsMessage(combinedInitialData.buttonKeyboardMessage)
+                    updated = updated.updatedKeyboardButtonsMessage(buttonKeyboardMessage)
                     updated = updated.updatedPinnedMessageId(pinnedMessageId)
                     updated = updated.updatedPinnedMessage(pinnedMessage)
                     updated = updated.updatedPeerIsBlocked(peerIsBlocked)
