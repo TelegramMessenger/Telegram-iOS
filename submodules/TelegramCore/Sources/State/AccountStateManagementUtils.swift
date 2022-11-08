@@ -88,20 +88,20 @@ private func activeChannelsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<Peer
     return peerIds.intersection(peerIdsRequiringLocalChatStateFromUpdateGroups(groups))
 }
 
-private func associatedMessageIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> Set<MessageId> {
-    var messageIds = Set<MessageId>()
+private func associatedMessageIdsFromUpdateGroups(_ groups: [UpdateGroup]) -> (replyIds: ReferencedReplyMessageIds, generalIds: Set<MessageId>) {
+    var replyIds = ReferencedReplyMessageIds()
+    var generalIds = Set<MessageId>()
     
     for group in groups {
         for update in group.updates {
             if let associatedMessageIds = update.associatedMessageIds {
-                for messageId in associatedMessageIds {
-                    messageIds.insert(messageId)
-                }
+                replyIds.formUnion(associatedMessageIds.replyIds)
+                generalIds.formUnion(associatedMessageIds.generalIds)
             }
         }
     }
     
-    return messageIds
+    return (replyIds, generalIds)
 }
 
 private func peerIdsRequiringLocalChatStateFromUpdates(_ updates: [Api.Update]) -> Set<PeerId> {
@@ -282,23 +282,22 @@ private func activeChannelsFromDifference(_ difference: Api.updates.Difference) 
     return peerIds
 }
 
-private func associatedMessageIdsFromDifference(_ difference: Api.updates.Difference) -> Set<MessageId> {
-    var messageIds = Set<MessageId>()
+private func associatedMessageIdsFromDifference(_ difference: Api.updates.Difference) -> (replyIds: ReferencedReplyMessageIds, generalIds: Set<MessageId>) {
+    var replyIds = ReferencedReplyMessageIds()
+    var generalIds = Set<MessageId>()
     
     switch difference {
         case let .difference(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
                 if let associatedMessageIds = apiMessageAssociatedMessageIds(message) {
-                    for messageId in associatedMessageIds {
-                        messageIds.insert(messageId)
-                    }
+                    replyIds.formUnion(associatedMessageIds.replyIds)
+                    generalIds.formUnion(associatedMessageIds.generalIds)
                 }
             }
             for update in otherUpdates {
                 if let associatedMessageIds = update.associatedMessageIds {
-                    for messageId in associatedMessageIds {
-                        messageIds.insert(messageId)
-                    }
+                    replyIds.formUnion(associatedMessageIds.replyIds)
+                    generalIds.formUnion(associatedMessageIds.generalIds)
                 }
             }
         case .differenceEmpty:
@@ -306,24 +305,22 @@ private func associatedMessageIdsFromDifference(_ difference: Api.updates.Differ
         case let .differenceSlice(newMessages, _, otherUpdates, _, _, _):
             for message in newMessages {
                 if let associatedMessageIds = apiMessageAssociatedMessageIds(message) {
-                    for messageId in associatedMessageIds {
-                        messageIds.insert(messageId)
-                    }
+                    replyIds.formUnion(associatedMessageIds.replyIds)
+                    generalIds.formUnion(associatedMessageIds.generalIds)
                 }
             }
             
             for update in otherUpdates {
                 if let associatedMessageIds = update.associatedMessageIds {
-                    for messageId in associatedMessageIds {
-                        messageIds.insert(messageId)
-                    }
+                    replyIds.formUnion(associatedMessageIds.replyIds)
+                    generalIds.formUnion(associatedMessageIds.generalIds)
                 }
             }
         case .differenceTooLong:
             break
     }
     
-    return messageIds
+    return (replyIds, generalIds)
 }
 
 private func peerIdsRequiringLocalChatStateFromDifference(_ difference: Api.updates.Difference) -> Set<PeerId> {
@@ -424,7 +421,7 @@ private func locallyGeneratedMessageTimestampsFromDifference(_ difference: Api.u
     return messageTimestamps
 }
 
-private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, associatedMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
+private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<PeerId>, activeChannelIds: Set<PeerId>, referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, peerIdsRequiringLocalChatState: Set<PeerId>, locallyGeneratedMessageTimestamps: [PeerId: [(MessageId.Namespace, Int32)]]) -> AccountMutableState {
     var peers: [PeerId: Peer] = [:]
     var channelStates: [PeerId: AccountStateChannelState] = [:]
     
@@ -454,7 +451,8 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
         }
     }
     
-    let storedMessages = transaction.filterStoredMessageIds(associatedMessageIds)
+    let storedMessages = transaction.filterStoredMessageIds(Set(referencedReplyMessageIds.targetIdsBySourceId.keys).union(referencedGeneralMessageIds))
+    
     var storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>] = [:]
     if !locallyGeneratedMessageTimestamps.isEmpty {
         for (peerId, namespacesAndTimestamps) in locallyGeneratedMessageTimestamps {
@@ -517,7 +515,7 @@ private func initialStateWithPeerIds(_ transaction: Transaction, peerIds: Set<Pe
         }
     }
     
-    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedMessageIds: associatedMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
+    let state = AccountMutableState(initialState: AccountInitialState(state: (transaction.getState() as? AuthorizedAccountState)!.state!, peerIds: peerIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestamps, cloudReadStates: cloudReadStates, channelsToPollExplicitely: channelsToPollExplicitely), initialPeers: peers, initialReferencedReplyMessageIds: referencedReplyMessageIds, initialReferencedGeneralMessageIds: referencedGeneralMessageIds, initialStoredMessages: storedMessages, initialReadInboxMaxIds: readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: storedMessagesByPeerIdAndTimestamp)
     return state
 }
 
@@ -528,7 +526,7 @@ func initialStateWithUpdateGroups(postbox: Postbox, groups: [UpdateGroup]) -> Si
         let associatedMessageIds = associatedMessageIdsFromUpdateGroups(groups)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromUpdateGroups(groups)
         
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, associatedMessageIds: associatedMessageIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromUpdateGroups(groups))
     }
 }
 
@@ -538,7 +536,7 @@ func initialStateWithDifference(postbox: Postbox, difference: Api.updates.Differ
         let activeChannelIds = activeChannelsFromDifference(difference)
         let associatedMessageIds = associatedMessageIdsFromDifference(difference)
         let peerIdsRequiringLocalChatState = peerIdsRequiringLocalChatStateFromDifference(difference)
-        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, associatedMessageIds: associatedMessageIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
+        return initialStateWithPeerIds(transaction, peerIds: peerIds, activeChannelIds: activeChannelIds, referencedReplyMessageIds: associatedMessageIds.replyIds, referencedGeneralMessageIds: associatedMessageIds.generalIds, peerIdsRequiringLocalChatState: peerIdsRequiringLocalChatState, locallyGeneratedMessageTimestamps: locallyGeneratedMessageTimestampsFromDifference(difference))
     }
 }
 
@@ -2058,8 +2056,10 @@ private func reactionsFromState(_ state: AccountMutableState) -> [MessageReactio
 }
 
 private func resolveAssociatedMessages(postbox: Postbox, network: Network, state: AccountMutableState) -> Signal<AccountMutableState, NoError> {
-    let missingMessageIds = state.referencedMessageIds.subtracting(state.storedMessages)
-    if missingMessageIds.isEmpty {
+    let missingReplyMessageIds = state.referencedReplyMessageIds.subtractingStoredIds(state.storedMessages)
+    let missingGeneralMessageIds = state.referencedGeneralMessageIds.subtracting(state.storedMessages)
+    
+    if missingReplyMessageIds.isEmpty && missingGeneralMessageIds.isEmpty {
         return resolveUnknownEmojiFiles(postbox: postbox, source: .network(network), messages: messagesFromOperations(state: state), reactions: reactionsFromState(state), result: state)
         |> mapToSignal { state in
             return resolveForumThreads(postbox: postbox, network: network, state: state)
@@ -2069,7 +2069,38 @@ private func resolveAssociatedMessages(postbox: Postbox, network: Network, state
         let _ = missingPeers
         
         var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
-        for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingMessageIds) {
+        for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingReplyMessageIds) {
+            if let peer = state.peers[peerId] {
+                var signal: Signal<Api.messages.Messages, MTRpcError>?
+                if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                    signal = network.request(Api.functions.messages.getMessages(id: messageIds.targetIdsBySourceId.values.map({ Api.InputMessage.inputMessageReplyTo(id: $0.id) })))
+                } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                    if let inputChannel = apiInputChannel(peer) {
+                        signal = network.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.targetIdsBySourceId.values.map({ Api.InputMessage.inputMessageReplyTo(id: $0.id) })))
+                    }
+                }
+                if let signal = signal {
+                    signals.append(signal |> map { result in
+                        switch result {
+                            case let .messages(messages, chats, users):
+                                return (messages, chats, users)
+                            case let .messagesSlice(_, _, _, _, messages, chats, users):
+                                return (messages, chats, users)
+                            case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
+                                let _ = apiTopics
+                                return (messages, chats, users)
+                            case .messagesNotModified:
+                                return ([], [], [])
+                        }
+                    } |> `catch` { _ in
+                        return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                    })
+                }
+            } else {
+                missingPeers = true
+            }
+        }
+        for (peerId, messageIds) in messagesIdsGroupedByPeerId(missingGeneralMessageIds) {
             if let peer = state.peers[peerId] {
                 var signal: Signal<Api.messages.Messages, MTRpcError>?
                 if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
@@ -2290,7 +2321,7 @@ func pollChannelOnce(accountPeerId: PeerId, postbox: Postbox, network: Network, 
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Int32, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)
@@ -2344,7 +2375,7 @@ public func standalonePollChannelOnce(accountPeerId: PeerId, postbox: Postbox, n
                 peerChatInfos[peerId] = PeerChatInfo(notificationSettings: notificationSettings)
             }
         }
-        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
+        let initialState = AccountMutableState(initialState: AccountInitialState(state: accountState, peerIds: Set(), peerIdsRequiringLocalChatState: Set(), channelStates: channelStates, peerChatInfos: peerChatInfos, locallyGeneratedMessageTimestamps: [:], cloudReadStates: [:], channelsToPollExplicitely: Set()), initialPeers: initialPeers, initialReferencedReplyMessageIds: ReferencedReplyMessageIds(), initialReferencedGeneralMessageIds: Set(), initialStoredMessages: Set(), initialReadInboxMaxIds: [:], storedMessagesByPeerIdAndTimestamp: [:])
         return pollChannel(accountPeerId: accountPeerId, postbox: postbox, network: network, peer: peer, state: initialState)
         |> mapToSignal { (finalState, _, timeout) -> Signal<Never, NoError> in
             return resolveAssociatedMessages(postbox: postbox, network: network, state: finalState)

@@ -156,6 +156,17 @@ func messagesIdsGroupedByPeerId(_ ids: [MessageId]) -> [PeerId: [MessageId]] {
     return dict
 }
 
+func messagesIdsGroupedByPeerId(_ ids: ReferencedReplyMessageIds) -> [PeerId: ReferencedReplyMessageIds] {
+    var dict: [PeerId: ReferencedReplyMessageIds] = [:]
+    
+    for (targetId, sourceId) in ids.targetIdsBySourceId {
+        let peerId = sourceId.peerId
+        dict[peerId, default: ReferencedReplyMessageIds()].add(sourceId: sourceId, targetId: targetId)
+    }
+    
+    return dict
+}
+
 func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
     guard case let .Id(id) = message.id else {
         return nil
