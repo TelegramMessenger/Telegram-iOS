@@ -103,20 +103,29 @@ func resolveUnknownEmojiFiles<T>(postbox: Postbox, source: FetchMessageHistoryHo
 private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMessageHistoryHoleSource, peers: [PeerId: Peer], storeMessages: [StoreMessage], _ f: @escaping (Transaction, [Peer], [StoreMessage]) -> T) -> Signal<T, NoError> {
     return postbox.transaction { transaction -> Signal<T, NoError> in
         var storedIds = Set<MessageId>()
-        var referencedIds = Set<MessageId>()
+        var referencedReplyIds = ReferencedReplyMessageIds()
+        var referencedGeneralIds = Set<MessageId>()
         for message in storeMessages {
             guard case let .Id(id) = message.id else {
                 continue
             }
             storedIds.insert(id)
             for attribute in message.attributes {
-                referencedIds.formUnion(attribute.associatedMessageIds)
+                if let attribute = attribute as? ReplyMessageAttribute {
+                    referencedReplyIds.add(sourceId: id, targetId: attribute.messageId)
+                } else {
+                    referencedGeneralIds.formUnion(attribute.associatedMessageIds)
+                }
             }
         }
-        referencedIds.subtract(storedIds)
-        referencedIds.subtract(transaction.filterStoredMessageIds(referencedIds))
         
-        if referencedIds.isEmpty {
+        let allPossiblyStoredReferencedIds = storedIds.union(referencedGeneralIds).union(referencedReplyIds.targetIdsBySourceId.keys)
+        let allStoredReferencedIds = transaction.filterStoredMessageIds(allPossiblyStoredReferencedIds)
+        
+        referencedReplyIds = referencedReplyIds.subtractingStoredIds(allStoredReferencedIds)
+        referencedGeneralIds.subtract(allStoredReferencedIds)
+        
+        if referencedReplyIds.isEmpty && referencedGeneralIds.isEmpty {
             return resolveUnknownEmojiFiles(postbox: postbox, source: source, messages: storeMessages, reactions: [], result: Void())
             |> mapToSignal { _ -> Signal<T, NoError> in
                 return postbox.transaction { transaction -> T in
@@ -125,7 +134,38 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
             }
         } else {
             var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
-            for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedIds) {
+            for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedReplyIds) {
+                if let peer = transaction.getPeer(peerId) ?? peers[peerId] {
+                    var signal: Signal<Api.messages.Messages, MTRpcError>?
+                    if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
+                        signal = source.request(Api.functions.messages.getMessages(id: messageIds.targetIdsBySourceId.values.map({ Api.InputMessage.inputMessageReplyTo(id: $0.id) })))
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        if let inputChannel = apiInputChannel(peer) {
+                            signal = source.request(Api.functions.channels.getMessages(channel: inputChannel, id: messageIds.targetIdsBySourceId.values.map({ Api.InputMessage.inputMessageReplyTo(id: $0.id) })))
+                        }
+                    }
+                    if let signal = signal {
+                        signals.append(signal
+                        |> map { result in
+                            switch result {
+                                case let .messages(messages, chats, users):
+                                    return (messages, chats, users)
+                                case let .messagesSlice(_, _, _, _, messages, chats, users):
+                                    return (messages, chats, users)
+                                case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
+                                    let _ = apiTopics
+                                    return (messages, chats, users)
+                                case .messagesNotModified:
+                                    return ([], [], [])
+                            }
+                        }
+                        |> `catch` { _ in
+                            return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                        })
+                    }
+                }
+            }
+            for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedGeneralIds) {
                 if let peer = transaction.getPeer(peerId) ?? peers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
                     if peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.CloudGroup {
@@ -230,6 +270,10 @@ struct FetchMessageHistoryHoleResult: Equatable {
 
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
+    
+    if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
+        assert(true)
+    }
     
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
@@ -654,6 +698,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             return nil
                         }
                     }
+                    
+                    print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
+                    if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
+                        assert(true)
+                    }
+                    
                     if ids.count == 0 || implicitelyFillHole {
                         filledRange = minMaxRange
                         strictFilledIndices = IndexSet()
@@ -701,8 +751,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         return updated
                     })
                     updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                    
-                    print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
                     
                     let result = FetchMessageHistoryHoleResult(
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),

@@ -5792,7 +5792,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var index: Int
             }
             
-            let topMessage = pinnedHistorySignal(anchorMessageId: nil, count: 3)
+            let topMessage = pinnedHistorySignal(anchorMessageId: nil, count: 10)
             |> map { update -> TopMessage? in
                 switch update {
                 case .Loading:
@@ -5816,7 +5816,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }
             
-            let loadCount = 100
+            let loadCount = 10
             
             struct PinnedHistory {
                 struct PinnedMessage {

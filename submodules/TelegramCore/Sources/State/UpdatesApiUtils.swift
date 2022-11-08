@@ -305,7 +305,7 @@ extension Api.Update {
         }
     }
     
-    var associatedMessageIds: [MessageId]? {
+    var associatedMessageIds: (replyIds: ReferencedReplyMessageIds, generalIds: [MessageId])? {
         switch self {
             case let .updateNewMessage(message, _, _):
                 return apiMessageAssociatedMessageIds(message)

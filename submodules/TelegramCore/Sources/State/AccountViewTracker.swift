@@ -1562,7 +1562,7 @@ public final class AccountViewTracker {
                     let (pollMessageIds, pollMessageDict) = pollMessages(entries: next.0.entries)
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     } else if case let .thread(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
@@ -1576,7 +1576,7 @@ public final class AccountViewTracker {
                     switch chatLocation {
                     case let .peer(peerId, _):
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
                         }
                     case let .thread(peerId, _, _):
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1694,7 +1694,7 @@ public final class AccountViewTracker {
                 if let strongSelf = self {
                     strongSelf.queue.async {
                         strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: nil)
                     }
                 }
             })

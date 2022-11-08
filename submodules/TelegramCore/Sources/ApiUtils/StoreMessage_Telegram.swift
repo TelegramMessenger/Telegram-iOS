@@ -236,24 +236,30 @@ func apiMessagePeerIds(_ message: Api.Message) -> [PeerId] {
     }
 }
 
-func apiMessageAssociatedMessageIds(_ message: Api.Message) -> [MessageId]? {
+func apiMessageAssociatedMessageIds(_ message: Api.Message) -> (replyIds: ReferencedReplyMessageIds, generalIds: [MessageId])? {
     switch message {
-        case let .message(_, _, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+        case let .message(_, id, _, chatPeerId, _, _, replyTo, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
             if let replyTo = replyTo {
                 let peerId: PeerId = chatPeerId.peerId
                 
                 switch replyTo {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
-                    return [MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                    let targetId = MessageId(peerId: replyToPeerId?.peerId ?? peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                    var replyIds = ReferencedReplyMessageIds()
+                    replyIds.add(sourceId: MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
+                    return (replyIds, [])
                 }
             }
         case .messageEmpty:
             break
-        case let .messageService(_, _, _, chatPeerId, replyHeader, _, _, _):
+        case let .messageService(_, id, _, chatPeerId, replyHeader, _, _, _):
             if let replyHeader = replyHeader {
                 switch replyHeader {
                 case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, _):
-                    return [MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)]
+                    let targetId = MessageId(peerId: replyToPeerId?.peerId ?? chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
+                    var replyIds = ReferencedReplyMessageIds()
+                    replyIds.add(sourceId: MessageId(peerId: chatPeerId.peerId, namespace: Namespaces.Message.Cloud, id: id), targetId: targetId)
+                    return (replyIds, [])
                 }
             }
     }
