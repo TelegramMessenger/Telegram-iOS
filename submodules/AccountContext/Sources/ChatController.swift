@@ -580,6 +580,14 @@ public enum ChatPresentationInputQueryResult: Equatable {
 
 public let ChatControllerCount = Atomic<Int32>(value: 0)
 
+public final class PeerInfoNavigationSourceTag {
+    public let peerId: EnginePeer.Id
+    
+    public init(peerId: EnginePeer.Id) {
+        self.peerId = peerId
+    }
+}
+
 public protocol PeerInfoScreen: ViewController {
     
 }

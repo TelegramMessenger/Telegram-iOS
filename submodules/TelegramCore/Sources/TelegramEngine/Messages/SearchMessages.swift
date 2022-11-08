@@ -74,8 +74,9 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     let totalCount: Int32
     let nextRate: Int32?
     switch result {
-        case let .channelMessages(_, _, count, _, apiMessages, apiChats, apiUsers):
+        case let .channelMessages(_, _, count, _, apiMessages, apiTopics, apiChats, apiUsers):
             messages = apiMessages
+            let _ = apiTopics
             chats = apiChats
             users = apiUsers
             totalCount = count
@@ -478,8 +479,9 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
                     let chats: [Api.Chat]
                     let users: [Api.User]
                     switch result {
-                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                             messages = apiMessages
+                            let _ = apiTopics
                             chats = apiChats
                             users = apiUsers
                         case let .messages(apiMessages, apiChats, apiUsers):
@@ -531,7 +533,7 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
 }
 
 func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource, message: MessageReference) -> Signal<Message?, NoError> {
-    guard case let .message(peer, id, _, _, _) = message.content else {
+    guard case let .message(peer, _, id, _, _, _) = message.content else {
         return .single(nil)
     }
     let signal: Signal<Api.messages.Messages, MTRpcError>
@@ -562,8 +564,9 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
         let chats: [Api.Chat]
         let users: [Api.User]
         switch result {
-            case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+            case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                 messages = apiMessages
+                let _ = apiTopics
                 chats = apiChats
                 users = apiUsers
             case let .messages(apiMessages, apiChats, apiUsers):
@@ -638,7 +641,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                     switch result {
                         case let .messages(apiMessages, _, _):
                             messages = apiMessages
-                        case let .channelMessages(_, _, _, _, apiMessages, _, _):
+                        case let .channelMessages(_, _, _, _, apiMessages, _, _, _):
                             messages = apiMessages
                         case let .messagesSlice(_, _, _, _, apiMessages, _, _):
                             messages = apiMessages
@@ -668,7 +671,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                         switch result {
                             case let .messages(apiMessages, _, _):
                                 messages = apiMessages
-                            case let .channelMessages(_, _, _, _, apiMessages, _, _):
+                            case let .channelMessages(_, _, _, _, apiMessages, _, _, _):
                                 messages = apiMessages
                             case let .messagesSlice(_, _, _, _, apiMessages, _, _):
                                 messages = apiMessages
@@ -692,7 +695,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                     switch result {
                         case let .messages(apiMessages, _, _):
                             messages = apiMessages
-                        case let .channelMessages(_, _, _, _, apiMessages, _, _):
+                        case let .channelMessages(_, _, _, _, apiMessages, _, _, _):
                             messages = apiMessages
                         case let .messagesSlice(_, _, _, _, apiMessages, _, _):
                             messages = apiMessages

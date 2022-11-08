@@ -66,7 +66,8 @@ func _internal_getMessagesLoadIfNecessary(_ messageIds: [MessageId], postbox: Po
                                     return (messages, chats, users)
                                 case let .messagesSlice(_, _, _, _, messages, chats, users):
                                     return (messages, chats, users)
-                                case let .channelMessages(_, _, _, _, messages, chats, users):
+                                case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
+                                    let _ = apiTopics
                                     return (messages, chats, users)
                                 case .messagesNotModified:
                                     return ([], [], [])

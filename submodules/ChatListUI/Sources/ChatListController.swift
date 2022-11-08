@@ -419,6 +419,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: true, sourceView: sourceNode.view, gesture: gesture)
             }
             self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
+            
+            /*self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
+            self.navigationBar?.allowsCustomTransition = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationBar?.userInfo == nil {
+                    return false
+                }
+                return true
+            }*/
         }
         
         switch self.location {

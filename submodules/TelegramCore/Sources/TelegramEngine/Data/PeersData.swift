@@ -905,11 +905,25 @@ public extension TelegramEngine.EngineData.Item {
             }
         }
         
-        public struct ThreadData: TelegramEngineDataItem, PostboxViewDataItem {
+        public struct ThreadData: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
+            public struct Key: Hashable {
+                public var id: EnginePeer.Id
+                public var threadId: Int64
+                
+                public init(id: EnginePeer.Id, threadId: Int64) {
+                    self.id = id
+                    self.threadId = threadId
+                }
+            }
+            
             public typealias Result = MessageHistoryThreadData?
 
             fileprivate var id: EnginePeer.Id
             fileprivate var threadId: Int64
+            
+            public var mapKey: Key {
+                return Key(id: self.id, threadId: self.threadId)
+            }
 
             public init(id: EnginePeer.Id, threadId: Int64) {
                 self.id = id

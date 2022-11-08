@@ -579,7 +579,9 @@ extension OngoingCallThreadLocalContextWebrtc: OngoingCallThreadLocalContextProt
     }
     
     func nativeSetIsAudioSessionActive(isActive: Bool) {
+        #if os(iOS)
         self.setManualAudioSessionIsActive(isActive)
+        #endif
     }
 }
 
@@ -1482,7 +1484,7 @@ private final class CallSignalingConnectionManager {
             let connection = CallSignalingConnectionImpl(queue: queue, host: host, port: port, peerTag: self.peerTag, dataReceived: { data in
                 dataReceived(data)
             }, isClosed: { [weak self] in
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
                 self.handleConnectionFailed(id: id)

@@ -576,10 +576,12 @@ public final class OngoingGroupCallContext {
             
             self.audioSessionActiveDisposable.set((audioSessionActive
             |> deliverOn(queue)).start(next: { [weak self] isActive in
-                guard let self else {
+                guard let `self` = self else {
                     return
                 }
+                #if os(iOS)
                 self.context.setManualAudioSessionIsActive(isActive)
+                #endif
             }))
         }
         
