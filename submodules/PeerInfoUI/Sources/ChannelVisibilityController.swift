@@ -23,6 +23,7 @@ import ContextUI
 import UndoUI
 import QrCodeUI
 import PremiumUI
+import TextFormat
 
 private final class ChannelVisibilityControllerArguments {
     let context: AccountContext
@@ -629,10 +630,8 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .publicLinkHeader(_, title):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: title, sectionId: self.section)
-            case let .publicLinkAvailability(theme, text, value):
-                let attr = NSMutableAttributedString(string: text, textColor: value ? theme.list.freeTextColor : theme.list.freeTextErrorColor)
-                attr.addAttribute(.font, value: Font.regular(13), range: NSMakeRange(0, attr.length))
-                return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: attr, sectionId: self.section)
+            case let .publicLinkAvailability(_, text, value):
+                return ItemListActivityTextItem(displayActivity: value, presentationData: presentationData, text: text, color: value ? .generic : .destructive, sectionId: self.section)
             case let .linksLimitInfo(theme, text, count, limit, premiumLimit, isPremiumDisabled):
                 return IncreaseLimitHeaderItem(theme: theme, strings: presentationData.strings, icon: .link, count: count, limit: limit, premiumCount: premiumLimit, text: text, isPremiumDisabled: isPremiumDisabled, sectionId: self.section)
             case let .privateLinkHeader(_, title):
@@ -672,26 +671,28 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .publicLinkInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
-            case let .publicLinkStatus(theme, text, status):
+            case let .publicLinkStatus(_, text, status):
                 var displayActivity = false
-                let color: UIColor
+                let textColor: ItemListActivityTextItem.TextColor
                 switch status {
-                    case .invalidFormat:
-                        color = theme.list.freeTextErrorColor
-                    case let .availability(availability):
-                        switch availability {
-                            case .available:
-                                color = theme.list.freeTextSuccessColor
-                            case .invalid:
-                                color = theme.list.freeTextErrorColor
-                            case .taken:
-                                color = theme.list.freeTextErrorColor
-                        }
-                    case .checking:
-                        color = theme.list.freeTextColor
-                        displayActivity = true
+                case .invalidFormat:
+                    textColor = .destructive
+                case let .availability(availability):
+                    switch availability {
+                    case .available:
+                        textColor = .constructive
+                    case .invalid:
+                        textColor = .destructive
+                    case .taken:
+                        textColor = .destructive
+                    case .purchaseAvailable:
+                        textColor = .generic
+                    }
+                case .checking:
+                    textColor = .generic
+                    displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: NSAttributedString(string: text, textColor: color), sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: text, color: textColor, linkAction: { _ in }, sectionId: self.section)
             case let .existingLinksInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .existingLinkPeerItem(_, _, _, dateTimeFormat, nameDisplayOrder, peer, editing, enabled):
@@ -1060,6 +1061,14 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
                                         text = presentationData.strings.Channel_Username_InvalidTaken
+                                    case .purchaseAvailable:
+                                        var markdownString = presentationData.strings.Channel_Username_UsernamePurchaseAvailable
+                                        let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+                                        if let entity = entities.first {
+                                            markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+                                            markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+                                        }
+                                        text = markdownString
                                 }
                             case .checking:
                                 text = presentationData.strings.Channel_Username_CheckingUsername
@@ -1253,6 +1262,14 @@ private func channelVisibilityControllerEntries(presentationData: PresentationDa
                                         text = presentationData.strings.Channel_Username_InvalidCharacters
                                     case .taken:
                                         text = presentationData.strings.Channel_Username_InvalidTaken
+                                    case .purchaseAvailable:
+                                        var markdownString = presentationData.strings.Channel_Username_UsernamePurchaseAvailable
+                                        let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+                                        if let entity = entities.first {
+                                            markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+                                            markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+                                        }
+                                        text = markdownString
                                     }
                                 case .checking:
                                     text = presentationData.strings.Channel_Username_CheckingUsername

@@ -11,6 +11,7 @@ import AccountContext
 import ShareController
 import UndoUI
 import InviteLinksUI
+import TextFormat
 
 private final class UsernameSetupControllerArguments {
     let account: Account
@@ -207,24 +208,26 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                         arguments.shareLink()
                     }
                 })
-            case let .publicLinkStatus(theme, _, status, text):
+            case let .publicLinkStatus(_, _, status, text):
                 var displayActivity = false
-                let string: NSAttributedString
+                let textColor: ItemListActivityTextItem.TextColor
                 switch status {
-                    case .invalidFormat:
-                        string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
-                    case let .availability(availability):
-                        switch availability {
-                            case .available:
-                                string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
-                            case .invalid, .taken:
-                                string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
-                        }
-                    case .checking:
-                        string = NSAttributedString(string: text, textColor: theme.list.freeTextColor)
-                        displayActivity = true
+                case .invalidFormat:
+                    textColor = .destructive
+                case let .availability(availability):
+                    switch availability {
+                    case .available:
+                        textColor = .constructive
+                    case .purchaseAvailable:
+                        textColor = .generic
+                    case .invalid, .taken:
+                        textColor = .destructive
+                    }
+                case .checking:
+                    textColor = .generic
+                    displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: string, sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: text, color: textColor, linkAction: { _ in }, sectionId: self.section)
             case let .additionalLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .additionalLink(_, link, _):
@@ -328,6 +331,14 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .taken:
                             statusText = presentationData.strings.Username_InvalidTaken
+                        case .purchaseAvailable:
+                            var markdownString = presentationData.strings.Username_UsernamePurchaseAvailable
+                            let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+                            if let entity = entities.first {
+                                markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+                                markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+                            }
+                            statusText = markdownString
                     }
                 case .checking:
                     statusText = presentationData.strings.Username_CheckingUsername

@@ -17,6 +17,7 @@ public enum AddressNameAvailability: Equatable {
     case available
     case invalid
     case taken
+    case purchaseAvailable
 }
 
 public enum AddressNameDomain {
@@ -33,7 +34,7 @@ func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -
             if index == 0 {
                 return .startsWithUnderscore
             } else if index == length - 1 {
-                return length < 5 ? .tooShort : .endsWithUnderscore
+                return length < 4 ? .tooShort : .endsWithUnderscore
             }
         }
         if index == 0 && char >= "0" && char <= "9" {
@@ -45,7 +46,7 @@ func _internal_checkAddressNameFormat(_ value: String, canEmpty: Bool = false) -
         index += 1
     }
     
-    if length < 5 && (!canEmpty || length != 0) {
+    if length < 4 && (!canEmpty || length != 0) {
         return .tooShort
     }
     return nil
@@ -65,7 +66,11 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                     }
                 }
                 |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                    return .single(.invalid)
+                    if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
+                        return .single(.purchaseAvailable)
+                    } else {
+                        return .single(.invalid)
+                    }
                 }
             case let .peer(peerId):
                 if let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) {
@@ -79,7 +84,11 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                         }
                     }
                     |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                        return .single(.invalid)
+                        if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
+                            return .single(.purchaseAvailable)
+                        } else {
+                            return .single(.invalid)
+                        }
                     }
                 } else if peerId.namespace == Namespaces.Peer.CloudGroup {
                     return account.network.request(Api.functions.channels.checkUsername(channel: .inputChannelEmpty, username: name))
@@ -92,7 +101,11 @@ func _internal_addressNameAvailability(account: Account, domain: AddressNameDoma
                         }
                     }
                     |> `catch` { error -> Signal<AddressNameAvailability, NoError> in
-                        return .single(.invalid)
+                        if error.errorDescription == "USERNAME_PURCHASE_AVAILABLE" {
+                            return .single(.purchaseAvailable)
+                        } else {
+                            return .single(.invalid)
+                        }
                     }
                 } else {
                     return .single(.invalid)

@@ -718,7 +718,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     decoration: .fasterStars
                                 )),
                                 title: strings.Premium_FasterSpeed,
-                                text: strings.Premium_FasterSpeedInfo,
+                                text: isStandalone ? strings.Premium_FasterSpeedStandaloneInfo : strings.Premium_FasterSpeedInfo,
                                 textColor: textColor
                             )
                         )
@@ -736,7 +736,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     decoration: .badgeStars
                                 )),
                                 title: strings.Premium_VoiceToText,
-                                text: strings.Premium_VoiceToTextInfo,
+                                text: isStandalone ? strings.Premium_VoiceToTextStandaloneInfo : strings.Premium_VoiceToTextInfo,
                                 textColor: textColor
                             )
                         )
@@ -826,7 +826,7 @@ private final class DemoSheetContent: CombinedComponent {
                                     decoration: .swirlStars
                                 )),
                                 title: strings.Premium_ChatManagement,
-                                text: strings.Premium_ChatManagementInfo,
+                                text: isStandalone ? strings.Premium_ChatManagementStandaloneInfo : strings.Premium_ChatManagementInfo,
                                 textColor: textColor
                             )
                         )

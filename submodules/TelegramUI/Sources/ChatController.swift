@@ -1057,6 +1057,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var tip: ContextController.Tip?
                     
                     if tip == nil {
+                        let isAd = message.adAttribute != nil
+                            
                         var isAction = false
                         for media in message.media {
                             if media is TelegramMediaAction {
@@ -1064,7 +1066,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 break
                             }
                         }
-                        if strongSelf.presentationInterfaceState.copyProtectionEnabled && !isAction {
+                        if strongSelf.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
                             if case .scheduledMessages = strongSelf.subject {
                             } else {
                                 var isChannel = false
@@ -1075,7 +1077,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         } else {
                             let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
-                            let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3
+                            let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3 && !isAd
                             if displayTextSelectionTip {
                                 let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                 tip = .textSelection
@@ -1088,11 +1090,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
-                    
                     actions.animationCache = strongSelf.controllerInteraction?.presentationContext.animationCache
-                                         
-                    //let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
-                    
+                                                             
                     if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                         actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
                         actions.selectedReactionItems = selectedReactions.reactions
