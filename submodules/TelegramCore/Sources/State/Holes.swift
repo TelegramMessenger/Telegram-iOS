@@ -271,6 +271,10 @@ struct FetchMessageHistoryHoleResult: Equatable {
 func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryHoleSource, postbox: Postbox, peerInput: FetchMessageHistoryHoleThreadInput, namespace: MessageId.Namespace, direction: MessageHistoryViewRelativeHoleDirection, space: MessageHistoryHoleSpace, count rawCount: Int) -> Signal<FetchMessageHistoryHoleResult?, NoError> {
     let count = min(100, rawCount)
     
+    if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
+        assert(true)
+    }
+    
     return postbox.stateView()
     |> mapToSignal { view -> Signal<AuthorizedAccountState, NoError> in
         if let state = view.state as? AuthorizedAccountState {
@@ -694,6 +698,12 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                             return nil
                         }
                     }
+                    
+                    print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
+                    if peerInput.requestThreadId != nil, case .everywhere = space, case .aroundId = direction {
+                        assert(true)
+                    }
+                    
                     if ids.count == 0 || implicitelyFillHole {
                         filledRange = minMaxRange
                         strictFilledIndices = IndexSet()
@@ -741,8 +751,6 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                         return updated
                     })
                     updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
-                    
-                    print("fetchMessageHistoryHole for \(peerInput) space \(space) done")
                     
                     let result = FetchMessageHistoryHoleResult(
                         removedIndices: IndexSet(integersIn: Int(filledRange.lowerBound) ... Int(filledRange.upperBound)),

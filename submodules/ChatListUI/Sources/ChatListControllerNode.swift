@@ -596,16 +596,16 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return (state, filterId)
         })
         
-        if self.controlsHistoryPreload {
+        if self.controlsHistoryPreload, case .chatList(groupId: .root) = self.location {
             self.context.account.viewTracker.chatListPreloadItems.set(combineLatest(queue: .mainQueue(),
                 context.sharedContext.hasOngoingCall.get(),
                 itemNode.listNode.preloadItems.get()
             )
-            |> map { hasOngoingCall, preloadItems -> [ChatHistoryPreloadItem] in
+            |> map { hasOngoingCall, preloadItems -> Set<ChatHistoryPreloadItem> in
                 if hasOngoingCall {
                     return []
                 } else {
-                    return preloadItems
+                    return Set(preloadItems)
                 }
             })
         }
