@@ -14,17 +14,17 @@ public enum InternalUpdaterError {
 public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, InternalUpdaterError> {
     return TelegramEngine(account: account).peers.resolvePeerByName(name: source)
         |> castError(InternalUpdaterError.self)
-        |> mapToSignal { peer -> Signal<Peer?, InternalUpdaterError> in
-            return .single(peer?._asPeer())
+        |> map { peer -> Peer? in
+            return peer?._asPeer()
         }
-        |> mapToSignal { peer in
+        |> mapToSignal { peer -> Signal<Data, InternalUpdaterError> in
             if let peer = peer, let inputPeer = apiInputPeer(peer) {
                 return account.network.request(Api.functions.messages.getHistory(peer: inputPeer, offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: Int32.max, minId: 0, hash: 0))
                     |> retryRequest
                     |> castError(InternalUpdaterError.self)
                     |> mapToSignal { result in
                         switch result {
-                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, _, apiChats, apiUsers):
                             if let apiMessage = apiMessages.first, let storeMessage = StoreMessage(apiMessage: apiMessage) {
                                 
                                 var peers: [PeerId: Peer] = [:]
@@ -67,7 +67,7 @@ public func requestUpdatesXml(account: Account, source: String) -> Signal<Data, 
             } else {
                 return .fail(.xmlLoad)
             }
-    }
+        }
 }
 
 public enum AppUpdateDownloadResult {
@@ -89,7 +89,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                     |> castError(InternalUpdaterError.self)
                     |> mapToSignal { messages in
                         switch messages {
-                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, _, apiChats, apiUsers):
                             
                             var peers: [PeerId: Peer] = [:]
                             for chat in apiChats {
