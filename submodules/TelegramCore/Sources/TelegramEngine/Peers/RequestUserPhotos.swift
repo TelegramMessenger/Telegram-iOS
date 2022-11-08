@@ -79,7 +79,7 @@ func _internal_requestPeerPhotos(postbox: Postbox, network: Network, peerId: Pee
                     let chats: [Api.Chat]
                     let users: [Api.User]
                     switch result {
-                        case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                        case let .channelMessages(_, _, _, _, apiMessages, _, apiChats, apiUsers):
                             messages = apiMessages
                             chats = apiChats
                             users = apiUsers

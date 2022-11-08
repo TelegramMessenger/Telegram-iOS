@@ -712,7 +712,7 @@ public final class SparseMessageList {
     }
 }
 
-public final class SparseMessageScrollingContext {
+/*public final class SparseMessageScrollingContext {
     public struct State: Equatable {
         public var totalCount: Int
         public var minTimestamp: Int32
@@ -762,7 +762,7 @@ public final class SparseMessageScrollingContext {
                     case let .messagesSlice(_, count, _, _, apiMessages, _, _):
                         messages = apiMessages
                         totalCount = Int(count)
-                    case let .channelMessages(_, _, count, _, apiMessages, _, _):
+                    case let .channelMessages(_, _, count, _, apiMessages, _, _, _):
                         messages = apiMessages
                         totalCount = Int(count)
                     case .messagesNotModified:
@@ -815,7 +815,7 @@ public final class SparseMessageScrollingContext {
             return Impl(queue: queue, account: account, peerId: peerId)
         })
     }
-}
+}*/
 
 public final class SparseMessageCalendar {
     private final class Impl {

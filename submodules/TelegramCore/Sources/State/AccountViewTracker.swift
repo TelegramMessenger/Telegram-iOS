@@ -93,8 +93,9 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         messages = apiMessages
                         chats = apiChats
                         users = apiUsers
-                    case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                    case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                         messages = apiMessages
+                        let _ = apiTopics
                         chats = apiChats
                         users = apiUsers
                     case .messagesNotModified:
@@ -1070,7 +1071,7 @@ public final class AccountViewTracker {
                                         return (messages, chats, users)
                                     case let .messagesSlice(_, _, _, _, messages, chats, users):
                                         return (messages, chats, users)
-                                    case let .channelMessages(_, _, _, _, messages, chats, users):
+                                    case let .channelMessages(_, _, _, _, messages, _, chats, users):
                                         return (messages, chats, users)
                                     case .messagesNotModified:
                                         return ([], [], [])
@@ -1712,7 +1713,9 @@ public final class AccountViewTracker {
                 |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
                     if let threadInfo = threadInfo {
                         let anchor: HistoryViewInputAnchor
-                        if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
+                        if threadInfo.maxIncomingReadId <= 1 {
+                            anchor = .message(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1))
+                        } else if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
                             let customUnreadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadInfo.maxIncomingReadId)
                             anchor = .message(customUnreadMessageId)
                         } else {

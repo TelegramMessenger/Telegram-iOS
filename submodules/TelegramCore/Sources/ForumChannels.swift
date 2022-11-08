@@ -485,7 +485,13 @@ enum LoadMessageHistoryThreadsError {
 
 func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> {
     let signal: Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> = postbox.transaction { transaction -> Api.InputChannel? in
-        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+        guard let channel = transaction.getPeer(peerId) as? TelegramChannel else {
+            return nil
+        }
+        if !channel.flags.contains(.isForum) {
+            return nil
+        }
+        return apiInputChannel(channel)
     }
     |> castError(LoadMessageHistoryThreadsError.self)
     |> mapToSignal { inputChannel -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> in

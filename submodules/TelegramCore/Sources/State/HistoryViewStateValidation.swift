@@ -522,8 +522,9 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .channelMessages(_, pts, _, _, apiMessages, apiChats, apiUsers):
+                            case let .channelMessages(_, pts, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                                 messages = apiMessages
+                                let _ = apiTopics
                                 chats = apiChats
                                 users = apiUsers
                                 channelPts = pts
@@ -540,7 +541,8 @@ private func validateChannelMessagesBatch(postbox: Postbox, network: Network, ac
         }
         
         return validateBatch(postbox: postbox, network: network, transaction: transaction, accountPeerId: accountPeerId, tag: tag, historyState: historyState, signal: signal, previous: previous, messageNamespace: Namespaces.Message.Cloud)
-    } |> switchToLatest
+    }
+    |> switchToLatest
 }
 
 private func validateReplyThreadMessagesBatch(postbox: Postbox, network: Network, accountPeerId: PeerId, peerId: PeerId, threadMessageId: Int32, tag: MessageTags?, messageIds: [MessageId]) -> Signal<Void, NoError> {
@@ -589,8 +591,9 @@ private func validateReplyThreadMessagesBatch(postbox: Postbox, network: Network
                         messages = apiMessages
                         chats = apiChats
                         users = apiUsers
-                    case let .channelMessages(_, pts, _, _, apiMessages, apiChats, apiUsers):
+                    case let .channelMessages(_, pts, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                         messages = apiMessages
+                        let _ = apiTopics
                         chats = apiChats
                         users = apiUsers
                         channelPts = pts
@@ -630,8 +633,9 @@ private func validateScheduledMessagesBatch(postbox: Postbox, network: Network, 
                                 messages = apiMessages
                                 chats = apiChats
                                 users = apiUsers
-                            case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                            case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                                 messages = apiMessages
+                                let _ = apiTopics
                                 chats = apiChats
                                 users = apiUsers
                             case .messagesNotModified:
@@ -703,8 +707,9 @@ private func validateBatch(postbox: Postbox, network: Network, transaction: Tran
                                     |> map { result -> Set<MessageId> in
                                         let apiMessages: [Api.Message]
                                         switch result {
-                                            case let .channelMessages(_, _, _, _, messages, _, _):
+                                            case let .channelMessages(_, _, _, _, messages, apiTopics, _, _):
                                                 apiMessages = messages
+                                                let _ = apiTopics
                                             case let .messages(messages, _, _):
                                                 apiMessages = messages
                                             case let .messagesSlice(_, _, _, _, messages, _, _):
@@ -951,8 +956,9 @@ private func validateReplyThreadBatch(postbox: Postbox, network: Network, transa
                         |> map { result -> Set<MessageId> in
                             let apiMessages: [Api.Message]
                             switch result {
-                                case let .channelMessages(_, _, _, _, messages, _, _):
+                                case let .channelMessages(_, _, _, _, messages, apiTopics, _, _):
                                     apiMessages = messages
+                                    let _ = apiTopics
                                 case let .messages(messages, _, _):
                                     apiMessages = messages
                                 case let .messagesSlice(_, _, _, _, messages, _, _):

@@ -86,7 +86,18 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
 
 public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, clipStyle: round ? .round : .none, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+    
+    let clipStyle: AvatarNodeClipStyle
+    if round {
+        if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+            clipStyle = .roundedRect
+        } else {
+            clipStyle = .round
+        }
+    } else {
+        clipStyle = .none
+    }
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, clipStyle: clipStyle, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
         if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
             iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
             |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in

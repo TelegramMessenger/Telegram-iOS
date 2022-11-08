@@ -47,7 +47,7 @@ private func dialogTopMessage(network: Network, postbox: Postbox, peerId: PeerId
             }
             let apiMessages: [Api.Message]
             switch result {
-                case let .channelMessages(_, _, _, _, messages, _, _):
+                case let .channelMessages(_, _, _, _, messages, _, _, _):
                     apiMessages = messages
                 case let .messages(messages, _, _):
                     apiMessages = messages

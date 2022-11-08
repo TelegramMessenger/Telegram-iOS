@@ -2536,7 +2536,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         var transitionSourceHeight: CGFloat = 0.0
         var transitionFraction: CGFloat = 0.0
-        var transitionSourceAvatarFrame = CGRect()
+        var transitionSourceAvatarFrame: CGRect?
         var transitionSourceTitleFrame = CGRect()
         var transitionSourceSubtitleFrame = CGRect()
         
@@ -2544,10 +2544,13 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let headerBackgroundColor: UIColor = presentationData.theme.list.blocksBackgroundColor
         var effectiveSeparatorAlpha: CGFloat
-        if let navigationTransition = self.navigationTransition, let sourceAvatarNode = (navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode {
+        if let navigationTransition = self.navigationTransition {
             transitionSourceHeight = navigationTransition.sourceNavigationBar.backgroundNode.bounds.height
             transitionFraction = navigationTransition.fraction
-            transitionSourceAvatarFrame = sourceAvatarNode.view.convert(sourceAvatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
+            
+            if let sourceAvatarNode = (navigationTransition.sourceNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode {
+                transitionSourceAvatarFrame = sourceAvatarNode.view.convert(sourceAvatarNode.view.bounds, to: navigationTransition.sourceNavigationBar.view)
+            }
             transitionSourceTitleFrame = navigationTransition.sourceTitleFrame
             transitionSourceSubtitleFrame = navigationTransition.sourceSubtitleFrame
 
@@ -2761,7 +2764,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.usernameNode.accessibilityLabel = usernameString.string
         
         let avatarFrame = CGRect(origin: CGPoint(x: floor((width - avatarSize) / 2.0), y: statusBarHeight + 13.0), size: CGSize(width: avatarSize, height: avatarSize))
-        let avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
+        let avatarCenter: CGPoint
+        if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
+            avatarCenter = CGPoint(x: (1.0 - transitionFraction) * avatarFrame.midX + transitionFraction * transitionSourceAvatarFrame.midX, y: (1.0 - transitionFraction) * avatarFrame.midY + transitionFraction * transitionSourceAvatarFrame.midY)
+        } else {
+            avatarCenter = avatarFrame.center
+        }
         
         let titleSize = titleNodeLayout[TitleNodeStateRegular]!.size
         let titleExpandedSize = titleNodeLayout[TitleNodeStateExpanded]!.size
@@ -2893,7 +2901,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarScale: CGFloat
         let avatarOffset: CGFloat
         if self.navigationTransition != nil {
-            avatarScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * transitionSourceAvatarFrame.width) / avatarFrame.width
+            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
+                avatarScale = ((1.0 - transitionFraction) * avatarFrame.width + transitionFraction * transitionSourceAvatarFrame.width) / avatarFrame.width
+            } else {
+                avatarScale = 1.0
+            }
             avatarOffset = 0.0
         } else {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
@@ -2909,7 +2921,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 
         if self.isAvatarExpanded {
             self.avatarListNode.listContainerNode.isHidden = false
-            if !transitionSourceAvatarFrame.width.isZero {
+            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode, cornerRadius: transitionFraction * transitionSourceAvatarFrame.width / 2.0)
                 transition.updateCornerRadius(node: self.avatarListNode.listContainerNode.controlsClippingNode, cornerRadius: transitionFraction * transitionSourceAvatarFrame.width / 2.0)
             } else {
@@ -2947,7 +2959,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if self.isAvatarExpanded {
             let expandedAvatarCenter = CGPoint(x: expandedAvatarListSize.width / 2.0, y: expandedAvatarListSize.height / 2.0 - contentOffset / 2.0)
             apparentAvatarFrame = CGRect(origin: CGPoint(x: expandedAvatarCenter.x * (1.0 - transitionFraction) + transitionFraction * avatarCenter.x, y: expandedAvatarCenter.y * (1.0 - transitionFraction) + transitionFraction * avatarCenter.y), size: CGSize())
-            if !transitionSourceAvatarFrame.width.isZero {
+            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 let expandedFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: expandedAvatarListSize)
                 controlsClippingFrame = CGRect(origin: CGPoint(x: transitionFraction * transitionSourceAvatarFrame.minX + (1.0 - transitionFraction) * expandedFrame.minX, y: transitionFraction * transitionSourceAvatarFrame.minY + (1.0 - transitionFraction) * expandedFrame.minY), size: CGSize(width: transitionFraction * transitionSourceAvatarFrame.width + (1.0 - transitionFraction) * expandedFrame.width, height: transitionFraction * transitionSourceAvatarFrame.height + (1.0 - transitionFraction) * expandedFrame.height))
             } else {
@@ -2963,7 +2975,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let avatarListContainerFrame: CGRect
         let avatarListContainerScale: CGFloat
         if self.isAvatarExpanded {
-            if !transitionSourceAvatarFrame.width.isZero {
+            if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
                 let neutralAvatarListContainerSize = expandedAvatarListSize
                 let avatarListContainerSize = CGSize(width: neutralAvatarListContainerSize.width * (1.0 - transitionFraction) + transitionSourceAvatarFrame.width * transitionFraction, height: neutralAvatarListContainerSize.height * (1.0 - transitionFraction) + transitionSourceAvatarFrame.height * transitionFraction)
                 avatarListContainerFrame = CGRect(origin: CGPoint(x: -avatarListContainerSize.width / 2.0, y: -avatarListContainerSize.height / 2.0), size: avatarListContainerSize)

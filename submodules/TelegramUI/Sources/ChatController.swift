@@ -219,7 +219,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     public weak var parentController: ViewController?
 
     private let currentChatListFilter: Int32?
-    private let chatNavigationStack: [PeerId]
+    private let chatNavigationStack: [ChatNavigationStackItem]
     
     public var peekActions: ChatControllerPeekActions = .standard
     private var didSetup3dTouch: Bool = false
@@ -494,8 +494,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
-            if case let .peer(peerId) = self.chatLocation {
-                return ChatControllerNavigationData(peerId: peerId)
+            if let peerId = self.chatLocation.peerId {
+                return ChatControllerNavigationData(peerId: peerId, threadId: self.chatLocation.threadId)
             } else {
                 return nil
             }
@@ -534,7 +534,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         return title
     }
     
-    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = []) {
+    public init(context: AccountContext, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, mode: ChatControllerPresentationMode = .standard(previewing: false), peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = []) {
         let _ = ChatControllerCount.modify { value in
             return value + 1
         }
@@ -4079,19 +4079,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.controllerInteraction = controllerInteraction
         
-        if case let .peer(peerId) = chatLocation, peerId != context.account.peerId {
-            switch subject {
-            case .pinnedMessages, .scheduledMessages, .forwardedMessages:
-                break
-            default:
-                self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
+        if chatLocation.threadId == nil {
+            if let peerId = chatLocation.peerId, peerId != context.account.peerId {
+                switch subject {
+                case .pinnedMessages, .scheduledMessages, .forwardedMessages:
+                    break
+                default:
+                    self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
+                }
             }
-        }
-        self.navigationBar?.allowsCustomTransition = { [weak self] in
-            guard let strongSelf = self else {
-                return false
+            self.navigationBar?.allowsCustomTransition = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationBar?.userInfo == nil {
+                    return false
+                }
+                if strongSelf.navigationBar?.contentNode != nil {
+                    return false
+                }
+                return true
             }
-            return strongSelf.navigationItem.rightBarButtonItem === strongSelf.chatInfoNavigationButton?.buttonItem
         }
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
@@ -9870,9 +9878,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 
                 var updatedChatNavigationStack = strongSelf.chatNavigationStack
-                updatedChatNavigationStack.removeAll(where: { $0 ==  peer.id})
-                if case let .peer(peerId) = strongSelf.chatLocation {
-                    updatedChatNavigationStack.insert(peerId, at: 0)
+                updatedChatNavigationStack.removeAll(where: { $0 == ChatNavigationStackItem(peerId: peer.id, threadId: nil) })
+                if let peerId = strongSelf.chatLocation.peerId {
+                    updatedChatNavigationStack.insert(ChatNavigationStackItem(peerId: peerId, threadId: strongSelf.chatLocation.threadId), at: 0)
                 }
 
                 strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), animated: false, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
@@ -9936,73 +9944,36 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             })
         }
         
-        var chatNavigationStack: [PeerId] = self.chatNavigationStack
-        if case let .peer(peerId) = self.chatLocation, let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
-            chatNavigationStack.removeAll()
-            chatNavigationStack = summary.peerIds.filter({ $0 != peerId })
+        var chatNavigationStack: [ChatNavigationStackItem] = self.chatNavigationStack
+        if let peerId = self.chatLocation.peerId {
+            if let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
+                chatNavigationStack.removeAll()
+                chatNavigationStack = summary.peerNavigationItems.filter({ $0 != ChatNavigationStackItem(peerId: peerId, threadId: self.chatLocation.threadId) })
+            }
+            if let _ = self.chatLocation.threadId {
+                if !chatNavigationStack.contains(ChatNavigationStackItem(peerId: peerId, threadId: nil)) {
+                    chatNavigationStack.append(ChatNavigationStackItem(peerId: peerId, threadId: nil))
+                }
+            }
         }
         
         if !chatNavigationStack.isEmpty {
             self.chatDisplayNode.navigationBar?.backButtonNode.isGestureEnabled = true
             self.chatDisplayNode.navigationBar?.backButtonNode.activated = { [weak self] gesture, _ in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let backButtonNode = strongSelf.chatDisplayNode.navigationBar?.backButtonNode, let navigationController = strongSelf.effectiveNavigationController else {
                     gesture.cancel()
                     return
                 }
-                
-                let _ = (strongSelf.context.engine.data.get(EngineDataList(
-                    chatNavigationStack.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
-                ))
-                |> deliverOnMainQueue).start(next: { peerList in
-                    guard let strongSelf = self, let backButtonNode = strongSelf.chatDisplayNode.navigationBar?.backButtonNode else {
-                        return
-                    }
-                    
-                    let peers = peerList.compactMap { $0 }
-                    
-                    let avatarSize = CGSize(width: 28.0, height: 28.0)
-                    
-                    var items: [ContextMenuItem] = []
-                    for peer in peers {
-                        let title: String
-                        let iconSource: ContextMenuActionItemIconSource?
-                        if peer.id == strongSelf.context.account.peerId {
-                            title = strongSelf.presentationData.strings.DialogList_SavedMessages
-                            iconSource = nil
-                        } else {
-                            title = peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)
-                            iconSource = ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer, size: avatarSize))
-                        }
-                        
-                        let isSavedMessages = peer.id == strongSelf.context.account.peerId
-                        
-                        items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
-                            if isSavedMessages {
-                                return generateAvatarImage(size: avatarSize, icon: savedMessagesIcon, iconScale: 0.5, color: .blue)
-                            }
-                            return nil
-                        }, iconSource: iconSource, action: { _, f in
-                            f(.default)
-                            
-                            guard let strongSelf = self, let navigationController = strongSelf.effectiveNavigationController else {
-                                return
-                            }
-
-                            let nextFolderId: Int32? = strongSelf.currentChatListFilter
-                            
-                            var updatedChatNavigationStack = strongSelf.chatNavigationStack
-                            if let index = updatedChatNavigationStack.firstIndex(of: peer.id) {
-                                updatedChatNavigationStack.removeSubrange(0 ..< (index + 1))
-                            }
-
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), useBackAnimation: true, animated: true, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { nextController in
-                                let _ = nextController
-                            }))
-                        })))
-                    }
-                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: backButtonNode.view, insets: UIEdgeInsets(), contentInsets: UIEdgeInsets(top: 0.0, left: -15.0, bottom: 0.0, right: -15.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                    strongSelf.presentInGlobalOverlay(contextController)
-                })
+                let nextFolderId: Int32? = strongSelf.currentChatListFilter
+                PeerInfoScreenImpl.displayChatNavigationMenu(
+                    context: strongSelf.context,
+                    chatNavigationStack: chatNavigationStack,
+                    nextFolderId: nextFolderId,
+                    parentController: strongSelf,
+                    backButtonView: backButtonNode.view,
+                    navigationController: navigationController,
+                    gesture: gesture
+                )
             }
         }
     }
@@ -10455,6 +10426,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             interfaceState = interfaceState.withUpdatedHistoryScrollState(scrollState)
         }
         interfaceState = interfaceState.withUpdatedInputLanguage(self.chatDisplayNode.currentTextInputLanguage)
+        if case .peer = self.chatLocation, let channel = self.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+            interfaceState = interfaceState.withUpdatedComposeInputState(ChatTextInputState())
+        }
         let _ = ChatInterfaceState.update(engine: self.context.engine, peerId: peerId, threadId: threadId, { _ in
             return interfaceState
         }).start()
@@ -17633,33 +17607,35 @@ func peerMessageSelectedReactions(context: AccountContext, message: Message) -> 
 
 final class ChatControllerNavigationData: CustomViewControllerNavigationData {
     let peerId: PeerId
+    let threadId: Int64?
     
-    init(peerId: PeerId) {
+    init(peerId: PeerId, threadId: Int64?) {
         self.peerId = peerId
+        self.threadId = threadId
     }
     
     func combine(summary: CustomViewControllerNavigationDataSummary?) -> CustomViewControllerNavigationDataSummary? {
         if let summary = summary as? ChatControllerNavigationDataSummary {
-            return summary.adding(peerId: self.peerId)
+            return summary.adding(peerNavigationItem: ChatNavigationStackItem(peerId: self.peerId, threadId: threadId))
         } else {
-            return ChatControllerNavigationDataSummary(peerIds: [self.peerId])
+            return ChatControllerNavigationDataSummary(peerNavigationItems: [ChatNavigationStackItem(peerId: self.peerId, threadId: threadId)])
         }
     }
 }
 
 final class ChatControllerNavigationDataSummary: CustomViewControllerNavigationDataSummary {
-    let peerIds: [PeerId]
+    let peerNavigationItems: [ChatNavigationStackItem]
     
-    init(peerIds: [PeerId]) {
-        self.peerIds = peerIds
+    init(peerNavigationItems: [ChatNavigationStackItem]) {
+        self.peerNavigationItems = peerNavigationItems
     }
     
-    func adding(peerId: PeerId) -> ChatControllerNavigationDataSummary {
-        var peerIds = self.peerIds
-        if let index = peerIds.firstIndex(of: peerId) {
-            peerIds.removeSubrange(0 ... index)
+    func adding(peerNavigationItem: ChatNavigationStackItem) -> ChatControllerNavigationDataSummary {
+        var peerNavigationItems = self.peerNavigationItems
+        if let index = peerNavigationItems.firstIndex(of: peerNavigationItem) {
+            peerNavigationItems.removeSubrange(0 ... index)
         }
-        peerIds.insert(peerId, at: 0)
-        return ChatControllerNavigationDataSummary(peerIds: peerIds)
+        peerNavigationItems.insert(peerNavigationItem, at: 0)
+        return ChatControllerNavigationDataSummary(peerNavigationItems: peerNavigationItems)
     }
 }

@@ -293,9 +293,9 @@ public extension TelegramEngine {
             return SparseMessageCalendar(account: self.account, peerId: peerId, threadId: threadId, messageTag: tag)
         }
 
-        public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
+        /*public func sparseMessageScrollingContext(peerId: EnginePeer.Id) -> SparseMessageScrollingContext {
             return SparseMessageScrollingContext(account: self.account, peerId: peerId)
-        }
+        }*/
 
         public func refreshMessageTagStats(peerId: EnginePeer.Id, threadId: Int64?, tags: [EngineMessage.Tags]) -> Signal<Never, NoError> {
             let account = self.account
@@ -325,7 +325,7 @@ public extension TelegramEngine {
                         switch result {
                         case let .messagesSlice(_, count, _, _, messages, _, _):
                             return (count, messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
-                        case let .channelMessages(_, _, count, _, messages, _, _):
+                        case let .channelMessages(_, _, count, _, messages, _, _, _):
                             return (count, messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
                         case let .messages(messages, _, _):
                             return (Int32(messages.count), messages.first?.id(namespace: Namespaces.Message.Cloud)?.id)
