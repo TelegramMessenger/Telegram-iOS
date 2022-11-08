@@ -196,9 +196,18 @@ public final class TapLongTapOrDoubleTapGestureRecognizer: UIGestureRecognizer, 
                 self.highlight?(touchLocation)
             }
             
-            if let hitResult = self.view?.hitTest(touch.location(in: self.view), with: event), let _ = hitResult as? UIButton {
-                self.state = .failed
-                return
+            if let hitResult = self.view?.hitTest(touch.location(in: self.view), with: event) {
+                var fail = false
+                if let _ = hitResult as? UIButton {
+                    fail = true
+                } else if let node = hitResult.asyncdisplaykit_node, node is ASControlNode {
+                    fail = true
+                }
+                
+                if fail {
+                    self.state = .failed
+                    return
+                }
             }
             
             self.tapCount += 1

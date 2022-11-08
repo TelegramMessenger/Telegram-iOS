@@ -252,7 +252,7 @@ final class PageComponent<ChildEnvironment: Equatable>: CombinedComponent {
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 40.0))
             )
             context.add(text
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 80.0))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: content.size.height + 60.0 + text.size.height / 2.0))
             )
             context.add(content
                 .position(CGPoint(x: content.size.width / 2.0, y: content.size.height / 2.0))
@@ -972,6 +972,10 @@ private final class DemoSheetContent: CombinedComponent {
                         buttonText = strings.Premium_Gift_GiftSubscription(price ?? "–").string
                     case .other:
                         switch component.subject {
+                            case .fasterDownload:
+                                buttonText = strings.Premium_FasterSpeed_Proceed
+                            case .advancedChatManagement:
+                                buttonText = strings.Premium_ChatManagement_Proceed
                             case .uniqueReactions:
                                 buttonText = strings.Premium_Reactions_Proceed
                                 buttonAnimationName = "premium_unlock"
@@ -1030,6 +1034,10 @@ private final class DemoSheetContent: CombinedComponent {
             var contentHeight: CGFloat = context.availableSize.width + 146.0
             if case .other = component.source {
                 contentHeight -= 40.0
+                
+                if [.advancedChatManagement, .fasterDownload].contains(component.subject) {
+                    contentHeight += 20.0
+                }
             }
               
             let buttonFrame = CGRect(origin: CGPoint(x: sideInset, y: contentHeight + 20.0), size: button.size)

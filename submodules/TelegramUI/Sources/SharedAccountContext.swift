@@ -1293,6 +1293,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
             return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
+            }, navigateToThreadMessage: { _, _, _ in
             }, tapMessage: { message in
                 tapMessage?(message)
         }, clickThroughMessage: {
@@ -1523,6 +1524,8 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                 mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
             case .voiceToText:
                 mappedSource = .voiceToText
+            case .fasterDownload:
+                mappedSource = .fasterDownload
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
     }

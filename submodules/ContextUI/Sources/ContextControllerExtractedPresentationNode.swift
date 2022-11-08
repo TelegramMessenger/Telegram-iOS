@@ -908,6 +908,10 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
             
+            if case .reference = self.source {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
+            
             let actionsVerticalTransitionDirection: CGFloat
             if let contentNode = contentNode {
                 if contentNode.frame.minY < self.actionsStackNode.frame.minY {
@@ -1123,6 +1127,11 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             if case .center = actionsHorizontalAlignment {
                 actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
             }
+            
+            if case .reference = self.source {
+                actionsPositionDeltaXDistance = currentContentScreenFrame.midX - self.actionsStackNode.frame.midX
+            }
+            
             let actionsPositionDeltaYDistance = -animationInContentDistance + actionsVerticalTransitionDirection * actionsSize.height / 2.0 - contentActionsSpacing
             self.actionsStackNode.layer.animate(
                 from: NSValue(cgPoint: CGPoint()),

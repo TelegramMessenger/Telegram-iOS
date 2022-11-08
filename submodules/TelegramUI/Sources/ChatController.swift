@@ -1820,6 +1820,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.navigateToMessage(from: fromId, to: .id(id, nil), forceInCurrentChat: fromId.peerId == id.peerId)
         }, navigateToMessageStandalone: { [weak self] id in
             self?.navigateToMessage(from: nil, to: .id(id, nil), forceInCurrentChat: false)
+        }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
+            if let context = self?.context, let navigationController = self?.effectiveNavigationController {
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+            }
         }, tapMessage: nil, clickThroughMessage: { [weak self] in
             self?.chatDisplayNode.dismissInput()
         }, toggleMessagesSelection: { [weak self] ids, value in

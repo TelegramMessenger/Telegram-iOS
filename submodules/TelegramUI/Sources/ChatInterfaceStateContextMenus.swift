@@ -614,7 +614,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
 
     let readCounters = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: messages[0].id.peerId))
     
-    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?), NoError> = combineLatest(
+    let dataSignal: Signal<(MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?), NoError> = combineLatest(
         loadLimits,
         loadStickerSaveStatusSignal,
         loadResourceStatusSignal,
@@ -626,9 +626,10 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
         ApplicationSpecificNotice.getMessageViewsPrivacyTips(accountManager: context.sharedContext.accountManager),
         context.engine.stickers.availableReactions(),
         context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.translationSettings, SharedDataKeys.loggingSettings]),
-        context.engine.peers.notificationSoundList() |> take(1)
+        context.engine.peers.notificationSoundList() |> take(1),
+        context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
     )
-    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readCounters, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?) in
+    |> map { limitsAndAppConfig, stickerSaveStatus, resourceStatus, messageActions, updatingMessageMedia, infoSummaryData, readCounters, messageViewsPrivacyTips, availableReactions, sharedData, notificationSoundList, accountPeer -> (MessageContextMenuData, [MessageId: ChatUpdatingMessageMedia], InfoSummaryData, AppConfiguration, Bool, Int32, AvailableReactions?, TranslationSettings, LoggingSettings, NotificationSoundList?, EnginePeer?) in
         let (limitsConfiguration, appConfig) = limitsAndAppConfig
         var canEdit = false
         if !isAction {
@@ -652,12 +653,14 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             loggingSettings = LoggingSettings.defaultSettings
         }
         
-        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList)
+        return (MessageContextMenuData(starStatus: stickerSaveStatus, canReply: canReply, canPin: canPin, canEdit: canEdit, canSelect: canSelect, resourceStatus: resourceStatus, messageActions: messageActions), updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer)
     }
     
     return dataSignal
     |> deliverOnMainQueue
-    |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList -> ContextController.Items in
+    |> map { data, updatingMessageMedia, infoSummaryData, appConfig, isMessageRead, messageViewsPrivacyTips, availableReactions, translationSettings, loggingSettings, notificationSoundList, accountPeer -> ContextController.Items in
+        let isPremium = accountPeer?.isPremium ?? false
+        
         var actions: [ContextMenuItem] = []
         
         var isPinnedMessages = false
@@ -794,7 +797,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                                 controllerInteraction.displayUndo(.info(title: presentationData.strings.Notifications_UploadError_TooLong_Title(fileName).string, text: presentationData.strings.Notifications_UploadError_TooLong_Text(stringForDuration(Int32(settings.maxDuration))).string))
                             } else {
                                 let _ = (context.engine.peers.saveNotificationSound(file: .message(message: MessageReference(message), media: file))
-                                |> deliverOnMainQueue).start(completed: {
+                                         |> deliverOnMainQueue).start(completed: {
                                     controllerInteraction.displayUndo(.notificationSoundAdded(title: presentationData.strings.Notifications_UploadSuccess_Title, text: presentationData.strings.Notifications_SaveSuccess_Text, action: {
                                         controllerInteraction.navigationController()?.pushViewController(notificationsAndSoundsController(context: context, exceptionsList: nil))
                                     }))
@@ -937,6 +940,53 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             }
         }
         
+        var isDownloading = false
+        let resourceAvailable: Bool
+        if let resourceStatus = data.resourceStatus {
+            if case .Local = resourceStatus {
+                resourceAvailable = true
+            } else {
+                resourceAvailable = false
+            }
+            if case .Fetching = resourceStatus {
+                isDownloading = true
+            }
+        } else {
+            resourceAvailable = false
+        }
+        
+
+        if !isPremium && isDownloading {
+            var isLargeFile = false
+            for media in message.media {
+                if let file = media as? TelegramMediaFile {
+                    if let size = file.size, size >= 300 * 1024 * 1024 {
+                        isLargeFile = true
+                    }
+                    break
+                }
+            }
+            if isLargeFile {
+                actions.append(.action(ContextMenuActionItem(text: chatPresentationInterfaceState.strings.Conversation_IncreaseSpeed, icon: { theme in
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Speed"), color: theme.actionSheet.primaryTextColor)
+                }, action: { _, f in
+                    let context = context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = PremiumDemoScreen(context: context, subject: .fasterDownload, action: {
+                        let controller = PremiumIntroScreen(context: context, source: .fasterDownload)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    controllerInteraction.navigationController()?.pushViewController(controller)
+                    
+                    f(.dismissWithoutContent)
+                })))
+                actions.append(.separator)
+            }
+        }
+        
         var isReplyThreadHead = false
         if case let .replyThread(replyThreadMessage) = chatPresentationInterfaceState.chatLocation {
             isReplyThreadHead = messages[0].id == replyThreadMessage.effectiveTopId
@@ -970,12 +1020,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             })))
         }
         
-        let resourceAvailable: Bool
-        if let resourceStatus = data.resourceStatus, case .Local = resourceStatus {
-            resourceAvailable = true
-        } else {
-            resourceAvailable = false
-        }
+
         
         var messageText: String = ""
         for message in messages {

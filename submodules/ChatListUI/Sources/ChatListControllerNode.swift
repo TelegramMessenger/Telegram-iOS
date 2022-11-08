@@ -601,11 +601,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 context.sharedContext.hasOngoingCall.get(),
                 itemNode.listNode.preloadItems.get()
             )
-            |> map { hasOngoingCall, preloadItems -> [ChatHistoryPreloadItem] in
+            |> map { hasOngoingCall, preloadItems -> Set<ChatHistoryPreloadItem> in
                 if hasOngoingCall {
-                    return []
+                    return Set()
                 } else {
-                    return preloadItems
+                    return Set(preloadItems)
                 }
             })
         }

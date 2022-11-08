@@ -112,6 +112,10 @@ public enum PresentationResourceKey: Int32 {
     case chatBubbleVerticalLineIncomingImage
     case chatBubbleVerticalLineOutgoingImage
     
+    case chatBubbleArrowFreeImage
+    case chatBubbleArrowIncomingImage
+    case chatBubbleArrowOutgoingImage
+    
     case chatBubbleCheckBubbleFullImage
     case chatBubbleBubblePartialImage
     case checkBubbleMediaFullImage

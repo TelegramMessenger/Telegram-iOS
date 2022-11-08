@@ -2431,6 +2431,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })
         }, navigateToMessage: { fromId, id in
         }, navigateToMessageStandalone: { _ in
+        }, navigateToThreadMessage: { _, _, _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {

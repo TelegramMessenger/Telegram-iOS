@@ -7585,9 +7585,7 @@ Sorry for the inconvenience.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
-
 "Premium.AppIcons.Proceed" = "Unlock Premium Icons";
-
 "Premium.NoAds.Proceed" = "About Telegram Premium";
 
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
@@ -8271,5 +8269,11 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
 
-"Username.UsernamePurchaseAvailable" = "Sorry, this username is occupied by someone. But it's available for purchase through official @auction.";
-"Channel.Username.UsernamePurchaseAvailable" = "Sorry, this link is occupied by someone. But it's available for purchase through official @auction.";
+"Username.UsernamePurchaseAvailable" = "Sorry, this username is occupied by someone. But it's available for purchase on [fragment.com]().";
+"Channel.Username.UsernamePurchaseAvailable" = "Sorry, this link is occupied by someone. But it's available for purchase on [fragment.com]().";
+
+"DownloadList.IncreaseSpeed" = "Increase Speed";
+"Conversation.IncreaseSpeed" = "Increase Speed";
+
+"Premium.ChatManagement.Proceed" = "About Telegram Premium";
+"Premium.FasterSpeed.Proceed" = "About Telegram Premium";

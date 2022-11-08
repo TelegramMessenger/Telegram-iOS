@@ -33,6 +33,7 @@ import Postbox
 import TelegramAnimatedStickerNode
 import AnimationCache
 import MultiAnimationRenderer
+import PremiumUI
 
 private enum ChatListTokenId: Int32 {
     case archive
@@ -284,7 +285,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             isForum = true
                         }
                         
-                        filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: strongSelf.hasDownloads).map(\.filter)
+                        filters = defaultAvailableSearchPanes(isForum: isForum, hasDownloads: !isForum && strongSelf.hasDownloads).map(\.filter)
                     }
                     strongSelf.filterContainerNode.update(size: CGSize(width: layout.size.width - 40.0, height: 38.0), sideInset: layout.safeInsets.left - 20.0, filters: filters.map { .filter($0) }, selectedFilter: strongSelf.selectedFilter?.id, transitionFraction: strongSelf.transitionFraction, presentationData: strongSelf.presentationData, transition: transition)
                 }
@@ -896,13 +897,15 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             
             let items = combineLatest(queue: .mainQueue(),
                 context.sharedContext.chatAvailableMessageActions(engine: context.engine, accountPeerId: context.account.peerId, messageIds: [message.id], messages: [message.id: message], peers: [:]),
-                isCachedValue |> take(1)
+                isCachedValue |> take(1),
+                context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
             )
             |> deliverOnMainQueue
-            |> map { [weak self] actions, isCachedValue -> [ContextMenuItem] in
+            |> map { [weak self] actions, isCachedValue, accountPeer -> [ContextMenuItem] in
                 guard let strongSelf = self else {
                     return []
                 }
+                let isPremium = accountPeer?.isPremium ?? false
                 
                 var items: [ContextMenuItem] = []
                 
@@ -920,6 +923,31 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         })
                     })))
                 } else {
+                    if !isPremium, let size = downloadResource?.size, size >= 300 * 1024 * 1024 {
+                        items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_IncreaseSpeed, textColor: .primary, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Speed"), color: theme.contextMenu.primaryColor)
+                        }, action: { _, f in
+                            guard let strongSelf = self else {
+                                f(.default)
+                                return
+                            }
+                            
+                            let context = strongSelf.context
+                            var replaceImpl: ((ViewController) -> Void)?
+                            let controller = PremiumDemoScreen(context: context, subject: .fasterDownload, action: {
+                                let controller = PremiumIntroScreen(context: context, source: .fasterDownload)
+                                replaceImpl?(controller)
+                            })
+                            replaceImpl = { [weak controller] c in
+                                controller?.replace(with: c)
+                            }
+                            strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {})
+                                                                                    
+                            f(.default)
+                        })))
+                        items.append(.separator)
+                    }
+                    
                     if let downloadResource = downloadResource, !downloadResource.isFirstInList {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_RaisePriority, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Raise"), color: theme.contextMenu.primaryColor)
@@ -1032,7 +1060,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
             }
             items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { [weak self] c, _ in
                 c.dismiss(completion: { [weak self] in
-                    self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), nil, message.id, false)
+                    self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.threadId, message.id, false)
                 })
             })))
             
@@ -1078,7 +1106,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
-                                self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), nil, message.id, false)
+                                self?.openMessage(EnginePeer(message.peers[message.id.peerId]!), message.threadId, message.id, false)
                             })
                         })))
                         

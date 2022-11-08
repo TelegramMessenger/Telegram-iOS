@@ -13,6 +13,7 @@ public class ItemListActivityTextItem: ListViewItem, ItemListItem {
         case generic
         case constructive
         case destructive
+        case warning
     }
     
     let displayActivity: Bool
@@ -123,6 +124,8 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
                 textColor = item.presentationData.theme.list.freeTextSuccessColor
             case .destructive:
                 textColor = item.presentationData.theme.list.freeTextErrorColor
+            case .warning:
+                textColor = UIColor(rgb: 0xef8c00)
             }
             
             let attributedString = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: textColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: textColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
