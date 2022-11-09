@@ -3187,7 +3187,7 @@ func replayFinalState(
                                 
                                 if message.flags.contains(.Incoming) {
                                     if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
-                                        if id.id >= data.maxKnownMessageId {
+                                        if data.maxIncomingReadId != 0 && id.id >= data.maxKnownMessageId {
                                             data.maxKnownMessageId = id.id
                                             data.incomingUnreadCount += 1
                                             
@@ -3464,6 +3464,7 @@ func replayFinalState(
                                 }
                                 
                                 data.maxKnownMessageId = max(data.maxKnownMessageId, readMaxId)
+                                data.maxIncomingReadId = max(data.maxIncomingReadId, readMaxId)
                                 
                                 if let entry = StoredMessageHistoryThreadInfo(data) {
                                     transaction.setMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), info: entry)

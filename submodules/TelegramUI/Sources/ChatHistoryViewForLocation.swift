@@ -110,9 +110,9 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                             canScrollToRead = false
                         }
                         
-                        if case let .replyThread(message) = chatLocation, message.isForumPost {
+                        if tagMask == nil, case let .replyThread(message) = chatLocation, message.isForumPost, view.maxReadIndex == nil {
                             if case let .message(index) = view.anchorIndex {
-                                scrollPosition = .index(index: .message(index), position: .top(0.0), directionHint: .Up, animated: false, highlight: false, displayLink: false)
+                                scrollPosition = .index(index: .message(index), position: .bottom(0.0), directionHint: .Up, animated: false, highlight: false, displayLink: false)
                             }
                         }
                         

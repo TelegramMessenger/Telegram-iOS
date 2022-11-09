@@ -859,17 +859,23 @@ public extension TelegramEngine {
         }
         
         public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
-            return self.account.postbox.transaction { transaction -> [Int64] in
-                return transaction.getPeerPinnedThreads(peerId: id)
+            return self.account.postbox.transaction { transaction -> ([Int64], Int) in
+                var limit = 5
+                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
+                    limit = Int(value)
+                }
+                
+                return (transaction.getPeerPinnedThreads(peerId: id), limit)
             }
             |> castError(SetForumChannelTopicPinnedError.self)
-            |> mapToSignal { threadIds -> Signal<Never, SetForumChannelTopicPinnedError> in
+            |> mapToSignal { threadIds, limit -> Signal<Never, SetForumChannelTopicPinnedError> in
                 var threadIds = threadIds
                 if threadIds.contains(threadId) {
                     threadIds.removeAll(where: { $0 == threadId })
                 } else {
-                    if threadIds.count + 1 > 5 {
-                        return .fail(.limitReached(5))
+                    if threadIds.count + 1 > limit {
+                        return .fail(.limitReached(limit))
                     }
                     threadIds.insert(threadId, at: 0)
                 }
