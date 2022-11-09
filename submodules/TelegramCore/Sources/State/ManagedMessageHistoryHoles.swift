@@ -15,7 +15,7 @@ private final class ManagedMessageHistoryHolesState {
         }
     }
     
-    private struct PendingEntry {
+    private struct PendingEntry: CustomStringConvertible {
         var key: LocationKey
         var entry: MessageHistoryHolesViewEntry
         var disposable: Disposable
@@ -24,6 +24,10 @@ private final class ManagedMessageHistoryHolesState {
             self.key = key
             self.entry = entry
             self.disposable = disposable
+        }
+        
+        var description: String {
+            return "entry: \(self.entry)"
         }
     }
     
@@ -87,6 +91,7 @@ private final class ManagedMessageHistoryHolesState {
         for i in (0 ..< self.discardedEntries.count).reversed() {
             if self.discardedEntries[i].timestamp < timestamp - 0.5 {
                 result.append(self.discardedEntries[i].entry.disposable)
+                Logger.shared.log("ManagedMessageHistoryHoles", "Removing discarded entry \(self.discardedEntries[i].entry)")
                 self.discardedEntries.remove(at: i)
             }
         }
@@ -102,9 +107,9 @@ private final class ManagedMessageHistoryHolesState {
         
         for i in (0 ..< self.pendingEntries.count).reversed() {
             if !entries.contains(self.pendingEntries[i].entry) {
+                Logger.shared.log("ManagedMessageHistoryHoles", "Stashing entry \(self.pendingEntries[i])")
                 self.discardedEntries.append(DiscardedEntry(entry: self.pendingEntries[i], timestamp: timestamp))
                 self.pendingEntries.remove(at: i)
-                //removed.append(self.pendingEntries[i].disposable)
             }
         }
         
@@ -115,10 +120,13 @@ private final class ManagedMessageHistoryHolesState {
                 if !self.pendingEntries.contains(where: { $0.key == key }) {
                     if let discardedIndex = self.discardedEntries.firstIndex(where: { $0.entry.entry == entry }) {
                         let discardedEntry = self.discardedEntries.remove(at: discardedIndex)
+                        Logger.shared.log("ManagedMessageHistoryHoles", "Taking discarded entry \(discardedEntry.entry)")
                         self.pendingEntries.append(discardedEntry.entry)
                     } else {
                         let disposable = MetaDisposable()
-                        self.pendingEntries.append(PendingEntry(key: key, entry: entry, disposable: disposable))
+                        let pendingEntry = PendingEntry(key: key, entry: entry, disposable: disposable)
+                        self.pendingEntries.append(pendingEntry)
+                        Logger.shared.log("ManagedMessageHistoryHoles", "Adding pending entry \(pendingEntry), discarded entries: \(self.discardedEntries.map(\.entry))")
                         added[entry] = disposable
                     }
                 }

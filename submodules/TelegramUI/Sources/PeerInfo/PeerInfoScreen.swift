@@ -8959,8 +8959,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             
             var items: [ContextMenuItem] = []
             
-            items.append(.action(ContextMenuActionItem(text: presentationData.strings.ChatList_Tabs_AllChats, icon: { theme in
-                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Back"), color: theme.contextMenu.primaryColor)
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Navigation_AllChats, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Chats"), color: theme.contextMenu.primaryColor)
             }, action: { _, f in
                 f(.default)
                 

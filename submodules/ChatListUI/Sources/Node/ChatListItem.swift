@@ -2551,8 +2551,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         
-                        compoundHighlightingNode.color = theme.itemHighlightedBackgroundColor.withMultipliedAlpha(0.5)
-                        
                         var topRect = topForumTopicRect
                         topRect.origin.x -= 1.0
                         topRect.size.width += 2.0
@@ -2566,7 +2564,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let midY = floor((topForumTopicRect.minY + textRect.maxY) / 2.0) + 1.0
                         
                         let finalTopRect = CGRect(origin: topRect.origin, size: CGSize(width: topRect.width, height: midY - topRect.minY))
-                        let finalBottomRect = CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                        var finalBottomRect = CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                        if finalBottomRect.maxX < finalTopRect.maxX && abs(finalBottomRect.maxX - finalTopRect.maxX) < 5.0 {
+                            finalBottomRect.size.width = finalTopRect.maxX - finalBottomRect.minX
+                        }
                         
                         compoundHighlightingNode.inset = 0.0
                         compoundHighlightingNode.outerRadius = floor(finalBottomRect.height * 0.5)
@@ -2575,7 +2576,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         compoundHighlightingNode.updateRects([
                             finalTopRect,
                             finalBottomRect
-                        ])
+                        ], color: theme.itemHighlightedBackgroundColor.withMultipliedAlpha(0.5))
                         
                         compoundTextButtonNode.frame = compoundHighlightingNode.frame
                     } else {
@@ -3297,5 +3298,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let result = self.view.snapshotContentTree()
         self.backgroundNode.alpha = 1.0
         return result
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let compoundTextButtonNode = self.compoundTextButtonNode, let compoundHighlightingNode = self.compoundHighlightingNode, compoundHighlightingNode.alpha != 0.0 {
+            let localPoint = self.view.convert(point, to: compoundHighlightingNode.view)
+            var matches = false
+            for rect in compoundHighlightingNode.rects {
+                if rect.contains(localPoint) {
+                    matches = true
+                    break
+                }
+            }
+            if matches {
+                return compoundTextButtonNode.view
+            }
+        }
+        
+        return super.hitTest(point, with: event)
     }
 }

@@ -303,10 +303,19 @@ public final class LinkHighlightingNode: ASDisplayNode {
         self.addSubnode(self.imageNode)
     }
     
-    public func updateRects(_ rects: [CGRect]) {
+    public func updateRects(_ rects: [CGRect], color: UIColor? = nil) {
+        var updated = false
         if self.rects != rects {
+            updated = true
             self.rects = rects
-            
+        }
+        
+        if let color, !color.isEqual(self.color) {
+            updated = true
+            self.color = color
+        }
+        
+        if updated {
             self.updateImage()
         }
     }
