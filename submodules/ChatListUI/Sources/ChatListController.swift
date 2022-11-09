@@ -1661,7 +1661,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             var joined = false
-            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
                 for media in message.media {
                     if let action = media as? TelegramMediaAction, action.action == .peerJoined {
                         joined = true
@@ -1675,7 +1675,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _):
                 switch item.index {
                 case .chatList:
                     if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {

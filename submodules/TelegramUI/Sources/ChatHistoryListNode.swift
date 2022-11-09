@@ -34,7 +34,7 @@ struct ChatTopVisibleMessageRange: Equatable {
     var isLast: Bool
 }
 
-private let historyMessageCount: Int = 90
+private let historyMessageCount: Int = 44
 
 public enum ChatHistoryListDisplayHeaders {
     case none
@@ -1160,14 +1160,14 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                         initialSearchLocation = .index(.absoluteUpperBound())
                                     }
                                 }
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: historyMessageCount, highlight: highlight), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: historyMessageCount, highlight: true), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             } else if var chatHistoryLocation = strongSelf.chatHistoryLocationValue {
                                 chatHistoryLocation.id += 1
                                 strongSelf.chatHistoryLocationValue = chatHistoryLocation
                             } else {
-                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
+                                strongSelf.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: (strongSelf.chatHistoryLocationValue?.id).flatMap({ $0 + 1 }) ?? 0)
                             }
                         }
                     }
@@ -1493,11 +1493,11 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     initialSearchLocation = .index(MessageIndex.absoluteUpperBound())
                 }
             }
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: 60, highlight: highlight), id: 0)
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: initialSearchLocation, count: historyMessageCount, highlight: highlight), id: 0)
         } else if let subject = subject, case let .pinnedMessages(maybeMessageId) = subject, let messageId = maybeMessageId {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: 60, highlight: true), id: 0)
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .InitialSearch(location: .id(messageId), count: historyMessageCount, highlight: true), id: 0)
         } else {
-            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: 60), id: 0)
+            self.chatHistoryLocationValue = ChatHistoryLocationInput(content: .Initial(count: historyMessageCount), id: 0)
         }
         self.chatHistoryLocationPromise.set(self.chatHistoryLocationValue!)
         

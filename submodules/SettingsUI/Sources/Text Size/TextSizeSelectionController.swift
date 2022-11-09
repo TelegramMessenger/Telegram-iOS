@@ -284,7 +284,8 @@ private final class TextSizeSelectionControllerNode: ASDisplayNode, UIScrollView
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
                     hasFailedMessages: false,
-                    forumTopicData: nil
+                    forumTopicData: nil,
+                    topForumTopicItems: []
                 ),
                 editing: false,
                 hasActiveRevealControls: false,

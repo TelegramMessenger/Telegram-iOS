@@ -1313,6 +1313,7 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
                 hasUnseenMentions: false,
                 hasUnseenReactions: false,
                 forumTopicData: nil,
+                topForumTopicItems: [],
                 hasFailed: false,
                 isContact: false
             ))

@@ -129,13 +129,13 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                                     }
                                 }
                                 
-                                let maxIndex = targetIndex + count / 2
-                                let minIndex = targetIndex - count / 2
+                                let maxIndex = targetIndex + 40
+                                let minIndex = targetIndex - 40
                                 if minIndex <= 0 && view.holeEarlier {
                                     fadeIn = true
                                     return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                                 }
-                                if maxIndex >= targetIndex {
+                                if maxIndex >= view.entries.count {
                                     if view.holeLater {
                                         fadeIn = true
                                         return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))

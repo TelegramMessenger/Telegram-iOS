@@ -2363,6 +2363,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             strongSelf.openPeer(peer: peer, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil)
                         }
                     })
+                } else {
+                    strongSelf.openPeer(peer: nil, navigation: .chat(textInputState: ChatTextInputState(inputText: NSAttributedString(string: inputString)), subject: nil, peekData: nil), fromMessage: nil)
                 }
             }
         }, openUrl: { [weak self] url, concealed, _, message in

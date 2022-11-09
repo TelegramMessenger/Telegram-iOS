@@ -1272,8 +1272,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             }
 
             #if DEBUG
-            //debugSaveState(basePath: basePath + "/db", name: "previous1")
-            //debugRestoreState(basePath: basePath + "/db", name: "previous1")
+            //debugSaveState(basePath: basePath + "/db", name: "previous2")
+            debugRestoreState(basePath: basePath + "/db", name: "previous2")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()

@@ -904,7 +904,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
                     hasFailedMessages: false,
-                    forumTopicData: nil
+                    forumTopicData: nil,
+                    topForumTopicItems: []
                 ),
                 editing: false,
                 hasActiveRevealControls: false,

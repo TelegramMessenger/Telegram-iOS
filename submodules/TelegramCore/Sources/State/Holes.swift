@@ -119,8 +119,9 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
             }
         }
         
-        let allPossiblyStoredReferencedIds = storedIds.union(referencedGeneralIds).union(referencedReplyIds.targetIdsBySourceId.keys)
-        let allStoredReferencedIds = transaction.filterStoredMessageIds(allPossiblyStoredReferencedIds)
+        let allPossiblyStoredReferencedIds = referencedGeneralIds.union(referencedReplyIds.targetIdsBySourceId.keys)
+        
+        let allStoredReferencedIds = transaction.filterStoredMessageIds(allPossiblyStoredReferencedIds).union(storedIds)
         
         referencedReplyIds = referencedReplyIds.subtractingStoredIds(allStoredReferencedIds)
         referencedGeneralIds.subtract(allStoredReferencedIds)
