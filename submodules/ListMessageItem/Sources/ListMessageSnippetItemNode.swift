@@ -41,7 +41,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
     private let instantViewIconNode: ASImageNode
     public let linkNode: TextNode
     private var linkHighlightingNode: LinkHighlightingNode?
-    public let authorNode: TextNode
+    public let authorNode: ListMessageFileItemNode.DescriptionNode
     
     private let iconTextBackgroundNode: ASImageNode
     private let iconTextNode: TextNode
@@ -55,6 +55,30 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
     private var appliedItem: ListMessageItem?
     
     private var cachedChatListSearchResult: CachedChatListSearchResult?
+    
+    public override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = self.visibilityStatus
+            let isVisible: Bool
+            switch self.visibility {
+                case let .visible(fraction, _):
+                    isVisible = fraction > 0.2
+                case .none:
+                    isVisible = false
+            }
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.authorNode.visibilityStatus = self.visibilityStatus
+            }
+        }
+    }
     
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
@@ -100,7 +124,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         self.iconImageNode = TransformImageNode()
         self.iconImageNode.displaysAsynchronously = false
         
-        self.authorNode = TextNode()
+        self.authorNode = ListMessageFileItemNode.DescriptionNode()
         self.authorNode.isUserInteractionEnabled = false
         
         super.init()
@@ -209,7 +233,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
         let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
         let iconTextMakeLayout = TextNode.asyncLayout(self.iconTextNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
-        let authorNodeMakeLayout = TextNode.asyncLayout(self.authorNode)
+        let authorNodeMakeLayout = self.authorNode.asyncLayout()
     
         let currentIconImageRepresentation = self.currentIconImageRepresentation
         
@@ -259,7 +283,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             var selectedMedia: TelegramMediaWebpage?
             var processed = false
-            
+                        
             if let message = item.message {
                 for media in message.media {
                     if let webpage = media as? TelegramMediaWebpage {
@@ -468,6 +492,22 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                 }
             }
             
+            var forumThreadTitle: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            
+            var authorString = ""
+            if let message = item.message, let _ = message.threadId, let threadInfo = message.associatedThreadInfo {
+                let fullAuthorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                authorString = fullAuthorString.first ?? ""
+                forumThreadTitle = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+            } else if item.isGlobalSearchResult, let message = item.message {
+                let fullAuthorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                authorString = fullAuthorString.first ?? ""
+                
+                if fullAuthorString.count > 1, let globalAuthorTitle = fullAuthorString.last {
+                    forumThreadTitle = (NSAttributedString(string: globalAuthorTitle, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), false, nil, 0)
+                }
+            }
+            
             var chatListSearchResult: CachedChatListSearchResult?
             if let searchQuery = item.interaction.searchTextHighightState, let message = item.message {
                 if let cached = currentChatListSearchResult, cached.matches(text: message.text, searchQuery: searchQuery) {
@@ -546,19 +586,13 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     updateIconImageSignal = .complete()
                 }
             }
-            
-            var authorString = ""
-            if item.isGlobalSearchResult, let message = item.message {
-                authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
-            }
-            
+                        
             let authorText = NSAttributedString(string: authorString, font: authorFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
-            
-            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(TextNodeLayoutArguments(attributedString: authorText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - params.rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (authorNodeLayout, authorNodeApply) = authorNodeMakeLayout(item.context, params.width - leftInset - params.rightInset - 30.0, item.presentationData.theme.theme, authorText, forumThreadTitle)
             
             var contentHeight = 9.0 + titleNodeLayout.size.height + 10.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
-            if item.isGlobalSearchResult {
-                contentHeight += authorNodeLayout.size.height
+            if !authorString.isEmpty {
+                contentHeight += authorNodeLayout.height
             }
             
             var insets = UIEdgeInsets()
@@ -642,8 +676,8 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     let _ = linkNodeApply()
                     
                     let _ = authorNodeApply()
-                    transition.updateFrame(node: strongSelf.authorNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: linkFrame.maxY + 1.0), size: authorNodeLayout.size))
-                    strongSelf.authorNode.isHidden = !item.isGlobalSearchResult
+                    transition.updateFrame(node: strongSelf.authorNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: linkFrame.maxY + 1.0), size: authorNodeLayout))
+                    strongSelf.authorNode.isHidden = authorString.isEmpty
                     
                     if let image = instantViewImage {
                         strongSelf.instantViewIconNode.image = image
