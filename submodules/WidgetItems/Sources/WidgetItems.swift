@@ -249,8 +249,9 @@ public struct WidgetDataPeer: Codable, Equatable {
     public var avatarPath: String?
     public var badge: Badge?
     public var message: Message?
+    public var isForum: Bool
     
-    public init(id: Int64, name: String, lastName: String?, letters: [String], avatarPath: String?, badge: Badge?, message: Message?) {
+    public init(id: Int64, name: String, lastName: String?, letters: [String], avatarPath: String?, badge: Badge?, message: Message?, isForum: Bool) {
         self.id = id
         self.name = name
         self.lastName = lastName
@@ -258,6 +259,7 @@ public struct WidgetDataPeer: Codable, Equatable {
         self.avatarPath = avatarPath
         self.badge = badge
         self.message = message
+        self.isForum = isForum
     }
 }
 

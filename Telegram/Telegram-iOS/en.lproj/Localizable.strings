@@ -8277,3 +8277,6 @@ Sorry for the inconvenience.";
 
 "Premium.ChatManagement.Proceed" = "About Telegram Premium";
 "Premium.FasterSpeed.Proceed" = "About Telegram Premium";
+
+"OwnershipTransfer.EnterPassword" = "Enter Password";
+"OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to confirm the action.";
