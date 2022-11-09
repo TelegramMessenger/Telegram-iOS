@@ -592,7 +592,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
             
             var contentHeight = 9.0 + titleNodeLayout.size.height + 10.0 + descriptionNodeLayout.size.height + linkNodeLayout.size.height
             if !authorString.isEmpty {
-                contentHeight += authorNodeLayout.height
+                contentHeight += authorNodeLayout.height - 4.0
             }
             
             var insets = UIEdgeInsets()
@@ -676,7 +676,7 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     let _ = linkNodeApply()
                     
                     let _ = authorNodeApply()
-                    transition.updateFrame(node: strongSelf.authorNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: linkFrame.maxY + 1.0), size: authorNodeLayout))
+                    transition.updateFrame(node: strongSelf.authorNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: linkFrame.maxY - 1.0), size: authorNodeLayout))
                     strongSelf.authorNode.isHidden = authorString.isEmpty
                     
                     if let image = instantViewImage {

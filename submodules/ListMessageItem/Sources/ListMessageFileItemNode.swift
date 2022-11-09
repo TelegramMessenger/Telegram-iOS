@@ -202,7 +202,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     maxTitleWidth = floor(constrainedWidth * 0.7)
                 }
                 
-                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
                 
                 var remainingWidth = constrainedWidth - descriptionLayout.0.size.width
                 
@@ -338,7 +338,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     private var selectionNode: ItemListSelectableControlNode?
     
-    public let titleNode: TextNode
+    public let titleNode: DescriptionNode
     public let textNode: TextNode
     public let descriptionNode: DescriptionNode
     private let descriptionProgressNode: ImmediateTextNode
@@ -423,7 +423,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.highlightedBackgroundNode = ASDisplayNode()
         self.highlightedBackgroundNode.isLayerBacked = true
         
-        self.titleNode = TextNode()
+        self.titleNode = DescriptionNode()
         self.titleNode.displaysAsynchronously = false
         self.titleNode.isUserInteractionEnabled = false
 
@@ -561,7 +561,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     }
     
     override public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
-        let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
+        let titleNodeMakeLayout = self.titleNode.asyncLayout()
         let textNodeMakeLayout = TextNode.asyncLayout(self.textNode)
         let descriptionNodeMakeLayout = self.descriptionNode.asyncLayout()
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
@@ -619,7 +619,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let message = item.message
             
-            var forumThreadTitle: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            var titleExtraData: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            var descriptionExtraData: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
             var globalAuthorTitle: String?
             
             var selectedMedia: Media?
@@ -699,7 +700,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             if item.isGlobalSearchResult || item.isDownloadList {
                                 let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
-                                authorName = authorString.joined(separator: " → ")
+                                if authorString.count > 1 {
+                                    globalAuthorTitle = authorString.last ?? ""
+                                }
+                                authorName = authorString.first ?? ""
                             }
                             
                             titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
@@ -814,11 +818,17 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 descriptionText = NSAttributedString(string: " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
             }
             
-            if !(isInstantVideo || isVoice) {
-                if let _ = item.message?.threadId, let threadInfo = item.message?.associatedThreadInfo {
-                    forumThreadTitle = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
-                } else if let globalAuthorTitle = globalAuthorTitle {
-                    forumThreadTitle = (NSAttributedString(string: globalAuthorTitle, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), false, nil, 0)
+            if let _ = item.message?.threadId, let threadInfo = item.message?.associatedThreadInfo {
+                if isInstantVideo || isVoice {
+                    titleExtraData = (NSAttributedString(string: threadInfo.title, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+                } else {
+                    descriptionExtraData = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+                }
+            } else if let globalAuthorTitle = globalAuthorTitle {
+                if isInstantVideo || isVoice {
+                    titleExtraData = (NSAttributedString(string: globalAuthorTitle, font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor), false, nil, 0)
+                } else {
+                    descriptionExtraData = (NSAttributedString(string: globalAuthorTitle, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), false, nil, 0)
                 }
             }
             
@@ -956,11 +966,11 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let (dateNodeLayout, dateNodeApply) = dateNodeMakeLayout(TextNodeLayoutArguments(attributedString: dateAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 12.0, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(TextNodeLayoutArguments(attributedString: titleText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .middle, constrainedSize: CGSize(width: params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            let (titleNodeLayout, titleNodeApply) = titleNodeMakeLayout(item.context, params.width - leftInset - leftOffset - rightInset - dateNodeLayout.size.width - 4.0, item.presentationData.theme.theme, titleText, titleExtraData)
             
             let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, forumThreadTitle)
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, descriptionExtraData)
             
             var (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             if extensionTextLayout.truncated, let text = extensionText?.string  {
@@ -1020,7 +1030,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 insets.bottom += 35.0
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.height - 5.0 + descriptionNodeLayout.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -1144,7 +1154,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset, y: 9.0), size: titleNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.titleNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 1.0, y: 7.0), size: titleNodeLayout))
                     let _ = titleNodeApply()
                     
                     var descriptionOffset: CGFloat = 0.0
@@ -1165,7 +1175,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.textNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: textNodeLayout.size))
                     let _ = textNodeApply()
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout))
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset - 1.0, y: strongSelf.titleNode.frame.maxY - 3.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout))
                     let _ = descriptionNodeApply()
                     
                     let _ = dateNodeApply()
