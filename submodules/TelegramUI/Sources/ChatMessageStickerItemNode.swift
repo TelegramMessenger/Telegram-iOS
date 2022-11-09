@@ -635,11 +635,12 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     
                     if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
                         hasReply = false
-                    } else if let threadId = item.message.threadId, Int64(replyMessage.id.id) == threadId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
-                        hasReply = false
                     }
                     
-                    if case .peer = item.chatLocation, replyMessage.threadId != nil {
+                    if case .peer = item.chatLocation, replyMessage.threadId != nil, case let .peer(peerId) = item.chatLocation, peerId == replyMessage.id.peerId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
+                        if let threadId = item.message.threadId, Int64(replyMessage.id.id) == threadId {
+                            hasReply = false
+                        }
                         threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
                             presentationData: item.presentationData,
                             strings: item.presentationData.strings,

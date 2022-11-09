@@ -275,8 +275,10 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
         
         self.contentNode.highligthedChanged = { [weak self] highlighted in
             if let strongSelf = self {
-                if highlighted {
-                    strongSelf.contentNode.layer.animateScale(from: 1.0, to: 0.96, duration: 0.15, removeOnCompletion: false)
+                if highlighted, !strongSelf.frame.width.isZero {
+                    let scale = (strongSelf.frame.width - 10.0) / strongSelf.frame.width
+                    
+                    strongSelf.contentNode.layer.animateScale(from: 1.0, to: scale, duration: 0.15, removeOnCompletion: false)
                     
                     strongSelf.contentBackgroundNode.layer.removeAnimation(forKey: "opacity")
                     strongSelf.contentBackgroundNode.alpha = 0.2
@@ -358,8 +360,10 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             var lineRects = textLayout.linesRects().map { rect in
                 return CGRect(origin: rect.origin.offsetBy(dx: insets.left, dy: 0.0), size: CGSize(width: rect.width + iconSize.width + spacing + 3.0, height: rect.size.height))
             }
-            let lastRect = lineRects[lineRects.count - 1]
-            lineRects[lineRects.count - 1] = CGRect(origin: lastRect.origin, size: CGSize(width: lastRect.width + 11.0, height: lastRect.height))
+            if lineRects.count > 0 {
+                let lastRect = lineRects[lineRects.count - 1]
+                lineRects[lineRects.count - 1] = CGRect(origin: lastRect.origin, size: CGSize(width: lastRect.width + 11.0, height: lastRect.height))
+            }
             
             let size = CGSize(width: insets.left + iconSize.width + spacing + textLayout.size.width + insets.right + lineInset * 2.0, height: insets.top + textLayout.size.height + insets.bottom)
             
