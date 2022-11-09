@@ -8280,3 +8280,5 @@ Sorry for the inconvenience.";
 
 "OwnershipTransfer.EnterPassword" = "Enter Password";
 "OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to confirm the action.";
+
+"Navigation.AllChats" = "All Chats";

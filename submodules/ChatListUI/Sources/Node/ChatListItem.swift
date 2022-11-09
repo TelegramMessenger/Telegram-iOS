@@ -1527,7 +1527,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let contentImageSpacing: CGFloat = 2.0
             let contentImageTrailingSpace: CGFloat = 5.0
             var contentImageSpecs: [(message: EngineMessage, media: EngineMedia, size: CGSize)] = []
-            var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32)?
+            var forumThread: (id: Int64, title: String, iconId: Int64?, iconColor: Int32, isUnread: Bool)?
             
             switch contentData {
                 case let .chat(itemPeer, _, _, _, text, spoilers, customEmojiRanges):
@@ -1555,9 +1555,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 
                     if let _ = peerText, case let .channel(channel) = itemPeer.chatMainPeer, channel.flags.contains(.isForum), threadInfo == nil {
                         if let forumTopicData = forumTopicData {
-                            forumThread = (forumTopicData.id, forumTopicData.title, forumTopicData.iconFileId, forumTopicData.iconColor)
+                            forumThread = (forumTopicData.id, forumTopicData.title, forumTopicData.iconFileId, forumTopicData.iconColor, forumTopicData.isUnread)
                         } else if let threadInfo = threadInfo {
-                            forumThread = (threadInfo.id, threadInfo.info.title, threadInfo.info.icon, threadInfo.info.iconColor)
+                            forumThread = (threadInfo.id, threadInfo.info.title, threadInfo.info.icon, threadInfo.info.iconColor, false)
                         }
                     }
                     
@@ -2021,11 +2021,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var forumThreads: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)] = []
             if forumThread != nil || !topForumTopicItems.isEmpty {
                 if let forumThread = forumThread {
-                    forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.title, font: textFont, textColor: theme.authorNameColor), iconId: forumThread.iconId, iconColor: forumThread.iconColor))
+                    forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.title, font: textFont, textColor: forumThread.isUnread ? theme.authorNameColor : theme.messageTextColor), iconId: forumThread.iconId, iconColor: forumThread.iconColor))
                 }
                 for item in topForumTopicItems {
                     if forumThread?.id != item.id {
-                        forumThreads.append((id: item.id, title: NSAttributedString(string: item.title, font: textFont, textColor: theme.authorNameColor), iconId: item.iconFileId, iconColor: item.iconColor))
+                        forumThreads.append((id: item.id, title: NSAttributedString(string: item.title, font: textFont, textColor: item.isUnread ? theme.authorNameColor : theme.messageTextColor), iconId: item.iconFileId, iconColor: item.iconColor))
                     }
                 }
                 
@@ -2551,8 +2551,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             }
                         }
                         
-                        compoundHighlightingNode.color = theme.itemHighlightedBackgroundColor.withMultipliedAlpha(0.5)
-                        
                         var topRect = topForumTopicRect
                         topRect.origin.x -= 1.0
                         topRect.size.width += 2.0
@@ -2566,7 +2564,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let midY = floor((topForumTopicRect.minY + textRect.maxY) / 2.0) + 1.0
                         
                         let finalTopRect = CGRect(origin: topRect.origin, size: CGSize(width: topRect.width, height: midY - topRect.minY))
-                        let finalBottomRect = CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                        var finalBottomRect = CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                        if finalBottomRect.maxX < finalTopRect.maxX && abs(finalBottomRect.maxX - finalTopRect.maxX) < 5.0 {
+                            finalBottomRect.size.width = finalTopRect.maxX - finalBottomRect.minX
+                        }
                         
                         compoundHighlightingNode.inset = 0.0
                         compoundHighlightingNode.outerRadius = floor(finalBottomRect.height * 0.5)
@@ -2575,7 +2576,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         compoundHighlightingNode.updateRects([
                             finalTopRect,
                             finalBottomRect
-                        ])
+                        ], color: theme.pinnedItemBackgroundColor.mixedWith(theme.unreadBadgeInactiveBackgroundColor, alpha: 0.1))
                         
                         compoundTextButtonNode.frame = compoundHighlightingNode.frame
                     } else {
@@ -3297,5 +3298,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let result = self.view.snapshotContentTree()
         self.backgroundNode.alpha = 1.0
         return result
+    }
+    
+    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+        if let compoundTextButtonNode = self.compoundTextButtonNode, let compoundHighlightingNode = self.compoundHighlightingNode, compoundHighlightingNode.alpha != 0.0 {
+            let localPoint = self.view.convert(point, to: compoundHighlightingNode.view)
+            var matches = false
+            for rect in compoundHighlightingNode.rects {
+                if rect.contains(localPoint) {
+                    matches = true
+                    break
+                }
+            }
+            if matches {
+                return compoundTextButtonNode.view
+            }
+        }
+        
+        return super.hitTest(point, with: event)
     }
 }

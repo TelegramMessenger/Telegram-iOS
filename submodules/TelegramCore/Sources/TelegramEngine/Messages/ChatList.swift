@@ -30,16 +30,18 @@ public final class EngineChatList: Equatable {
     public struct ForumTopicData: Equatable {
         public var id: Int64
         public var title: String
-        public let iconFileId: Int64?
-        public let iconColor: Int32
+        public var iconFileId: Int64?
+        public var iconColor: Int32
         public var maxOutgoingReadMessageId: EngineMessage.Id
+        public var isUnread: Bool
         
-        public init(id: Int64, title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id) {
+        public init(id: Int64, title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id, isUnread: Bool) {
             self.id = id
             self.title = title
             self.iconFileId = iconFileId
             self.iconColor = iconColor
             self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
+            self.isUnread = isUnread
         }
     }
 
@@ -436,14 +438,14 @@ extension EngineChatList.Item {
             if let forumTopicData = forumTopicData {
                 let id = forumTopicData.id
                 if let forumTopicData = forumTopicData.info.data.get(MessageHistoryThreadData.self) {
-                    forumTopicDataValue = EngineChatList.ForumTopicData(id: id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
+                    forumTopicDataValue = EngineChatList.ForumTopicData(id: id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0)
                 }
             }
             
             var topForumTopicItems: [EngineChatList.ForumTopicData] = []
             for item in topForumTopics {
                 if let forumTopicData = item.info.data.get(MessageHistoryThreadData.self) {
-                    topForumTopicItems.append(EngineChatList.ForumTopicData(id: item.id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId)))
+                    topForumTopicItems.append(EngineChatList.ForumTopicData(id: item.id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0))
                 }
             }
             

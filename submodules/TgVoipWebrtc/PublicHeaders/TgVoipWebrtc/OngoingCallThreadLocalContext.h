@@ -206,24 +206,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 @property (nonatomic, copy) void (^ _Nullable audioLevelUpdated)(float);
 
-- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue
-                                   proxy:(VoipProxyServerWebrtc * _Nullable)proxy
-                             networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving
-                            derivedState:(NSData * _Nonnull)derivedState
-                                     key:(NSData * _Nonnull)key
-                              isOutgoing:(bool)isOutgoing
-                             connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer
-                                allowP2P:(BOOL)allowP2P
-                                allowTCP:(BOOL)allowTCP
-                       enableStunMarking:(BOOL)enableStunMarking
-                                 logPath:(NSString * _Nonnull)logPath
-                            statsLogPath:(NSString * _Nonnull)statsLogPath
-                       sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
-                     preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec
-                      audioInputDeviceId:(NSString * _Nonnull)audioInputDeviceId
-            useManualAudioSessionControl:(bool)useManualAudioSessionControl;
-
-- (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+- (instancetype _Nonnull)initWithVersion:(NSString * _Nonnull)version queue:(id<OngoingCallThreadLocalContextQueueWebrtc> _Nonnull)queue proxy:(VoipProxyServerWebrtc * _Nullable)proxy networkType:(OngoingCallNetworkTypeWebrtc)networkType dataSaving:(OngoingCallDataSavingWebrtc)dataSaving derivedState:(NSData * _Nonnull)derivedState key:(NSData * _Nonnull)key isOutgoing:(bool)isOutgoing connections:(NSArray<OngoingCallConnectionDescriptionWebrtc *> * _Nonnull)connections maxLayer:(int32_t)maxLayer allowP2P:(BOOL)allowP2P allowTCP:(BOOL)allowTCP enableStunMarking:(BOOL)enableStunMarking logPath:(NSString * _Nonnull)logPath statsLogPath:(NSString * _Nonnull)statsLogPath sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec audioInputDeviceId: (NSString * _Nonnull)audioInputDeviceId;
 
 - (void)beginTermination;
 - (void)stop:(void (^_Nullable)(NSString * _Nullable debugLog, int64_t bytesSentWifi, int64_t bytesReceivedWifi, int64_t bytesSentMobile, int64_t bytesReceivedMobile))completion;
@@ -376,8 +359,6 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     logPath:(NSString * _Nonnull)logPath;
 
 - (void)stop;
-
-- (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
 
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 

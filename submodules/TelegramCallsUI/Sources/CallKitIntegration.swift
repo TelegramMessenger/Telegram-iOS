@@ -8,7 +8,6 @@ import TelegramCore
 import SwiftSignalKit
 import AppBundle
 import AccountContext
-import TelegramAudio
 
 private let sharedProviderDelegate: AnyObject? = {
     if #available(iOSApplicationExtension 10.0, iOS 10.0, *) {
@@ -108,10 +107,6 @@ public final class CallKitIntegration {
             }
         }
     }
-    
-    public func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
-        (sharedProviderDelegate as? CallKitProviderDelegate)?.applyVoiceChatOutputMode(outputMode: outputMode)
-    }
 }
 
 @available(iOSApplicationExtension 10.0, iOS 10.0, *)
@@ -129,9 +124,6 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private var endCall: ((UUID) -> Signal<Bool, NoError>)?
     private var setCallMuted: ((UUID, Bool) -> Void)?
     private var audioSessionActivationChanged: ((Bool) -> Void)?
-    
-    private var isAudioSessionActive: Bool = false
-    private var pendingVoiceChatOutputMode: AudioSessionOutputMode?
     
     private let disposableSet = DisposableSet()
     
@@ -171,7 +163,7 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     private func requestTransaction(_ transaction: CXTransaction, completion: ((Bool) -> Void)? = nil) {
         self.callController.request(transaction) { error in
             if let error = error {
-                print("Error requesting transaction \(transaction): \(error)")
+                print("Error requesting transaction: \(error)")
             }
             completion?(error == nil)
         }
@@ -245,12 +237,6 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         update.supportsUngrouping = false
         update.supportsDTMF = false
         update.hasVideo = isVideo
-        
-        do {
-            try AVAudioSession.sharedInstance().setMode(.voiceChat)
-        } catch let e {
-            print("AVAudioSession.sharedInstance().setMode(.voiceChat) error \(e)")
-        }
         
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
             completion?(error as NSError?)
@@ -335,28 +321,13 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
     }
     
     func provider(_ provider: CXProvider, didActivate audioSession: AVAudioSession) {
-        print("provider didActivate default? \(audioSession === AVAudioSession.sharedInstance())")
-        self.isAudioSessionActive = true
         self.audioSessionActivationChanged?(true)
         self.audioSessionActivePromise?.set(true)
-        
-        if let outputMode = self.pendingVoiceChatOutputMode {
-            self.pendingVoiceChatOutputMode = nil
-            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
-        }
     }
     
     func provider(_ provider: CXProvider, didDeactivate audioSession: AVAudioSession) {
-        self.isAudioSessionActive = false
         self.audioSessionActivationChanged?(false)
         self.audioSessionActivePromise?.set(false)
     }
-    
-    func applyVoiceChatOutputMode(outputMode: AudioSessionOutputMode) {
-        if self.isAudioSessionActive {
-            ManagedAudioSession.shared?.applyVoiceChatOutputModeInCurrentAudioSession(outputMode: outputMode)
-        } else {
-            self.pendingVoiceChatOutputMode = outputMode
-        }
-    }
 }
+
