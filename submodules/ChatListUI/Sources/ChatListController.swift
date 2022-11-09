@@ -1835,7 +1835,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             } else if let peerView = peerView, let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
                 switch channel.participationStatus {
                 case .member:
-                    strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
+                    toolbar = nil
                 default:
                     let actionTitle: String
                     if channel.flags.contains(.requestToJoin) {
@@ -1843,13 +1843,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     } else {
                         actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
                     }
-                    strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
+                    toolbar = Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true))
                 }
             }
             var transition: ContainedViewLayoutTransition = .immediate
             let previousToolbar = previousToolbarValue.swap(toolbar)
             if (previousToolbar == nil) != (toolbar == nil) {
-                transition = .animated(duration: 0.3, curve: .easeInOut)
+                transition = .animated(duration: 0.4, curve: .spring)
             }
             strongSelf.setToolbar(toolbar, transition: transition)
         }))
