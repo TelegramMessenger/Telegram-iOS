@@ -758,13 +758,11 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             })))
         }
         
-        if canOpenClose {
-            items.append(.separator)
-            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                f(.default)
-                chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
-            })))
-        }
+        items.append(.separator)
+        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+            chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
+        })))
         
         return .single(items)
     }
