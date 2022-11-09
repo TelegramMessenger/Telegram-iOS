@@ -5705,6 +5705,16 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private func topPinnedMessageSignal(latest: Bool) -> Signal<ChatPinnedMessage?, NoError> {
         var pinnedPeerId: EnginePeer.Id?
         let threadId = self.chatLocation.threadId
+        let loadState: Signal<Bool, NoError> = self.chatDisplayNode.historyNode.historyState.get()
+        |> map { state -> Bool in
+            switch state {
+            case .loading:
+                return false
+            default:
+                return true
+            }
+        }
+        |> distinctUntilChanged
         
         switch self.chatLocation {
         case let .peer(id):
@@ -5720,10 +5730,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         if let peerId = pinnedPeerId {
             let topPinnedMessage: Signal<ChatPinnedMessage?, NoError>
             
-            struct ReferenceMessage {
-                var id: MessageId
-                var minId: MessageId
-                var isScrolled: Bool
+            enum ReferenceMessage {
+                struct Loaded {
+                    var id: MessageId
+                    var minId: MessageId
+                    var isScrolled: Bool
+                }
+                
+                case ready(Loaded)
+                case loading
             }
             
             let referenceMessage: Signal<ReferenceMessage?, NoError>
@@ -5736,18 +5751,22 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     self.chatDisplayNode.historyNode.topVisibleMessageRange.get()
                 )
                 |> map { scrolledToMessageId, topVisibleMessageRange -> ReferenceMessage? in
+                    if let topVisibleMessageRange = topVisibleMessageRange, topVisibleMessageRange.isLoading {
+                        return .loading
+                    }
+                    
                     let bottomVisibleMessage = topVisibleMessageRange?.lowerBound.id
                     let topVisibleMessage = topVisibleMessageRange?.upperBound.id
                     
                     if let scrolledToMessageId = scrolledToMessageId {
                         if let topVisibleMessage, let bottomVisibleMessage {
                             if scrolledToMessageId.allowedReplacementDirection.contains(.up) && topVisibleMessage < scrolledToMessageId.id {
-                                return ReferenceMessage(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false)
+                                return .ready(ReferenceMessage.Loaded(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false))
                             }
                         }
-                        return ReferenceMessage(id: scrolledToMessageId.id, minId: scrolledToMessageId.id, isScrolled: true)
+                        return .ready(ReferenceMessage.Loaded(id: scrolledToMessageId.id, minId: scrolledToMessageId.id, isScrolled: true))
                     } else if let topVisibleMessage, let bottomVisibleMessage {
-                        return ReferenceMessage(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false)
+                        return .ready(ReferenceMessage.Loaded(id: topVisibleMessage, minId: bottomVisibleMessage, isScrolled: false))
                     } else {
                         return nil
                     }
@@ -5881,7 +5900,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         let result = PinnedHistory(messages: messages, totalCount: messages.count)
                         
-                        if let referenceId = referenceMessageValue?.id {
+                        if case let .ready(loaded) = referenceMessageValue {
+                            let referenceId = loaded.id
+                            
                             if viewValue.entries.count < loadCount {
                                 subscriber.putNext(result)
                             } else if referenceId < viewValue.entries[1].message.id {
@@ -5919,7 +5940,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         if !initializedView {
                             initializedView = true
                             //print("reload at \(String(describing: referenceMessage?.id)) disposable \(unsafeBitCast(viewDisposable, to: UInt64.self))")
-                            viewDisposable.set((pinnedHistorySignal(anchorMessageId: referenceMessage?.id, count: loadCount)
+                            var referenceId: MessageId?
+                            if case let .ready(loaded) = referenceMessage {
+                                referenceId = loaded.id
+                            }
+                            viewDisposable.set((pinnedHistorySignal(anchorMessageId: referenceId, count: loadCount)
                             |> deliverOnMainQueue).start(next: { next in
                                 view = next
                                 updateState()
@@ -5941,9 +5966,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             topPinnedMessage = combineLatest(queue: .mainQueue(),
                 adjustedReplyHistory,
                 topMessage,
-                referenceMessage
+                referenceMessage,
+                loadState
             )
-            |> map { pinnedMessages, topMessage, referenceMessage -> ChatPinnedMessage? in
+            |> map { pinnedMessages, topMessage, referenceMessage, loadState -> ChatPinnedMessage? in
+                if !loadState {
+                    return nil
+                }
+                
                 var message: ChatPinnedMessage?
                 
                 let topMessageId: MessageId
@@ -5952,7 +5982,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 topMessageId = topMessage?.message.id ?? pinnedMessages.messages[pinnedMessages.messages.count - 1].message.id
                 
-                if let referenceMessage = referenceMessage, referenceMessage.isScrolled, !pinnedMessages.messages.isEmpty, referenceMessage.id == pinnedMessages.messages[0].message.id, let topMessage = topMessage {
+                if case let .ready(referenceMessage) = referenceMessage, referenceMessage.isScrolled, !pinnedMessages.messages.isEmpty, referenceMessage.id == pinnedMessages.messages[0].message.id, let topMessage = topMessage {
                     var index = topMessage.index
                     for message in pinnedMessages.messages {
                         if message.message.id == topMessage.message.id {
@@ -5975,7 +6005,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var matches = false
                     if message == nil {
                         matches = true
-                    } else if let referenceMessage = referenceMessage {
+                    } else if case let .ready(referenceMessage) = referenceMessage {
                         if referenceMessage.isScrolled {
                             if entry.message.id < referenceMessage.id {
                                 matches = true
@@ -5989,7 +6019,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         matches = true
                     }
                     if matches {
-                        if threadId != nil, let referenceMessage {
+                        if threadId != nil, case let .ready(referenceMessage) = referenceMessage {
                             if referenceMessage.minId <= entry.message.id {
                                 continue
                             }
