@@ -523,7 +523,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
             switch result {
             case let .forumTopics(_, _, topics, messages, chats, users, pts):
                 var items: [LoadMessageHistoryThreadsResult.Item] = []
-                var pinnedId: Int64?
+                var pinnedIds: [Int64] = []
                 
                 let addedMessages = messages.compactMap { message -> StoreMessage? in
                     return StoreMessage(apiMessage: message)
@@ -538,7 +538,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                         let _ = draft
                         
                         if (flags & (1 << 3)) != 0 {
-                            pinnedId = Int64(id)
+                            pinnedIds.append(Int64(id))
                         }
                         
                         let data = MessageHistoryThreadData(
@@ -589,11 +589,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                 
                 var pinnedThreadIds: [Int64]?
                 if offsetIndex == nil {
-                    if let pinnedId = pinnedId {
-                        pinnedThreadIds = [pinnedId]
-                    } else {
-                        pinnedThreadIds = []
-                    }
+                    pinnedThreadIds = pinnedIds
                 }
                 
                 var nextIndex: StoredPeerThreadCombinedState.Index
