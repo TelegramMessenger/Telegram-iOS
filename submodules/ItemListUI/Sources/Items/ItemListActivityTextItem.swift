@@ -109,7 +109,6 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
             let verticalInset: CGFloat = 7.0
             
             let titleFont = Font.regular(item.presentationData.fontSize.itemListBaseHeaderFontSize)
-            let titleBoldFont = Font.semibold(item.presentationData.fontSize.itemListBaseHeaderFontSize)
             
             var activityWidth: CGFloat = 0.0
             if item.displayActivity {
@@ -128,7 +127,7 @@ public class ItemListActivityTextItemNode: ListViewItemNode {
                 textColor = UIColor(rgb: 0xef8c00)
             }
             
-            let attributedString = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: textColor), bold: MarkdownAttributeSet(font: titleBoldFont, textColor: textColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
+            let attributedString = parseMarkdownIntoAttributedString(item.text, attributes: MarkdownAttributes(body: MarkdownAttributeSet(font: titleFont, textColor: textColor), bold: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.freeTextErrorColor), link: MarkdownAttributeSet(font: titleFont, textColor: item.presentationData.theme.list.itemAccentColor), linkAttribute: { contents in
                 return (TelegramTextAttributes.URL, contents)
             }))
             

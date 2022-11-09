@@ -1427,29 +1427,41 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                             strongSelf.containerLayoutUpdated(layout, navigationBarHeight: navigationBarHeight, transition: .immediate)
                         }
                     } else {
-                        let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: nil, { currentState in
+                        let _ = (ChatInterfaceState.update(engine: strongSelf.context.engine, peerId: peerId, threadId: threadId, { currentState in
                             return currentState.withUpdatedForwardMessageIds(Array(messageIds))
                         })
-                        |> deliverOnMainQueue).start(completed: {
+                        |> deliverOnMainQueue).start(completed: { [weak self] in
                             if let strongSelf = self {
-                                let controller = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
-                                controller.purposefulAction = { [weak self] in
-                                    self?.cancel?()
-                                }
-                                
-                                if let navigationController = strongSelf.navigationController, let peerSelectionControllerIndex = navigationController.viewControllers.firstIndex(where: { $0 is PeerSelectionController }) {
-                                    var viewControllers = navigationController.viewControllers
-                                    viewControllers.insert(controller, at: peerSelectionControllerIndex)
-                                    navigationController.setViewControllers(viewControllers, animated: false)
-                                    Queue.mainQueue().after(0.2) {
-                                        peerSelectionController?.dismiss()
+                                let proceed: (ChatController) -> Void = { chatController in
+                                    chatController.purposefulAction = { [weak self] in
+                                        self?.cancel?()
                                     }
-                                } else {
-                                    strongSelf.navigationController?.pushViewController(controller, animated: false, completion: {
-                                        if let peerSelectionController = peerSelectionController {
-                                            peerSelectionController.dismiss()
+                                    if let navigationController = strongSelf.navigationController {
+                                        var viewControllers = navigationController.viewControllers
+                                        if threadId != nil {
+                                            viewControllers.insert(chatController, at: viewControllers.count - 2)
+                                        } else {
+                                            viewControllers.insert(chatController, at: viewControllers.count - 1)
                                         }
+                                        navigationController.setViewControllers(viewControllers, animated: false)
+
+                                        strongSelf.activeActionDisposable.set((chatController.ready.get()
+                                        |> filter { $0 }
+                                        |> take(1)
+                                        |> deliverOnMainQueue).start(next: { [weak navigationController] _ in
+                                            viewControllers.removeAll(where: { $0 is PeerSelectionController })
+                                            navigationController?.setViewControllers(viewControllers, animated: true)
+                                        }))
+                                    }
+                                }
+
+                                if let threadId = threadId {
+                                    let _ = (strongSelf.context.sharedContext.chatControllerForForumThread(context: strongSelf.context, peerId: peerId, threadId: threadId)
+                                    |> deliverOnMainQueue).start(next: { chatController in
+                                        proceed(chatController)
                                     })
+                                } else {
+                                    proceed(strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false)))
                                 }
 
                                 strongSelf.updateState { state in

@@ -219,7 +219,7 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                     case .available:
                         textColor = .constructive
                     case .purchaseAvailable:
-                        textColor = .warning
+                        textColor = .generic
                     case .invalid, .taken:
                         textColor = .destructive
                     }

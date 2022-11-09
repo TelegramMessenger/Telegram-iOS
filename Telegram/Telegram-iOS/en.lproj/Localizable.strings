@@ -8269,8 +8269,8 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
 
-"Username.UsernamePurchaseAvailable" = "Sorry, this username is occupied by someone. But it's available for purchase on [fragment.com]().";
-"Channel.Username.UsernamePurchaseAvailable" = "Sorry, this link is occupied by someone. But it's available for purchase on [fragment.com]().";
+"Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is being resold via auction. [Learn more...]()";
+"Channel.Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is being resold via auction. [Learn more...]()";
 
 "DownloadList.IncreaseSpeed" = "Increase Speed";
 "Conversation.IncreaseSpeed" = "Increase Speed";

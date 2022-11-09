@@ -1959,9 +1959,9 @@ public final class ChatListNode: ListView {
         }
         self.view.addGestureRecognizer(selectionRecognizer)
         
-        if case .forum = location {
-            self.isSelectionGestureEnabled = false
-        }
+//        if case .forum = location {
+//            self.isSelectionGestureEnabled = false
+//        }
     }
     
     deinit {

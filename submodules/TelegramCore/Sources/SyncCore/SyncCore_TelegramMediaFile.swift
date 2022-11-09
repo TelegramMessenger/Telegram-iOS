@@ -683,12 +683,16 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     }
     
     public var isMusic: Bool {
+        var hasNonVoiceAudio = false
+        var hasVideo = false
         for attribute in self.attributes {
             if case .Audio(false, _, _, _, _) = attribute {
-                return true
+                hasNonVoiceAudio = true
+            } else if case .Video = attribute {
+                hasVideo = true
             }
         }
-        return false
+        return hasNonVoiceAudio && !hasVideo
     }
     
     public var isVoice: Bool {

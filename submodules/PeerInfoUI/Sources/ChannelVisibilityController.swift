@@ -688,7 +688,7 @@ private enum ChannelVisibilityEntry: ItemListNodeEntry {
                     case .taken:
                         textColor = .destructive
                     case .purchaseAvailable:
-                        textColor = .warning
+                        textColor = .generic
                     }
                 case .checking:
                     textColor = .generic
