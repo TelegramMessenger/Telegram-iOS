@@ -327,6 +327,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     
     public final var displayedItemRangeChanged: (ListViewDisplayedItemRange, Any?) -> Void = { _, _ in }
     public private(set) final var displayedItemRange: ListViewDisplayedItemRange = ListViewDisplayedItemRange(loadedRange: nil, visibleRange: nil)
+    public private(set) final var internalDisplayedItemRange: ListViewDisplayedItemRange?
     
     public private(set) final var opaqueTransactionState: Any?
     
@@ -4097,8 +4098,9 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
     public func updateVisibleItemRange(force: Bool = false) {
         let currentRange = self.immediateDisplayedItemRange()
         
-        if currentRange != self.displayedItemRange || force {
+        if currentRange != self.internalDisplayedItemRange || force {
             self.displayedItemRange = currentRange
+            self.internalDisplayedItemRange = currentRange
             self.displayedItemRangeChanged(currentRange, self.opaqueTransactionState)
         }
     }

@@ -32,6 +32,7 @@ struct ChatTopVisibleMessageRange: Equatable {
     var lowerBound: MessageIndex
     var upperBound: MessageIndex
     var isLast: Bool
+    var isLoading: Bool
 }
 
 private let historyMessageCount: Int = 44
@@ -591,7 +592,17 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private var loadedMessagesFromCachedDataDisposable: Disposable?
     
     let isTopReplyThreadMessageShown = ValuePromise<Bool>(false, ignoreRepeated: true)
-    let topVisibleMessageRange = ValuePromise<ChatTopVisibleMessageRange?>(nil, ignoreRepeated: true)
+    
+    private var topVisibleMessageRangeValueInitialized: Bool = false
+    private var topVisibleMessageRangeValue: ChatTopVisibleMessageRange?
+    private func updateTopVisibleMessageRange(_ value: ChatTopVisibleMessageRange?) {
+        if value != self.topVisibleMessageRangeValue || !self.topVisibleMessageRangeValueInitialized {
+            self.topVisibleMessageRangeValueInitialized = true
+            self.topVisibleMessageRangeValue = value
+            self.topVisibleMessageRange.set(.single(value))
+        }
+    }
+    let topVisibleMessageRange = Promise<ChatTopVisibleMessageRange?>(nil)
     
     var isSelectionGestureEnabled = true
 
@@ -1951,6 +1962,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         let historyView = transactionState.historyView
         var isTopReplyThreadMessageShownValue = false
         var topVisibleMessageRange: ChatTopVisibleMessageRange?
+        let isLoading = historyView.originalView.isLoading
         
         if let visible = displayedRange.visibleRange {
             let indexRange = (historyView.filteredEntries.count - 1 - visible.lastIndex, historyView.filteredEntries.count - 1 - visible.firstIndex)
@@ -2069,9 +2081,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                             isTopReplyThreadMessageShownValue = true
                         }
                         if let topVisibleMessageRangeValue = topVisibleMessageRange {
-                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
+                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1, isLoading: isLoading)
                         } else {
-                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
+                            topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1, isLoading: isLoading)
                         }
                         if message.id.namespace == Namespaces.Message.Cloud, self.remainingDynamicAdMessageInterval != nil {
                             allVisibleAnchorMessageIds.append((message.id, nodeIndex))
@@ -2122,9 +2134,9 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                                 isTopReplyThreadMessageShownValue = true
                             }
                             if let topVisibleMessageRangeValue = topVisibleMessageRange {
-                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
+                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: topVisibleMessageRangeValue.lowerBound, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1, isLoading: isLoading)
                             } else {
-                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1)
+                                topVisibleMessageRange = ChatTopVisibleMessageRange(lowerBound: message.index, upperBound: message.index, isLast: i == historyView.filteredEntries.count - 1, isLoading: isLoading)
                             }
                         }
                         if let message = messages.first {
@@ -2334,7 +2346,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             }
         }
         self.isTopReplyThreadMessageShown.set(isTopReplyThreadMessageShownValue)
-        self.topVisibleMessageRange.set(topVisibleMessageRange)
+        self.updateTopVisibleMessageRange(topVisibleMessageRange)
         let _ = self.visibleMessageRange.swap(topVisibleMessageRange.flatMap { range in
             return VisibleMessageRange(lowerBound: range.lowerBound, upperBound: range.upperBound)
         })
@@ -2964,6 +2976,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                 }
                 
                 strongSelf.hasActiveTransition = false
+                
                 strongSelf.dequeueHistoryViewTransitions()
             }
         }
