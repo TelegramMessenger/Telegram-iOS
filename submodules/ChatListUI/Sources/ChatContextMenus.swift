@@ -312,19 +312,16 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                         }
                     }
 
-                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                    if isUnread {
+                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                            f(.default)
+                        })))
                     } else {
-                        if isUnread {
-                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsRead, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsRead"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                                f(.default)
-                            })))
-                        } else {
-                            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                                let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
-                                f(.default)
-                            })))
-                        }
+                        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                            let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
+                            f(.default)
+                        })))
                     }
 
                     let archiveEnabled = !isSavedMessages && peerId != PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(777000)) && peerId == context.account.peerId
@@ -519,7 +516,19 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                 f(.default)
                 
-                let _ = context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: !isPinned).start()
+                let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId)
+                |> deliverOnMainQueue).start(error: { error in
+                    switch error {
+                    case let .limitReached(count):
+                        if let chatListController = chatListController {
+                            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                            let text = presentationData.strings.ChatList_MaxThreadPinsFinalText(Int32(count))
+                            chatListController.present(textAlertController(context: context, title: presentationData.strings.Premium_LimitReached, text: text, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})], parseMarkdown: true), in: .window(.root))
+                        }
+                    default:
+                        break
+                    }
+                })
             })))
         }
         
@@ -749,12 +758,11 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             })))
         }
         
-//        items.append(.separator)
-//        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-//            f(.default)
-//            
-//            
-//        })))
+        items.append(.separator)
+        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+            f(.default)
+            chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
+        })))
         
         return .single(items)
     }

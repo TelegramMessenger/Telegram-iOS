@@ -151,14 +151,14 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             case .member:
                 isMember = true
             case .left:
-                if case .replyThread = chatPresentationInterfaceState.chatLocation {
-                    if !channel.flags.contains(.joinToSend) {
+                if case let .replyThread(message) = chatPresentationInterfaceState.chatLocation {
+                    if !message.isForumPost && !channel.flags.contains(.joinToSend) {
                         isMember = true
                     }
                 }
             }
             
-            if channel.flags.contains(.isForum) {
+            if channel.flags.contains(.isForum) && isMember {
                 if let threadData = chatPresentationInterfaceState.threadData {
                     if threadData.isClosed {
                         var canManage = false
@@ -179,17 +179,6 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 panel.interfaceInteraction = interfaceInteraction
                                 return (panel, nil)
                             }
-                        }
-                    }
-                } else {
-                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
-                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
-                            return (currentPanel, nil)
-                        } else {
-                            let panel = ChatRestrictedInputPanelNode()
-                            panel.context = context
-                            panel.interfaceInteraction = interfaceInteraction
-                            return (panel, nil)
                         }
                     }
                 }
@@ -245,6 +234,22 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                         }
                     } else {
                         break
+                    }
+                }
+            }
+            
+            if channel.flags.contains(.isForum) {
+                if let _ = chatPresentationInterfaceState.threadData {
+                } else {
+                    if chatPresentationInterfaceState.interfaceState.replyMessageId == nil {
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
+                        }
                     }
                 }
             }

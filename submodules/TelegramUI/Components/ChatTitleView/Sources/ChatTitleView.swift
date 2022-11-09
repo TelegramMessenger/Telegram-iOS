@@ -718,7 +718,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             if self.titleRightIconNode.supernode == nil {
                 self.titleTextNode.addSubnode(self.titleRightIconNode)
             }
-            rightIconWidth = image.size.width + 3.0
+            rightIconWidth = max(24.0, image.size.width) + 3.0
         } else if self.titleRightIconNode.supernode != nil {
             self.titleRightIconNode.removeFromSupernode()
         }
@@ -728,12 +728,12 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             titleTransition = .immediate
         }
         
-        let titleSideInset: CGFloat = 3.0
+        let titleSideInset: CGFloat = 6.0
         var titleFrame: CGRect
         if size.height > 40.0 {
             var titleSize = self.titleTextNode.updateLayout(size: CGSize(width: clearBounds.width - leftIconWidth - credibilityIconWidth - rightIconWidth - titleSideInset * 2.0, height: size.height), animated: titleTransition.isAnimated)
             titleSize.width += credibilityIconWidth
-            let activitySize = self.activityNode.updateLayout(clearBounds.size, alignment: .center)
+            let activitySize = self.activityNode.updateLayout(CGSize(width: clearBounds.size.width - titleSideInset * 2.0, height: clearBounds.size.height), alignment: .center)
             let titleInfoSpacing: CGFloat = 0.0
             
             if activitySize.height.isZero {

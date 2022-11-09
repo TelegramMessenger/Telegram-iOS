@@ -914,7 +914,7 @@ final class MutableMessageHistoryView {
             case .ready:
                 return nil
             case let .loadHole(peerId, namespace, _, threadId, id):
-                return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, threadId: threadId)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)), self.fillCount * 2, self.userId)
+                return (.peer(MessageHistoryViewPeerHole(peerId: peerId, namespace: namespace, threadId: threadId)), .aroundId(MessageId(peerId: peerId, namespace: namespace, id: id)), 100, self.userId)
             }
         case let .loaded(loadedSample):
             if let hole = loadedSample.hole {
@@ -924,7 +924,7 @@ final class MutableMessageHistoryView {
                 } else {
                     direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))
                 }
-                return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, threadId: hole.threadId)), direction, self.fillCount * 2, self.userId)
+                return (.peer(MessageHistoryViewPeerHole(peerId: hole.peerId, namespace: hole.namespace, threadId: hole.threadId)), direction, 100, self.userId)
             } else {
                 return nil
             }

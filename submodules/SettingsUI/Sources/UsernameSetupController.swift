@@ -11,22 +11,23 @@ import AccountContext
 import ShareController
 import UndoUI
 import InviteLinksUI
+import TextFormat
 
 private final class UsernameSetupControllerArguments {
     let account: Account
-    
     let updatePublicLinkText: (String?, String) -> Void
     let shareLink: () -> Void
-    
     let activateLink: (String) -> Void
     let deactivateLink: (String) -> Void
+    let openAuction: (String) -> Void
     
-    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void, shareLink: @escaping () -> Void, activateLink: @escaping (String) -> Void, deactivateLink: @escaping (String) -> Void) {
+    init(account: Account, updatePublicLinkText: @escaping (String?, String) -> Void, shareLink: @escaping () -> Void, activateLink: @escaping (String) -> Void, deactivateLink: @escaping (String) -> Void, openAuction: @escaping (String) -> Void) {
         self.account = account
         self.updatePublicLinkText = updatePublicLinkText
         self.shareLink = shareLink
         self.activateLink = activateLink
         self.deactivateLink = deactivateLink
+        self.openAuction = openAuction
     }
 }
 
@@ -55,7 +56,7 @@ private enum UsernameSetupEntryId: Hashable {
 private enum UsernameSetupEntry: ItemListNodeEntry {
     case publicLinkHeader(PresentationTheme, String)
     case editablePublicLink(PresentationTheme, PresentationStrings, String, String?, String)
-    case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String)
+    case publicLinkStatus(PresentationTheme, String, AddressNameValidationStatus, String, String)
     case publicLinkInfo(PresentationTheme, String)
     
     case additionalLinkHeader(PresentationTheme, String)
@@ -110,8 +111,8 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .publicLinkStatus(lhsTheme, lhsAddressName, lhsStatus, lhsText):
-                if case let .publicLinkStatus(rhsTheme, rhsAddressName, rhsStatus, rhsText) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsStatus == rhsStatus, lhsText == rhsText {
+            case let .publicLinkStatus(lhsTheme, lhsAddressName, lhsStatus, lhsText, lhsUsername):
+                if case let .publicLinkStatus(rhsTheme, rhsAddressName, rhsStatus, rhsText, rhsUsername) = rhs, lhsTheme === rhsTheme, lhsAddressName == rhsAddressName, lhsStatus == rhsStatus, lhsText == rhsText, lhsUsername == rhsUsername {
                     return true
                 } else {
                     return false
@@ -207,24 +208,28 @@ private enum UsernameSetupEntry: ItemListNodeEntry {
                         arguments.shareLink()
                     }
                 })
-            case let .publicLinkStatus(theme, _, status, text):
+            case let .publicLinkStatus(_, _, status, text, username):
                 var displayActivity = false
-                let string: NSAttributedString
+                let textColor: ItemListActivityTextItem.TextColor
                 switch status {
-                    case .invalidFormat:
-                        string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
-                    case let .availability(availability):
-                        switch availability {
-                            case .available:
-                                string = NSAttributedString(string: text, textColor: theme.list.freeTextSuccessColor)
-                            case .invalid, .taken:
-                                string = NSAttributedString(string: text, textColor: theme.list.freeTextErrorColor)
-                        }
-                    case .checking:
-                        string = NSAttributedString(string: text, textColor: theme.list.freeTextColor)
-                        displayActivity = true
+                case .invalidFormat:
+                    textColor = .destructive
+                case let .availability(availability):
+                    switch availability {
+                    case .available:
+                        textColor = .constructive
+                    case .purchaseAvailable:
+                        textColor = .generic
+                    case .invalid, .taken:
+                        textColor = .destructive
+                    }
+                case .checking:
+                    textColor = .generic
+                    displayActivity = true
                 }
-                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: string, sectionId: self.section)
+                return ItemListActivityTextItem(displayActivity: displayActivity, presentationData: presentationData, text: text, color: textColor, linkAction: { _ in
+                    arguments.openAuction(username)
+                }, sectionId: self.section)
             case let .additionalLinkHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
             case let .additionalLink(_, link, _):
@@ -328,11 +333,19 @@ private func usernameSetupControllerEntries(presentationData: PresentationData, 
                             statusText = presentationData.strings.Username_InvalidCharacters
                         case .taken:
                             statusText = presentationData.strings.Username_InvalidTaken
+                        case .purchaseAvailable:
+                            var markdownString = presentationData.strings.Username_UsernamePurchaseAvailable
+                            let entities = generateTextEntities(markdownString, enabledTypes: [.mention])
+                            if let entity = entities.first {
+                                markdownString.insert(contentsOf: "]()", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.upperBound))
+                                markdownString.insert(contentsOf: "[", at: markdownString.index(markdownString.startIndex, offsetBy: entity.range.lowerBound))
+                            }
+                            statusText = markdownString
                     }
                 case .checking:
                     statusText = presentationData.strings.Username_CheckingUsername
             }
-            entries.append(.publicLinkStatus(presentationData.theme, currentUsername, status, statusText))
+            entries.append(.publicLinkStatus(presentationData.theme, currentUsername, status, statusText, currentUsername))
         }
         
         var infoText = presentationData.strings.Username_Help
@@ -460,6 +473,10 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_DeactivateAlertTitle, text: presentationData.strings.Username_DeactivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_DeactivateAlertHide, action: {
             let _ = context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: false).start()
         })]), nil)
+    }, openAuction: { username in
+        dismissInputImpl?()
+        
+        context.sharedContext.openExternalUrl(context: context, urlContext: .generic, url: "https://fragment.com/username/\(username)", forceExternal: true, presentationData: context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})
     })
     
     let temporaryOrder = Promise<[String]?>(nil)
@@ -669,6 +686,5 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
-    
     return controller
 }

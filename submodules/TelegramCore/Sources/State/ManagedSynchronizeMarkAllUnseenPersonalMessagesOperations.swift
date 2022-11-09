@@ -128,7 +128,7 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
             switch result {
                 case let .messages(messages, _, _):
                     return .single(messages.compactMap({ $0.id() }))
-                case let .channelMessages(_, _, _, _, messages, _, _):
+                case let .channelMessages(_, _, _, _, messages, _, _, _):
                     return .single(messages.compactMap({ $0.id() }))
                 case .messagesNotModified:
                     return .single([])

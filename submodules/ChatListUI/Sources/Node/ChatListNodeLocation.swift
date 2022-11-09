@@ -267,6 +267,7 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     hasUnseenMentions: hasUnseenMentions,
                     hasUnseenReactions: hasUnseenReactions,
                     forumTopicData: nil,
+                    topForumTopicItems: [],
                     hasFailed: false,
                     isContact: false
                 ))

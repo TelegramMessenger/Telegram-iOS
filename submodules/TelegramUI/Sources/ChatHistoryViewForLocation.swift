@@ -110,6 +110,12 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                             canScrollToRead = false
                         }
                         
+                        if tagMask == nil, case let .replyThread(message) = chatLocation, message.isForumPost, view.maxReadIndex == nil {
+                            if case let .message(index) = view.anchorIndex {
+                                scrollPosition = .index(index: .message(index), position: .bottom(0.0), directionHint: .Up, animated: false, highlight: false, displayLink: false)
+                            }
+                        }
+                        
                         if let maxReadIndex = view.maxReadIndex, tagMask == nil, canScrollToRead {
                             let aroundIndex = maxReadIndex
                             scrollPosition = .unread(index: maxReadIndex)
@@ -123,13 +129,13 @@ func chatHistoryViewForLocation(_ location: ChatHistoryLocationInput, ignoreMess
                                     }
                                 }
                                 
-                                let maxIndex = targetIndex + count / 2
-                                let minIndex = targetIndex - count / 2
+                                let maxIndex = targetIndex + 40
+                                let minIndex = targetIndex - 40
                                 if minIndex <= 0 && view.holeEarlier {
                                     fadeIn = true
                                     return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))
                                 }
-                                if maxIndex >= targetIndex {
+                                if maxIndex >= view.entries.count {
                                     if view.holeLater {
                                         fadeIn = true
                                         return .Loading(initialData: combinedInitialData, type: .Generic(type: updateType))

@@ -2147,29 +2147,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
                     c.dismiss(completion: {
                         if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                            let currentPeerId = strongSelf.peerId
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(currentPeer)), subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
-                                var viewControllers = navigationController.viewControllers
-                                var indexesToRemove = Set<Int>()
-                                var keptCurrentChatController = false
-                                var index: Int = viewControllers.count - 1
-                                for controller in viewControllers.reversed() {
-                                    if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
-                                        if peerId == currentPeerId && !keptCurrentChatController {
-                                            keptCurrentChatController = true
-                                        } else {
+                            if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
+                                let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).start()
+                            } else {
+                                let targetLocation: NavigateToChatControllerParams.Location
+                                if case let .replyThread(message) = strongSelf.chatLocation {
+                                    targetLocation = .replyThread(message)
+                                } else {
+                                    targetLocation = .peer(EnginePeer(currentPeer))
+                                }
+                                
+                                let currentPeerId = strongSelf.peerId
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                    var viewControllers = navigationController.viewControllers
+                                    var indexesToRemove = Set<Int>()
+                                    var keptCurrentChatController = false
+                                    var index: Int = viewControllers.count - 1
+                                    for controller in viewControllers.reversed() {
+                                        if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
+                                            if peerId == currentPeerId && !keptCurrentChatController {
+                                                keptCurrentChatController = true
+                                            } else {
+                                                indexesToRemove.insert(index)
+                                            }
+                                        } else if controller is PeerInfoScreen {
                                             indexesToRemove.insert(index)
                                         }
-                                    } else if controller is PeerInfoScreen {
-                                        indexesToRemove.insert(index)
+                                        index -= 1
                                     }
-                                    index -= 1
-                                }
-                                for i in indexesToRemove.sorted().reversed() {
-                                    viewControllers.remove(at: i)
-                                }
-                                navigationController.setViewControllers(viewControllers, animated: false)
-                            }))
+                                    for i in indexesToRemove.sorted().reversed() {
+                                        viewControllers.remove(at: i)
+                                    }
+                                    navigationController.setViewControllers(viewControllers, animated: false)
+                                }))
+                            }
                         }
                     })
                 })))
@@ -2298,36 +2309,40 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         items.append(.action(ContextMenuActionItem(text: strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor) }, action: { c, f in
                             c.dismiss(completion: {
                                 if let strongSelf = self, let currentPeer = strongSelf.data?.peer, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                                    let targetLocation: NavigateToChatControllerParams.Location
-                                    if case let .replyThread(message) = strongSelf.chatLocation {
-                                        targetLocation = .replyThread(message)
+                                    if let channel = currentPeer as? TelegramChannel, channel.flags.contains(.isForum), let threadId = message.threadId {
+                                        let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: currentPeer.id, threadId: threadId, messageId: message.id, navigationController: navigationController, activateInput: nil, keepStack: .default).start()
                                     } else {
-                                        targetLocation = .peer(EnginePeer(currentPeer))
-                                    }
-                                    
-                                    let currentPeerId = strongSelf.peerId
-                                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
-                                        var viewControllers = navigationController.viewControllers
-                                        var indexesToRemove = Set<Int>()
-                                        var keptCurrentChatController = false
-                                        var index: Int = viewControllers.count - 1
-                                        for controller in viewControllers.reversed() {
-                                            if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
-                                                if peerId == currentPeerId && !keptCurrentChatController {
-                                                    keptCurrentChatController = true
-                                                } else {
+                                        let targetLocation: NavigateToChatControllerParams.Location
+                                        if case let .replyThread(message) = strongSelf.chatLocation {
+                                            targetLocation = .replyThread(message)
+                                        } else {
+                                            targetLocation = .peer(EnginePeer(currentPeer))
+                                        }
+                                        
+                                        let currentPeerId = strongSelf.peerId
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: targetLocation, subject: .message(id: .id(message.id), highlight: true, timecode: nil), keepStack: .always, useExisting: false, purposefulAction: {
+                                            var viewControllers = navigationController.viewControllers
+                                            var indexesToRemove = Set<Int>()
+                                            var keptCurrentChatController = false
+                                            var index: Int = viewControllers.count - 1
+                                            for controller in viewControllers.reversed() {
+                                                if let controller = controller as? ChatController, case let .peer(peerId) = controller.chatLocation {
+                                                    if peerId == currentPeerId && !keptCurrentChatController {
+                                                        keptCurrentChatController = true
+                                                    } else {
+                                                        indexesToRemove.insert(index)
+                                                    }
+                                                } else if controller is PeerInfoScreen {
                                                     indexesToRemove.insert(index)
                                                 }
-                                            } else if controller is PeerInfoScreen {
-                                                indexesToRemove.insert(index)
+                                                index -= 1
                                             }
-                                            index -= 1
-                                        }
-                                        for i in indexesToRemove.sorted().reversed() {
-                                            viewControllers.remove(at: i)
-                                        }
-                                        navigationController.setViewControllers(viewControllers, animated: false)
-                                    }))
+                                            for i in indexesToRemove.sorted().reversed() {
+                                                viewControllers.remove(at: i)
+                                            }
+                                            navigationController.setViewControllers(viewControllers, animated: false)
+                                        }))
+                                    }
                                 }
                             })
                         })))
@@ -2431,6 +2446,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             })
         }, navigateToMessage: { fromId, id in
         }, navigateToMessageStandalone: { _ in
+        }, navigateToThreadMessage: { _, _, _ in
         }, tapMessage: nil, clickThroughMessage: {
         }, toggleMessagesSelection: { [weak self] ids, value in
             guard let strongSelf = self else {
@@ -8548,7 +8564,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     override public var customNavigationData: CustomViewControllerNavigationData? {
         get {
             if !self.isSettings {
-                return ChatControllerNavigationData(peerId: self.peerId)
+                return ChatControllerNavigationData(peerId: self.peerId, threadId: self.chatLocation.threadId)
             } else {
                 return nil
             }
@@ -8760,7 +8776,7 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.navigationItem.backBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         }
            
-        if case .peer = self.chatLocation {
+        if self.chatLocation.peerId != nil {
             self.navigationBar?.makeCustomTransitionNode = { [weak self] other, isInteractive in
                 guard let strongSelf = self else {
                     return nil
@@ -8775,9 +8791,6 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
                     return nil
                 }
                 if isInteractive && strongSelf.controllerNode.headerNode.isAvatarExpanded {
-                    return nil
-                }
-                if other.contentNode != nil {
                     return nil
                 }
                 if let allowsCustomTransition = other.allowsCustomTransition, !allowsCustomTransition() {
@@ -8924,50 +8937,122 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
+    static func displayChatNavigationMenu(context: AccountContext, chatNavigationStack: [ChatNavigationStackItem], nextFolderId: Int32?, parentController: ViewController, backButtonView: UIView, navigationController: NavigationController, gesture: ContextGesture) {
+        let peerMap = EngineDataMap(
+            Set(chatNavigationStack.map(\.peerId)).map(TelegramEngine.EngineData.Item.Peer.Peer.init)
+        )
+        let threadDataMap = EngineDataMap(
+            Set(chatNavigationStack.filter { $0.threadId != nil }).map { TelegramEngine.EngineData.Item.Peer.ThreadData(id: $0.peerId, threadId: $0.threadId!) }
+        )
+        let _ = (context.engine.data.get(
+            peerMap,
+            threadDataMap
+        )
+        |> deliverOnMainQueue).start(next: { [weak parentController, weak backButtonView, weak navigationController] peerMap, threadDataMap in
+            guard let parentController, let backButtonView else {
+                return
+            }
+            
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            
+            let avatarSize = CGSize(width: 28.0, height: 28.0)
+            
+            var items: [ContextMenuItem] = []
+            
+            items.append(.action(ContextMenuActionItem(text: presentationData.strings.Navigation_AllChats, icon: { theme in
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Chats"), color: theme.contextMenu.primaryColor)
+            }, action: { _, f in
+                f(.default)
+                
+                navigationController?.popToRoot(animated: true)
+            })))
+            
+            for item in chatNavigationStack {
+                guard let maybeItemPeer = peerMap[item.peerId], let itemPeer = maybeItemPeer else {
+                    continue
+                }
+                
+                let title: String
+                let iconSource: ContextMenuActionItemIconSource?
+                if let threadId = item.threadId {
+                    guard let maybeThreadData = threadDataMap[TelegramEngine.EngineData.Item.Peer.ThreadData.Key(id: item.peerId, threadId: threadId)], let threadData = maybeThreadData else {
+                        continue
+                    }
+                    title = threadData.info.title
+                    iconSource = nil
+                } else {
+                    if itemPeer.id == context.account.peerId {
+                        title = presentationData.strings.DialogList_SavedMessages
+                        iconSource = nil
+                    } else {
+                        title = itemPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        iconSource = ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: context.account, peer: itemPeer, size: avatarSize))
+                    }
+                }
+                
+                let isSavedMessages = itemPeer.id == context.account.peerId
+                
+                items.append(.action(ContextMenuActionItem(text: title, icon: { _ in
+                    if isSavedMessages {
+                        return generateAvatarImage(size: avatarSize, icon: savedMessagesIcon, iconScale: 0.5, color: .blue)
+                    }
+                    return nil
+                }, iconSource: iconSource, action: { _, f in
+                    f(.default)
+                    
+                    guard let navigationController = navigationController else {
+                        return
+                    }
+                    
+                    var updatedChatNavigationStack = chatNavigationStack
+                    if let index = updatedChatNavigationStack.firstIndex(of: item) {
+                        updatedChatNavigationStack.removeSubrange(0 ..< (index + 1))
+                    }
+                    
+                    let navigateChatLocation: NavigateToChatControllerParams.Location
+                    if let threadId = item.threadId {
+                        navigateChatLocation = .replyThread(ChatReplyThreadMessage(
+                            messageId: MessageId(peerId: item.peerId, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false
+                        ))
+                    } else {
+                        navigateChatLocation = .peer(itemPeer)
+                    }
+
+                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: navigateChatLocation, useBackAnimation: true, animated: true, chatListFilter: nextFolderId, chatNavigationStack: updatedChatNavigationStack, completion: { _ in
+                    }))
+                })))
+            }
+            let contextController = ContextController(account: context.account, presentationData: presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: parentController, sourceView: backButtonView, insets: UIEdgeInsets(), contentInsets: UIEdgeInsets(top: 0.0, left: -15.0, bottom: 0.0, right: -15.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
+            parentController.presentInGlobalOverlay(contextController)
+        })
+    }
+    
     override public func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
-        var chatNavigationStack: [PeerId] = []
+        var chatNavigationStack: [ChatNavigationStackItem] = []
         if !self.isSettings, let summary = self.customNavigationDataSummary as? ChatControllerNavigationDataSummary {
             chatNavigationStack.removeAll()
-            chatNavigationStack = summary.peerIds.filter({ $0 != peerId })
+            chatNavigationStack = summary.peerNavigationItems.filter({ $0 != ChatNavigationStackItem(peerId: self.peerId, threadId: self.chatLocation.threadId) })
         }
         
         if !chatNavigationStack.isEmpty {
             self.navigationBar?.backButtonNode.isGestureEnabled = true
             self.navigationBar?.backButtonNode.activated = { [weak self] gesture, _ in
-                guard let strongSelf = self else {
+                guard let strongSelf = self, let backButtonNode = strongSelf.navigationBar?.backButtonNode, let navigationController = strongSelf.navigationController as? NavigationController else {
                     gesture.cancel()
                     return
                 }
                 
-                let _ = (strongSelf.context.engine.data.get(EngineDataList(
-                    chatNavigationStack.map(TelegramEngine.EngineData.Item.Peer.Peer.init)
-                ))
-                |> deliverOnMainQueue).start(next: { peerList in
-                    guard let strongSelf = self, let backButtonNode = strongSelf.navigationBar?.backButtonNode else {
-                        return
-                    }
-                    let peers = peerList.compactMap { $0 }
-                    
-                    let avatarSize = CGSize(width: 28.0, height: 28.0)
-                    
-                    var items: [ContextMenuItem] = []
-                    for peer in peers {
-                        items.append(.action(ContextMenuActionItem(text: peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder), icon: { _ in return nil }, iconSource: ContextMenuActionItemIconSource(size: avatarSize, signal: peerAvatarCompleteImage(account: strongSelf.context.account, peer: peer, size: avatarSize)), action: { _, f in
-                            f(.default)
-                            
-                            guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
-                                return
-                            }
-
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), animated: true, completion: { _ in
-                            }))
-                        })))
-                    }
-                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .reference(ChatControllerContextReferenceContentSource(controller: strongSelf, sourceView: backButtonNode.view, insets: UIEdgeInsets(), contentInsets: UIEdgeInsets(top: 0.0, left: -15.0, bottom: 0.0, right: -15.0))), items: .single(ContextController.Items(content: .list(items))), gesture: gesture)
-                    strongSelf.presentInGlobalOverlay(contextController)
-                })
+                PeerInfoScreenImpl.displayChatNavigationMenu(
+                    context: strongSelf.context,
+                    chatNavigationStack: chatNavigationStack,
+                    nextFolderId: nil,
+                    parentController: strongSelf,
+                    backButtonView: backButtonNode.view,
+                    navigationController: navigationController,
+                    gesture: gesture
+                )
             }
         }
     }
@@ -9105,14 +9190,6 @@ private func getUserPeer(engine: TelegramEngine, peerId: EnginePeer.Id) -> Signa
     }
 }
 
-final class PeerInfoNavigationSourceTag {
-    let peerId: PeerId
-    
-    init(peerId: PeerId) {
-        self.peerId = peerId
-    }
-}
-
 private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavigationTransitionNode {
     private let screenNode: PeerInfoScreenNode
     private let presentationData: PresentationData
@@ -9238,7 +9315,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateAlpha(node: currentBackButton, alpha: (1.0 - fraction))
         }
         
-        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let _ = (bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode)?.avatarNode, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
+        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
             let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             

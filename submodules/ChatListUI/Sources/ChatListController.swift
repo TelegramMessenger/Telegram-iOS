@@ -419,6 +419,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: self, isViewingAsTopics: true, sourceView: sourceNode.view, gesture: gesture)
             }
             self.moreBarButton.addTarget(self, action: #selector(self.moreButtonPressed), forControlEvents: .touchUpInside)
+            
+            /*self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
+            self.navigationBar?.allowsCustomTransition = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationBar?.userInfo == nil {
+                    return false
+                }
+                return true
+            }*/
         }
         
         switch self.location {
@@ -514,21 +525,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let navigationController = strongSelf.navigationController as? NavigationController {
                             let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, botStart: nil, mode: .standard(previewing: false))
                             navigationController.replaceController(strongSelf, with: chatController, animated: true)
-                        }
-                    }
-                    
-                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
-                        switch channel.participationStatus {
-                        case .member:
-                            strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
-                        default:
-                            let actionTitle: String
-                            if channel.flags.contains(.requestToJoin) {
-                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
-                            } else {
-                                actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
-                            }
-                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                         }
                     }
                 })
@@ -1650,7 +1646,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             
             var joined = false
-            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+            if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
                 for media in message.media {
                     if let action = media as? TelegramMediaAction, action.action == .peerJoined {
                         joined = true
@@ -1664,7 +1660,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _):
+            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _):
                 switch item.index {
                 case .chatList:
                     if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {
@@ -1770,11 +1766,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
+        let peerView: Signal<PeerView?, NoError>
+        if case let .forum(peerId) = location {
+            peerView = context.account.viewTracker.peerView(peerId)
+            |> map(Optional.init)
+        } else {
+            peerView = .single(nil)
+        }
+        
         let previousToolbarValue = Atomic<Toolbar?>(value: nil)
         self.stateDisposable.set(combineLatest(queue: .mainQueue(),
             self.presentationDataValue.get(),
-            peerIdsAndOptions
-        ).start(next: { [weak self] presentationData, peerIdsAndOptions in
+            peerIdsAndOptions,
+            peerView
+        ).start(next: { [weak self] presentationData, peerIdsAndOptions, peerView in
             guard let strongSelf = self else {
                 return
             }
@@ -1827,11 +1832,24 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     }
                     toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
                 }
+            } else if let peerView = peerView, let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                switch channel.participationStatus {
+                case .member:
+                    toolbar = nil
+                default:
+                    let actionTitle: String
+                    if channel.flags.contains(.requestToJoin) {
+                        actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
+                    } else {
+                        actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
+                    }
+                    toolbar = Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true))
+                }
             }
             var transition: ContainedViewLayoutTransition = .immediate
             let previousToolbar = previousToolbarValue.swap(toolbar)
             if (previousToolbar == nil) != (toolbar == nil) {
-                transition = .animated(duration: 0.3, curve: .easeInOut)
+                transition = .animated(duration: 0.4, curve: .spring)
             }
             strongSelf.setToolbar(toolbar, transition: transition)
         }))
@@ -1871,10 +1889,18 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
         self.tabContainerNode.presentPremiumTip = { [weak self] in
             if let strongSelf = self {
-                let context = strongSelf.context
                 strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .universal(animation: "anim_reorder", scale: 0.05, colors: [:], title: nil, text: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAll, customUndoText: strongSelf.presentationData.strings.ChatListFolderSettings_SubscribeToMoveAllAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                     if case .undo = action {
-                        strongSelf.push(PremiumIntroScreen(context: context, source: .folders))
+                        let context = strongSelf.context
+                        var replaceImpl: ((ViewController) -> Void)?
+                        let controller = PremiumDemoScreen(context: context, subject: .advancedChatManagement, action: {
+                            let controller = PremiumIntroScreen(context: context, source: .folders)
+                            replaceImpl?(controller)
+                        })
+                        replaceImpl = { [weak controller] c in
+                            controller?.replace(with: c)
+                        }
+                        strongSelf.push(controller)
                     }
                     return false }), in: .current)
             }
@@ -2980,6 +3006,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     displaySearchFilters = false
                 }
                 
+                if !tabsIsEmpty, let snapshotView = strongSelf.tabContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = strongSelf.tabContainerNode.frame
+                    strongSelf.tabContainerNode.view.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                }
+                
                 if let searchContentNode = strongSelf.searchContentNode {                    
                     if let filterContainerNodeAndActivate = strongSelf.chatListDisplayNode.activateSearch(placeholderNode: searchContentNode.placeholderNode, displaySearchFilters: displaySearchFilters, hasDownloads: strongSelf.hasDownloads, initialFilter: filter, navigationController: strongSelf.navigationController as? NavigationController) {
                         let (filterContainerNode, activate) = filterContainerNodeAndActivate
@@ -2996,13 +3031,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             searchContentNode.search(filter: filter, query: query)
                         }
                         
-                        if !tabsIsEmpty {
-                            Queue.mainQueue().after(0.01) {
-                                filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 38.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                                filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                                
-                                strongSelf.tabContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -64.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                            }
+                        Queue.mainQueue().justDispatch {
+                            filterContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: 30.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                            filterContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                         }
                     }
                 }
@@ -3033,15 +3064,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if !self.displayNavigationBar {
             var completion: (() -> Void)?
             
-            var filterContainerNode: ASDisplayNode?
-            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
-                filterContainerNode = searchContentNode.filterContainerNode
-            }
-            
-            if let searchContentNode = self.searchContentNode {
-                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
-            }
-            
             let tabsIsEmpty: Bool
             if let (resolvedItems, displayTabsAtBottom, _) = self.tabContainerData {
                 tabsIsEmpty = resolvedItems.count <= 1 || displayTabsAtBottom
@@ -3049,6 +3071,33 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 tabsIsEmpty = true
             }
             
+            
+            var filterContainerNode: ASDisplayNode?
+            if animated, let searchContentNode = self.chatListDisplayNode.searchDisplayController?.contentNode as? ChatListSearchContainerNode {
+                filterContainerNode = searchContentNode.filterContainerNode
+                
+                if let filterContainerNode = filterContainerNode, let snapshotView = filterContainerNode.view.snapshotView(afterScreenUpdates: false) {
+                    snapshotView.frame = filterContainerNode.frame
+                    filterContainerNode.view.superview?.addSubview(snapshotView)
+                    
+                    snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                        snapshotView?.removeFromSuperview()
+                    })
+                    
+                    if !tabsIsEmpty {
+                        Queue.mainQueue().after(0.01) {
+                            self.tabContainerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+                            self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -74.0), to: .zero, duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                        }
+                    }
+                }
+            }
+            
+            if let searchContentNode = self.searchContentNode {
+                completion = self.chatListDisplayNode.deactivateSearch(placeholderNode: searchContentNode.placeholderNode, animated: animated)
+            }
+            
+
             self.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: false)
             if let parentController = self.parent as? TabBarController {
                 parentController.navigationBar?.setSecondaryContentNode(tabsIsEmpty ? nil : self.tabContainerNode, animated: animated)
@@ -3060,14 +3109,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             completion?()
             
             (self.parent as? TabBarController)?.updateIsTabBarHidden(false, transition: .animated(duration: 0.4, curve: .spring))
-            
-            if let filterContainerNode = filterContainerNode {
-                filterContainerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -44.0), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
-                
-                if !tabsIsEmpty {
-                    self.tabContainerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: -64.0), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
-                }
-            }
             
             self.isSearchActive = false
             if let navigationController = self.navigationController as? NavigationController {
@@ -3196,10 +3237,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {
         let peerIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedPeerIds
+        let threadIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedThreadIds
         if case .left = action {
             let signal: Signal<Never, NoError>
             var completion: (() -> Void)?
-            if !peerIds.isEmpty {
+            if !threadIds.isEmpty, case let .forum(peerId) = self.location {
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadIds.first!))
+                completion = { [weak self] in
+                    self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
+                }
+                signal = self.context.engine.messages.markForumThreadsAsRead(peerId: peerId, threadIds: Array(threadIds))
+            } else if !peerIds.isEmpty {
                 self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                 completion = { [weak self] in
                     self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
@@ -3789,6 +3837,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.present(actionSheet, in: .window(.root))
     }
     
+    func selectPeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        self.chatListDisplayNode.containerNode.updateState({ state in
+            var state = state
+            state.selectedThreadIds.insert(threadId)
+            return state
+        })
+        self.chatListDisplayNode.containerNode.didBeginSelectingChats?()
+    }
+    
     private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64, completion: @escaping () -> Void) {
         self.forEachController({ controller in
             if let controller = controller as? UndoOverlayController {
@@ -3851,7 +3908,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     private func setPeerThreadPinned(peerId: EnginePeer.Id, threadId: Int64, isPinned: Bool) {
-        self.actionDisposables.add(self.context.engine.peers.setForumChannelTopicPinned(id: peerId, threadId: threadId, isPinned: isPinned).start())
+        self.actionDisposables.add(self.context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId).start())
     }
     
     public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {

@@ -430,8 +430,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 self.title = ""
                 self.fileId = 0
                 
-                let colors: [Int32] = [0x6FB9F0, 0xFFD67E, 0xCB86DB, 0x8EEE98,0xFF93B2, 0xFB6F5F]
-                self.iconColor = colors.randomElement() ?? 0x0
+                self.iconColor = ForumCreateTopicScreen.iconColors.randomElement() ?? 0x0
             case let .edit(info):
                 self.title = info.title
                 self.fileId = info.icon ?? 0

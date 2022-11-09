@@ -93,8 +93,9 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                         messages = apiMessages
                         chats = apiChats
                         users = apiUsers
-                    case let .channelMessages(_, _, _, _, apiMessages, apiChats, apiUsers):
+                    case let .channelMessages(_, _, _, _, apiMessages, apiTopics, apiChats, apiUsers):
                         messages = apiMessages
+                        let _ = apiTopics
                         chats = apiChats
                         users = apiUsers
                     case .messagesNotModified:
@@ -330,14 +331,14 @@ public final class AccountViewTracker {
     
     private let externallyUpdatedPeerIdDisposable = MetaDisposable()
     
-    public let chatListPreloadItems = Promise<[ChatHistoryPreloadItem]>([])
+    public let chatListPreloadItems = Promise<Set<ChatHistoryPreloadItem>>([])
     
     init(account: Account) {
         self.account = account
         
         self.historyViewStateValidationContexts = HistoryViewStateValidationContexts(queue: self.queue, postbox: account.postbox, network: account.network, accountPeerId: account.peerId)
         
-        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged)
+        self.chatHistoryPreloadManager = ChatHistoryPreloadManager(postbox: account.postbox, network: account.network, accountPeerId: account.peerId, networkState: account.networkState, preloadItemsSignal: self.chatListPreloadItems.get() |> distinctUntilChanged |> map { Array($0) })
         
         self.externallyUpdatedPeerIdDisposable.set((account.stateManager.externallyUpdatedPeerIds
         |> deliverOn(self.queue)).start(next: { [weak self] peerIds in
@@ -1070,7 +1071,7 @@ public final class AccountViewTracker {
                                         return (messages, chats, users)
                                     case let .messagesSlice(_, _, _, _, messages, chats, users):
                                         return (messages, chats, users)
-                                    case let .channelMessages(_, _, _, _, messages, chats, users):
+                                    case let .channelMessages(_, _, _, _, messages, _, chats, users):
                                         return (messages, chats, users)
                                     case .messagesNotModified:
                                         return ([], [], [])
@@ -1561,7 +1562,7 @@ public final class AccountViewTracker {
                     let (pollMessageIds, pollMessageDict) = pollMessages(entries: next.0.entries)
                     strongSelf.updatePolls(viewId: viewId, messageIds: pollMessageIds, messages: pollMessageDict)
                     if case let .peer(peerId, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     } else if case let .thread(peerId, _, _) = chatLocation, peerId.namespace == Namespaces.Peer.CloudChannel {
                         strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: next.0, location: chatLocation)
                     }
@@ -1575,7 +1576,7 @@ public final class AccountViewTracker {
                     switch chatLocation {
                     case let .peer(peerId, _):
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
-                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                            strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: chatLocation)
                         }
                     case let .thread(peerId, _, _):
                         if peerId.namespace == Namespaces.Peer.CloudChannel {
@@ -1693,7 +1694,7 @@ public final class AccountViewTracker {
                 if let strongSelf = self {
                     strongSelf.queue.async {
                         strongSelf.updatePendingWebpages(viewId: viewId, messageIds: [], localWebpages: [:])
-                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil)
+                        strongSelf.historyViewStateValidationContexts.updateView(id: viewId, view: nil, location: nil)
                     }
                 }
             })
@@ -1712,7 +1713,9 @@ public final class AccountViewTracker {
                 |> mapToSignal { threadInfo -> Signal<(MessageHistoryView, ViewUpdateType, InitialMessageHistoryData?), NoError> in
                     if let threadInfo = threadInfo {
                         let anchor: HistoryViewInputAnchor
-                        if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
+                        if threadInfo.maxIncomingReadId <= 1 {
+                            anchor = .message(MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: 1))
+                        } else if threadInfo.incomingUnreadCount > 0 && tagMask == nil {
                             let customUnreadMessageId = MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: threadInfo.maxIncomingReadId)
                             anchor = .message(customUnreadMessageId)
                         } else {
@@ -1729,7 +1732,8 @@ public final class AccountViewTracker {
                             tagMask: tagMask,
                             appendMessagesFromTheSameGroup: false,
                             namespaces: .not(Namespaces.Message.allScheduled),
-                            orderStatistics: orderStatistics
+                            orderStatistics: orderStatistics,
+                            additionalData: wrappedHistoryViewAdditionalData(chatLocation: chatLocation, additionalData: additionalData)
                         )
                     }
                     

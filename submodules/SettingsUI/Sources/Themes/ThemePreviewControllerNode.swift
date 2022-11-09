@@ -367,7 +367,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
         }, activateChatPreview: { _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
-        })
+        }, openForumThread: { _, _ in })
 
         func makeChatListItem(
             peer: EnginePeer,
@@ -427,7 +427,8 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
                     hasFailedMessages: false,
-                    forumTopicData: nil
+                    forumTopicData: nil,
+                    topForumTopicItems: []
                 ),
                 editing: false,
                 hasActiveRevealControls: false,

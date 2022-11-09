@@ -510,6 +510,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     var forwardInfoReferenceNode: ASDisplayNode? {
         return self.forwardInfoNode
     }
+    
+    private var threadInfoNode: ChatMessageThreadInfoNode?
     private var replyInfoNode: ChatMessageReplyInfoNode?
     
     private var contentContainersWrapperNode: ASDisplayNode
@@ -545,6 +547,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if self.visibility != oldValue {
                 for contentNode in self.contentNodes {
                     contentNode.visibility = mapVisibility(self.visibility, boundsSize: self.bounds.size, insets: self.insets, to: contentNode)
+                }
+                
+                if let threadInfoNode = self.threadInfoNode {
+                    threadInfoNode.visibility = self.visibility != .none
                 }
                 
                 if let replyInfoNode = self.replyInfoNode {
@@ -932,6 +938,11 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         }
                     }
                 }
+                if let threadInfoNode = strongSelf.threadInfoNode, threadInfoNode.frame.contains(point) {
+                    if let _ = threadInfoNode.hitTest(strongSelf.view.convert(point, to: threadInfoNode.view), with: nil) {
+                        return .fail
+                    }
+                }
                 if let replyInfoNode = strongSelf.replyInfoNode, replyInfoNode.frame.contains(point) {
                     return .waitForSingleTap
                 }
@@ -1054,6 +1065,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         
         let authorNameLayout = TextNode.asyncLayout(self.nameNode)
         let adminBadgeLayout = TextNode.asyncLayout(self.adminBadgeNode)
+        let threadInfoLayout = ChatMessageThreadInfoNode.asyncLayout(self.threadInfoNode)
         let forwardInfoLayout = ChatMessageForwardInfoNode.asyncLayout(self.forwardInfoNode)
         let replyInfoLayout = ChatMessageReplyInfoNode.asyncLayout(self.replyInfoNode)
         let actionButtonsLayout = ChatMessageActionButtonsNode.asyncLayout(self.actionButtonsNode)
@@ -1076,6 +1088,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 currentContentClassesPropertiesAndLayouts: currentContentClassesPropertiesAndLayouts,
                 authorNameLayout: authorNameLayout,
                 adminBadgeLayout: adminBadgeLayout,
+                threadInfoLayout: threadInfoLayout,
                 forwardInfoLayout: forwardInfoLayout,
                 replyInfoLayout: replyInfoLayout,
                 actionButtonsLayout: actionButtonsLayout,
@@ -1093,6 +1106,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         currentContentClassesPropertiesAndLayouts: [(Message, AnyClass, Bool, (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))))],
         authorNameLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
         adminBadgeLayout: (TextNodeLayoutArguments) -> (TextNodeLayout, () -> TextNode),
+        threadInfoLayout: (ChatMessageThreadInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageThreadInfoNode),
         forwardInfoLayout: (ChatPresentationData, PresentationStrings, ChatMessageForwardInfoType, Peer?, String?, String?, CGSize) -> (CGSize, (CGFloat) -> ChatMessageForwardInfoNode),
         replyInfoLayout: (ChatMessageReplyInfoNode.Arguments) -> (CGSize, (Bool) -> ChatMessageReplyInfoNode),
         actionButtonsLayout: (AccountContext, ChatPresentationThemeData, PresentationChatBubbleCorners, PresentationStrings, WallpaperBackgroundNode?, ReplyMarkupMessageAttribute, Message, CGFloat) -> (minWidth: CGFloat, layout: (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation) -> ChatMessageActionButtonsNode)),
@@ -1398,8 +1412,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             
                 var enableAutoRank = false
-                if let authorRank = authorRank, case .admin = authorRank {
-                    enableAutoRank = true
+                if case .admin = authorRank {
+                } else if case .owner = authorRank {
                 } else if authorRank == nil {
                     enableAutoRank = true
                 }
@@ -1834,6 +1848,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         var nameNodeOriginY: CGFloat = 0.0
         var nameNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
         var adminNodeSizeApply: (CGSize, () -> TextNode?) = (CGSize(), { nil })
+
+        var threadInfoOriginY: CGFloat = 0.0
+        var threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?) = (CGSize(), {  _ in nil })
         
         var replyInfoOriginY: CGFloat = 0.0
         var replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?) = (CGSize(), {  _ in nil })
@@ -1945,7 +1962,39 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 headerSize.height += forwardInfoSizeApply.0.height
             }
             
-            if !isInstantVideo, let replyMessage = replyMessage {
+            var hasReply = replyMessage != nil
+            if !isInstantVideo, let replyMessage = replyMessage, replyMessage.threadId != nil, case let .peer(peerId) = item.chatLocation, peerId == replyMessage.id.peerId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
+                if let threadId = item.message.threadId, Int64(replyMessage.id.id) == threadId {
+                    hasReply = false
+                }
+                    
+                if !mergedTop.merged {
+                    if headerSize.height.isZero {
+                        headerSize.height += 14.0
+                    } else {
+                        headerSize.height += 5.0
+                    }
+                    let sizeAndApply = threadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                        presentationData: item.presentationData,
+                        strings: item.presentationData.strings,
+                        context: item.context,
+                        controllerInteraction: item.controllerInteraction,
+                        type: .bubble(incoming: incoming),
+                        message: replyMessage,
+                        parentMessage: item.message,
+                        constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                    ))
+                    threadInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
+                    
+                    threadInfoOriginY = headerSize.height
+                    headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                    headerSize.height += threadInfoSizeApply.0.height + 5.0
+                }
+            }
+            
+            if !isInstantVideo, let replyMessage = replyMessage, hasReply {
                 if headerSize.height.isZero {
                     headerSize.height += 6.0
                 } else {
@@ -2401,6 +2450,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 currentCredibilityIcon: currentCredibilityIcon,
                 adminNodeSizeApply: adminNodeSizeApply,
                 contentUpperRightCorner: contentUpperRightCorner,
+                threadInfoSizeApply: threadInfoSizeApply,
+                threadInfoOriginY: threadInfoOriginY,
                 forwardInfoSizeApply: forwardInfoSizeApply,
                 forwardInfoOriginY: forwardInfoOriginY,
                 replyInfoSizeApply: replyInfoSizeApply,
@@ -2449,6 +2500,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
         currentCredibilityIcon: EmojiStatusComponent.Content?,
         adminNodeSizeApply: (CGSize, () -> TextNode?),
         contentUpperRightCorner: CGPoint,
+        threadInfoSizeApply: (CGSize, (Bool) -> ChatMessageThreadInfoNode?),
+        threadInfoOriginY: CGFloat,
         forwardInfoSizeApply: (CGSize, (CGFloat) -> ChatMessageForwardInfoNode?),
         forwardInfoOriginY: CGFloat,
         replyInfoSizeApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode?),
@@ -2718,6 +2771,40 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             } else {
                 strongSelf.forwardInfoNode?.removeFromSupernode()
                 strongSelf.forwardInfoNode = nil
+            }
+        }
+        
+        if let threadInfoNode = threadInfoSizeApply.1(synchronousLoads) {
+            strongSelf.threadInfoNode = threadInfoNode
+            var animateFrame = true
+            if threadInfoNode.supernode == nil {
+                strongSelf.clippingNode.addSubnode(threadInfoNode)
+                animateFrame = false
+                
+                threadInfoNode.visibility = strongSelf.visibility != .none
+                
+                if animation.isAnimated {
+                    threadInfoNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            let previousThreadInfoNodeFrame = threadInfoNode.frame
+            threadInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + threadInfoOriginY), size: threadInfoSizeApply.0)
+            if case let .System(duration, _) = animation {
+                if animateFrame {
+                    threadInfoNode.layer.animateFrame(from: previousThreadInfoNodeFrame, to: threadInfoNode.frame, duration: duration, timingFunction: timingFunction)
+                }
+            }
+        } else {
+            if animation.isAnimated {
+                if let threadInfoNode = strongSelf.threadInfoNode {
+                    strongSelf.threadInfoNode = nil
+                    threadInfoNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak threadInfoNode] _ in
+                        threadInfoNode?.removeFromSupernode()
+                    })
+                }
+            } else {
+                strongSelf.threadInfoNode?.removeFromSupernode()
+                strongSelf.threadInfoNode = nil
             }
         }
         
@@ -3498,6 +3585,16 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             }
                         }
                     }
+                } else if let threadInfoNode = self.threadInfoNode, self.item?.controllerInteraction.tapMessage == nil, threadInfoNode.frame.contains(location) {
+                    if let item = self.item {
+                        for attribute in item.message.attributes {
+                            if let attribute = attribute as? ReplyMessageAttribute, let threadId = attribute.threadMessageId {
+                                return .optionalAction({
+                                    item.controllerInteraction.navigateToThreadMessage(item.message.id.peerId, Int64(clamping: threadId.id), item.message.id)
+                                })
+                            }
+                        }
+                    }
                 }
                 if let forwardInfoNode = self.forwardInfoNode, forwardInfoNode.frame.contains(location) {
                     if let item = self.item, let forwardInfo = item.message.forwardInfo {
@@ -3652,6 +3749,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 if let item = self.item, self.backgroundNode.frame.contains(location) {
                     let message = item.message
                     
+                    if let threadInfoNode = self.threadInfoNode, self.item?.controllerInteraction.tapMessage == nil, threadInfoNode.frame.contains(location) {
+                        return .action({})
+                    }
+                    
                     var tapMessage: Message? = item.content.firstMessage
                     var selectAll = true
                     var hasFiles = false
@@ -3773,6 +3874,10 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             return nil
         }
         
+        if let threadInfoNode = self.threadInfoNode, let result = threadInfoNode.hitTest(self.view.convert(point, to: threadInfoNode.view), with: event) {
+            return result
+        }
+        
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view
         }
@@ -3803,7 +3908,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 return result
             }
         }
-        
+                
         return super.hitTest(point, with: event)
     }
     

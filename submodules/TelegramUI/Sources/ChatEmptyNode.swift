@@ -896,7 +896,7 @@ private enum ChatEmptyNodeContentType: Equatable {
     case cloud
     case peerNearby
     case greeting
-    case topic(Int64?)
+    case topic
 }
 
 final class ChatEmptyNode: ASDisplayNode {
@@ -962,9 +962,7 @@ final class ChatEmptyNode: ASDisplayNode {
 
             self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), enableBlur: dateFillNeedsBlur(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), transition: .immediate)
         }
-        
-
-        
+    
         var isScheduledMessages = false
         if case .scheduledMessages = interfaceState.subject {
             isScheduledMessages = true
@@ -973,7 +971,7 @@ final class ChatEmptyNode: ASDisplayNode {
         let contentType: ChatEmptyNodeContentType
         if case .replyThread = interfaceState.chatLocation {
             if case .topic = emptyType {
-                contentType = .topic(nil)
+                contentType = .topic
             } else {
                 contentType = .regular
             }

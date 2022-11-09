@@ -208,7 +208,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
                     backgroundMaskImage = (currentOffset, currentImage)
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects)
+                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
                     backgroundMaskUpdated = true
                 }
             

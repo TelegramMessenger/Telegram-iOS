@@ -858,8 +858,40 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
-        public func setForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
-            return _internal_setForumChannelTopicPinned(account: self.account, id: id, threadId: threadId, isPinned: isPinned)
+        public func toggleForumChannelTopicPinned(id: EnginePeer.Id, threadId: Int64) -> Signal<Never, SetForumChannelTopicPinnedError> {
+            return self.account.postbox.transaction { transaction -> ([Int64], Int) in
+                var limit = 5
+                let appConfiguration: AppConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? AppConfiguration.defaultValue
+                if let data = appConfiguration.data, let value = data["topics_pinned_limit"] as? Double {
+                    limit = Int(value)
+                }
+                
+                return (transaction.getPeerPinnedThreads(peerId: id), limit)
+            }
+            |> castError(SetForumChannelTopicPinnedError.self)
+            |> mapToSignal { threadIds, limit -> Signal<Never, SetForumChannelTopicPinnedError> in
+                var threadIds = threadIds
+                if threadIds.contains(threadId) {
+                    threadIds.removeAll(where: { $0 == threadId })
+                } else {
+                    if threadIds.count + 1 > limit {
+                        return .fail(.limitReached(limit))
+                    }
+                    threadIds.insert(threadId, at: 0)
+                }
+                
+                return _internal_setForumChannelPinnedTopics(account: self.account, id: id, threadIds: threadIds)
+            }
+        }
+        
+        public func getForumChannelPinnedTopics(id: EnginePeer.Id) -> Signal<[Int64], NoError> {
+            return self.account.postbox.transaction { transcation -> [Int64] in
+                return transcation.getPeerPinnedThreads(peerId: id)
+            }
+        }
+        
+        public func setForumChannelPinnedTopics(id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
+            return _internal_setForumChannelPinnedTopics(account: self.account, id: id, threadIds: threadIds)
         }
         
         public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> {

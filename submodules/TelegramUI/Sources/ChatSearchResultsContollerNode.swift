@@ -100,7 +100,8 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         ignoreUnreadBadge: true,
                         displayAsMessage: true,
                         hasFailedMessages: false,
-                        forumTopicData: nil
+                        forumTopicData: nil,
+                        topForumTopicItems: []
                     ),
                     editing: false,
                     hasActiveRevealControls: false,
@@ -245,7 +246,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 return
             }
             switch item.content {
-            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
                 if let message = messages.first {
                     let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
@@ -258,6 +259,7 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 gesture?.cancel()
             }
         }, present: { _ in
+        }, openForumThread: { _, _ in
         })
         interaction.searchTextHighightState = searchQuery
         self.interaction = interaction

@@ -59,17 +59,31 @@ func chatListSelectionOptions(context: AccountContext, peerIds: Set<PeerId>, fil
 
 
 func forumSelectionOptions(context: AccountContext, peerId: PeerId, threadIds: Set<Int64>, canDelete: Bool) -> Signal<ChatListSelectionOptions, NoError> {
-    if threadIds.isEmpty {
-        return context.engine.data.subscribe(TelegramEngine.EngineData.Item.Messages.PeerReadCounters(id: peerId))
-        |> map { counters -> ChatListSelectionOptions in
+    let threadIdsArray = Array(threadIds)
+        
+    var threadSignals: [Signal<MessageHistoryThreadData?, NoError>] = []
+    for threadId in threadIdsArray {
+        threadSignals.append(
+            context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId))
+        )
+    }
+    
+    return combineLatest(threadSignals)
+    |> map { threadDatas -> ChatListSelectionOptions in
+        if threadIds.isEmpty {
+            return ChatListSelectionOptions(read: .selective(enabled: false), delete: false)
+        } else {
             var hasUnread = false
-            if counters.isUnread {
-                hasUnread = true
+            for thread in threadDatas {
+                guard let thread = thread else {
+                    continue
+                }
+                if thread.incomingUnreadCount > 0 {
+                    hasUnread = true
+                    break
+                }
             }
-            return ChatListSelectionOptions(read: .all(enabled: hasUnread), delete: false)
+            return ChatListSelectionOptions(read: .selective(enabled: hasUnread), delete: canDelete)
         }
-        |> distinctUntilChanged
-    } else {
-        return .single(ChatListSelectionOptions(read: .selective(enabled: false), delete: canDelete))
     }
 }

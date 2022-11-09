@@ -93,7 +93,8 @@ enum AccountStateMutationOperation {
     case ReadSecretOutbox(peerId: PeerId, maxTimestamp: Int32, actionTimestamp: Int32)
     case AddPeerInputActivity(chatPeerId: PeerActivitySpace, peerId: PeerId?, activity: PeerInputActivity?)
     case UpdatePinnedItemIds(PeerGroupId, AccountStateUpdatePinnedItemIdsOperation)
-    case UpdatePinnedTopic(peerId: PeerId, threadId: Int64?)
+    case UpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool)
+    case UpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64])
     case ReadMessageContents((PeerId?, [Int32]))
     case UpdateMessageImpressionCount(MessageId, Int32)
     case UpdateMessageForwardsCount(MessageId, Int32)
@@ -142,6 +143,38 @@ enum StateResetForumTopics {
     case error(PeerId)
 }
 
+struct ReferencedReplyMessageIds {
+    var targetIdsBySourceId: [MessageId: MessageId] = [:]
+    
+    var isEmpty: Bool {
+        return self.targetIdsBySourceId.isEmpty
+    }
+    
+    mutating func add(sourceId: MessageId, targetId: MessageId) {
+        if self.targetIdsBySourceId[targetId] == nil {
+            self.targetIdsBySourceId[targetId] = sourceId
+        }
+    }
+    
+    mutating func formUnion(_ other: ReferencedReplyMessageIds) {
+        for (targetId, sourceId) in other.targetIdsBySourceId {
+            if self.targetIdsBySourceId[targetId] == nil {
+                self.targetIdsBySourceId[targetId] = sourceId
+            }
+        }
+    }
+    
+    func subtractingStoredIds(_ ids: Set<MessageId>) -> ReferencedReplyMessageIds {
+        var result = ReferencedReplyMessageIds()
+        for (targetId, sourceId) in self.targetIdsBySourceId {
+            if !ids.contains(targetId) {
+                result.add(sourceId: sourceId, targetId: targetId)
+            }
+        }
+        return result
+    }
+}
+
 struct AccountMutableState {
     let initialState: AccountInitialState
     let branchOperationIndex: Int
@@ -152,7 +185,8 @@ struct AccountMutableState {
     var peers: [PeerId: Peer]
     var channelStates: [PeerId: AccountStateChannelState]
     var peerChatInfos: [PeerId: PeerChatInfo]
-    var referencedMessageIds: Set<MessageId>
+    var referencedReplyMessageIds: ReferencedReplyMessageIds
+    var referencedGeneralMessageIds: Set<MessageId>
     var storedMessages: Set<MessageId>
     var readInboxMaxIds: [PeerId: MessageId]
     var namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]]
@@ -175,11 +209,12 @@ struct AccountMutableState {
     
     var authorizationListUpdated: Bool = false
     
-    init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
+    init(initialState: AccountInitialState, initialPeers: [PeerId: Peer], initialReferencedReplyMessageIds: ReferencedReplyMessageIds, initialReferencedGeneralMessageIds: Set<MessageId>, initialStoredMessages: Set<MessageId>, initialReadInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>]) {
         self.initialState = initialState
         self.state = initialState.state
         self.peers = initialPeers
-        self.referencedMessageIds = initialReferencedMessageIds
+        self.referencedReplyMessageIds = initialReferencedReplyMessageIds
+        self.referencedGeneralMessageIds = initialReferencedGeneralMessageIds
         self.storedMessages = initialStoredMessages
         self.readInboxMaxIds = initialReadInboxMaxIds
         self.channelStates = initialState.channelStates
@@ -190,13 +225,14 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
         self.peers = peers
         self.channelStates = channelStates
-        self.referencedMessageIds = referencedMessageIds
+        self.referencedReplyMessageIds = referencedReplyMessageIds
+        self.referencedGeneralMessageIds = referencedGeneralMessageIds
         self.storedMessages = storedMessages
         self.peerChatInfos = peerChatInfos
         self.readInboxMaxIds = readInboxMaxIds
@@ -209,11 +245,13 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedMessageIds: self.referencedMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
-        self.referencedMessageIds.formUnion(other.referencedMessageIds)
+        self.referencedReplyMessageIds.formUnion(other.referencedReplyMessageIds)
+        self.referencedGeneralMessageIds.formUnion(other.referencedGeneralMessageIds)
+        
         for i in other.branchOperationIndex ..< other.operations.count {
             self.addOperation(other.operations[i])
         }
@@ -475,8 +513,12 @@ struct AccountMutableState {
         self.addOperation(.UpdatePinnedItemIds(groupId, operation))
     }
     
-    mutating func addUpdatePinnedTopic(peerId: PeerId, threadId: Int64?) {
-        self.addOperation(.UpdatePinnedTopic(peerId: peerId, threadId: threadId))
+    mutating func addUpdatePinnedTopic(peerId: PeerId, threadId: Int64, isPinned: Bool) {
+        self.addOperation(.UpdatePinnedTopic(peerId: peerId, threadId: threadId, isPinned: isPinned))
+    }
+    
+    mutating func addUpdatePinnedTopicOrder(peerId: PeerId, threadIds: [Int64]) {
+        self.addOperation(.UpdatePinnedTopicOrder(peerId: peerId, threadIds: threadIds))
     }
     
     mutating func addReadMessagesContents(_ peerIdsAndMessageIds: (PeerId?, [Int32])) {
@@ -545,7 +587,7 @@ struct AccountMutableState {
     
     mutating func addOperation(_ operation: AccountStateMutationOperation) {
         switch operation {
-        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
+        case .DeleteMessages, .DeleteMessagesWithGlobalIds, .EditMessage, .UpdateMessagePoll, .UpdateMessageReactions, .UpdateMedia, .ReadOutbox, .ReadGroupFeedInbox, .MergePeerPresences, .UpdateSecretChat, .AddSecretMessages, .ReadSecretOutbox, .AddPeerInputActivity, .UpdateCachedPeerData, .UpdatePinnedItemIds, .UpdatePinnedTopic, .UpdatePinnedTopicOrder, .ReadMessageContents, .UpdateMessageImpressionCount, .UpdateMessageForwardsCount, .UpdateInstalledStickerPacks, .UpdateRecentGifs, .UpdateChatInputState, .UpdateCall, .AddCallSignalingData, .UpdateLangPack, .UpdateMinAvailableMessage, .UpdatePeerChatUnreadMark, .UpdateIsContact, .UpdatePeerChatInclusion, .UpdatePeersNearby, .UpdateTheme, .SyncChatListFilters, .UpdateChatListFilterOrder, .UpdateChatListFilter, .UpdateReadThread, .UpdateGroupCallParticipants, .UpdateGroupCall, .UpdateMessagesPinned, .UpdateAutoremoveTimeout, .UpdateAttachMenuBots, .UpdateAudioTranscription, .UpdateConfig, .UpdateExtendedMedia, .ResetForumTopic:
                 break
             case let .AddMessages(messages, location):
                 for message in messages {
@@ -562,11 +604,11 @@ struct AccountMutableState {
                                 }
                             }
                         }
-                    }
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? ReplyMessageAttribute {
-                            self.referencedMessageIds.insert(attribute.messageId)
-                            break inner
+                        inner: for attribute in message.attributes {
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                self.referencedReplyMessageIds.add(sourceId: id, targetId: attribute.messageId)
+                                break inner
+                            }
                         }
                     }
                 }
@@ -574,11 +616,11 @@ struct AccountMutableState {
                 for message in messages {
                     if case let .Id(id) = message.id {
                         self.storedMessages.insert(id)
-                    }
-                    inner: for attribute in message.attributes {
-                        if let attribute = attribute as? ReplyMessageAttribute {
-                            self.referencedMessageIds.insert(attribute.messageId)
-                            break inner
+                        inner: for attribute in message.attributes {
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                self.referencedReplyMessageIds.add(sourceId: id, targetId: attribute.messageId)
+                                break inner
+                            }
                         }
                     }
                 }

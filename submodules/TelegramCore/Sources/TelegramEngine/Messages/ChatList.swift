@@ -28,16 +28,20 @@ public final class EngineChatList: Equatable {
     }
     
     public struct ForumTopicData: Equatable {
+        public var id: Int64
         public var title: String
-        public let iconFileId: Int64?
-        public let iconColor: Int32
+        public var iconFileId: Int64?
+        public var iconColor: Int32
         public var maxOutgoingReadMessageId: EngineMessage.Id
+        public var isUnread: Bool
         
-        public init(title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id) {
+        public init(id: Int64, title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id, isUnread: Bool) {
+            self.id = id
             self.title = title
             self.iconFileId = iconFileId
             self.iconColor = iconColor
             self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
+            self.isUnread = isUnread
         }
     }
 
@@ -119,6 +123,7 @@ public final class EngineChatList: Equatable {
         public let hasUnseenMentions: Bool
         public let hasUnseenReactions: Bool
         public let forumTopicData: ForumTopicData?
+        public let topForumTopicItems: [EngineChatList.ForumTopicData]
         public let hasFailed: Bool
         public let isContact: Bool
 
@@ -135,6 +140,7 @@ public final class EngineChatList: Equatable {
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
             forumTopicData: ForumTopicData?,
+            topForumTopicItems: [EngineChatList.ForumTopicData],
             hasFailed: Bool,
             isContact: Bool
         ) {
@@ -150,6 +156,7 @@ public final class EngineChatList: Equatable {
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
             self.forumTopicData = forumTopicData
+            self.topForumTopicItems = topForumTopicItems
             self.hasFailed = hasFailed
             self.isContact = isContact
         }
@@ -189,6 +196,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.forumTopicData != rhs.forumTopicData {
+                return false
+            }
+            if lhs.topForumTopicItems != rhs.topForumTopicItems {
                 return false
             }
             if lhs.hasFailed != rhs.hasFailed {
@@ -398,7 +408,7 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, topForumTopics, hasFailed, isContact):
             var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -425,11 +435,25 @@ extension EngineChatList.Item {
             }
             
             var forumTopicDataValue: EngineChatList.ForumTopicData?
-            if let forumTopicData = forumTopicData?.data.get(MessageHistoryThreadData.self) {
-                forumTopicDataValue = EngineChatList.ForumTopicData(title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
+            if let forumTopicData = forumTopicData {
+                let id = forumTopicData.id
+                if let forumTopicData = forumTopicData.info.data.get(MessageHistoryThreadData.self) {
+                    forumTopicDataValue = EngineChatList.ForumTopicData(id: id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0)
+                }
+            }
+            
+            var topForumTopicItems: [EngineChatList.ForumTopicData] = []
+            for item in topForumTopics {
+                if let forumTopicData = item.info.data.get(MessageHistoryThreadData.self) {
+                    topForumTopicItems.append(EngineChatList.ForumTopicData(id: item.id, title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId), isUnread: forumTopicData.incomingUnreadCount > 0))
+                }
             }
             
             let readCounters = readState.flatMap(EnginePeerReadCounters.init)
+            
+            if let channel = renderedPeer.peer as? TelegramChannel, channel.flags.contains(.isForum) {
+                draft = nil
+            }
 
             self.init(
                 id: .chatList(index.messageIndex.id.peerId),
@@ -444,6 +468,7 @@ extension EngineChatList.Item {
                 hasUnseenMentions: hasUnseenMentions,
                 hasUnseenReactions: hasUnseenReactions,
                 forumTopicData: forumTopicDataValue,
+                topForumTopicItems: topForumTopicItems,
                 hasFailed: hasFailed,
                 isContact: isContact
             )

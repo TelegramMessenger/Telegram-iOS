@@ -1210,7 +1210,7 @@ public enum PostboxResult {
     case error
 }
 
-func debugSaveState(basePath:String, name: String) {
+func debugSaveState(basePath: String, name: String) {
     let path = basePath + name
     let _ = try? FileManager.default.removeItem(atPath: path)
     do {
@@ -1220,7 +1220,7 @@ func debugSaveState(basePath:String, name: String) {
     }
 }
 
-func debugRestoreState(basePath:String, name: String) {
+func debugRestoreState(basePath: String, name: String) {
     let path = basePath + name
     if FileManager.default.fileExists(atPath: path) {
         let _ = try? FileManager.default.removeItem(atPath: basePath)
@@ -1272,8 +1272,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             }
 
             #if DEBUG
-            //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            //debugSaveState(basePath: basePath + "/db", name: "previous2")
+            //debugRestoreState(basePath: basePath + "/db", name: "previous2")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -2438,6 +2438,8 @@ final class PostboxImpl {
         for id in messageIds {
             if self.messageHistoryIndexTable.exists(id) {
                 filteredIds.insert(id)
+            } else {
+                assert(true)
             }
         }
         
@@ -2953,7 +2955,7 @@ final class PostboxImpl {
         return ActionDisposable { [weak self] in
             disposable.dispose()
             if let strongSelf = self {
-                strongSelf.queue.async {
+                strongSelf.queue.justDispatch {
                     strongSelf.viewTracker.removeMessageHistoryView(index: index)
                 }
             }

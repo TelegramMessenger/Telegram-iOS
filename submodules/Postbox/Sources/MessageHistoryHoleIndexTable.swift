@@ -394,8 +394,6 @@ final class MessageHistoryHoleIndexTable: Table {
     }
     
     private func removeInternal(peerId: PeerId, namespace: MessageId.Namespace, space: MessageHistoryHoleSpace, range: ClosedRange<MessageId.Id>, operations: inout [MessageHistoryIndexHoleOperationKey: [MessageHistoryIndexHoleOperation]]) {
-        postboxLog("MessageHistoryHoleIndexTable: removeInternal peerId: \(peerId) namespace: \(namespace) space: \(space) range: \(range)")
-        
         var removeKeys: [Int32] = []
         var insertRanges = IndexSet()
         
@@ -440,6 +438,7 @@ final class MessageHistoryHoleIndexTable: Table {
         
         if !removeKeys.isEmpty {
             addMessageHistoryHoleOperation(.remove(range), peerId: peerId, threadId: nil, namespace: namespace, space: space, to: &operations)
+            postboxLog("MessageHistoryHoleIndexTable: removeInternal peerId: \(peerId) namespace: \(namespace) space: \(space) range: \(range)")
         }
     }
     
