@@ -192,7 +192,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             self.addSubnode(self.descriptionNode)
         }
         
-        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topic: (title: NSAttributedString, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
+        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topic: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
             let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
             let makeTopicTitleLayout = TextNode.asyncLayout(self.topicTitleNode)
             
@@ -212,7 +212,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     remainingWidth -= 22.0 + 2.0
                     
                     if authorTitle != nil {
-                        arrowIconImage = PresentationResourcesChatList.topicArrowIcon(theme)
+                        arrowIconImage = PresentationResourcesItemList.topicArrowDescriptionIcon(theme)
                         if let arrowIconImage = arrowIconImage {
                             remainingWidth -= arrowIconImage.size.width + 6.0 * 2.0
                         }
@@ -263,7 +263,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         }
                     }
                     
-                    if let topic {
+                    if let topic, topic.showIcon {
                         let titleTopicIconView: ComponentHostView<Empty>
                         if let current = self.titleTopicIconView {
                             titleTopicIconView = current
@@ -340,7 +340,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     
     public let titleNode: TextNode
     public let textNode: TextNode
-    public let descriptionNode: TextNode
+    public let descriptionNode: DescriptionNode
     private let descriptionProgressNode: ImmediateTextNode
     public let dateNode: TextNode
     
@@ -379,6 +379,30 @@ public final class ListMessageFileItemNode: ListMessageNode {
     private var currentIsRestricted = false
     private var cachedSearchResult: CachedChatListSearchResult?
     
+    public override var visibility: ListViewItemNodeVisibility {
+        didSet {
+            let wasVisible = self.visibilityStatus
+            let isVisible: Bool
+            switch self.visibility {
+                case let .visible(fraction, _):
+                    isVisible = fraction > 0.2
+                case .none:
+                    isVisible = false
+            }
+            if wasVisible != isVisible {
+                self.visibilityStatus = isVisible
+            }
+        }
+    }
+    
+    private var visibilityStatus: Bool = false {
+        didSet {
+            if self.visibilityStatus != oldValue {
+                self.descriptionNode.visibilityStatus = self.visibilityStatus
+            }
+        }
+    }
+    
     public required init() {
         self.contextSourceNode = ContextExtractedContentContainingNode()
         self.containerNode = ContextControllerSourceNode()
@@ -407,7 +431,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         self.textNode.displaysAsynchronously = false
         self.textNode.isUserInteractionEnabled = false
         
-        self.descriptionNode = TextNode()
+        self.descriptionNode = DescriptionNode()
         self.descriptionNode.displaysAsynchronously = false
         self.descriptionNode.isUserInteractionEnabled = false
         
@@ -539,8 +563,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
     override public func asyncLayout() -> (_ item: ListMessageItem, _ params: ListViewItemLayoutParams, _ mergedTop: Bool, _ mergedBottom: Bool, _ dateHeaderAtBottom: Bool) -> (ListViewItemNodeLayout, (ListViewItemUpdateAnimation) -> Void) {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let textNodeMakeLayout = TextNode.asyncLayout(self.textNode)
-        let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
-//        let newDescriptionNodeMakeLayout = self.descriptionNode.asyncLayout()
+        let descriptionNodeMakeLayout = self.descriptionNode.asyncLayout()
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
         let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
@@ -596,6 +619,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let message = item.message
             
+            var forumThreadTitle: (title: NSAttributedString, showIcon: Bool, iconId: Int64?, iconColor: Int32)? = nil
+            var globalAuthorTitle: String?
+            
             var selectedMedia: Media?
             if let message = message {
                 for media in message.media {
@@ -626,10 +652,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                                 
                                 if item.isGlobalSearchResult || item.isDownloadList {
                                     let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                    if authorString.count > 1 {
+                                        globalAuthorTitle = authorString.last ?? ""
+                                    }
                                     if descriptionString.isEmpty {
-                                        descriptionString = authorString
+                                        descriptionString = authorString.first ?? ""
                                     } else {
-                                        descriptionString = "\(descriptionString) • \(authorString)"
+                                        descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                                     }
                                 }
                                 
@@ -669,7 +698,8 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             }
                             
                             if item.isGlobalSearchResult || item.isDownloadList {
-                                authorName = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                authorName = authorString.joined(separator: " → ")
                             }
                             
                             titleText = NSAttributedString(string: authorName, font: audioTitleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
@@ -726,10 +756,13 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             
                             if item.isGlobalSearchResult || item.isDownloadList {
                                 let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                                if authorString.count > 1 {
+                                    globalAuthorTitle = authorString.last ?? ""
+                                }
                                 if descriptionString.isEmpty {
-                                    descriptionString = authorString
+                                    descriptionString = authorString.first ?? ""
                                 } else {
-                                    descriptionString = "\(descriptionString) • \(authorString)"
+                                    descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                                 }
                             }
                         
@@ -754,12 +787,15 @@ public final class ListMessageFileItemNode: ListMessageNode {
                             descriptionString = "\(dateString)"
                         }
                         
-                        if item.isGlobalSearchResult || item.isDownloadList {
+                        if item.isGlobalSearchResult || item.isDownloadList {                            
                             let authorString = stringForFullAuthorName(message: EngineMessage(message), strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, accountPeerId: item.context.account.peerId)
+                            if authorString.count > 1 {
+                                globalAuthorTitle = authorString.last ?? ""
+                            }
                             if descriptionString.isEmpty {
-                                descriptionString = authorString
+                                descriptionString = authorString.first ?? ""
                             } else {
-                                descriptionString = "\(descriptionString) • \(authorString)"
+                                descriptionString = "\(descriptionString) • \(authorString.first ?? "")"
                             }
                         }
                     
@@ -776,6 +812,14 @@ public final class ListMessageFileItemNode: ListMessageNode {
             } else {
                 titleText = NSAttributedString(string: " ", font: titleFont, textColor: item.presentationData.theme.theme.list.itemPrimaryTextColor)
                 descriptionText = NSAttributedString(string: " ", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
+            }
+            
+            if !(isInstantVideo || isVoice) {
+                if let _ = item.message?.threadId, let threadInfo = item.message?.associatedThreadInfo {
+                    forumThreadTitle = (NSAttributedString(string: threadInfo.title, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), true, threadInfo.icon, threadInfo.iconColor)
+                } else if let globalAuthorTitle = globalAuthorTitle {
+                    forumThreadTitle = (NSAttributedString(string: globalAuthorTitle, font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor), false, nil, 0)
+                }
             }
             
             var mediaUpdated = false
@@ -916,10 +960,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
-            
-//            let forumThreadTitle: (title: NSAttributedString, iconId: Int64?, iconColor: Int32)? = nil
-//            let (newDescriptionNodeLayout, newDescriptionNodeApply) = newDescriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, forumThreadTitle)
+            let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, forumThreadTitle)
             
             var (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             if extensionTextLayout.truncated, let text = extensionText?.string  {
@@ -979,7 +1020,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                 insets.bottom += 35.0
             }
             
-            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.size.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
+            let nodeLayout = ListViewItemNodeLayout(contentSize: CGSize(width: params.width, height: 8.0 * 2.0 + titleNodeLayout.size.height + 3.0 + descriptionNodeLayout.height + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), insets: insets)
             
             return (nodeLayout, { animation in
                 if let strongSelf = self {
@@ -1124,7 +1165,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     transition.updateFrame(node: strongSelf.textNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0), size: textNodeLayout.size))
                     let _ = textNodeApply()
                     
-                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout.size))
+                    transition.updateFrame(node: strongSelf.descriptionNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset + descriptionOffset, y: strongSelf.titleNode.frame.maxY + 1.0 + (textNodeLayout.size.height > 0.0 ? textNodeLayout.size.height + 3.0 : 0.0)), size: descriptionNodeLayout))
                     let _ = descriptionNodeApply()
                     
                     let _ = dateNodeApply()

@@ -167,7 +167,7 @@ func messagesIdsGroupedByPeerId(_ ids: ReferencedReplyMessageIds) -> [PeerId: Re
     return dict
 }
 
-func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Message? {
+func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer], associatedThreadInfo: Message.AssociatedThreadInfo? = nil) -> Message? {
     guard case let .Id(id) = message.id else {
         return nil
     }
@@ -219,8 +219,8 @@ func locallyRenderedMessage(message: StoreMessage, peers: [PeerId: Peer]) -> Mes
     let first = UInt32((hashValue >> 32) & 0xffffffff)
     let second = UInt32(hashValue & 0xffffffff)
     let stableId = first &+ second
-    
-    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
+        
+    return Message(stableId: stableId, stableVersion: 0, id: id, globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: message.threadId, timestamp: message.timestamp, flags: MessageFlags(message.flags), tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: forwardInfo, author: author, text: message.text, attributes: message.attributes, media: message.media, peers: messagePeers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: associatedThreadInfo)
 }
 
 public extension Message {

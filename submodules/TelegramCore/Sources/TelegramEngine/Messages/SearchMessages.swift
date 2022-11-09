@@ -64,7 +64,7 @@ public struct SearchMessagesState: Equatable {
     fileprivate let additional: SearchMessagesPeerState?
 }
 
-private func mergedState(transaction: Transaction, state: SearchMessagesPeerState?, result: Api.messages.Messages?) -> SearchMessagesPeerState? {
+private func mergedState(transaction: Transaction, seedConfiguration: SeedConfiguration, state: SearchMessagesPeerState?, result: Api.messages.Messages?) -> SearchMessagesPeerState? {
     guard let result = result else {
         return state
     }
@@ -121,17 +121,23 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     
     var renderedMessages: [Message] = []
     for message in messages {
-        if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
-            let peerId = renderedMessage.id.peerId
-            renderedMessages.append(renderedMessage)
-            peerIdsSet.insert(peerId)
-            for attribute in renderedMessage.attributes {
-                if let attribute = attribute as? ReplyMessageAttribute {
-                    if let threadMessageId = attribute.threadMessageId {
-                        let threadId = makeMessageThreadId(threadMessageId)
-                        if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
-                            threadInfo[renderedMessage.id] = data
-                            break
+        if let message = StoreMessage(apiMessage: message) {
+            var associatedThreadInfo: Message.AssociatedThreadInfo?
+            if let threadId = message.threadId, let threadInfo = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId) {
+                associatedThreadInfo = seedConfiguration.decodeMessageThreadInfo(threadInfo.data)
+            }
+            if let renderedMessage = locallyRenderedMessage(message: message, peers: peers, associatedThreadInfo: associatedThreadInfo) {
+                let peerId = renderedMessage.id.peerId
+                renderedMessages.append(renderedMessage)
+                peerIdsSet.insert(peerId)
+                for attribute in renderedMessage.attributes {
+                    if let attribute = attribute as? ReplyMessageAttribute {
+                        if let threadMessageId = attribute.threadMessageId {
+                            let threadId = makeMessageThreadId(threadMessageId)
+                            if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                                threadInfo[renderedMessage.id] = data
+                                break
+                            }
                         }
                     }
                 }
@@ -148,7 +154,7 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     renderedMessages.sort(by: { lhs, rhs in
         return lhs.index > rhs.index
     })
-    
+        
     let completed = renderedMessages.isEmpty || renderedMessages.count == totalCount
     if let previous = state {
         var currentIds = Set<MessageId>()
@@ -399,7 +405,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
     return remoteSearchResult
     |> mapToSignal { result, additionalResult -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> in
         return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
-            var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, state: state?.additional, result: additionalResult)
+            var additional: SearchMessagesPeerState? = mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, state: state?.additional, result: additionalResult)
             
             if state?.additional == nil {
                 switch location {
@@ -440,7 +446,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                 }
             }
             
-            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
+            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, seedConfiguration: account.postbox.seedConfiguration, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
             return (mergedResult(updatedState), updatedState)
         }
     }
