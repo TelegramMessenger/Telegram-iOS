@@ -2576,7 +2576,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         compoundHighlightingNode.updateRects([
                             finalTopRect,
                             finalBottomRect
-                        ], color: theme.itemHighlightedBackgroundColor.withMultipliedAlpha(0.5))
+                        ], color: theme.pinnedItemBackgroundColor.mixedWith(theme.unreadBadgeInactiveBackgroundColor, alpha: 0.1))
                         
                         compoundTextButtonNode.frame = compoundHighlightingNode.frame
                     } else {
