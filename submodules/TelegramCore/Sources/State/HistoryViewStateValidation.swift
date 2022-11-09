@@ -138,11 +138,11 @@ final class HistoryViewStateValidationContexts {
     }
     
     func updateView(id: Int32, view: MessageHistoryView?, location: ChatLocationInput?) {
-        #if DEBUG
+        /*#if DEBUG
         if "".isEmpty {
             return
         }
-        #endif
+        #endif*/
         
         assert(self.queue.isCurrent())
         guard let view = view, view.tagMask == nil || view.tagMask == MessageTags.unseenPersonalMessage || view.tagMask == MessageTags.unseenReaction || view.tagMask == MessageTags.music || view.tagMask == MessageTags.pinned else {

@@ -79,6 +79,7 @@ public final class ChatListNodeInteraction {
     let hidePsa: (EnginePeer.Id) -> Void
     let activateChatPreview: (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void
     let present: (ViewController) -> Void
+    let openForumThread: (EnginePeer.Id, Int64) -> Void
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
@@ -113,7 +114,8 @@ public final class ChatListNodeInteraction {
         toggleThreadsSelection: @escaping ([Int64], Bool) -> Void,
         hidePsa: @escaping (EnginePeer.Id) -> Void,
         activateChatPreview: @escaping (ChatListItem, ASDisplayNode, ContextGesture?, CGPoint?) -> Void,
-        present: @escaping (ViewController) -> Void
+        present: @escaping (ViewController) -> Void,
+        openForumThread: @escaping (EnginePeer.Id, Int64) -> Void
     ) {
         self.activateSearch = activateSearch
         self.peerSelected = peerSelected
@@ -141,6 +143,7 @@ public final class ChatListNodeInteraction {
         self.present = present
         self.animationCache = animationCache
         self.animationRenderer = animationRenderer
+        self.openForumThread = openForumThread
     }
 }
 
@@ -1141,6 +1144,17 @@ public final class ChatListNode: ListView {
             }
         }, present: { [weak self] c in
             self?.present?(c)
+        }, openForumThread: { [weak self] peerId, threadId in
+            guard let self else {
+                return
+            }
+            let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+            |> deliverOnMainQueue).start(next: { [weak self] peer in
+                guard let self, let peer else {
+                    return
+                }
+                self.peerSelected?(peer, threadId, true, true, nil)
+            })
         })
         
         let viewProcessingQueue = self.viewProcessingQueue

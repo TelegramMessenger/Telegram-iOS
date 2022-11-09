@@ -536,13 +536,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let makeTopicTitleLayout = TextNode.asyncLayout(currentNode?.topicTitleNode)
             
             return { constrainedWidth, context, theme, title, iconId, iconColor in
-                let remainingWidth = max(1.0, constrainedWidth - (22.0 + 2.0))
+                let remainingWidth = max(1.0, constrainedWidth - (18.0 + 2.0))
                 
                 let topicTitleArguments = TextNodeLayoutArguments(attributedString: title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
                 
                 let topicTitleLayout = makeTopicTitleLayout(topicTitleArguments)
                 
-                return (CGSize(width: 22.0 + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
+                return (CGSize(width: 18.0 + 2.0 + topicTitleLayout.0.size.width, height: topicTitleLayout.0.size.height), {
                     let topicTitleNode = topicTitleLayout.1()
                     
                     let titleTopicIconView: ComponentHostView<Empty>
@@ -556,7 +556,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let fileId = iconId, fileId != 0 {
                         titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(2))
                     } else {
-                        titleTopicIconContent = .topic(title: String(title.string.prefix(1)), color: iconColor, size: CGSize(width: 22.0, height: 22.0))
+                        titleTopicIconContent = .topic(title: String(title.string.prefix(1)), color: iconColor, size: CGSize(width: 18.0, height: 18.0))
                     }
                     
                     let titleTopicIconComponent = EmojiStatusComponent(
@@ -576,11 +576,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition: .immediate,
                         component: AnyComponent(titleTopicIconComponent),
                         environment: {},
-                        containerSize: CGSize(width: 22.0, height: 22.0)
+                        containerSize: CGSize(width: 18.0, height: 18.0)
                     )
-                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: UIScreenPixel), size: iconSize)
+                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: 0.0, y: 2.0), size: iconSize)
                     
-                    topicTitleNode.frame = CGRect(origin: CGPoint(x: 22.0 + 2.0, y: 0.0), size: topicTitleLayout.0.size)
+                    topicTitleNode.frame = CGRect(origin: CGPoint(x: 18.0 + 2.0, y: 0.0), size: topicTitleLayout.0.size)
                     
                     return targetNode
                 })
@@ -592,6 +592,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         let authorNode: TextNode
         var titleTopicArrowNode: ASImageNode?
         var topicNodes: [Int64: TopicItemNode] = [:]
+        var topicNodeOrder: [Int64] = []
         
         var visibilityStatus: Bool = false {
             didSet {
@@ -610,6 +611,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             super.init()
             
             self.addSubnode(self.authorNode)
+        }
+        
+        func setFirstTopicHighlighted(_ isHighlighted: Bool) {
+            guard let id = self.topicNodeOrder.first, let itemNode = self.topicNodes[id] else {
+                return
+            }
+            if isHighlighted {
+                itemNode.layer.removeAnimation(forKey: "opacity")
+                itemNode.alpha = 0.65
+            } else {
+                itemNode.alpha = 1.0
+                itemNode.layer.animateAlpha(from: 0.65, to: 1.0, duration: 0.2)
+            }
         }
         
         func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topics: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)]) -> (CGSize, () -> CGRect?) {
@@ -649,7 +663,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let (topicSize, topicApply) = makeTopicLayout(remainingWidth, context, theme, topic.title, topic.iconId, topic.iconColor)
                     topicsSizeAndApply.append((topic.id, topicSize, topicApply))
                     
-                    remainingWidth -= topicSize.width + 1.0
+                    remainingWidth -= topicSize.width + 4.0
                 }
                 
                 var size = authorTitleLayout.0.size
@@ -695,7 +709,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     var topTopicRect: CGRect?
+                    var topicNodeOrder: [Int64] = []
                     for item in topicsSizeAndApply {
+                        topicNodeOrder.append(item.0)
                         let itemNode = item.2()
                         if self.topicNodes[item.0] != itemNode {
                             self.topicNodes[item.0]?.removeFromSupernode()
@@ -707,7 +723,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if topTopicRect == nil {
                             topTopicRect = itemFrame
                         }
-                        nextX += item.1.width + 1.0
+                        nextX += item.1.width + 4.0
                     }
                     var removeIds: [Int64] = []
                     for (id, itemNode) in self.topicNodes {
@@ -719,61 +735,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     for id in removeIds {
                         self.topicNodes.removeValue(forKey: id)
                     }
-                    
-                    /*if let topic {
-                        let titleTopicIconView: ComponentHostView<Empty>
-                        if let current = self.titleTopicIconView {
-                            titleTopicIconView = current
-                        } else {
-                            titleTopicIconView = ComponentHostView<Empty>()
-                            self.titleTopicIconView = titleTopicIconView
-                            self.view.addSubview(titleTopicIconView)
-                        }
-                        
-                        let titleTopicIconContent: EmojiStatusComponent.Content
-                        if let fileId = topic.iconId, fileId != 0 {
-                            titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(2))
-                        } else {
-                            titleTopicIconContent = .topic(title: String(topic.title.string.prefix(1)), color: topic.iconColor, size: CGSize(width: 22.0, height: 22.0))
-                        }
-                        
-                        let titleTopicIconComponent = EmojiStatusComponent(
-                            context: context,
-                            animationCache: context.animationCache,
-                            animationRenderer: context.animationRenderer,
-                            content: titleTopicIconContent,
-                            isVisibleForAnimations: self.visibilityStatus,
-                            action: nil
-                        )
-                        self.titleTopicIconComponent = titleTopicIconComponent
-                        
-                        let iconSize = titleTopicIconView.update(
-                            transition: .immediate,
-                            component: AnyComponent(titleTopicIconComponent),
-                            environment: {},
-                            containerSize: CGSize(width: 22.0, height: 22.0)
-                        )
-                        titleTopicIconView.frame = CGRect(origin: CGPoint(x: nextX, y: UIScreenPixel), size: iconSize)
-                        nextX += iconSize.width + 2.0
-                    } else {
-                        if let titleTopicIconView = self.titleTopicIconView {
-                            self.titleTopicIconView = nil
-                            titleTopicIconView.removeFromSuperview()
-                        }
-                    }
-                    
-                    if let topicTitleLayout = topicTitleLayout {
-                        let topicTitleNode = topicTitleLayout.1()
-                        if topicTitleNode.supernode == nil {
-                            self.addSubnode(topicTitleNode)
-                            self.topicTitleNode = topicTitleNode
-                        }
-                        
-                        topicTitleNode.frame = CGRect(origin: CGPoint(x: nextX - 1.0, y: 0.0), size: topicTitleLayout.0.size)
-                    } else if let topicTitleNode = self.topicTitleNode {
-                        self.topicTitleNode = nil
-                        topicTitleNode.removeFromSupernode()
-                    }*/
+                    self.topicNodeOrder = topicNodeOrder
                     
                     return topTopicRect
                 })
@@ -799,6 +761,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let titleNode: TextNode
     let authorNode: AuthorNode
     private var compoundHighlightingNode: LinkHighlightingNode?
+    private var textArrowNode: ASImageNode?
+    private var compoundTextButtonNode: HighlightTrackingButtonNode?
     let measureNode: TextNode
     private var currentItemHeight: CGFloat?
     let textNode: TextNodeWithEntities
@@ -2086,7 +2050,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !textLeftCutout.isZero {
                 textCutout = TextNodeCutout(topLeft: CGSize(width: textLeftCutout, height: 10.0), topRight: nil, bottomRight: nil)
             }
-            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: rawContentWidth - badgeSize, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+            
+            var textMaxWidth = rawContentWidth - badgeSize
+            
+            var textArrowImage: UIImage?
+            if !forumThreads.isEmpty {
+                textArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                textMaxWidth -= 18.0
+            }
+            
+            let (textLayout, textApply) = textLayout(TextNodeLayoutArguments(attributedString: textAttributedString, backgroundColor: nil, maximumNumberOfLines: authorAttributedString == nil ? 2 : 1, truncationType: .end, constrainedSize: CGSize(width: textMaxWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: textCutout, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
             
             let maxTitleLines: Int
             switch item.index {
@@ -2519,31 +2492,101 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.height.isZero ? 0.0 : (authorLayout.height - 3.0))), size: textLayout.size)
                     strongSelf.textNode.textNode.frame = textNodeFrame
                     
+                    if let textArrowImage = textArrowImage {
+                        let textArrowNode: ASImageNode
+                        if let current = strongSelf.textArrowNode {
+                            textArrowNode = current
+                        } else {
+                            textArrowNode = ASImageNode()
+                            strongSelf.textArrowNode = textArrowNode
+                            strongSelf.textNode.textNode.addSubnode(textArrowNode)
+                        }
+                        textArrowNode.image = textArrowImage
+                        let arrowScale: CGFloat = 0.75
+                        let textArrowSize = CGSize(width: floor(textArrowImage.size.width * arrowScale), height: floor(textArrowImage.size.height * arrowScale))
+                        textArrowNode.frame = CGRect(origin: CGPoint(x: textNodeFrame.width - 3.0, y: floorToScreenPixels((textNodeFrame.height - textArrowSize.height) / 2.0)), size: textArrowSize)
+                    } else if let textArrowNode = strongSelf.textArrowNode {
+                        strongSelf.textArrowNode = nil
+                        textArrowNode.removeFromSupernode()
+                    }
+                    
                     if let topForumTopicRect {
                         let compoundHighlightingNode: LinkHighlightingNode
                         if let current = strongSelf.compoundHighlightingNode {
                             compoundHighlightingNode = current
                         } else {
-                            compoundHighlightingNode = LinkHighlightingNode(color: theme.itemHighlightedBackgroundColor)
+                            compoundHighlightingNode = LinkHighlightingNode(color: .clear)
+                            compoundHighlightingNode.alpha = strongSelf.authorNode.alpha
+                            compoundHighlightingNode.useModernPathCalculation = true
                             strongSelf.compoundHighlightingNode = compoundHighlightingNode
                             strongSelf.contextContainer.insertSubnode(compoundHighlightingNode, at: 0)
                         }
-                        compoundHighlightingNode.outerRadius = 8.0
-                        compoundHighlightingNode.innerRadius = 8.0
-                        compoundHighlightingNode.frame = CGRect(origin: CGPoint(x: authorNodeFrame.minX, y: authorNodeFrame.minY), size: CGSize(width: textNodeFrame.maxX - authorNodeFrame.minX, height: textNodeFrame.maxY - authorNodeFrame.minY))
+                        
+                        let compoundTextButtonNode: HighlightTrackingButtonNode
+                        if let current = strongSelf.compoundTextButtonNode {
+                            compoundTextButtonNode = current
+                        } else {
+                            compoundTextButtonNode = HighlightTrackingButtonNode()
+                            strongSelf.compoundTextButtonNode = compoundTextButtonNode
+                            strongSelf.contextContainer.addSubnode(compoundTextButtonNode)
+                            compoundTextButtonNode.addTarget(strongSelf, action: #selector(strongSelf.compoundTextButtonPressed), forControlEvents: .touchUpInside)
+                            compoundTextButtonNode.highligthedChanged = { highlighted in
+                                guard let strongSelf = self, let compoundHighlightingNode = strongSelf.compoundHighlightingNode else {
+                                    return
+                                }
+                                if highlighted {
+                                    compoundHighlightingNode.layer.removeAnimation(forKey: "opacity")
+                                    compoundHighlightingNode.alpha = 0.65
+                                    strongSelf.textNode.textNode.alpha = strongSelf.authorNode.alpha * 0.65
+                                    strongSelf.authorNode.setFirstTopicHighlighted(true)
+                                } else {
+                                    compoundHighlightingNode.alpha = 1.0
+                                    compoundHighlightingNode.layer.animateAlpha(from: 0.65, to: 1.0, duration: 0.2)
+                                    
+                                    let prevAlpha = strongSelf.textNode.textNode.alpha
+                                    strongSelf.textNode.textNode.alpha = strongSelf.authorNode.alpha
+                                    strongSelf.textNode.textNode.layer.animateAlpha(from: prevAlpha, to: strongSelf.authorNode.alpha, duration: 0.2)
+                                    strongSelf.authorNode.setFirstTopicHighlighted(false)
+                                }
+                            }
+                        }
+                        
+                        compoundHighlightingNode.color = theme.itemHighlightedBackgroundColor.withMultipliedAlpha(0.5)
+                        
                         var topRect = topForumTopicRect
-                        topRect.origin.y += 1.0
+                        topRect.origin.x -= 1.0
+                        topRect.size.width += 2.0
                         var textRect = textNodeFrame.offsetBy(dx: -authorNodeFrame.minX, dy: -authorNodeFrame.minY)
                         textRect.origin.x = topRect.minX
-                        textRect.size.height -= 3.0
-                        let midY = floor((topForumTopicRect.minY + textRect.maxY) / 2.0) + 3.0
+                        textRect.size.height -= 1.0
+                        textRect.size.width += 16.0
+                        
+                        compoundHighlightingNode.frame = CGRect(origin: CGPoint(x: authorNodeFrame.minX, y: authorNodeFrame.minY), size: CGSize(width: textNodeFrame.maxX - authorNodeFrame.minX, height: textNodeFrame.maxY - authorNodeFrame.minY))
+                        
+                        let midY = floor((topForumTopicRect.minY + textRect.maxY) / 2.0) + 1.0
+                        
+                        let finalTopRect = CGRect(origin: topRect.origin, size: CGSize(width: topRect.width, height: midY - topRect.minY))
+                        let finalBottomRect = CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                        
+                        compoundHighlightingNode.inset = 0.0
+                        compoundHighlightingNode.outerRadius = floor(finalBottomRect.height * 0.5)
+                        compoundHighlightingNode.innerRadius = 4.0
+                        
                         compoundHighlightingNode.updateRects([
-                            CGRect(origin: topRect.origin, size: CGSize(width: topRect.width, height: midY - topRect.minY)),
-                            CGRect(origin: CGPoint(x: textRect.minX, y: midY), size: CGSize(width: textRect.width, height: textRect.maxY - midY))
+                            finalTopRect,
+                            finalBottomRect
                         ])
-                    } else if let compoundHighlightingNode = strongSelf.compoundHighlightingNode {
-                        strongSelf.compoundHighlightingNode = nil
-                        compoundHighlightingNode.removeFromSupernode()
+                        
+                        compoundTextButtonNode.frame = compoundHighlightingNode.frame
+                    } else {
+                        if let compoundHighlightingNode = strongSelf.compoundHighlightingNode {
+                            strongSelf.compoundHighlightingNode = nil
+                            compoundHighlightingNode.removeFromSupernode()
+                        }
+                        if let compoundTextButtonNode = strongSelf.compoundTextButtonNode {
+                            strongSelf.compoundTextButtonNode = nil
+                            compoundTextButtonNode.removeFromSupernode()
+                        }
                     }
                     
                     if !textLayout.spoilers.isEmpty {
@@ -2585,12 +2628,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.inputActivitiesNode.alpha = 1.0
                             strongSelf.textNode.textNode.alpha = 0.0
                             strongSelf.authorNode.alpha = 0.0
+                            strongSelf.compoundHighlightingNode?.alpha = 0.0
                             strongSelf.dustNode?.alpha = 0.0
                             
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.textNode.textNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
+                                strongSelf.compoundHighlightingNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15)
                             }
                         }
@@ -2599,6 +2644,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.inputActivitiesNode.alpha = 0.0
                             strongSelf.textNode.textNode.alpha = 1.0
                             strongSelf.authorNode.alpha = 1.0
+                            strongSelf.compoundHighlightingNode?.alpha = 1.0
                             strongSelf.dustNode?.alpha = 1.0
                             if animated || animateContent {
                                 strongSelf.inputActivitiesNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, completion: { value in
@@ -2608,6 +2654,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                 })
                                 strongSelf.textNode.textNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.authorNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
+                                strongSelf.compoundHighlightingNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                                 strongSelf.dustNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.15)
                             } else {
                                 strongSelf.inputActivitiesNode.removeFromSupernode()
@@ -2672,6 +2719,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         
                         let authorPosition = strongSelf.authorNode.position
                         transition.animatePosition(node: strongSelf.authorNode, from: CGPoint(x: authorPosition.x - contentDelta.x, y: authorPosition.y - contentDelta.y))
+                        if let compoundHighlightingNode = strongSelf.compoundHighlightingNode {
+                            let compoundHighlightingPosition = compoundHighlightingNode.position
+                            transition.animatePosition(node: compoundHighlightingNode, from: CGPoint(x: compoundHighlightingPosition.x - contentDelta.x, y: compoundHighlightingPosition.y - contentDelta.y))
+                        }
                     }
                     
                     if crossfadeContent {
@@ -2789,6 +2840,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             })
         }
+    }
+    
+    @objc private func compoundTextButtonPressed() {
+        guard let item else {
+            return
+        }
+        guard case let .peer(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, topForumTopicItems) = item.content else {
+            return
+        }
+        guard let topicItem = topForumTopicItems.first else {
+            return
+        }
+        guard case let .chatList(index) = item.index else {
+            return
+        }
+        item.interaction.openForumThread(index.messageIndex.id.peerId, topicItem.id)
     }
     
     override func animateInsertion(_ currentTimestamp: Double, duration: Double, short: Bool) {
@@ -2955,8 +3022,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let titleFrame = self.titleNode.frame
             transition.updateFrameAdditive(node: self.titleNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x + titleOffset, y: titleFrame.origin.y), size: titleFrame.size))
             
-            let authorFrame = self.authorNode.frame
-            transition.updateFrame(node: self.authorNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size))
+            var authorFrame = self.authorNode.frame
+            authorFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: authorFrame.origin.y), size: authorFrame.size)
+            transition.updateFrame(node: self.authorNode, frame: authorFrame)
+            
+            if let compoundHighlightingNode = self.compoundHighlightingNode {
+                let compoundHighlightingFrame = compoundHighlightingNode.frame
+                transition.updateFrame(node: compoundHighlightingNode, frame: CGRect(origin: CGPoint(x: authorFrame.minX, y: compoundHighlightingFrame.origin.y), size: compoundHighlightingFrame.size))
+            }
             
             transition.updateFrame(node: self.inputActivitiesNode, frame: CGRect(origin: CGPoint(x: contentRect.origin.x, y: self.inputActivitiesNode.frame.minY), size: self.inputActivitiesNode.bounds.size))
             

@@ -52,7 +52,7 @@ private func drawConnectingCorner(context: CGContext, color: UIColor, at point: 
     }
 }
 
-private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat) -> (CGPoint, UIImage?) {
+private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat, useModernPathCalculation: Bool) -> (CGPoint, UIImage?) {
     if rects.isEmpty {
         return (CGPoint(), nil)
     }
@@ -77,21 +77,117 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
         
         context.setBlendMode(.copy)
         
-        /*context.move(to: CGPoint(x: rects[0].midX, y: rects[0].minY))
-        
-        for i in 0 ..< rects.count {
-            let rect = rects[i].insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y)
-            var next: CGRect?
-            if i + 1 < rects.count {
-                next = rects[i + 1].insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y)
+        var rects = rects.map { $0.insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y) }
+        if rects.count > 1 {
+            let minRadius: CGFloat = 2.0
+            
+            for _ in 0 ..< rects.count * rects.count {
+                var hadChanges = false
+                for i in 0 ..< rects.count - 1 {
+                    if rects[i].maxY > rects[i + 1].minY {
+                        let midY = floor((rects[i].maxY + rects[i + 1].minY) * 0.5)
+                        rects[i].size.height = midY - rects[i].minY
+                        rects[i + 1].origin.y = midY
+                        rects[i + 1].size.height = rects[i + 1].maxY - midY
+                        hadChanges = true
+                    }
+                    if rects[i].maxY >= rects[i + 1].minY && rects[i].insetBy(dx: 0.0, dy: 1.0).intersects(rects[i + 1]) {
+                        if abs(rects[i].minX - rects[i + 1].minX) < minRadius {
+                            let commonMinX = min(rects[i].origin.x, rects[i + 1].origin.x)
+                            if rects[i].origin.x != commonMinX {
+                                rects[i].origin.x = commonMinX
+                                hadChanges = true
+                            }
+                            if rects[i + 1].origin.x != commonMinX {
+                                rects[i + 1].origin.x = commonMinX
+                                hadChanges = true
+                            }
+                        }
+                        if abs(rects[i].maxX - rects[i + 1].maxX) < minRadius {
+                            let commonMaxX = max(rects[i].maxX, rects[i + 1].maxX)
+                            if rects[i].maxX != commonMaxX {
+                                rects[i].size.width = commonMaxX - rects[i].minX
+                                hadChanges = true
+                            }
+                            if rects[i + 1].maxX != commonMaxX {
+                                rects[i + 1].size.width = commonMaxX - rects[i + 1].minX
+                                hadChanges = true
+                            }
+                        }
+                    }
+                }
+                if !hadChanges {
+                    break
+                }
             }
             
-            if let next = next {
+            if useModernPathCalculation {
+                context.move(to: CGPoint(x: rects[0].midX, y: rects[0].minY))
+                context.addLine(to: CGPoint(x: rects[0].maxX - outerRadius, y: rects[0].minY))
+                context.addArc(tangent1End: rects[0].topRight, tangent2End: CGPoint(x: rects[0].maxX, y: rects[0].minY + outerRadius), radius: outerRadius)
+                context.addLine(to: CGPoint(x: rects[0].maxX, y: rects[0].midY))
                 
-            } else {
+                for i in 0 ..< rects.count - 1 {
+                    let rect = rects[i]
+                    let next = rects[i + 1]
+                    
+                    if rect.maxX == next.maxX {
+                        context.addLine(to: CGPoint(x: next.maxX, y: next.midY))
+                    } else {
+                        let nextRadius = min(outerRadius, floor(abs(rect.maxX - next.maxX) * 0.5))
+                        context.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY - nextRadius))
+                        if next.maxX > rect.maxX {
+                            context.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX + nextRadius, y: rect.maxY), radius: nextRadius)
+                            context.addLine(to: CGPoint(x: next.maxX - nextRadius, y: next.minY))
+                        } else {
+                            context.addArc(tangent1End: CGPoint(x: rect.maxX, y: rect.maxY), tangent2End: CGPoint(x: rect.maxX - nextRadius, y: rect.maxY), radius: nextRadius)
+                            context.addLine(to: CGPoint(x: next.maxX + nextRadius, y: next.minY))
+                        }
+                        context.addArc(tangent1End: next.topRight, tangent2End: CGPoint(x: next.maxX, y: next.minY + nextRadius), radius: nextRadius)
+                        context.addLine(to: CGPoint(x: next.maxX, y: next.midY))
+                    }
+                }
                 
+                let last = rects[rects.count - 1]
+                context.addLine(to: CGPoint(x: last.maxX, y: last.maxY - outerRadius))
+                context.addArc(tangent1End: last.bottomRight, tangent2End: CGPoint(x: last.maxX - outerRadius, y: last.maxY), radius: outerRadius)
+                context.addLine(to: CGPoint(x: last.minX + outerRadius, y: last.maxY))
+                context.addArc(tangent1End: last.bottomLeft, tangent2End: CGPoint(x: last.minX, y: last.maxY - outerRadius), radius: outerRadius)
+                
+                for i in (1 ..< rects.count).reversed() {
+                    let rect = rects[i]
+                    let prev = rects[i - 1]
+                    
+                    if rect.minX == prev.minX {
+                        context.addLine(to: CGPoint(x: prev.minX, y: prev.midY))
+                    } else {
+                        let prevRadius = min(outerRadius, floor(abs(rect.minX - prev.minX) * 0.5))
+                        context.addLine(to: CGPoint(x: rect.minX, y: rect.minY + prevRadius))
+                        if rect.minX < prev.minX {
+                            context.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX + prevRadius, y: rect.minY), radius: prevRadius)
+                            context.addLine(to: CGPoint(x: prev.minX - prevRadius, y: prev.maxY))
+                        } else {
+                            context.addArc(tangent1End: CGPoint(x: rect.minX, y: rect.minY), tangent2End: CGPoint(x: rect.minX - prevRadius, y: rect.minY), radius: prevRadius)
+                            context.addLine(to: CGPoint(x: prev.minX + prevRadius, y: prev.maxY))
+                        }
+                        context.addArc(tangent1End: prev.bottomLeft, tangent2End: CGPoint(x: prev.minX, y: prev.maxY - prevRadius), radius: prevRadius)
+                        context.addLine(to: CGPoint(x: prev.minX, y: prev.midY))
+                    }
+                }
+                
+                context.addLine(to: CGPoint(x: rects[0].minX, y: rects[0].minY + outerRadius))
+                context.addArc(tangent1End: rects[0].topLeft, tangent2End: CGPoint(x: rects[0].minX + outerRadius, y: rects[0].minY), radius: outerRadius)
+                context.addLine(to: CGPoint(x: rects[0].midX, y: rects[0].minY))
+                
+                context.fillPath()
+                return
             }
-        }*/
+        } else {
+            let path = UIBezierPath(roundedRect: rects[0], cornerRadius: outerRadius).cgPath
+            context.addPath(path)
+            context.fillPath()
+            return
+        }
         
         for i in 0 ..< rects.count {
             let rect = rects[i].insetBy(dx: -inset, dy: -inset)
@@ -181,6 +277,7 @@ public final class LinkHighlightingNode: ASDisplayNode {
     public var innerRadius: CGFloat = 4.0
     public var outerRadius: CGFloat = 4.0
     public var inset: CGFloat = 2.0
+    public var useModernPathCalculation: Bool = false
     
     private var _color: UIColor
     public var color: UIColor {
@@ -218,7 +315,7 @@ public final class LinkHighlightingNode: ASDisplayNode {
         if self.rects.isEmpty {
             self.imageNode.image = nil
         }
-        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius)
+        let (offset, image) = generateRectsImage(color: self.color, rects: self.rects, inset: self.inset, outerRadius: self.outerRadius, innerRadius: self.innerRadius, useModernPathCalculation: self.useModernPathCalculation)
         
         if let image = image {
             self.imageNode.image = image
@@ -226,11 +323,11 @@ public final class LinkHighlightingNode: ASDisplayNode {
         }
     }
 
-    public static func generateImage(color: UIColor, inset: CGFloat, innerRadius: CGFloat, outerRadius: CGFloat, rects: [CGRect]) -> (CGPoint, UIImage)? {
+    public static func generateImage(color: UIColor, inset: CGFloat, innerRadius: CGFloat, outerRadius: CGFloat, rects: [CGRect], useModernPathCalculation: Bool) -> (CGPoint, UIImage)? {
         if rects.isEmpty {
            return nil
         }
-        let (offset, image) = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius)
+        let (offset, image) = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius, useModernPathCalculation: useModernPathCalculation)
 
         if let image = image {
             return (offset, image)
@@ -245,11 +342,12 @@ public final class LinkHighlightingNode: ASDisplayNode {
         let currentInnerRadius = self.innerRadius
         let currentOuterRadius = self.outerRadius
         let currentInset = self.inset
+        let useModernPathCalculation = self.useModernPathCalculation
         
         return { [weak self] color, rects, innerRadius, outerRadius, inset in
             var updatedImage: (CGPoint, UIImage?)?
             if currentRects != rects || !currentColor.isEqual(color) || currentInnerRadius != innerRadius || currentOuterRadius != outerRadius || currentInset != inset {
-                updatedImage = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius)
+                updatedImage = generateRectsImage(color: color, rects: rects, inset: inset, outerRadius: outerRadius, innerRadius: innerRadius, useModernPathCalculation: useModernPathCalculation)
             }
             
             return {
