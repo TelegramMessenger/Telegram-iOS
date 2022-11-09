@@ -15,7 +15,7 @@ public enum PostboxViewKey: Hashable {
     case historyTagSummaryView(tag: MessageTags, peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace)
     case cachedPeerData(peerId: PeerId)
     case unreadCounts(items: [UnreadMessageCountsItem])
-    case combinedReadState(peerId: PeerId)
+    case combinedReadState(peerId: PeerId, handleThreads: Bool)
     case peerNotificationSettings(peerIds: Set<PeerId>)
     case pendingPeerNotificationSettings
     case messageOfInterestHole(location: MessageOfInterestViewLocation, namespace: MessageId.Namespace, count: Int)
@@ -221,8 +221,8 @@ public enum PostboxViewKey: Hashable {
             } else {
                 return false
             }
-        case let .combinedReadState(peerId):
-            if case .combinedReadState(peerId) = rhs {
+        case let .combinedReadState(peerId, handleThreads):
+            if case .combinedReadState(peerId, handleThreads) = rhs {
                 return true
             } else {
                 return false
@@ -405,8 +405,8 @@ func postboxViewForKey(postbox: PostboxImpl, key: PostboxViewKey) -> MutablePost
         return MutableCachedPeerDataView(postbox: postbox, peerId: peerId)
     case let .unreadCounts(items):
         return MutableUnreadMessageCountsView(postbox: postbox, items: items)
-    case let .combinedReadState(peerId):
-        return MutableCombinedReadStateView(postbox: postbox, peerId: peerId)
+    case let .combinedReadState(peerId, handleThreads):
+        return MutableCombinedReadStateView(postbox: postbox, peerId: peerId, handleThreads: handleThreads)
     case let .peerNotificationSettings(peerIds):
         return MutablePeerNotificationSettingsView(postbox: postbox, peerIds: peerIds)
     case .pendingPeerNotificationSettings:
