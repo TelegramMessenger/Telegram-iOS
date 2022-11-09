@@ -169,7 +169,6 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
             }
         }
     }))
-    
 }
 
 enum ChatMessageThreadInfoType {
@@ -351,6 +350,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             let text = NSAttributedString(string: topicTitle, font: textFont, textColor: textColor)
                          
             let lineInset: CGFloat = 7.0
+            let fillInset: CGFloat = 5.0
             let iconSize = CGSize(width: 22.0, height: 22.0)
             let insets = UIEdgeInsets(top: 2.0, left: 4.0, bottom: 2.0, right: 4.0)
             let spacing: CGFloat = 4.0
@@ -360,7 +360,15 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             var lineRects = textLayout.linesRects().map { rect in
                 return CGRect(origin: rect.origin.offsetBy(dx: insets.left, dy: 0.0), size: CGSize(width: rect.width + iconSize.width + spacing + 3.0, height: rect.size.height))
             }
+            var outerRadius: CGFloat = 13.0
+            let innerRadius: CGFloat = 8.0
+            
+            var firstLineMidY: CGFloat?
             if lineRects.count > 0 {
+                if let firstLine = lineRects.first {
+                    firstLineMidY = firstLine.midY - firstLine.minY
+                    outerRadius = min(floorToScreenPixels((firstLine.height + fillInset * 2.0) / 2.0), outerRadius)
+                }
                 let lastRect = lineRects[lineRects.count - 1]
                 lineRects[lineRects.count - 1] = CGRect(origin: lastRect.origin, size: CGSize(width: lastRect.width + 11.0, height: lastRect.height))
             }
@@ -382,10 +390,10 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                 }
                                 
                 if node.lineRects != lineRects {
-                    let (offset, image) = generateRectsImage(color: backgroundColor, rects: lineRects, inset: 5.0, outerRadius: 13.0, innerRadius: 8.0)
+                    let (_, image) = generateRectsImage(color: backgroundColor, rects: lineRects, inset: fillInset, outerRadius: outerRadius, innerRadius: innerRadius)
                     if let image = image {
                         if case .standalone = arguments.type {
-                            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -3.0), size: CGSize(width: size.width + 5.0, height: size.height + 10.0))
+                            let backgroundFrame = CGRect(origin: CGPoint(x: 0.0, y: -3.0), size: CGSize(width: size.width + fillInset, height: size.height + fillInset * 2.0))
                             
                             if arguments.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                                 if node.backgroundContent == nil, let backgroundContent = arguments.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {
@@ -435,7 +443,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                                 backgroundNode.updateColor(color: selectDateFillStaticColor(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: arguments.presentationData.theme.theme, wallpaper: arguments.presentationData.theme.wallpaper), transition: .immediate)
                             }
                         } else {
-                            node.contentBackgroundNode.frame = CGRect(origin: offset.offsetBy(dx: 0.0, dy: -11.0), size: image.size)
+                            node.contentBackgroundNode.frame = CGRect(origin: CGPoint(x: -1.0, y: -3.0), size: image.size)
                             node.contentBackgroundNode.image = image
                         }
                     }
@@ -489,15 +497,25 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                         environment: {},
                         containerSize: CGSize(width: 22.0, height: 22.0)
                     )
-                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left, y: 0.0), size: iconSize)
+                    
+                    let iconY: CGFloat
+                    if let firstLineMidY = firstLineMidY {
+                        iconY = floorToScreenPixels(firstLineMidY - iconSize.height / 2.0)
+                    } else {
+                        iconY = 0.0
+                    }
+                    
+                    titleTopicIconView.frame = CGRect(origin: CGPoint(x: insets.left, y: insets.top + iconY), size: iconSize)
                 }
 
                 let textFrame = CGRect(origin: CGPoint(x: iconSize.width + 2.0 + insets.left, y: insets.top), size: textLayout.size)
                 textNode.textNode.frame = textFrame
                  
-                if let arrowIcon = arrowIcon, let lastRect = lineRects.last {
+                if let arrowIcon = arrowIcon, let firstLine = lineRects.first, let lastLine = lineRects.last {
+                    let lastRectMidY = lastLine.midY - firstLine.minY
+                    
                     node.arrowNode.image = arrowIcon
-                    node.arrowNode.frame = CGRect(origin: CGPoint(x: lastRect.maxX - arrowIcon.size.width - 1.0, y: floorToScreenPixels(lastRect.midY - arrowIcon.size.height / 2.0) - 11.0 + UIScreenPixel), size: arrowIcon.size)
+                    node.arrowNode.frame = CGRect(origin: CGPoint(x: lastLine.maxX - arrowIcon.size.width - 1.0, y: insets.top + floorToScreenPixels(lastRectMidY - arrowIcon.size.height / 2.0) + UIScreenPixel), size: arrowIcon.size)
                 }
                 
                 node.contentNode.frame = CGRect(origin: CGPoint(), size: size)
