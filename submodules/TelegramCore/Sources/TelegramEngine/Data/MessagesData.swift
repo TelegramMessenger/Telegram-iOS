@@ -169,7 +169,7 @@ public extension TelegramEngine.EngineData.Item {
             }
 
             var key: PostboxViewKey {
-                return .combinedReadState(peerId: self.id)
+                return .combinedReadState(peerId: self.id, handleThreads: true)
             }
 
             public init(id: EnginePeer.Id) {
