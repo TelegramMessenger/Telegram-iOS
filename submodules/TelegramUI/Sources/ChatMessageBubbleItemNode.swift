@@ -1968,28 +1968,30 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     hasReply = false
                 }
                     
-                if headerSize.height.isZero {
-                    headerSize.height += 14.0
-                } else {
-                    headerSize.height += 5.0
+                if !mergedTop.merged {
+                    if headerSize.height.isZero {
+                        headerSize.height += 14.0
+                    } else {
+                        headerSize.height += 5.0
+                    }
+                    let sizeAndApply = threadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                        presentationData: item.presentationData,
+                        strings: item.presentationData.strings,
+                        context: item.context,
+                        controllerInteraction: item.controllerInteraction,
+                        type: .bubble(incoming: incoming),
+                        message: replyMessage,
+                        parentMessage: item.message,
+                        constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
+                        animationCache: item.controllerInteraction.presentationContext.animationCache,
+                        animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                    ))
+                    threadInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
+                    
+                    threadInfoOriginY = headerSize.height
+                    headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
+                    headerSize.height += threadInfoSizeApply.0.height + 5.0
                 }
-                let sizeAndApply = threadInfoLayout(ChatMessageThreadInfoNode.Arguments(
-                    presentationData: item.presentationData,
-                    strings: item.presentationData.strings,
-                    context: item.context,
-                    controllerInteraction: item.controllerInteraction,
-                    type: .bubble(incoming: incoming),
-                    message: replyMessage,
-                    parentMessage: item.message,
-                    constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
-                    animationCache: item.controllerInteraction.presentationContext.animationCache,
-                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                ))
-                threadInfoSizeApply = (sizeAndApply.0, { synchronousLoads in sizeAndApply.1(synchronousLoads) })
-                
-                threadInfoOriginY = headerSize.height
-                headerSize.width = max(headerSize.width, threadInfoSizeApply.0.width + layoutConstants.text.bubbleInsets.left + layoutConstants.text.bubbleInsets.right)
-                headerSize.height += threadInfoSizeApply.0.height + 5.0
             }
             
             if !isInstantVideo, let replyMessage = replyMessage, hasReply {

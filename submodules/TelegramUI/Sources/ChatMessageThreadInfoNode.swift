@@ -334,7 +334,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                     let colors = topicIconColors(for: topicIconColor)
                     backgroundColor = UIColor(rgb: colors.0.last ?? 0x000000)
                     textColor = UIColor(rgb: colors.1.first ?? 0x000000)
-                    arrowIcon = PresentationResourcesChat.chatBubbleArrowImage(color: textColor)
+                    arrowIcon = PresentationResourcesChat.chatBubbleArrowImage(color: textColor.withAlphaComponent(0.3))
                 } else {
                     backgroundColor = (incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
                     textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor

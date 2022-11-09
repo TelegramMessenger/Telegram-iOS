@@ -472,6 +472,15 @@ public extension TelegramEngine {
             |> ignoreValues
         }
         
+        public func markForumThreadsAsRead(peerId: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for threadId in threadIds {
+                    _internal_markForumThreadAsReadInteractively(transaction: transaction, network: self.account.network, viewTracker: self.account.viewTracker, peerId: peerId, threadId: threadId)
+                }
+            }
+            |> ignoreValues
+        }
+        
         public func debugAddHoles() -> Signal<Never, NoError> {
             return self.account.postbox.transaction { transaction -> Void in
                 transaction.addHolesEverywhere(peerNamespaces: [Namespaces.Peer.CloudUser, Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel], holeNamespace: Namespaces.Message.Cloud)
