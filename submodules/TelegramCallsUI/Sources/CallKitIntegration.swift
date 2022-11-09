@@ -247,9 +247,9 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         update.hasVideo = isVideo
         
         do {
-            try AVAudioSession.sharedInstance().setMode(.default)
+            try AVAudioSession.sharedInstance().setMode(.voiceChat)
         } catch let e {
-            print("AVAudioSession.sharedInstance().setMode(.default) error \(e)")
+            print("AVAudioSession.sharedInstance().setMode(.voiceChat) error \(e)")
         }
         
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in

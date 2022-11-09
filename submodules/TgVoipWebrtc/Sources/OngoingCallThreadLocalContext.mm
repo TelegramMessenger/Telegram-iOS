@@ -878,7 +878,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 #ifdef WEBRTC_IOS
         RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
         if (useManualAudioSessionControl) {
-            sharedConfiguration.mode = AVAudioSessionModeDefault;
+            sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
         } else {
             sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
         }
