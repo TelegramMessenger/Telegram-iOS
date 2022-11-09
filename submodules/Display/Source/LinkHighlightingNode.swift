@@ -77,51 +77,51 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
         
         context.setBlendMode(.copy)
         
-        var rects = rects.map { $0.insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y) }
-        if rects.count > 1 {
-            let minRadius: CGFloat = 2.0
-            
-            for _ in 0 ..< rects.count * rects.count {
-                var hadChanges = false
-                for i in 0 ..< rects.count - 1 {
-                    if rects[i].maxY > rects[i + 1].minY {
-                        let midY = floor((rects[i].maxY + rects[i + 1].minY) * 0.5)
-                        rects[i].size.height = midY - rects[i].minY
-                        rects[i + 1].origin.y = midY
-                        rects[i + 1].size.height = rects[i + 1].maxY - midY
-                        hadChanges = true
-                    }
-                    if rects[i].maxY >= rects[i + 1].minY && rects[i].insetBy(dx: 0.0, dy: 1.0).intersects(rects[i + 1]) {
-                        if abs(rects[i].minX - rects[i + 1].minX) < minRadius {
-                            let commonMinX = min(rects[i].origin.x, rects[i + 1].origin.x)
-                            if rects[i].origin.x != commonMinX {
-                                rects[i].origin.x = commonMinX
-                                hadChanges = true
+        if useModernPathCalculation {
+            var rects = rects.map { $0.insetBy(dx: -inset, dy: -inset).offsetBy(dx: -topLeft.x, dy: -topLeft.y) }
+            if rects.count > 1 {
+                let minRadius: CGFloat = 2.0
+                
+                for _ in 0 ..< rects.count * rects.count {
+                    var hadChanges = false
+                    for i in 0 ..< rects.count - 1 {
+                        if rects[i].maxY > rects[i + 1].minY {
+                            let midY = floor((rects[i].maxY + rects[i + 1].minY) * 0.5)
+                            rects[i].size.height = midY - rects[i].minY
+                            rects[i + 1].origin.y = midY
+                            rects[i + 1].size.height = rects[i + 1].maxY - midY
+                            hadChanges = true
+                        }
+                        if rects[i].maxY >= rects[i + 1].minY && rects[i].insetBy(dx: 0.0, dy: 1.0).intersects(rects[i + 1]) {
+                            if abs(rects[i].minX - rects[i + 1].minX) < minRadius {
+                                let commonMinX = min(rects[i].origin.x, rects[i + 1].origin.x)
+                                if rects[i].origin.x != commonMinX {
+                                    rects[i].origin.x = commonMinX
+                                    hadChanges = true
+                                }
+                                if rects[i + 1].origin.x != commonMinX {
+                                    rects[i + 1].origin.x = commonMinX
+                                    hadChanges = true
+                                }
                             }
-                            if rects[i + 1].origin.x != commonMinX {
-                                rects[i + 1].origin.x = commonMinX
-                                hadChanges = true
+                            if abs(rects[i].maxX - rects[i + 1].maxX) < minRadius {
+                                let commonMaxX = max(rects[i].maxX, rects[i + 1].maxX)
+                                if rects[i].maxX != commonMaxX {
+                                    rects[i].size.width = commonMaxX - rects[i].minX
+                                    hadChanges = true
+                                }
+                                if rects[i + 1].maxX != commonMaxX {
+                                    rects[i + 1].size.width = commonMaxX - rects[i + 1].minX
+                                    hadChanges = true
+                                }
                             }
                         }
-                        if abs(rects[i].maxX - rects[i + 1].maxX) < minRadius {
-                            let commonMaxX = max(rects[i].maxX, rects[i + 1].maxX)
-                            if rects[i].maxX != commonMaxX {
-                                rects[i].size.width = commonMaxX - rects[i].minX
-                                hadChanges = true
-                            }
-                            if rects[i + 1].maxX != commonMaxX {
-                                rects[i + 1].size.width = commonMaxX - rects[i + 1].minX
-                                hadChanges = true
-                            }
-                        }
+                    }
+                    if !hadChanges {
+                        break
                     }
                 }
-                if !hadChanges {
-                    break
-                }
-            }
-            
-            if useModernPathCalculation {
+                
                 context.move(to: CGPoint(x: rects[0].midX, y: rects[0].minY))
                 context.addLine(to: CGPoint(x: rects[0].maxX - outerRadius, y: rects[0].minY))
                 context.addArc(tangent1End: rects[0].topRight, tangent2End: CGPoint(x: rects[0].maxX, y: rects[0].minY + outerRadius), radius: outerRadius)
@@ -181,12 +181,12 @@ private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat,
                 
                 context.fillPath()
                 return
+            } else {
+                let path = UIBezierPath(roundedRect: rects[0], cornerRadius: outerRadius).cgPath
+                context.addPath(path)
+                context.fillPath()
+                return
             }
-        } else {
-            let path = UIBezierPath(roundedRect: rects[0], cornerRadius: outerRadius).cgPath
-            context.addPath(path)
-            context.fillPath()
-            return
         }
         
         for i in 0 ..< rects.count {
