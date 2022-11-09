@@ -392,6 +392,11 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if let shareButtonNode = strongSelf.shareButtonNode, shareButtonNode.frame.contains(point) {
                     return .fail
                 }
+                if let threadInfoNode = strongSelf.threadInfoNode, threadInfoNode.frame.contains(point) {
+                    if let _ = threadInfoNode.hitTest(strongSelf.view.convert(point, to: threadInfoNode.view), with: nil) {
+                        return .fail
+                    }
+                }
                 if let reactionButtonsNode = strongSelf.reactionButtonsNode {
                     if let _ = reactionButtonsNode.hitTest(strongSelf.view.convert(point, to: reactionButtonsNode.view), with: nil) {
                         return .fail
@@ -2492,13 +2497,14 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         if let shareButtonNode = self.shareButtonNode, shareButtonNode.frame.contains(point) {
             return shareButtonNode.view
         }
-        
+        if let threadInfoNode = self.threadInfoNode, let result = threadInfoNode.hitTest(self.view.convert(point, to: threadInfoNode.view), with: event) {
+            return result
+        }
         if let reactionButtonsNode = self.reactionButtonsNode {
             if let result = reactionButtonsNode.hitTest(self.view.convert(point, to: reactionButtonsNode.view), with: event) {
                 return result
             }
         }
-        
         return super.hitTest(point, with: event)
     }
     

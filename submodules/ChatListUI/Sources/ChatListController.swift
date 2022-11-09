@@ -3237,10 +3237,17 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     override public func toolbarActionSelected(action: ToolbarActionOption) {
         let peerIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedPeerIds
+        let threadIds = self.chatListDisplayNode.containerNode.currentItemNode.currentState.selectedThreadIds
         if case .left = action {
             let signal: Signal<Never, NoError>
             var completion: (() -> Void)?
-            if !peerIds.isEmpty {
+            if !threadIds.isEmpty, case let .forum(peerId) = self.location {
+                self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerId, threadId: threadIds.first!))
+                completion = { [weak self] in
+                    self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
+                }
+                signal = self.context.engine.messages.markForumThreadsAsRead(peerId: peerId, threadIds: Array(threadIds))
+            } else if !peerIds.isEmpty {
                 self.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
                 completion = { [weak self] in
                     self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(nil)
