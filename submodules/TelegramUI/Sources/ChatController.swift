@@ -1057,6 +1057,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     var tip: ContextController.Tip?
                     
                     if tip == nil {
+                        let isAd = message.adAttribute != nil
+                            
                         var isAction = false
                         for media in message.media {
                             if media is TelegramMediaAction {
@@ -1064,7 +1066,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 break
                             }
                         }
-                        if strongSelf.presentationInterfaceState.copyProtectionEnabled && !isAction {
+                        if strongSelf.presentationInterfaceState.copyProtectionEnabled && !isAction && !isAd {
                             if case .scheduledMessages = strongSelf.subject {
                             } else {
                                 var isChannel = false
@@ -1075,7 +1077,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }
                         } else {
                             let numberOfComponents = message.text.components(separatedBy: CharacterSet.whitespacesAndNewlines).count
-                            let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3
+                            let displayTextSelectionTip = numberOfComponents >= 3 && !message.text.isEmpty && chatTextSelectionTips < 3 && !isAd
                             if displayTextSelectionTip {
                                 let _ = ApplicationSpecificNotice.incrementChatTextSelectionTips(accountManager: strongSelf.context.sharedContext.accountManager).start()
                                 tip = .textSelection
@@ -1088,11 +1090,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                     
                     actions.context = strongSelf.context
-                    
                     actions.animationCache = strongSelf.controllerInteraction?.presentationContext.animationCache
-                                         
-                    //let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
-                    
+                                                             
                     if canAddMessageReactions(message: topMessage), let allowedReactions = allowedReactions, !topReactions.isEmpty {
                         actions.reactionItems = topReactions.map(ReactionContextItem.reaction)
                         actions.selectedReactionItems = selectedReactions.reactions
@@ -1821,6 +1820,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self?.navigateToMessage(from: fromId, to: .id(id, nil), forceInCurrentChat: fromId.peerId == id.peerId)
         }, navigateToMessageStandalone: { [weak self] id in
             self?.navigateToMessage(from: nil, to: .id(id, nil), forceInCurrentChat: false)
+        }, navigateToThreadMessage: { [weak self] peerId, threadId, messageId in
+            if let context = self?.context, let navigationController = self?.effectiveNavigationController {
+                let _ = context.sharedContext.navigateToForumThread(context: context, peerId: peerId, threadId: threadId, messageId: messageId, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+            }
         }, tapMessage: nil, clickThroughMessage: { [weak self] in
             self?.chatDisplayNode.dismissInput()
         }, toggleMessagesSelection: { [weak self] ids, value in

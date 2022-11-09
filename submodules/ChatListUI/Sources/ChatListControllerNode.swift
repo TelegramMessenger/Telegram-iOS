@@ -603,7 +603,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             )
             |> map { hasOngoingCall, preloadItems -> Set<ChatHistoryPreloadItem> in
                 if hasOngoingCall {
-                    return []
+                    return Set()
                 } else {
                     return Set(preloadItems)
                 }

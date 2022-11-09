@@ -23,12 +23,22 @@ private let gradientColors: [NSArray] = [
     [UIColor(rgb: 0xd669ed).cgColor, UIColor(rgb: 0xe0a2f3).cgColor],
 ]
 
-private func avatarRoundImage(size: CGSize, source: UIImage) -> UIImage? {
+enum AvatarClipStyle {
+    case round
+    case roundedRect
+}
+private func avatarRoundImage(size: CGSize, source: UIImage, style: AvatarClipStyle) -> UIImage? {
     UIGraphicsBeginImageContextWithOptions(size, false, 0.0)
     let context = UIGraphicsGetCurrentContext()
     
     context?.beginPath()
-    context?.addEllipse(in: CGRect(x: 0.0, y: 0.0, width: size.width, height: size.height))
+    switch style {
+    case .round:
+        context?.addEllipse(in: CGRect(origin: .zero, size: size))
+    case .roundedRect:
+        context?.addPath(UIBezierPath(roundedRect: CGRect(origin: .zero, size: size), cornerRadius: size.width * 0.25).cgPath)
+    }
+    
     context?.clip()
     
     source.draw(in: CGRect(origin: CGPoint(), size: size))
@@ -159,10 +169,10 @@ private func savedMessagesImage(size: CGSize) -> UIImage? {
 
 private let avatarSize = CGSize(width: 50.0, height: 50.0)
 
-func avatarImage(accountPeerId: Int64?, peer: WidgetDataPeer?, size: CGSize) -> UIImage {
+func avatarImage(accountPeerId: Int64?, peer: WidgetDataPeer?, size: CGSize, style: AvatarClipStyle) -> UIImage {
     if let peer = peer, let accountPeerId = accountPeerId, peer.id == accountPeerId {
         return savedMessagesImage(size: size)!
-    } else if let path = peer?.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+    } else if let path = peer?.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image, style: style) {
         return roundImage
     } else {
         return avatarViewLettersImage(size: size, peerId: peer?.id ?? 1, accountPeerId: accountPeerId ?? 1, letters: peer?.letters ?? [" "])!
@@ -170,10 +180,10 @@ func avatarImage(accountPeerId: Int64?, peer: WidgetDataPeer?, size: CGSize) -> 
 }
 
 private final class AvatarView: UIImageView {
-    init(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize) {
+    init(accountPeerId: Int64, peer: WidgetDataPeer, size: CGSize, style: AvatarClipStyle) {
         super.init(frame: CGRect())
         
-        if let path = peer.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image) {
+        if let path = peer.avatarPath, let image = UIImage(contentsOfFile: path), let roundImage = avatarRoundImage(size: size, source: image, style: style) {
             self.image = roundImage
         } else {
             self.image = avatarViewLettersImage(size: size, peerId: peer.id, accountPeerId: accountPeerId, letters: peer.letters)
@@ -195,7 +205,7 @@ final class PeerView: UIView {
     init(primaryColor: UIColor, accountPeerId: Int64, peer: WidgetDataPeer, tapped: @escaping () -> Void) {
         self.peer = peer
         self.tapped = tapped
-        self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize)
+        self.avatarView = AvatarView(accountPeerId: accountPeerId, peer: peer, size: avatarSize, style: peer.isForum ? .roundedRect : .round)
         
         self.titleLabel = UILabel()
         var title = peer.name

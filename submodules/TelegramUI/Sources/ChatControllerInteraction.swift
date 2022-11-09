@@ -70,6 +70,7 @@ public final class ChatControllerInteraction {
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let navigateToMessageStandalone: (MessageId) -> Void
+    let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
     let tapMessage: ((Message) -> Void)?
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
@@ -178,6 +179,7 @@ public final class ChatControllerInteraction {
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,
         navigateToMessageStandalone: @escaping (MessageId) -> Void,
+        navigateToThreadMessage: @escaping (PeerId, Int64, MessageId?) -> Void,
         tapMessage: ((Message) -> Void)?,
         clickThroughMessage: @escaping () -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
@@ -269,6 +271,7 @@ public final class ChatControllerInteraction {
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
         self.navigateToMessageStandalone = navigateToMessageStandalone
+        self.navigateToThreadMessage = navigateToThreadMessage
         self.tapMessage = tapMessage
         self.clickThroughMessage = clickThroughMessage
         self.toggleMessagesSelection = toggleMessagesSelection

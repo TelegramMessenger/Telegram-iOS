@@ -122,6 +122,28 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatBubbleArrowImage(color: UIColor) -> UIImage? {
+        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: color)
+    }
+    
+    public static func chatBubbleArrowFreeImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowFreeImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: UIColor(white: 1.0, alpha: 0.3))
+        })
+    }
+    
+    public static func chatBubbleArrowIncomingImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowIncomingImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: theme.chat.message.incoming.accentTextColor.withAlphaComponent(0.3))
+        })
+    }
+    
+    public static func chatBubbleArrowOutgoingImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatBubbleArrowOutgoingImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Message/HeaderArrow"), color: theme.chat.message.outgoing.accentTextColor.withAlphaComponent(0.3))
+        })
+    }
+    
     public static func chatBubbleConsumableContentIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatBubbleConsumableContentIncomingIcon.rawValue, { theme in
             return generateFilledCircleImage(diameter: 4.0, color: theme.chat.message.incoming.accentTextColor)

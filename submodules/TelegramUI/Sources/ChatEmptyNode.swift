@@ -962,9 +962,7 @@ final class ChatEmptyNode: ASDisplayNode {
 
             self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), enableBlur: dateFillNeedsBlur(theme: interfaceState.theme, wallpaper: interfaceState.chatWallpaper), transition: .immediate)
         }
-        
-
-        
+    
         var isScheduledMessages = false
         if case .scheduledMessages = interfaceState.subject {
             isScheduledMessages = true

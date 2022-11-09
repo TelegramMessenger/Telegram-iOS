@@ -4351,6 +4351,27 @@ Unused sets are archived when you add more.";
 "SettingsSearch.Synonyms.Support" = "Support";
 "SettingsSearch.Synonyms.FAQ" = " ";
 
+"SettingsSearch.Synonyms.Devices.TerminateOtherSessions" = " ";
+"SettingsSearch.Synonyms.Devices.LinkDesktopDevice" = " ";
+
+"SettingsSearch.Synonyms.Language.ShowTranslateButton" = " ";
+"SettingsSearch.Synonyms.Language.DoNotTranslate" = " ";
+
+"SettingsSearch.Synonyms.Premium" = " ";
+"SettingsSearch.Synonyms.Premium.DoubledLimits" = " ";
+"SettingsSearch.Synonyms.Premium.UploadSize" = " ";
+"SettingsSearch.Synonyms.Premium.FasterSpeed" = " ";
+"SettingsSearch.Synonyms.Premium.VoiceToText" = "Transcribe";
+"SettingsSearch.Synonyms.Premium.NoAds" = " ";
+"SettingsSearch.Synonyms.Premium.EmojiStatus" = " ";
+"SettingsSearch.Synonyms.Premium.Reactions" = " ";
+"SettingsSearch.Synonyms.Premium.Stickers" = " ";
+"SettingsSearch.Synonyms.Premium.AnimatedEmoji" = " ";
+"SettingsSearch.Synonyms.Premium.ChatManagement" = " ";
+"SettingsSearch.Synonyms.Premium.Badge" = "Star";
+"SettingsSearch.Synonyms.Premium.Avatar" = "Video Avatar";
+"SettingsSearch.Synonyms.Premium.AppIcon" = " ";
+
 "ChatList.DeleteForCurrentUser" = "Delete just for me";
 "ChatList.DeleteForEveryone" = "Delete for me and %@";
 "ChatList.DeleteForEveryoneConfirmationTitle" = "Warning!";
@@ -7564,9 +7585,7 @@ Sorry for the inconvenience.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
-
 "Premium.AppIcons.Proceed" = "Unlock Premium Icons";
-
 "Premium.NoAds.Proceed" = "About Telegram Premium";
 
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
@@ -7645,13 +7664,14 @@ Sorry for the inconvenience.";
 
 "Premium.FasterSpeed" = "Faster Download Speed";
 "Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
+"Premium.FasterSpeedStandaloneInfo" = "Subscribe to **Telegram Premium** to download media and files at the fastest possible speed.";
 
 "Premium.VoiceToText" = "Voice-to-Text Conversion";
 "Premium.VoiceToTextInfo" = "Ability to read the transcript of any incoming voice message.";
+"Premium.VoiceToTextStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to convert voice and video messages to text.";
 
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
-
 "Premium.NoAdsStandaloneInfo" = "Remove ads such as this one by subscribing to **Telegram Premium**.";
 
 "Premium.Reactions" = "Unique Reactions";
@@ -7665,6 +7685,7 @@ Sorry for the inconvenience.";
 
 "Premium.ChatManagement" = "Advanced Chat Management";
 "Premium.ChatManagementInfo" = "Tools to set the default folder, auto-archive and hide new chats from non-contacts.";
+"Premium.ChatManagementStandaloneInfo" = "Subscribers of **Telegram Premium** can set the default folder, auto-archive and hide new chats from non-contacts.";
 
 "Premium.Badge" = "Profile Badge";
 "Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
@@ -8247,3 +8268,15 @@ Sorry for the inconvenience.";
 
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
+
+"Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is being resold via auction. [Learn more...]()";
+"Channel.Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is being resold via auction. [Learn more...]()";
+
+"DownloadList.IncreaseSpeed" = "Increase Speed";
+"Conversation.IncreaseSpeed" = "Increase Speed";
+
+"Premium.ChatManagement.Proceed" = "About Telegram Premium";
+"Premium.FasterSpeed.Proceed" = "About Telegram Premium";
+
+"OwnershipTransfer.EnterPassword" = "Enter Password";
+"OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to confirm the action.";

@@ -527,21 +527,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             navigationController.replaceController(strongSelf, with: chatController, animated: true)
                         }
                     }
-                    
-                    if let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
-                        switch channel.participationStatus {
-                        case .member:
-                            strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
-                        default:
-                            let actionTitle: String
-                            if channel.flags.contains(.requestToJoin) {
-                                actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
-                            } else {
-                                actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
-                            }
-                            strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
-                        }
-                    }
                 })
             }
         }
@@ -1781,11 +1766,20 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
+        let peerView: Signal<PeerView?, NoError>
+        if case let .forum(peerId) = location {
+            peerView = context.account.viewTracker.peerView(peerId)
+            |> map(Optional.init)
+        } else {
+            peerView = .single(nil)
+        }
+        
         let previousToolbarValue = Atomic<Toolbar?>(value: nil)
         self.stateDisposable.set(combineLatest(queue: .mainQueue(),
             self.presentationDataValue.get(),
-            peerIdsAndOptions
-        ).start(next: { [weak self] presentationData, peerIdsAndOptions in
+            peerIdsAndOptions,
+            peerView
+        ).start(next: { [weak self] presentationData, peerIdsAndOptions, peerView in
             guard let strongSelf = self else {
                 return
             }
@@ -1837,6 +1831,19 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         leftAction = ToolbarAction(title: presentationData.strings.ChatList_Read, isEnabled: enabled)
                     }
                     toolbar = Toolbar(leftAction: leftAction, rightAction: ToolbarAction(title: presentationData.strings.Common_Delete, isEnabled: options.delete), middleAction: middleAction)
+                }
+            } else if let peerView = peerView, let channel = peerView.peers[peerView.peerId] as? TelegramChannel {
+                switch channel.participationStatus {
+                case .member:
+                    strongSelf.setToolbar(nil, transition: .animated(duration: 0.4, curve: .spring))
+                default:
+                    let actionTitle: String
+                    if channel.flags.contains(.requestToJoin) {
+                        actionTitle = strongSelf.presentationData.strings.Group_ApplyToJoin
+                    } else {
+                        actionTitle = strongSelf.presentationData.strings.Channel_JoinChannel
+                    }
+                    strongSelf.setToolbar(Toolbar(leftAction: nil, rightAction: nil, middleAction: ToolbarAction(title: actionTitle, isEnabled: true)), transition: .animated(duration: 0.4, curve: .spring))
                 }
             }
             var transition: ContainedViewLayoutTransition = .immediate
@@ -3821,6 +3828,15 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             ])
         ])
         self.present(actionSheet, in: .window(.root))
+    }
+    
+    func selectPeerThread(peerId: EnginePeer.Id, threadId: Int64) {
+        self.chatListDisplayNode.containerNode.updateState({ state in
+            var state = state
+            state.selectedThreadIds.insert(threadId)
+            return state
+        })
+        self.chatListDisplayNode.containerNode.didBeginSelectingChats?()
     }
     
     private func commitDeletePeerThread(peerId: EnginePeer.Id, threadId: Int64, completion: @escaping () -> Void) {

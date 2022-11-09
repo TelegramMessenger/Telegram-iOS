@@ -228,7 +228,12 @@ final class WidgetDataContext {
                             name = peer.debugDisplayTitle
                         }
                         
-                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message)))
+                        var isForum = false
+                        if let peer = peer as? TelegramChannel, peer.flags.contains(.isForum) {
+                            isForum = true
+                        }
+                        
+                        result.append(WidgetDataPeer(id: peerId.toInt64(), name: name, lastName: lastName, letters: [], avatarPath: nil, badge: nil, message: WidgetDataPeer.Message(accountPeerId: account.peerId, message: message), isForum: isForum))
                     }
                     result.sort(by: { lhs, rhs in
                         return lhs.id < rhs.id

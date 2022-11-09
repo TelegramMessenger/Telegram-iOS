@@ -20,6 +20,8 @@ import ContextUI
 import FileMediaResourceStatus
 import ManagedAnimationNode
 import ShimmerEffect
+import ComponentFlow
+import EmojiStatusComponent
 
 private let extensionImageCache = Atomic<[UInt32: UIImage]>(value: [:])
 
@@ -159,6 +161,167 @@ final class CachedChatListSearchResult {
 }
 
 public final class ListMessageFileItemNode: ListMessageNode {
+    public final class DescriptionNode: ASDisplayNode {
+        let descriptionNode: TextNode
+        var titleTopicArrowNode: ASImageNode?
+        var topicTitleNode: TextNode?
+        var titleTopicIconView: ComponentHostView<Empty>?
+        var titleTopicIconComponent: EmojiStatusComponent?
+        
+        var visibilityStatus: Bool = false {
+            didSet {
+                if self.visibilityStatus != oldValue {
+                    if let titleTopicIconView = self.titleTopicIconView, let titleTopicIconComponent = self.titleTopicIconComponent {
+                        let _ = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent.withVisibleForAnimations(self.visibilityStatus)),
+                            environment: {},
+                            containerSize: titleTopicIconView.bounds.size
+                        )
+                    }
+                }
+            }
+        }
+        
+        override init() {
+            self.descriptionNode = TextNode()
+            self.descriptionNode.displaysAsynchronously = true
+            
+            super.init()
+            
+            self.addSubnode(self.descriptionNode)
+        }
+        
+        func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topic: (title: NSAttributedString, iconId: Int64?, iconColor: Int32)?) -> (CGSize, () -> Void) {
+            let makeDescriptionLayout = TextNode.asyncLayout(self.descriptionNode)
+            let makeTopicTitleLayout = TextNode.asyncLayout(self.topicTitleNode)
+            
+            return { [weak self] context, constrainedWidth, theme, authorTitle, topic in
+                var maxTitleWidth = constrainedWidth
+                if let _ = topic {
+                    maxTitleWidth = floor(constrainedWidth * 0.7)
+                }
+                
+                let descriptionLayout = makeDescriptionLayout(TextNodeLayoutArguments(attributedString: authorTitle, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: maxTitleWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0)))
+                
+                var remainingWidth = constrainedWidth - descriptionLayout.0.size.width
+                
+                var topicTitleArguments: TextNodeLayoutArguments?
+                var arrowIconImage: UIImage?
+                if let topic = topic {
+                    remainingWidth -= 22.0 + 2.0
+                    
+                    if authorTitle != nil {
+                        arrowIconImage = PresentationResourcesChatList.topicArrowIcon(theme)
+                        if let arrowIconImage = arrowIconImage {
+                            remainingWidth -= arrowIconImage.size.width + 6.0 * 2.0
+                        }
+                    }
+                    
+                    topicTitleArguments = TextNodeLayoutArguments(attributedString: topic.title, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: remainingWidth, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets(top: 2.0, left: 1.0, bottom: 2.0, right: 1.0))
+                }
+                
+                let topicTitleLayout = topicTitleArguments.flatMap(makeTopicTitleLayout)
+                
+                var size = descriptionLayout.0.size
+                if let topicTitleLayout = topicTitleLayout {
+                    size.height = max(size.height, topicTitleLayout.0.size.height)
+                    size.width += 10.0 + topicTitleLayout.0.size.width
+                }
+                
+                return (size, {
+                    guard let self else {
+                        return
+                    }
+                    
+                    let _ = descriptionLayout.1()
+                    let authorFrame = CGRect(origin: CGPoint(), size: descriptionLayout.0.size)
+                    self.descriptionNode.frame = authorFrame
+                    
+                    var nextX = authorFrame.maxX - 1.0
+                    if authorTitle == nil {
+                        nextX = 0.0
+                    }
+                    
+                    if let arrowIconImage = arrowIconImage {
+                        let titleTopicArrowNode: ASImageNode
+                        if let current = self.titleTopicArrowNode {
+                            titleTopicArrowNode = current
+                        } else {
+                            titleTopicArrowNode = ASImageNode()
+                            self.titleTopicArrowNode = titleTopicArrowNode
+                            self.addSubnode(titleTopicArrowNode)
+                        }
+                        titleTopicArrowNode.image = arrowIconImage
+                        nextX += 6.0
+                        titleTopicArrowNode.frame = CGRect(origin: CGPoint(x: nextX, y: 5.0), size: arrowIconImage.size)
+                        nextX += arrowIconImage.size.width + 6.0
+                    } else {
+                        if let titleTopicArrowNode = self.titleTopicArrowNode {
+                            self.titleTopicArrowNode = nil
+                            titleTopicArrowNode.removeFromSupernode()
+                        }
+                    }
+                    
+                    if let topic {
+                        let titleTopicIconView: ComponentHostView<Empty>
+                        if let current = self.titleTopicIconView {
+                            titleTopicIconView = current
+                        } else {
+                            titleTopicIconView = ComponentHostView<Empty>()
+                            self.titleTopicIconView = titleTopicIconView
+                            self.view.addSubview(titleTopicIconView)
+                        }
+                        
+                        let titleTopicIconContent: EmojiStatusComponent.Content
+                        if let fileId = topic.iconId, fileId != 0 {
+                            titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: theme.list.mediaPlaceholderColor, themeColor: theme.list.itemAccentColor, loopMode: .count(2))
+                        } else {
+                            titleTopicIconContent = .topic(title: String(topic.title.string.prefix(1)), color: topic.iconColor, size: CGSize(width: 22.0, height: 22.0))
+                        }
+                        
+                        let titleTopicIconComponent = EmojiStatusComponent(
+                            context: context,
+                            animationCache: context.animationCache,
+                            animationRenderer: context.animationRenderer,
+                            content: titleTopicIconContent,
+                            isVisibleForAnimations: self.visibilityStatus,
+                            action: nil
+                        )
+                        self.titleTopicIconComponent = titleTopicIconComponent
+                        
+                        let iconSize = titleTopicIconView.update(
+                            transition: .immediate,
+                            component: AnyComponent(titleTopicIconComponent),
+                            environment: {},
+                            containerSize: CGSize(width: 22.0, height: 22.0)
+                        )
+                        titleTopicIconView.frame = CGRect(origin: CGPoint(x: nextX, y: UIScreenPixel), size: iconSize)
+                        nextX += iconSize.width + 2.0
+                    } else {
+                        if let titleTopicIconView = self.titleTopicIconView {
+                            self.titleTopicIconView = nil
+                            titleTopicIconView.removeFromSuperview()
+                        }
+                    }
+                    
+                    if let topicTitleLayout = topicTitleLayout {
+                        let topicTitleNode = topicTitleLayout.1()
+                        if topicTitleNode.supernode == nil {
+                            self.addSubnode(topicTitleNode)
+                            self.topicTitleNode = topicTitleNode
+                        }
+                        
+                        topicTitleNode.frame = CGRect(origin: CGPoint(x: nextX - 1.0, y: 0.0), size: topicTitleLayout.0.size)
+                    } else if let topicTitleNode = self.topicTitleNode {
+                        self.topicTitleNode = nil
+                        topicTitleNode.removeFromSupernode()
+                    }
+                })
+            }
+        }
+    }
+    
     private let contextSourceNode: ContextExtractedContentContainingNode
     private let containerNode: ContextControllerSourceNode
     private let extractedBackgroundImageNode: ASImageNode
@@ -377,6 +540,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
         let titleNodeMakeLayout = TextNode.asyncLayout(self.titleNode)
         let textNodeMakeLayout = TextNode.asyncLayout(self.textNode)
         let descriptionNodeMakeLayout = TextNode.asyncLayout(self.descriptionNode)
+//        let newDescriptionNodeMakeLayout = self.descriptionNode.asyncLayout()
         let extensionIconTextMakeLayout = TextNode.asyncLayout(self.extensionIconText)
         let dateNodeMakeLayout = TextNode.asyncLayout(self.dateNode)
         let iconImageLayout = self.iconImageNode.asyncLayout()
@@ -753,6 +917,9 @@ public final class ListMessageFileItemNode: ListMessageNode {
             let (textNodeLayout, textNodeApply) = textNodeMakeLayout(TextNodeLayoutArguments(attributedString: captionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             let (descriptionNodeLayout, descriptionNodeApply) = descriptionNodeMakeLayout(TextNodeLayoutArguments(attributedString: descriptionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - leftInset - rightInset - 30.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+//            let forumThreadTitle: (title: NSAttributedString, iconId: Int64?, iconColor: Int32)? = nil
+//            let (newDescriptionNodeLayout, newDescriptionNodeApply) = newDescriptionNodeMakeLayout(item.context, params.width - leftInset - rightInset - 30.0, item.presentationData.theme.theme, descriptionText, forumThreadTitle)
             
             var (extensionTextLayout, extensionTextApply) = extensionIconTextMakeLayout(TextNodeLayoutArguments(attributedString: extensionText, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: 38.0, height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             if extensionTextLayout.truncated, let text = extensionText?.string  {

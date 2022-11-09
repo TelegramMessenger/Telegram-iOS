@@ -159,6 +159,12 @@ public enum PremiumSource: Equatable {
             } else {
                 return false
             }
+        case .fasterDownload:
+            if case .fasterDownload = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -184,6 +190,7 @@ public enum PremiumSource: Equatable {
     case gift(from: PeerId, to: PeerId, duration: Int32)
     case giftTerms
     case voiceToText
+    case fasterDownload
     
     var identifier: String? {
         switch self {
@@ -225,6 +232,8 @@ public enum PremiumSource: Equatable {
                 return "emoji_status"
             case .voiceToText:
                 return "voice_to_text"
+            case .fasterDownload:
+                return "faster_download"
             case .gift, .giftTerms:
                 return nil
             case let .deeplink(reference):
