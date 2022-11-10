@@ -4400,7 +4400,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
     private var backgroundMaskMode: Bool {
         let hasWallpaper = self.item?.presentationData.theme.wallpaper.hasWallpaper ?? false
         let isPreview = self.item?.presentationData.isPreview ?? false
-        return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview
+        return self.mainContextSourceNode.isExtractedToContextPreview || hasWallpaper || isPreview || !self.disablesComments
     }
     
     override func openMessageContextMenu() {

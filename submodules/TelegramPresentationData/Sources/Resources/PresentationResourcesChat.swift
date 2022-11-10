@@ -45,15 +45,19 @@ private func generateActionPhotoBackground(fillColor: UIColor, strokeColor: UICo
     })
 }
 
-private func generateInputPanelButtonBackgroundImage(fillColor: UIColor, strokeColor: UIColor) -> UIImage? {
-    let radius: CGFloat = 5.0
-    let shadowSize: CGFloat = 1.0
-    return generateImage(CGSize(width: radius * 2.0, height: radius * 2.0 + shadowSize), contextGenerator: { size, context in
+private func generateInputPanelButtonStrokeImage(color: UIColor, offset: CGFloat) -> UIImage? {
+    let radius: CGFloat = 4.0
+    return generateImage(CGSize(width: radius * 2.0 + 1.0, height: radius * 2.0 + 1.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
-        context.setFillColor(strokeColor.cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: 0.0, width: radius * 2.0, height: radius * 2.0))
-        context.setFillColor(fillColor.cgColor)
-        context.fillEllipse(in: CGRect(x: 0.0, y: shadowSize, width: radius * 2.0, height: radius * 2.0))
+        
+        var path = UIBezierPath(roundedRect: CGRect(origin: .zero, size: CGSize(width: size.width, height: size.height)), cornerRadius: radius)
+        context.addPath(path.cgPath)
+        context.setFillColor(color.cgColor)
+        context.fillPath()
+        path = UIBezierPath(roundedRect: CGRect(origin: CGPoint(x: 0.0, y: offset), size: CGSize(width: size.width, height: size.height)), cornerRadius: radius)
+        context.setBlendMode(.clear)
+        context.addPath(path.cgPath)
+        context.fillPath()
     })?.stretchableImage(withLeftCapWidth: Int(radius), topCapHeight: Int(radius))
 }
 
@@ -405,18 +409,18 @@ public struct PresentationResourcesChat {
         })
     }
     
-    public static func chatInputButtonPanelButtonImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonImage.rawValue, { theme in
-            return generateInputPanelButtonBackgroundImage(fillColor: theme.chat.inputButtonPanel.buttonFillColor, strokeColor: theme.chat.inputButtonPanel.buttonStrokeColor)
+    public static func chatInputButtonPanelButtonHighlightImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonHighlightImage.rawValue, { theme in
+            return generateInputPanelButtonStrokeImage(color: theme.chat.inputButtonPanel.buttonHighlightColor, offset: -1.0)
         })
     }
     
-    public static func chatInputButtonPanelButtonHighlightedImage(_ theme: PresentationTheme) -> UIImage? {
-        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonHighlightedImage.rawValue, { theme in
-            return generateInputPanelButtonBackgroundImage(fillColor: theme.chat.inputButtonPanel.buttonHighlightedFillColor, strokeColor: theme.chat.inputButtonPanel.buttonHighlightedStrokeColor)
+    public static func chatInputButtonPanelButtonShadowImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatInputButtonPanelButtonShadowImage.rawValue, { theme in
+            return generateInputPanelButtonStrokeImage(color: theme.chat.inputButtonPanel.buttonStrokeColor, offset: 1.0)
         })
     }
-    
+        
     public static func chatInputTextFieldBackgroundImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatInputTextFieldBackgroundImage.rawValue, { theme in
             let diameter: CGFloat = 35.0

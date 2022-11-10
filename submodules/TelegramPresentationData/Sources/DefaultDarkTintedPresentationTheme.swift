@@ -880,6 +880,7 @@ public func makeDefaultDarkTintedPresentationTheme(extendingThemeReference: Pres
         panelSeparatorColor: mainBackgroundColor,
         panelBackgroundColor: accentColor.withMultiplied(hue: 1.048, saturation: 0.378, brightness: 0.13),
         buttonFillColor: accentColor.withMultiplied(hue: 1.0, saturation: 0.085, brightness: 0.38),
+        buttonHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.2),
         buttonStrokeColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.39, brightness: 0.07),
         buttonHighlightedFillColor: accentColor.withMultiplied(hue: 1.0, saturation: 0.085, brightness: 0.38).withAlphaComponent(0.7),
         buttonHighlightedStrokeColor: accentColor.withMultiplied(hue: 1.019, saturation: 0.39, brightness: 0.07),

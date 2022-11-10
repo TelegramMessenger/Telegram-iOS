@@ -912,10 +912,11 @@ public func makeDefaultDayPresentationTheme(extendingThemeReference: Presentatio
     )
     
     let inputButtonPanel = PresentationThemeInputButtonPanel(
-        panelSeparatorColor: UIColor(rgb: 0xbec2c6),
-        panelBackgroundColor: UIColor(rgb: 0xdee2e6),
+        panelSeparatorColor: UIColor(rgb: 0xb2b2b2),
+        panelBackgroundColor: UIColor(rgb: 0xdddfd7, alpha: 0.8),
         buttonFillColor: UIColor(rgb: 0xffffff),
-        buttonStrokeColor: UIColor(rgb: 0xc3c7c9),
+        buttonHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.2),
+        buttonStrokeColor: UIColor(rgb: 0x353535, alpha: 0.2),
         buttonHighlightedFillColor: UIColor(rgb: 0xa8b3c0),
         buttonHighlightedStrokeColor: UIColor(rgb: 0xc3c7c9),
         buttonTextColor: UIColor(rgb: 0x000000)

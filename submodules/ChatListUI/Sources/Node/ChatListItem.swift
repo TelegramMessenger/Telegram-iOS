@@ -178,6 +178,9 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                     if case let .forum(_, _, threadIdValue, _, _) = self.index {
                         threadId = threadIdValue
                     }
+                    if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        threadId = message.threadId
+                    }
                     self.interaction.messageSelected(peer, threadId, message, promoInfo)
                 } else if let peer = peer.peer {
                     self.interaction.peerSelected(peer, nil, nil, promoInfo)
@@ -1351,6 +1354,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     hasUnseenReactions = hasUnseenReactionsValue
                     forumTopicData = forumTopicDataValue
                     topForumTopicItems = topForumTopicItemsValue
+                
+                    if item.interaction.searchTextHighightState != nil, threadInfo == nil, topForumTopicItems.isEmpty, let message = messagesValue.first, let threadId = message.threadId, let associatedThreadInfo = message.associatedThreadInfo {
+                        topForumTopicItems = [EngineChatList.ForumTopicData(id: threadId, title: associatedThreadInfo.title, iconFileId: associatedThreadInfo.icon, iconColor: associatedThreadInfo.iconColor, maxOutgoingReadMessageId: message.id, isUnread: false)]
+                    }
                     
                     switch peerValue.peer {
                     case .user, .secretChat:
@@ -2018,14 +2025,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             var effectiveAuthorTitle = (hideAuthor && !hasDraft) ? nil : authorAttributedString
             
+            let isSearching = item.interaction.searchTextHighightState != nil
+            
             var forumThreads: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)] = []
             if forumThread != nil || !topForumTopicItems.isEmpty {
                 if let forumThread = forumThread {
-                    forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.title, font: textFont, textColor: forumThread.isUnread ? theme.authorNameColor : theme.messageTextColor), iconId: forumThread.iconId, iconColor: forumThread.iconColor))
+                    forumThreads.append((id: forumThread.id, title: NSAttributedString(string: forumThread.title, font: textFont, textColor: forumThread.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: forumThread.iconId, iconColor: forumThread.iconColor))
                 }
                 for item in topForumTopicItems {
                     if forumThread?.id != item.id {
-                        forumThreads.append((id: item.id, title: NSAttributedString(string: item.title, font: textFont, textColor: item.isUnread ? theme.authorNameColor : theme.messageTextColor), iconId: item.iconFileId, iconColor: item.iconColor))
+                        forumThreads.append((id: item.id, title: NSAttributedString(string: item.title, font: textFont, textColor: item.isUnread || isSearching ? theme.authorNameColor : theme.messageTextColor), iconId: item.iconFileId, iconColor: item.iconColor))
                     }
                 }
                 
@@ -2492,7 +2501,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.height.isZero ? 0.0 : (authorLayout.height - 3.0))), size: textLayout.size)
                     strongSelf.textNode.textNode.frame = textNodeFrame
                     
-                    if let textArrowImage = textArrowImage {
+                    if let textArrowImage = textArrowImage, !isSearching {
                         let textArrowNode: ASImageNode
                         if let current = strongSelf.textArrowNode {
                             textArrowNode = current
@@ -2510,7 +2519,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         textArrowNode.removeFromSupernode()
                     }
                     
-                    if let topForumTopicRect {
+                    if let topForumTopicRect, !isSearching {
                         let compoundHighlightingNode: LinkHighlightingNode
                         if let current = strongSelf.compoundHighlightingNode {
                             compoundHighlightingNode = current

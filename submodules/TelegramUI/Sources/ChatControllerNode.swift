@@ -1862,6 +1862,8 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 inputNode.frame = adjustedForPreviousInputHeightFrame
                 transition.updateFrame(node: inputNode, frame: inputNodeFrame)
                 
+                inputNode.updateAbsoluteRect(inputNodeFrame, within: layout.size, transition: transition)
+                
                 if let externalTopPanelContainer = inputNode.externalTopPanelContainer {
                     externalTopPanelContainer.frame = CGRect(origin: adjustedForPreviousInputHeightFrame.offsetBy(dx: 0.0, dy:  externalTopPanelContainerOffset).origin, size: CGSize(width: adjustedForPreviousInputHeightFrame.width, height: 0.0))
                     transition.updateFrame(view: externalTopPanelContainer, frame: CGRect(origin: inputNodeFrame.origin, size: CGSize(width: inputNodeFrame.width, height: 0.0)))
