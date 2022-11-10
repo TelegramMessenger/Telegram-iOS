@@ -420,6 +420,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
     private let controllerInteraction: ChatControllerInteraction
     private let mode: ChatHistoryListMode
     
+    private var enableUnreadAlignment: Bool = true
+    
     private var historyView: ChatHistoryView?
     
     private let historyDisposable = MetaDisposable()
@@ -659,6 +661,10 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.tagMask = tagMask
         self.controllerInteraction = controllerInteraction
         self.mode = mode
+        
+        if let data = context.currentAppConfiguration.with({ $0 }).data, let _ = data["ios_killswitch_disable_unread_alignment"] {
+            self.enableUnreadAlignment = false
+        }
         
         let presentationData = updatedPresentationData.initial
         self.currentPresentationData = ChatPresentationData(theme: ChatPresentationThemeData(theme: presentationData.theme, wallpaper: presentationData.chatWallpaper), fontSize: presentationData.chatFontSize, strings: presentationData.strings, dateTimeFormat: presentationData.dateTimeFormat, nameDisplayOrder: presentationData.nameDisplayOrder, disableAnimations: true, largeEmoji: presentationData.largeEmoji, chatBubbleCorners: presentationData.chatBubbleCorners, animatedEmojiScale: 1.0)
@@ -3147,11 +3153,31 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         
     public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, additionalScrollDistance: CGFloat, scrollToTop: Bool, completion: @escaping () -> Void) {
         var scrollToItem: ListViewScrollToItem?
+        var postScrollToItem: ListViewScrollToItem?
         if scrollToTop, case .known = self.visibleContentOffset() {
             scrollToItem = ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Spring(duration: updateSizeAndInsets.duration), directionHint: .Up)
+        } else if self.enableUnreadAlignment {
+            if updateSizeAndInsets.insets.bottom != self.insets.bottom {
+                self.forEachVisibleItemNode { itemNode in
+                    if let itemNode = itemNode as? ChatUnreadItemNode, let index = itemNode.index {
+                        if abs(itemNode.frame.maxY - (self.visibleSize.height - self.insets.bottom + 6.0)) < 1.0 {
+                            postScrollToItem = ListViewScrollToItem(index: index, position: .bottom(0.0), animated: updateSizeAndInsets.duration != 0.0, curve: updateSizeAndInsets.curve, directionHint: .Up)
+                        }
+                    }
+                }
+            }
         }
-        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, additionalScrollDistance: scrollToTop ? 0.0 : additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
-            completion()
+        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: scrollToItem, additionalScrollDistance: scrollToTop ? 0.0 : additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { [weak self] _ in
+            guard let self else {
+                return
+            }
+            if let postScrollToItem = postScrollToItem {
+                self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: postScrollToItem, additionalScrollDistance: 0.0, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in
+                    completion()
+                })
+            } else {
+                completion()
+            }
         })
         
         if !self.dequeuedInitialTransitionOnLayout {
