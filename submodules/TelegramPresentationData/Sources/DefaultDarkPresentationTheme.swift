@@ -666,7 +666,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
         panelSeparatorColor: UIColor(rgb: 0x545458, alpha: 0.3),
         panelBackgroundColor: UIColor(rgb: 0x141414, alpha: 0.65),
         buttonFillColor: UIColor(rgb: 0xe9e9e9, alpha: 0.85),
-        buttonHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
+        buttonHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.05),
         buttonStrokeColor: UIColor(rgb: 0x000000, alpha: 0.85),
         buttonHighlightedFillColor: UIColor(rgb: 0x5a5a5a, alpha: 0.7),
         buttonHighlightedStrokeColor: UIColor(rgb: 0x0c0c0c),
