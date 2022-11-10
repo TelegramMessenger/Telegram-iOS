@@ -178,7 +178,10 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
                     if case let .forum(_, _, threadIdValue, _, _) = self.index {
                         threadId = threadIdValue
                     }
-                    self.interaction.messageSelected(peer, threadId ?? message.threadId, message, promoInfo)
+                    if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        threadId = message.threadId
+                    }
+                    self.interaction.messageSelected(peer, threadId, message, promoInfo)
                 } else if let peer = peer.peer {
                     self.interaction.peerSelected(peer, nil, nil, promoInfo)
                 } else if let peer = peer.peers[peer.peerId] {
