@@ -2,7 +2,7 @@ import Foundation
 import Postbox
 import SwiftSignalKit
 
-private final class ManagedMessageHistoryHolesState {
+private final class ManagedMessageHistoryHolesContext {
     private struct LocationKey: Equatable {
         var peerId: PeerId
         var threadId: Int64?
@@ -16,11 +16,13 @@ private final class ManagedMessageHistoryHolesState {
     }
     
     private struct PendingEntry: CustomStringConvertible {
+        var id: Int
         var key: LocationKey
         var entry: MessageHistoryHolesViewEntry
-        var disposable: Disposable
+        var disposable: MetaDisposable
         
-        init(key: LocationKey, entry: MessageHistoryHolesViewEntry, disposable: Disposable) {
+        init(id: Int, key: LocationKey, entry: MessageHistoryHolesViewEntry, disposable: MetaDisposable) {
+            self.id = id
             self.key = key
             self.entry = entry
             self.disposable = disposable
@@ -41,18 +43,47 @@ private final class ManagedMessageHistoryHolesState {
         }
     }
     
+    private let queue: Queue
+    private let accountPeerId: PeerId
+    private let postbox: Postbox
+    private let network: Network
+    
+    private var nextEntryId: Int = 0
     private var pendingEntries: [PendingEntry] = []
     private var discardedEntries: [DiscardedEntry] = []
     
-    private let performWork: (@escaping (ManagedMessageHistoryHolesState) -> Void) -> Void
     private var oldEntriesTimer: SwiftSignalKit.Timer?
     
-    init(performWork: @escaping (@escaping (ManagedMessageHistoryHolesState) -> Void) -> Void) {
-        self.performWork = performWork
+    private var currentEntries: Set<MessageHistoryHolesViewEntry> = Set()
+    private var currentEntriesDisposable: Disposable?
+    
+    private var completedEntries: [MessageHistoryHolesViewEntry: Double] = [:]
+    
+    init(
+        queue: Queue,
+        accountPeerId: PeerId,
+        postbox: Postbox,
+        network: Network,
+        entries: Signal<Set<MessageHistoryHolesViewEntry>, NoError>
+    ) {
+        self.queue = queue
+        self.accountPeerId = accountPeerId
+        self.postbox = postbox
+        self.network = network
+        
+        self.currentEntriesDisposable = (entries |> deliverOn(self.queue)).start(next: { [weak self] entries in
+            guard let self = self else {
+                return
+            }
+            self.update(entries: entries)
+        })
     }
     
     deinit {
+        assert(self.queue.isCurrent())
+        
         self.oldEntriesTimer?.invalidate()
+        self.currentEntriesDisposable?.dispose()
     }
     
     func clearDisposables() -> [Disposable] {
@@ -67,15 +98,15 @@ private final class ManagedMessageHistoryHolesState {
         let needsTimer = !self.discardedEntries.isEmpty
         if needsTimer {
             if self.oldEntriesTimer == nil {
-                let performWork = self.performWork
-                self.oldEntriesTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: {
-                    performWork { impl in
-                        let disposables = impl.discardOldEntries()
-                        for disposable in disposables {
-                            disposable.dispose()
-                        }
+                self.oldEntriesTimer = SwiftSignalKit.Timer(timeout: 0.2, repeat: true, completion: { [weak self] in
+                    guard let self = self else {
+                        return
                     }
-                }, queue: .mainQueue())
+                    let disposables = self.discardOldEntries()
+                    for disposable in disposables {
+                        disposable.dispose()
+                    }
+                }, queue: self.queue)
                 self.oldEntriesTimer?.start()
             }
         } else if let oldEntriesTimer = self.oldEntriesTimer {
@@ -99,21 +130,26 @@ private final class ManagedMessageHistoryHolesState {
         return result
     }
     
-    func update(entries: Set<MessageHistoryHolesViewEntry>) -> (removed: [Disposable], added: [MessageHistoryHolesViewEntry: MetaDisposable], hasOldEntries: Bool) {
-        let removed: [Disposable] = []
-        var added: [MessageHistoryHolesViewEntry: MetaDisposable] = [:]
+    func update(entries: Set<MessageHistoryHolesViewEntry>) {
+        //let removed: [Disposable] = []
+        var added: [PendingEntry] = []
         
         let timestamp = CFAbsoluteTimeGetCurrent()
+        let _ = timestamp
         
-        for i in (0 ..< self.pendingEntries.count).reversed() {
-            if !entries.contains(self.pendingEntries[i].entry) {
-                Logger.shared.log("ManagedMessageHistoryHoles", "Stashing entry \(self.pendingEntries[i])")
-                self.discardedEntries.append(DiscardedEntry(entry: self.pendingEntries[i], timestamp: timestamp))
-                self.pendingEntries.remove(at: i)
-            }
-        }
+        /*for i in (0 ..< self.pendingEntries.count).reversed() {
+         if !entries.contains(self.pendingEntries[i].entry) {
+         Logger.shared.log("ManagedMessageHistoryHoles", "Stashing entry \(self.pendingEntries[i])")
+         self.discardedEntries.append(DiscardedEntry(entry: self.pendingEntries[i], timestamp: timestamp))
+         self.pendingEntries.remove(at: i)
+         }
+         }*/
         
         for entry in entries {
+            if self.completedEntries[entry] != nil {
+                continue
+            }
+            
             switch entry.hole {
             case let .peer(peerHole):
                 let key = LocationKey(peerId: peerHole.peerId, threadId: peerHole.threadId, space: entry.space)
@@ -124,10 +160,12 @@ private final class ManagedMessageHistoryHolesState {
                         self.pendingEntries.append(discardedEntry.entry)
                     } else {
                         let disposable = MetaDisposable()
-                        let pendingEntry = PendingEntry(key: key, entry: entry, disposable: disposable)
+                        let id = self.nextEntryId
+                        self.nextEntryId += 1
+                        let pendingEntry = PendingEntry(id: id, key: key, entry: entry, disposable: disposable)
                         self.pendingEntries.append(pendingEntry)
                         Logger.shared.log("ManagedMessageHistoryHoles", "Adding pending entry \(pendingEntry), discarded entries: \(self.discardedEntries.map(\.entry))")
-                        added[entry] = disposable
+                        added.append(pendingEntry)
                     }
                 }
             }
@@ -135,13 +173,46 @@ private final class ManagedMessageHistoryHolesState {
         
         self.updateNeedsTimer()
         
-        return (removed, added, !self.discardedEntries.isEmpty)
+        for pendingEntry in added {
+            let id = pendingEntry.id
+            let entry = pendingEntry.entry
+            switch pendingEntry.entry.hole {
+            case let .peer(hole):
+                pendingEntry.disposable.set((fetchMessageHistoryHole(
+                    accountPeerId: self.accountPeerId,
+                    source: .network(self.network),
+                    postbox: self.postbox,
+                    peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: pendingEntry.entry.direction, space: pendingEntry.entry.space, count: pendingEntry.entry.count)
+                |> deliverOn(self.queue)).start(completed: { [weak self] in
+                    guard let self = self else {
+                        return
+                    }
+                    self.pendingEntries.removeAll(where: { $0.id == id })
+                    self.completedEntries[entry] = CFAbsoluteTimeGetCurrent()
+                    self.update(entries: self.currentEntries)
+                }))
+            }
+        }
     }
 }
 
 func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox: Postbox) -> Signal<Void, NoError> {
+    let sharedQueue = Queue()
+    
     return Signal { _ in
-        var performWorkImpl: ((@escaping (ManagedMessageHistoryHolesState) -> Void) -> Void)?
+        var context: QueueLocalObject<ManagedMessageHistoryHolesContext>? = QueueLocalObject<ManagedMessageHistoryHolesContext>(queue: sharedQueue, generate: {
+            return ManagedMessageHistoryHolesContext(
+                queue: sharedQueue,
+                accountPeerId: accountPeerId,
+                postbox: postbox,
+                network: network,
+                entries: postbox.messageHistoryHolesView() |> map { view in
+                    return view.entries
+                }
+            )
+        })
+        
+        /*var performWorkImpl: ((@escaping (ManagedMessageHistoryHolesState) -> Void) -> Void)?
         let state = Atomic(value: ManagedMessageHistoryHolesState(performWork: { f in
             performWorkImpl?(f)
         }))
@@ -151,7 +222,8 @@ func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox
             }
         }
         
-        let disposable = postbox.messageHistoryHolesView().start(next: { view in
+        let disposable = (postbox.messageHistoryHolesView()
+        |> deliverOn(sharedQueue)).start(next: { view in
             let (removed, added, _) = state.with { state in
                 return state.update(entries: view.entries)
             }
@@ -163,18 +235,30 @@ func managedMessageHistoryHoles(accountPeerId: PeerId, network: Network, postbox
             for (entry, disposable) in added {
                 switch entry.hole {
                 case let .peer(hole):
-                    disposable.set(fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: entry.direction, space: entry.space, count: entry.count).start())
+                    disposable.set((fetchMessageHistoryHole(accountPeerId: accountPeerId, source: .network(network), postbox: postbox, peerInput: .direct(peerId: hole.peerId, threadId: hole.threadId), namespace: hole.namespace, direction: entry.direction, space: entry.space, count: entry.count)
+                    |> afterDisposed {
+                        sharedQueue.async {
+                            state.with { state in
+                                let _ = state
+                                //state.removeCompletedEntry(entry: entry)
+                            }
+                        }
+                    }).start())
                 }
             }
-        })
+        })*/
         
         return ActionDisposable {
-            disposable.dispose()
+            if context != nil {
+                context = nil
+            }
+            /*disposable.dispose()
             for disposable in state.with({ state -> [Disposable] in
                 state.clearDisposables()
             }) {
                 disposable.dispose()
-            }
+            }*/
         }
     }
+    |> runOn(sharedQueue)
 }
