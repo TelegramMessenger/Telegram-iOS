@@ -664,7 +664,7 @@ public func makeDefaultDarkPresentationTheme(extendingThemeReference: Presentati
 
     let inputButtonPanel = PresentationThemeInputButtonPanel(
         panelSeparatorColor: UIColor(rgb: 0x545458, alpha: 0.3),
-        panelBackgroundColor: UIColor(rgb: 0x141414, alpha: 0.6),
+        panelBackgroundColor: UIColor(rgb: 0x141414, alpha: 0.65),
         buttonFillColor: UIColor(rgb: 0xe9e9e9, alpha: 0.85),
         buttonHighlightColor: UIColor(rgb: 0xffffff, alpha: 0.1),
         buttonStrokeColor: UIColor(rgb: 0x000000, alpha: 0.85),
