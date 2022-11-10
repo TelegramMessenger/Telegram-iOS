@@ -54,7 +54,9 @@ final class DocumentPreviewController: UINavigationController, QLPreviewControll
         }, rootController: self)
         controller.delegate = self
         controller.dataSource = self
-        controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        if #available(iOS 16.0, *) {
+            controller.navigationItem.setLeftBarButton(UIBarButtonItem(title: strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed)), animated: false)
+        }
         self.setViewControllers([controller], animated: false)
         
         if let path = self.postbox.mediaBox.completedResourcePath(self.file.resource) {
