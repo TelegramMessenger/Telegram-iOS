@@ -1072,8 +1072,9 @@ public class SearchBarNode: ASDisplayNode, UITextFieldDelegate {
             if !xOffset.isZero {
                 self.clearButton.layer.animatePosition(from: .zero, to: CGPoint(x: xOffset, y: 0.0), duration: duration, timingFunction: timingFunction, additive: true)
             }
-            self.clearButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { _ in
+            self.clearButton.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { _ in
                 self.clearButton.isHidden = true
+                self.clearButton.layer.removeAllAnimations()
             })
         }
         

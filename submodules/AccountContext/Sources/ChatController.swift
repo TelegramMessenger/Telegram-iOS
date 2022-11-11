@@ -46,8 +46,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
     public let alwaysDisplayTranscribeButton: DisplayTranscribeButton
     public let accountPeer: EnginePeer?
     public let topicAuthorId: EnginePeer.Id?
+    public let hasBots: Bool
     
-    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil) {
+    public init(automaticDownloadPeerType: MediaAutoDownloadPeerType, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, isRecentActions: Bool = false, subject: ChatControllerSubject? = nil, contactsPeerIds: Set<EnginePeer.Id> = Set(), channelDiscussionGroup: ChannelDiscussionGroupStatus = .unknown, animatedEmojiStickers: [String: [StickerPackItem]] = [:], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]] = [:], forcedResourceStatus: FileMediaResourceStatus? = nil, currentlyPlayingMessageId: EngineMessage.Index? = nil, isCopyProtectionEnabled: Bool = false, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, accountPeer: EnginePeer?, forceInlineReactions: Bool = false, alwaysDisplayTranscribeButton: DisplayTranscribeButton = DisplayTranscribeButton(canBeDisplayed: false, displayForNotConsumed: false), topicAuthorId: EnginePeer.Id? = nil, hasBots: Bool = false) {
         self.automaticDownloadPeerType = automaticDownloadPeerType
         self.automaticDownloadNetworkType = automaticDownloadNetworkType
         self.isRecentActions = isRecentActions
@@ -66,6 +67,7 @@ public final class ChatMessageItemAssociatedData: Equatable {
         self.forceInlineReactions = forceInlineReactions
         self.topicAuthorId = topicAuthorId
         self.alwaysDisplayTranscribeButton = alwaysDisplayTranscribeButton
+        self.hasBots = hasBots
     }
     
     public static func == (lhs: ChatMessageItemAssociatedData, rhs: ChatMessageItemAssociatedData) -> Bool {
@@ -118,6 +120,9 @@ public final class ChatMessageItemAssociatedData: Equatable {
             return false
         }
         if lhs.alwaysDisplayTranscribeButton != rhs.alwaysDisplayTranscribeButton {
+            return false
+        }
+        if lhs.hasBots != rhs.hasBots {
             return false
         }
         return true

@@ -261,7 +261,6 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 }
                 
                 var entities: [MessageTextEntity]?
-                
                 var updatedCachedChatMessageText: CachedChatMessageText?
                 if let cached = currentCachedChatMessageText, cached.matches(text: rawText, inputEntities: messageEntities) {
                     entities = cached.entities
@@ -301,6 +300,12 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                             }
                         }
                     }
+                    
+                    if !item.associatedData.hasBots {
+                        messageEntities = messageEntities?.filter { $0.type != .BotCommand }
+                        entities = entities?.filter { $0.type != .BotCommand }
+                    }
+                    
                     updatedCachedChatMessageText = CachedChatMessageText(text: rawText, inputEntities: messageEntities, entities: entities)
                 }
                 
