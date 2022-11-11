@@ -316,7 +316,7 @@ private final class ChatHistoryTransactionOpaqueState {
     }
 }
 
-private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?) -> ChatMessageItemAssociatedData {
+private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHistoryView, automaticDownloadNetworkType: MediaAutoDownloadNetworkType, animatedEmojiStickers: [String: [StickerPackItem]], additionalAnimatedEmojiStickers: [String: [Int: StickerPackItem]], subject: ChatControllerSubject?, currentlyPlayingMessageId: MessageIndex?, isCopyProtectionEnabled: Bool, availableReactions: AvailableReactions?, defaultReaction: MessageReaction.Reaction?, isPremium: Bool, alwaysDisplayTranscribeButton: ChatMessageItemAssociatedData.DisplayTranscribeButton, accountPeer: EnginePeer?, topicAuthorId: EnginePeer.Id?, hasBots: Bool) -> ChatMessageItemAssociatedData {
     var automaticMediaDownloadPeerType: MediaAutoDownloadPeerType = .channel
     var contactsPeerIds: Set<PeerId> = Set()
     var channelDiscussionGroup: ChatMessageItemAssociatedData.ChannelDiscussionGroupStatus = .unknown
@@ -365,7 +365,7 @@ private func extractAssociatedData(chatLocation: ChatLocation, view: MessageHist
         }
     }
     
-    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId)
+    return ChatMessageItemAssociatedData(automaticDownloadPeerType: automaticMediaDownloadPeerType, automaticDownloadNetworkType: automaticDownloadNetworkType, isRecentActions: false, subject: subject, contactsPeerIds: contactsPeerIds, channelDiscussionGroup: channelDiscussionGroup, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, accountPeer: accountPeer, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, topicAuthorId: topicAuthorId, hasBots: hasBots)
 }
 
 private extension ChatHistoryLocationInput {
@@ -496,6 +496,15 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         }
     }
     
+    private let chatHasBotsPromise = ValuePromise<Bool>(false)
+    var chatHasBots: Bool = false {
+        didSet {
+            if self.chatHasBots != oldValue {
+                self.chatHasBotsPromise.set(self.chatHasBots)
+            }
+        }
+    }
+        
     private let galleryHiddenMesageAndMediaDisposable = MetaDisposable()
     
     private let messageProcessingManager = ChatMessageThrottledProcessingManager()
@@ -1101,7 +1110,8 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             self.pendingUnpinnedAllMessagesPromise.get(),
             self.pendingRemovedMessagesPromise.get(),
             self.currentlyPlayingMessageIdPromise.get(),
-            self.scrollToMessageIdPromise.get()
+            self.scrollToMessageIdPromise.get(),
+            self.chatHasBotsPromise.get()
         )
         
         let historyViewTransitionDisposable = combineLatest(queue: messageViewQueue,
@@ -1122,7 +1132,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
             topicAuthorId,
             self.allAdMessagesPromise.get()
         ).start(next: { [weak self] update, chatPresentationData, selectedMessages, updatingMedia, networkType, animatedEmojiStickers, additionalAnimatedEmojiStickers, customChannelDiscussionReadState, customThreadOutgoingReadState, availableReactions, defaultReaction, accountPeer, suggestAudioTranscription, promises, topicAuthorId, allAdMessages in
-            let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId) = promises
+            let (historyAppearsCleared, pendingUnpinnedAllMessages, pendingRemovedMessages, currentlyPlayingMessageIdAndType, scrollToMessageId, chatHasBots) = promises
             let currentlyPlayingMessageId = currentlyPlayingMessageIdAndType?.0
             
             func applyHole() {
@@ -1261,7 +1271,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
                     displayForNotConsumed: suggestAudioTranscription.1
                 )
                 
-                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId)
+                let associatedData = extractAssociatedData(chatLocation: chatLocation, view: view, automaticDownloadNetworkType: networkType, animatedEmojiStickers: animatedEmojiStickers, additionalAnimatedEmojiStickers: additionalAnimatedEmojiStickers, subject: subject, currentlyPlayingMessageId: currentlyPlayingMessageId, isCopyProtectionEnabled: isCopyProtectionEnabled, availableReactions: availableReactions, defaultReaction: defaultReaction, isPremium: isPremium, alwaysDisplayTranscribeButton: alwaysDisplayTranscribeButton, accountPeer: accountPeer, topicAuthorId: topicAuthorId, hasBots: chatHasBots)
                 
                 let filteredEntries = chatHistoryEntriesForView(
                     location: chatLocation,

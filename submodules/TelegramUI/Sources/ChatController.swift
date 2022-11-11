@@ -10739,6 +10739,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }
         
+        self.chatDisplayNode.historyNode.chatHasBots = updatedChatPresentationInterfaceState.hasBots
+        
         if let (updatedSearchQuerySuggestionState, updatedSearchQuerySuggestionSignal) = searchQuerySuggestionResultStateForChatInterfacePresentationState(updatedChatPresentationInterfaceState, context: context, currentQuery: self.searchQuerySuggestionState?.0) {
             self.searchQuerySuggestionState?.1.dispose()
             var inScope = true
