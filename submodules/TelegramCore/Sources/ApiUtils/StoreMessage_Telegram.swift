@@ -459,6 +459,10 @@ extension StoreMessage {
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     }
                 }
+            
+                if threadId == nil && peerId.namespace == Namespaces.Peer.CloudChannel {
+                    threadId = 1
+                }
                 
                 var forwardInfo: StoreMessageForwardInfo?
                 if let fwdFrom = fwdFrom {
@@ -707,6 +711,10 @@ extension StoreMessage {
                     default:
                         break
                     }
+                }
+            
+                if threadId == nil && peerId.namespace == Namespaces.Peer.CloudChannel {
+                    threadId = 1
                 }
                 
                 if (flags & (1 << 17)) != 0 {

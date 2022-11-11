@@ -4084,7 +4084,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         self.controllerInteraction = controllerInteraction
         
-        if chatLocation.threadId == nil {
+        //if chatLocation.threadId == nil {
             if let peerId = chatLocation.peerId, peerId != context.account.peerId {
                 switch subject {
                 case .pinnedMessages, .scheduledMessages, .forwardedMessages:
@@ -4105,7 +4105,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
                 return true
             }
-        }
+        //}
         
         self.chatTitleView = ChatTitleView(context: self.context, theme: self.presentationData.theme, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: controllerInteraction.presentationContext.animationCache, animationRenderer: controllerInteraction.presentationContext.animationRenderer)
         self.navigationItem.titleView = self.chatTitleView
@@ -4448,7 +4448,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                 if case .pinnedMessages = presentationInterfaceState.subject {
                                     strongSelf.chatTitleView?.titleContent = .custom(presentationInterfaceState.strings.Chat_TitlePinnedMessages(Int32(displayedCount ?? 1)), nil, false)
                                 } else {
-                                    strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil)
+                                    strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: isScheduledMessages, isMuted: nil, customMessageCount: nil)
                                     let imageOverride: AvatarNodeImageOverride?
                                     if strongSelf.context.account.peerId == peer.id {
                                         imageOverride = .savedMessagesIcon
@@ -4826,17 +4826,30 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 let peerView = context.account.viewTracker.peerView(peerId)
                 
                 let messageAndTopic = messagePromise.get()
-                |> mapToSignal { message -> Signal<(message: Message?, threadData: MessageHistoryThreadData?), NoError> in
+                |> mapToSignal { message -> Signal<(message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int), NoError> in
                     guard let replyThreadId = replyThreadId else {
-                        return .single((message, nil))
+                        return .single((message, nil, 0))
                     }
                     let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: peerId, threadId: replyThreadId)
-                    return context.account.postbox.combinedView(keys: [viewKey])
-                    |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?) in
+                    let countViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Cloud)
+                    let localCountViewKey: PostboxViewKey = .historyTagSummaryView(tag: MessageTags(), peerId: peerId, threadId: replyThreadId, namespace: Namespaces.Message.Local)
+                    return context.account.postbox.combinedView(keys: [viewKey, countViewKey, localCountViewKey])
+                    |> map { views -> (message: Message?, threadData: MessageHistoryThreadData?, messageCount: Int) in
                         guard let view = views.views[viewKey] as? MessageHistoryThreadInfoView else {
-                            return (message, nil)
+                            return (message, nil, 0)
                         }
-                        return (message, view.info?.data.get(MessageHistoryThreadData.self))
+                        var messageCount = 0
+                        if let summaryView = views.views[countViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
+                            if replyThreadId == 1 {
+                                messageCount += Int(count)
+                            } else {
+                                messageCount += max(Int(count) - 1, 0)
+                            }
+                        }
+                        if let summaryView = views.views[localCountViewKey] as? MessageHistoryTagSummaryView, let count = summaryView.count {
+                            messageCount += Int(count)
+                        }
+                        return (message, view.info?.data.get(MessageHistoryThreadData.self), messageCount)
                     }
                 }
                 
@@ -4933,7 +4946,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                         
                         if let threadInfo = messageAndTopic.threadData?.info {
-                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted)
+                            strongSelf.chatTitleView?.titleContent = .peer(peerView: peerView, customTitle: threadInfo.title, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: peerIsMuted, customMessageCount: messageAndTopic.messageCount == 0 ? nil : messageAndTopic.messageCount)
                             
                             let avatarContent: EmojiStatusComponent.Content
                             if let fileId = threadInfo.icon {

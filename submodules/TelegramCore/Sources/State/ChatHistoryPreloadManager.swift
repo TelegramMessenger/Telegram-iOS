@@ -321,12 +321,6 @@ final class ChatHistoryPreloadManager {
                 return
             }
             
-            #if DEBUG
-            if "".isEmpty {
-                return
-            }
-            #endif
-            
             strongSelf.canPreloadHistoryValue = value
             if value {
                 for i in 0 ..< min(3, strongSelf.entries.count) {
@@ -382,7 +376,9 @@ final class ChatHistoryPreloadManager {
                 return
             }
             #if DEBUG
-            //return
+            if "".isEmpty {
+                return
+            }
             #endif
             
             var indices: [(ChatHistoryPreloadIndex, Bool, Bool)] = []

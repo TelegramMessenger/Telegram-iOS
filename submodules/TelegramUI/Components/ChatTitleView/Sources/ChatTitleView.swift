@@ -31,7 +31,7 @@ public enum ChatTitleContent {
         case replies
     }
     
-    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?)
+    case peer(peerView: PeerView, customTitle: String?, onlineMemberCount: Int32?, isScheduledMessages: Bool, isMuted: Bool?, customMessageCount: Int?)
     case replyThread(type: ReplyThreadType, count: Int)
     case custom(String, String?, Bool)
 }
@@ -123,7 +123,7 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
                 var titleCredibilityIcon: ChatTitleCredibilityIcon = .none
                 var isEnabled = true
                 switch titleContent {
-                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted):
+                    case let .peer(peerView, customTitle, _, isScheduledMessages, isMuted, _):
                         if peerView.peerId.isReplies {
                             let typeText: String = self.strings.DialogList_Replies
                             segments = [.text(0, NSAttributedString(string: typeText, font: titleFont, textColor: titleTheme.rootController.navigationBar.primaryTextColor))]
@@ -319,11 +319,14 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
         var inputActivitiesAllowed = true
         if let titleContent = self.titleContent {
             switch titleContent {
-            case let .peer(peerView, _, _, isScheduledMessages, _):
+            case let .peer(peerView, _, _, isScheduledMessages, _, customMessageCount):
                 if let peer = peerViewMainPeer(peerView) {
                     if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                         inputActivitiesAllowed = false
                     }
+                }
+                if customMessageCount != nil {
+                    inputActivitiesAllowed = false
                 }
             case .replyThread:
                 inputActivitiesAllowed = true
@@ -420,8 +423,11 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
             } else {
                 if let titleContent = self.titleContent {
                     switch titleContent {
-                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _):
-                            if let peer = peerViewMainPeer(peerView) {
+                        case let .peer(peerView, customTitle, onlineMemberCount, isScheduledMessages, _, customMessageCount):
+                            if let customMessageCount = customMessageCount, customMessageCount != 0 {
+                                let string = NSAttributedString(string: self.strings.Conversation_ForwardOptions_Messages(Int32(customMessageCount)), font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)
+                                state = .info(string, .generic)
+                            } else if let peer = peerViewMainPeer(peerView) {
                                 let servicePeer = isServicePeer(peer)
                                 if peer.id == self.context.account.peerId || isScheduledMessages || peer.id.isReplies {
                                     let string = NSAttributedString(string: "", font: subtitleFont, textColor: titleTheme.rootController.navigationBar.secondaryTextColor)

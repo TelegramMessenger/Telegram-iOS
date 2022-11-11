@@ -28,7 +28,7 @@ final class ChatAvatarNavigationNode: ASDisplayNode {
     let avatarNode: AvatarNode
     private var videoNode: UniversalVideoNode?
     
-    private let statusView: ComponentView<Empty>
+    let statusView: ComponentView<Empty>
     
     private var videoContent: NativeVideoContent?
     private let playbackStartDisposable = MetaDisposable()

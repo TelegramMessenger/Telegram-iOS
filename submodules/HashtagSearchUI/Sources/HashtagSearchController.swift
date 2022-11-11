@@ -86,7 +86,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, toggleArchivedFolderHiddenByDefault: {
         }, toggleThreadsSelection: { _, _ in
         }, hidePsa: { _ in
-        }, activateChatPreview: { _, _, gesture, _ in
+        }, activateChatPreview: { _, _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
         }, openForumThread: { _, _ in

@@ -58,6 +58,23 @@ public struct EnginePeerReadCounters: Equatable {
         }
         return state.isUnread
     }
+    
+    public var hasEverRead: Bool {
+        guard let state = self.state else {
+            return false
+        }
+        for (_, state) in state.states {
+            switch state {
+            case let .idBased(maxIncomingReadId, _, _, _, _):
+                if maxIncomingReadId != 0 {
+                    return true
+                }
+            case .indexBased:
+                return true
+            }
+        }
+        return false
+    }
 
     public func isOutgoingMessageIndexRead(_ index: EngineMessage.Index) -> Bool {
         guard let state = self.state else {

@@ -162,7 +162,7 @@ final class HistoryViewStateValidationContexts {
             }
         }
         
-        if let location = location, let peerId = location.peerId, let threadId = location.threadId {
+        if let location = location, let peerId = location.peerId, let threadId = location.threadId, let historyState = historyState, historyState.hasInvalidationIndex {
             var rangesToInvalidate: [[MessageId]] = []
             let addToRange: (MessageId, inout [[MessageId]]) -> Void = { id, ranges in
                 if ranges.isEmpty {
@@ -179,8 +179,17 @@ final class HistoryViewStateValidationContexts {
             }
             
             for entry in view.entries {
-                if entry.message.id.peerId == peerId && entry.message.id.namespace == Namespaces.Message.Cloud {
-                    addToRange(entry.message.id, &rangesToInvalidate)
+                if historyState.matchesPeerId(entry.message.id.peerId) && entry.message.id.namespace == Namespaces.Message.Cloud {
+                    if let tag = view.tagMask {
+                        if !entry.message.tags.contains(tag) {
+                            continue
+                        }
+                    }
+                    if !historyState.isMessageValid(entry.message) {
+                        addToRange(entry.message.id, &rangesToInvalidate)
+                    } else {
+                        addRangeBreak(&rangesToInvalidate)
+                    }
                 }
             }
             
