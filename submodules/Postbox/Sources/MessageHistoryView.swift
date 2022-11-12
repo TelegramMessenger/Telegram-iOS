@@ -920,6 +920,9 @@ final class MutableMessageHistoryView {
             if let hole = loadedSample.hole {
                 let direction: MessageHistoryViewRelativeHoleDirection
                 if let endId = hole.endId {
+                    if self.tag == nil, hole.namespace == 0 {
+                        assert(true)
+                    }
                     direction = .range(start: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId), end: MessageId(peerId: hole.peerId, namespace: hole.namespace, id: endId))
                 } else {
                     direction = .aroundId(MessageId(peerId: hole.peerId, namespace: hole.namespace, id: hole.startId))

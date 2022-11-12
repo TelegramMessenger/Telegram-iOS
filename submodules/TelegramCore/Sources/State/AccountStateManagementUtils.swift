@@ -3063,27 +3063,59 @@ func replayFinalState(
     
     var wasOperationScheduledMessageIds: [MessageId] = []
     
+    var readInboxCloudMessageIds: [PeerId: Int32] = [:]
+    
     var addedOperationIncomingMessageIds: [MessageId] = []
     for operation in finalState.state.operations {
         switch operation {
-            case let .AddMessages(messages, location):
-                if case .UpperHistoryBlock = location {
-                    for message in messages {
-                        if case let .Id(id) = message.id {
-                            if message.flags.contains(.Incoming) {
-                                addedOperationIncomingMessageIds.append(id)
-                                if let authorId = message.authorId {
-                                    recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
-                                }
+        case let .AddMessages(messages, location):
+            if case .UpperHistoryBlock = location {
+                for message in messages {
+                    if case let .Id(id) = message.id {
+                        if message.flags.contains(.Incoming) {
+                            addedOperationIncomingMessageIds.append(id)
+                            if let authorId = message.authorId {
+                                recordPeerActivityTimestamp(peerId: authorId, timestamp: message.timestamp, into: &peerActivityTimestamps)
                             }
-                            if message.flags.contains(.WasScheduled) {
-                                wasOperationScheduledMessageIds.append(id)
-                            }
+                        }
+                        if message.flags.contains(.WasScheduled) {
+                            wasOperationScheduledMessageIds.append(id)
                         }
                     }
                 }
-            default:
-                break
+            }
+        case let .ReadInbox(messageId):
+            if messageId.namespace == Namespaces.Message.Cloud {
+                if let current = readInboxCloudMessageIds[messageId.peerId] {
+                    if current < messageId.id {
+                        readInboxCloudMessageIds[messageId.peerId] = messageId.id
+                    }
+                } else {
+                    readInboxCloudMessageIds[messageId.peerId] = messageId.id
+                }
+            }
+        case let .ResetIncomingReadState(_, peerId, namespace, maxIncomingReadId, _, _):
+            if namespace == Namespaces.Message.Cloud {
+                if let current = readInboxCloudMessageIds[peerId] {
+                    if current < maxIncomingReadId {
+                        readInboxCloudMessageIds[peerId] = maxIncomingReadId
+                    }
+                } else {
+                    readInboxCloudMessageIds[peerId] = maxIncomingReadId
+                }
+            }
+        case let .ResetReadState(peerId, namespace, maxIncomingReadId, _, _, _, _):
+            if namespace == Namespaces.Message.Cloud {
+                if let current = readInboxCloudMessageIds[peerId] {
+                    if current < maxIncomingReadId {
+                        readInboxCloudMessageIds[peerId] = maxIncomingReadId
+                    }
+                } else {
+                    readInboxCloudMessageIds[peerId] = maxIncomingReadId
+                }
+            }
+        default:
+            break
         }
     }
     var wasScheduledMessageIds:[MessageId] = []
@@ -3187,7 +3219,22 @@ func replayFinalState(
                                 
                                 if message.flags.contains(.Incoming) {
                                     if var data = transaction.getMessageHistoryThreadInfo(peerId: id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
-                                        if data.maxIncomingReadId != 0 && id.id >= data.maxKnownMessageId {
+                                        var combinedMaxIncomingReadId = data.maxIncomingReadId
+                                        if combinedMaxIncomingReadId == 0 {
+                                            assert(true)
+                                        }
+                                        
+                                        if let maxId = readInboxCloudMessageIds[id.peerId] {
+                                            combinedMaxIncomingReadId = max(combinedMaxIncomingReadId, maxId)
+                                        } else if let groupReadState = transaction.getCombinedPeerReadState(id.peerId), let state = groupReadState.states.first(where: { $0.0 == Namespaces.Message.Cloud })?.1, case let .idBased(maxIncomingReadId, _, _, _, _) = state {
+                                            combinedMaxIncomingReadId = max(combinedMaxIncomingReadId, maxIncomingReadId)
+                                        }
+                                        
+                                        if combinedMaxIncomingReadId != data.maxIncomingReadId {
+                                            assert(true)
+                                        }
+                                        
+                                        if combinedMaxIncomingReadId != 0 && id.id >= data.maxKnownMessageId {
                                             data.maxKnownMessageId = id.id
                                             data.incomingUnreadCount += 1
                                             

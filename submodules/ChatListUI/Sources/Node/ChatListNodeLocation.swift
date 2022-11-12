@@ -187,11 +187,24 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                 ]
             )
         )
+        
+        let readStateKey: PostboxViewKey = .combinedReadState(peerId: peerId, handleThreads: false)
+        
         var isFirst = false
-        return account.postbox.combinedView(keys: [viewKey])
+        return account.postbox.combinedView(keys: [viewKey, readStateKey])
         |> map { views -> ChatListNodeViewUpdate in
             guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
                 preconditionFailure()
+            }
+            guard let readStateView = views.views[readStateKey] as? CombinedReadStateView else {
+                preconditionFailure()
+            }
+            
+            var maxReadId: Int32 = 0
+            if let state = readStateView.state?.states.first(where: { $0.0 == Namespaces.Message.Cloud }) {
+                if case let .idBased(maxIncomingReadId, _, _, _, _) = state.1 {
+                    maxReadId = maxIncomingReadId
+                }
             }
             
             var items: [EngineChatList.Item] = []
@@ -243,7 +256,12 @@ func chatListViewForLocation(chatListLocation: ChatListControllerLocation, locat
                     pinnedIndex = .none
                 }
                 
-                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
+                var topicMaxIncomingReadId = data.maxIncomingReadId
+                if data.maxIncomingReadId == 0 && maxReadId != 0 && Int64(maxReadId) <= item.id {
+                    topicMaxIncomingReadId = max(topicMaxIncomingReadId, maxReadId)
+                }
+                
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: topicMaxIncomingReadId, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
                 
                 var draft: EngineChatList.Draft?
                 if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {

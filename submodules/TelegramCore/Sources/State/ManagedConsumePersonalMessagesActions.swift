@@ -434,3 +434,75 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
         }
     } |> switchToLatest
 }
+
+func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+    return Signal { _ in
+        let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
+        
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: MessageTags(rawValue: 0), namespace: Namespaces.Message.Cloud)
+        let disposable = postbox.combinedView(keys: [invalidateKey]).start(next: { view in
+            var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
+            if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
+                invalidateEntries = v.entries
+            }
+            
+            let (disposeOperations, _, beginValidateOperations) = helper.with { helper -> (disposeOperations: [Disposable], beginOperations: [(PendingMessageActionsEntry, MetaDisposable)], beginValidateOperations: [(InvalidatedMessageHistoryTagsSummaryEntry, MetaDisposable)]) in
+                return helper.update(entries: [], invalidateEntries: invalidateEntries)
+            }
+            
+            for disposable in disposeOperations {
+                disposable.dispose()
+            }
+            
+            for (entry, disposable) in beginValidateOperations {
+                let signal = synchronizeMessageHistoryTagSummary(postbox: postbox, network: network, entry: entry)
+                |> then(postbox.transaction { transaction -> Void in
+                    transaction.removeInvalidatedMessageHistoryTagsSummaryEntry(entry)
+                })
+                disposable.set(signal.start())
+            }
+        })
+        
+        return ActionDisposable {
+            let disposables = helper.with { helper -> [Disposable] in
+                return helper.reset()
+            }
+            for disposable in disposables {
+                disposable.dispose()
+            }
+            disposable.dispose()
+        }
+    }
+}
+
+private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Network, entry: InvalidatedMessageHistoryTagsSummaryEntry) -> Signal<Void, NoError> {
+    return postbox.transaction { transaction -> Signal<Void, NoError> in
+        guard let threadId = entry.key.threadId else {
+            return .complete()
+        }
+        if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+            return network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: threadId), offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
+            |> map(Optional.init)
+            |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in
+                return .single(nil)
+            }
+            |> mapToSignal { result -> Signal<Void, NoError> in
+                guard let result = result else {
+                    return .complete()
+                }
+                return postbox.transaction { transaction -> Void in
+                    switch result {
+                    case let .channelMessages(_, _, count, _, messages, _, _, _):
+                        let topId: Int32 = messages.first?.id(namespace: Namespaces.Message.Cloud)?.id ?? 1
+                        transaction.replaceMessageTagSummary(peerId: entry.key.peerId, threadId: threadId, tagMask: entry.key.tagMask, namespace: entry.key.namespace, count: count, maxId: topId)
+                    default:
+                        break
+                    }
+                }
+            }
+        } else {
+            return .complete()
+        }
+    }
+    |> switchToLatest
+}

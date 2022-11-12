@@ -483,7 +483,7 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
-    private let stripeNode: ASDisplayNode
+    public let stripeNode: ASDisplayNode
     private let clippingNode: SparseNode
     private let buttonsContainerNode: ASDisplayNode
     
