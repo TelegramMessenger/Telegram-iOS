@@ -3276,90 +3276,94 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self?.donePressed()
                 completion?()
             })
-        } else if case .right = action, !peerIds.isEmpty {
-            let actionSheet = ActionSheetController(presentationData: self.presentationData)
-            var items: [ActionSheetItem] = []
-            items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
-                actionSheet?.dismissAnimated()
+        } else if case .right = action {
+            if !threadIds.isEmpty {
                 
-                guard let strongSelf = self else {
-                    return
-                }
-                
-                strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
-                    var state = state
-                    for peerId in peerIds {
-                        state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
-                    }
-                    return state
-                })
-                
-                let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
-                
-                strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+            } else if !peerIds.isEmpty {
+                let actionSheet = ActionSheetController(presentationData: self.presentationData)
+                var items: [ActionSheetItem] = []
+                items.append(ActionSheetButtonItem(title: self.presentationData.strings.ChatList_DeleteConfirmation(Int32(peerIds.count)), color: .destructive, action: { [weak self, weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    
                     guard let strongSelf = self else {
-                        return false
+                        return
                     }
-                    if value == .commit {
-                        let presentationData = strongSelf.presentationData
-                        let progressSignal = Signal<Never, NoError> { subscriber in
-                            let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
-                            self?.present(controller, in: .window(.root))
-                            return ActionDisposable { [weak controller] in
-                                Queue.mainQueue().async() {
-                                    controller?.dismiss()
+                    
+                    strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
+                        var state = state
+                        for peerId in peerIds {
+                            state.pendingRemovalItemIds.insert(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
+                        }
+                        return state
+                    })
+                    
+                    let text = strongSelf.presentationData.strings.ChatList_DeletedChats(Int32(peerIds.count))
+                    
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .removedChat(text: text), elevatedLayout: false, animateInAsReplacement: true, action: { value in
+                        guard let strongSelf = self else {
+                            return false
+                        }
+                        if value == .commit {
+                            let presentationData = strongSelf.presentationData
+                            let progressSignal = Signal<Never, NoError> { subscriber in
+                                let controller = OverlayStatusController(theme: presentationData.theme, type: .loading(cancelled: nil))
+                                self?.present(controller, in: .window(.root))
+                                return ActionDisposable { [weak controller] in
+                                    Queue.mainQueue().async() {
+                                        controller?.dismiss()
+                                    }
                                 }
                             }
+                            |> runOn(Queue.mainQueue())
+                            |> delay(0.8, queue: Queue.mainQueue())
+                            let progressDisposable = progressSignal.start()
+                            
+                            let signal: Signal<Never, NoError> = strongSelf.context.engine.peers.removePeerChats(peerIds: Array(peerIds))
+                            |> afterDisposed {
+                                Queue.mainQueue().async {
+                                    progressDisposable.dispose()
+                                }
+                            }
+                            let _ = (signal
+                            |> deliverOnMainQueue).start()
+                            
+                            strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
+                                var state = state
+                                for peerId in peerIds {
+                                    state.selectedPeerIds.remove(peerId)
+                                }
+                                return state
+                            })
+                            
+                            return true
+                        } else if value == .undo {
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
+                            strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
+                                var state = state
+                                for peerId in peerIds {
+                                    state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
+                                }
+                                return state
+                            })
+                            self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
+                            return true
                         }
-                        |> runOn(Queue.mainQueue())
-                        |> delay(0.8, queue: Queue.mainQueue())
-                        let progressDisposable = progressSignal.start()
-                        
-                        let signal: Signal<Never, NoError> = strongSelf.context.engine.peers.removePeerChats(peerIds: Array(peerIds))
-                        |> afterDisposed {
-                            Queue.mainQueue().async {
-                                progressDisposable.dispose()
-                            }
-                        }
-                        let _ = (signal
-                        |> deliverOnMainQueue).start()
-                        
-                        strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
-                            var state = state
-                            for peerId in peerIds {
-                                state.selectedPeerIds.remove(peerId)
-                            }
-                            return state
-                        })
-                        
-                        return true
-                    } else if value == .undo {
-                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
-                        strongSelf.chatListDisplayNode.containerNode.updateState(onlyCurrent: false, { state in
-                            var state = state
-                            for peerId in peerIds {
-                                state.pendingRemovalItemIds.remove(ChatListNodeState.ItemId(peerId: peerId, threadId: nil))
-                            }
-                            return state
-                        })
-                        self?.chatListDisplayNode.containerNode.currentItemNode.setCurrentRemovingItemId(ChatListNodeState.ItemId(peerId: peerIds.first!, threadId: nil))
-                        return true
-                    }
-                    return false
-                }), in: .current)
+                        return false
+                    }), in: .current)
+                    
+                    strongSelf.donePressed()
+                }))
                 
-                strongSelf.donePressed()
-            }))
-            
-            actionSheet.setItemGroups([
-                ActionSheetItemGroup(items: items),
-                ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                    })
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: self.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
                 ])
-            ])
-            self.present(actionSheet, in: .window(.root))
+                self.present(actionSheet, in: .window(.root))
+            }
         } else if case .middle = action {
             switch self.location {
             case let .chatList(groupId):

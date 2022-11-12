@@ -293,10 +293,12 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                 if customTransition {
                     node.removeFromSupernode()
                 } else {
-                    let nodeSize = self.videoNodes[index].currentSize
-                    node.layer.animateFrame(from: node.layer.frame, to: CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: true, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak node] _ in
-                        node?.removeFromSupernode()
-                    })
+                    if !node.isRemoved {
+                        let nodeSize = self.videoNodes[index].currentSize
+                        node.layer.animateFrame(from: node.layer.frame, to: CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: self.videoNodes[index].location, hidden: true, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: node.tempExtendedTopInset), size: nodeSize), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak node] _ in
+                            node?.removeFromSupernode()
+                        })
+                    }
                 }
             } else {
                 node.removeFromSupernode()
@@ -368,11 +370,16 @@ final class OverlayMediaControllerNode: ASDisplayNode, UIGestureRecognizerDelega
                         }
                         self.videoNodes[index].location = updatedLocation
                         
-                        draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: updatedLocation, hidden: !draggingNode.hasAttachedContext, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
-                        draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+                        draggingNode.frame = CGRect(origin: self.nodePosition(layout: validLayout, size: nodeSize, location: updatedLocation, hidden: !draggingNode.hasAttachedContext || shouldDismiss, isMinimized: self.videoNodes[index].isMinimized, tempExtendedTopInset: draggingNode.tempExtendedTopInset), size: nodeSize)
+                        draggingNode.layer.animateFrame(from: previousFrame, to: draggingNode.frame, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak draggingNode] _ in
+                            if draggingNode?.isRemoved == true {
+                                draggingNode?.removeFromSupernode()
+                            }
+                        })
                         self.draggingNode = nil
                         
                         if shouldDismiss && !draggingNode.isMinimizeable {
+                            draggingNode.isRemoved = true
                             draggingNode.dismiss()
                         }
                     }

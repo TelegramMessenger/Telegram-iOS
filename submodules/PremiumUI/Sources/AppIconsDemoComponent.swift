@@ -145,8 +145,11 @@ final class AppIconsDemoComponent: Component {
                         from = CGPoint(x: availableSize.width * 0.5, y: availableSize.height * 0.5)
                         delay = 0.0
                 }
-                view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring)
-                view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: delay, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                
+                Queue.mainQueue().after(delay) {
+                    view.layer.animateScale(from: 3.0, to: 1.0, duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring)
+                    view.layer.animatePosition(from: from, to: CGPoint(), duration: 0.5, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+                }
                 
                 i += 1
             }
