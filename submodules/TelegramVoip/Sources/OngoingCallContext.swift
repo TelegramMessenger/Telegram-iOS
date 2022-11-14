@@ -1399,92 +1399,48 @@ private final class CallSignalingConnectionImpl: CallSignalingConnection {
 }
 
 private final class CallSignalingConnectionManager {
-    private final class ConnectionContext {
-        let connection: CallSignalingConnection
-        let host: String
-        let port: UInt16
-        
-        init(connection: CallSignalingConnection, host: String, port: UInt16) {
-            self.connection = connection
-            self.host = host
-            self.port = port
-        }
-    }
-    
     private let queue: Queue
-    private let peerTag: Data
-    private let dataReceived: (Data) -> Void
-    
-    private var isRunning: Bool = false
     
     private var nextConnectionId: Int = 0
-    private var connections: [Int: ConnectionContext] = [:]
+    private var connections: [Int: CallSignalingConnection] = [:]
     
     init(queue: Queue, peerTag: Data, servers: [OngoingCallConnectionDescriptionWebrtc], dataReceived: @escaping (Data) -> Void) {
         self.queue = queue
-        self.peerTag = peerTag
-        self.dataReceived = dataReceived
         
         for server in servers {
             if server.hasTcp {
-                self.spawnConnection(host: server.ip, port: UInt16(server.port))
+                let id = self.nextConnectionId
+                self.nextConnectionId += 1
+                if #available(iOS 12.0, *) {
+                    let connection = CallSignalingConnectionImpl(queue: queue, host: server.ip, port: UInt16(server.port), peerTag: peerTag, dataReceived: { data in
+                        dataReceived(data)
+                    }, isClosed: { [weak self] in
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        let _ = strongSelf
+                    })
+                    connections[id] = connection
+                }
             }
         }
     }
     
     func start() {
-        if self.isRunning {
-            return
-        }
-        self.isRunning = true
-        
         for (_, connection) in self.connections {
-            connection.connection.start()
+            connection.start()
         }
     }
     
     func stop() {
-        if !self.isRunning {
-            return
-        }
-        self.isRunning = false
-        
         for (_, connection) in self.connections {
-            connection.connection.stop()
+            connection.stop()
         }
     }
     
     func send(payloadData: Data) {
         for (_, connection) in self.connections {
-            connection.connection.send(payloadData: payloadData)
-        }
-    }
-    
-    private func spawnConnection(host: String, port: UInt16) {
-        let id = self.nextConnectionId
-        self.nextConnectionId += 1
-        if #available(iOS 12.0, *) {
-            let dataReceived = self.dataReceived
-            let connection = CallSignalingConnectionImpl(queue: queue, host: host, port: port, peerTag: self.peerTag, dataReceived: { data in
-                dataReceived(data)
-            }, isClosed: { [weak self] in
-                guard let `self` = self else {
-                    return
-                }
-                self.handleConnectionFailed(id: id)
-            })
-            self.connections[id] = ConnectionContext(connection: connection, host: host, port: port)
-            if self.isRunning {
-                connection.start()
-            }
-        }
-    }
-    
-    private func handleConnectionFailed(id: Int) {
-        if let connection = self.connections.removeValue(forKey: id) {
-            connection.connection.stop()
-            self.spawnConnection(host: connection.host, port: connection.port)
+            connection.send(payloadData: payloadData)
         }
     }
 }
-
