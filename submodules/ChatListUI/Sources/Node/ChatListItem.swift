@@ -333,7 +333,30 @@ private func groupReferenceRevealOptions(strings: PresentationStrings, theme: Pr
     return options
 }
 
-private func forumRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isPinned: Bool, isEditing: Bool, canPin: Bool, canOpenClose: Bool, canDelete: Bool) -> [ItemListRevealOption] {
+private func forumGeneralRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isEditing: Bool, canHide: Bool, hiddenByDefault: Bool) -> [ItemListRevealOption] {
+    var options: [ItemListRevealOption] = []
+    if !isEditing {
+        if let isMuted = isMuted {
+            if isMuted {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unmute.rawValue, title: strings.ChatList_Unmute, icon: unmuteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.mute.rawValue, title: strings.ChatList_Mute, icon: muteIcon, color: theme.list.itemDisclosureActions.neutral2.fillColor, textColor: theme.list.itemDisclosureActions.neutral2.foregroundColor))
+            }
+        }
+    }
+    if canHide {
+        if !isEditing {
+            if hiddenByDefault {
+                options.append(ItemListRevealOption(key: RevealOptionKey.unhide.rawValue, title: strings.ChatList_UnhideAction, icon: unhideIcon, color: theme.list.itemDisclosureActions.constructive.fillColor, textColor: theme.list.itemDisclosureActions.constructive.foregroundColor))
+            } else {
+                options.append(ItemListRevealOption(key: RevealOptionKey.hide.rawValue, title: strings.ChatList_HideAction, icon: hideIcon, color: theme.list.itemDisclosureActions.inactive.fillColor, textColor: theme.list.itemDisclosureActions.neutral1.foregroundColor))
+            }
+        }
+    }
+    return options
+}
+
+private func forumThreadRevealOptions(strings: PresentationStrings, theme: PresentationTheme, isMuted: Bool?, isClosed: Bool, isEditing: Bool, canOpenClose: Bool, canDelete: Bool) -> [ItemListRevealOption] {
     var options: [ItemListRevealOption] = []
     if !isEditing {
         if let isMuted = isMuted {
@@ -2178,20 +2201,24 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if item.enableContextActions {
                         if case .forum = item.chatListLocation {
                             if case let .chat(itemPeer) = contentPeer, case let .channel(channel) = itemPeer.peer {
-                                var canOpenClose = false
-                                if channel.flags.contains(.isCreator) {
-                                    canOpenClose = true
-                                } else if channel.hasPermission(.manageTopics) {
-                                    canOpenClose = true
-                                } else if let threadInfo = threadInfo, threadInfo.isOwnedByMe {
-                                    canOpenClose = true
+                                if let threadInfo, threadInfo.id == 1 {
+                                    peerRevealOptions = forumGeneralRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isEditing: item.editing, canHide: channel.flags.contains(.isCreator) || channel.hasPermission(.pinMessages), hiddenByDefault: false)
+                                } else {
+                                    var canOpenClose = false
+                                    if channel.flags.contains(.isCreator) {
+                                        canOpenClose = true
+                                    } else if channel.hasPermission(.manageTopics) {
+                                        canOpenClose = true
+                                    } else if let threadInfo = threadInfo, threadInfo.isOwnedByMe {
+                                        canOpenClose = true
+                                    }
+                                    let canDelete = channel.hasPermission(.deleteAllMessages)
+                                    var isClosed = false
+                                    if let threadInfo {
+                                        isClosed = threadInfo.isClosed
+                                    }
+                                    peerRevealOptions = forumThreadRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canDelete: canDelete)
                                 }
-                                let canDelete = channel.hasPermission(.deleteAllMessages)
-                                var isClosed = false
-                                if let threadInfo {
-                                    isClosed = threadInfo.isClosed
-                                }
-                                peerRevealOptions = forumRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isPinned: isPinned, isEditing: item.editing, canPin: channel.flags.contains(.isCreator) || channel.hasPermission(.pinMessages), canOpenClose: canOpenClose, canDelete: canDelete)
                                 peerLeftRevealOptions = []
                             } else {
                                 peerRevealOptions = []

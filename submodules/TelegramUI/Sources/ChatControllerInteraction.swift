@@ -117,7 +117,7 @@ public final class ChatControllerInteraction {
     let scheduleCurrentMessage: () -> Void
     let sendScheduledMessagesNow: ([MessageId]) -> Void
     let editScheduledMessagesTime: ([MessageId]) -> Void
-    let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
+    let performTextSelectionAction: (Bool, NSAttributedString, TextSelectionAction) -> Void
     let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
@@ -226,7 +226,7 @@ public final class ChatControllerInteraction {
         scheduleCurrentMessage: @escaping () -> Void,
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
         editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
-        performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
+        performTextSelectionAction: @escaping (Bool, NSAttributedString, TextSelectionAction) -> Void,
         displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,

@@ -3441,7 +3441,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     })
                 }, delay: true)
             }
-        }, performTextSelectionAction: { [weak self] _, text, action in
+        }, performTextSelectionAction: { [weak self] canCopy, text, action in
             guard let strongSelf = self else {
                 return
             }
@@ -3493,7 +3493,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         
                         let (_, language) = canTranslateText(context: context, text: text.string, showTranslate: translationSettings.showTranslate, showTranslateIfTopical: showTranslateIfTopical, ignoredLanguages: translationSettings.ignoredLanguages)
                         
-                        let controller = TranslateScreen(context: context, text: text.string, fromLanguage: language)
+                        let controller = TranslateScreen(context: context, text: text.string, canCopy: canCopy, fromLanguage: language)
                         controller.pushController = { [weak self] c in
                             self?.effectiveNavigationController?._keepModalDismissProgress = true
                             self?.push(c)

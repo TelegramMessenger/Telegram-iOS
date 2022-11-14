@@ -735,27 +735,29 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             }
         })))
         
-        var canOpenClose = false
-        if channel.flags.contains(.isCreator) {
-            canOpenClose = true
-        } else if channel.hasPermission(.manageTopics) {
-            canOpenClose = true
-        } else if threadData.isOwnedByMe {
-            canOpenClose = true
-        }
-        if canOpenClose {
-            items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-                f(.default)
-                
-                let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
-            })))
-        }
-        if channel.hasPermission(.deleteAllMessages) {
-            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
-                f(.default)
-                
-                chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
-            })))
+        if threadId != 1 {
+            var canOpenClose = false
+            if channel.flags.contains(.isCreator) {
+                canOpenClose = true
+            } else if channel.hasPermission(.manageTopics) {
+                canOpenClose = true
+            } else if threadData.isOwnedByMe {
+                canOpenClose = true
+            }
+            if canOpenClose {
+                items.append(.action(ContextMenuActionItem(text: threadData.isClosed ? presentationData.strings.ChatList_Context_ReopenTopic : presentationData.strings.ChatList_Context_CloseTopic, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: threadData.isClosed ? "Chat/Context Menu/Play": "Chat/Context Menu/Pause"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                    f(.default)
+                    
+                    let _ = context.engine.peers.setForumChannelTopicClosed(id: peerId, threadId: threadId, isClosed: !threadData.isClosed).start()
+                })))
+            }
+            if channel.hasPermission(.deleteAllMessages) {
+                items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Delete, textColor: .destructive, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Delete"), color: theme.contextMenu.destructiveColor) }, action: { [weak chatListController] _, f in
+                    f(.default)
+                    
+                    chatListController?.deletePeerThread(peerId: peerId, threadId: threadId)
+                })))
+            }
         }
         
         items.append(.separator)

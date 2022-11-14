@@ -1768,7 +1768,7 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                     guard let strongSelf = self, let item = strongSelf.arguments else {
                         return
                     }
-                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                    item.controllerInteraction.performTextSelectionAction(true, text, action)
                 })
                 self.textSelectionNode = textSelectionNode
                 self.textClippingNode.addSubnode(textSelectionNode)

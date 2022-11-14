@@ -749,7 +749,7 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                     guard let strongSelf = self, let item = strongSelf.item else {
                         return
                     }
-                    item.controllerInteraction.performTextSelectionAction(item.message.stableId, text, action)
+                    item.controllerInteraction.performTextSelectionAction(true, text, action)
                 })
                 textSelectionNode.updateRange = { [weak self] selectionRange in
                     if let strongSelf = self, let dustNode = strongSelf.dustNode, !dustNode.isRevealed, let textLayout = strongSelf.textNode.textNode.cachedLayout, !textLayout.spoilers.isEmpty, let selectionRange = selectionRange {

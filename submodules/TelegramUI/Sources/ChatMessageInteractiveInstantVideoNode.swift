@@ -765,7 +765,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                             transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                             component: AnyComponent(AudioTranscriptionButtonComponent(
-                                theme: .freeform(durationBlurColor),
+                                theme: .freeform(durationBlurColor, durationTextColor),
                                 transcriptionState: effectiveAudioTranscriptionState,
                                 pressed: {
                                     guard let strongSelf = self else {

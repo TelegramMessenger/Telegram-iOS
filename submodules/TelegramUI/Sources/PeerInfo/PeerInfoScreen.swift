@@ -6328,7 +6328,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     if canTranslate {
                         actions.append(ContextMenuAction(content: .text(title: presentationData.strings.Conversation_ContextMenuTranslate, accessibilityLabel: presentationData.strings.Conversation_ContextMenuTranslate), action: { [weak self] in
                             
-                            let controller = TranslateScreen(context: context, text: text, fromLanguage: language)
+                            let controller = TranslateScreen(context: context, text: text, canCopy: true, fromLanguage: language)
                             controller.pushController = { [weak self] c in
                                 (self?.controller?.navigationController as? NavigationController)?._keepModalDismissProgress = true
                                 self?.controller?.push(c)
