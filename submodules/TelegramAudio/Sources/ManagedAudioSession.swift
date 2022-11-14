@@ -961,7 +961,7 @@ public final class ManagedAudioSession {
     
     public func callKitActivatedAudioSession() {
         self.queue.async {
-            managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
+            managedAudioSessionLog("ManagedAudioSession callKitActivatedAudioSession")
             self.callKitAudioSessionIsActive = true
             self.updateHolders()
         }

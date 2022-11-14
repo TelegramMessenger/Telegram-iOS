@@ -706,6 +706,10 @@ public final class OngoingCallContext {
         }
     }
     
+    public static func setupAudioSession() {
+        OngoingCallThreadLocalContextWebrtc.setupAudioSession()
+    }
+    
     public let callId: CallId
     public let internalId: CallSessionInternalId
     

@@ -883,6 +883,10 @@ public final class PresentationCallImpl: PresentationCall {
     }
     
     public func answer() {
+        self.answer(fromCallKitAction: false)
+    }
+        
+    func answer(fromCallKitAction: Bool) {
         let (presentationData, present, openSettings) = self.getDeviceAccessData()
         
         DeviceAccess.authorizeAccess(to: .microphone(.voiceCall), presentationData: presentationData, present: { c, a in
@@ -905,14 +909,18 @@ public final class PresentationCallImpl: PresentationCall {
                         }
                         if value {
                             strongSelf.callSessionManager.accept(internalId: strongSelf.internalId)
-                            strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                            if !fromCallKitAction {
+                                strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                            }
                         } else {
                             let _ = strongSelf.hangUp().start()
                         }
                     })
                 } else {
                     strongSelf.callSessionManager.accept(internalId: strongSelf.internalId)
-                    strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                    if !fromCallKitAction {
+                        strongSelf.callKitIntegration?.answerCall(uuid: strongSelf.internalId)
+                    }
                 }
             } else {
                 let _ = strongSelf.hangUp().start()

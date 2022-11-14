@@ -240,7 +240,7 @@ public final class PresentationCallManagerImpl: PresentationCallManager {
         
         answerCallImpl = { [weak self] uuid in
             if let strongSelf = self {
-                strongSelf.currentCall?.answer()
+                strongSelf.currentCall?.answer(fromCallKitAction: true)
             }
         }
         

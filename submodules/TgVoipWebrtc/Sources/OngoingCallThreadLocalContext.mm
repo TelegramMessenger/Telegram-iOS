@@ -808,6 +808,18 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     }
 }
 
++ (void)setupAudioSession {
+    RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
+    sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
+    sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+    sharedConfiguration.outputNumberOfChannels = 1;
+    [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
+    
+    [[RTCAudioSession sharedInstance] lockForConfiguration];
+    [[RTCAudioSession sharedInstance] setConfiguration:sharedConfiguration active:false error:nil disableRecording:false];
+    [[RTCAudioSession sharedInstance] unlockForConfiguration];
+}
+
 + (int32_t)maxLayer {
     return 92;
 }

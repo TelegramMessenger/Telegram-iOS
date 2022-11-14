@@ -202,6 +202,8 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 + (int32_t)maxLayer;
 + (NSArray<NSString *> * _Nonnull)versionsWithIncludeReference:(bool)includeReference;
 
++ (void)setupAudioSession;
+
 @property (nonatomic, copy) void (^ _Nullable stateChanged)(OngoingCallStateWebrtc, OngoingCallVideoStateWebrtc, OngoingCallRemoteVideoStateWebrtc, OngoingCallRemoteAudioStateWebrtc, OngoingCallRemoteBatteryLevelWebrtc, float);
 @property (nonatomic, copy) void (^ _Nullable signalBarsChanged)(int32_t);
 @property (nonatomic, copy) void (^ _Nullable audioLevelUpdated)(float);
