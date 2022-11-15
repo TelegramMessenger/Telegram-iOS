@@ -61,7 +61,9 @@ public final class ManagedAnimationState {
     }
     
     func draw() -> UIImage? {
-        let renderContext = DrawingContext(size: self.displaySize, scale: UIScreenScale, clear: true)
+        guard let renderContext = DrawingContext(size: self.displaySize, scale: UIScreenScale, clear: true) else {
+            return nil
+        }
 
         self.instance.renderFrame(with: Int32(self.frameIndex ?? 0), into: renderContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(renderContext.size.width * renderContext.scale), height: Int32(renderContext.size.height * renderContext.scale), bytesPerRow: Int32(renderContext.bytesPerRow))
         return renderContext.generateImage()

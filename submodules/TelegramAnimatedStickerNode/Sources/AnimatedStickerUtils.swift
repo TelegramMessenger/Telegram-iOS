@@ -35,7 +35,10 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
                         return
                     }
                     
-                    let context = DrawingContext(size: size, scale: 1.0, clear: true)
+                    guard let context = DrawingContext(size: size, scale: 1.0, clear: true) else {
+                        subscriber.putCompletion()
+                        return
+                    }
                     player.renderFrame(with: 0, into: context.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(size.width), height: Int32(size.height), bytesPerRow: Int32(context.bytesPerRow))
                     
                     let yuvaPixelsPerAlphaRow = (Int(size.width) + 1) & (~1)
@@ -53,7 +56,9 @@ public func fetchCompressedLottieFirstFrameAJpeg(data: Data, size: CGSize, fitzM
                     decodeYUVAToRGBA(yuvaFrameData.assumingMemoryBound(to: UInt8.self), context.bytes.assumingMemoryBound(to: UInt8.self), Int32(size.width), Int32(size.height), Int32(context.bytesPerRow))
                     
                     if let colorSourceImage = context.generateImage(), let alphaImage = generateGrayscaleAlphaMaskImage(image: colorSourceImage) {
-                        let colorContext = DrawingContext(size: size, scale: 1.0, clear: false)
+                        guard let colorContext = DrawingContext(size: size, scale: 1.0, clear: false) else {
+                            return
+                        }
                         colorContext.withFlippedContext { c in
                             c.setFillColor(UIColor.black.cgColor)
                             c.fill(CGRect(origin: CGPoint(), size: size))

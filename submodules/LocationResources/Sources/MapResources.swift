@@ -113,7 +113,9 @@ public func chatMapSnapshotImage(engine: TelegramEngine, resource: MapSnapshotMe
     
     return signal |> map { fullSizeData in
         return { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                return nil
+            }
             
             var fullSizeImage: CGImage?
             if let fullSizeData = fullSizeData {

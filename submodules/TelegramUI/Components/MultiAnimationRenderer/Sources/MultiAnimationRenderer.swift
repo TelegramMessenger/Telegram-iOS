@@ -106,7 +106,9 @@ private final class ItemAnimationContext {
             
             switch frame.format {
             case let .rgba(data, width, height, bytesPerRow):
-                let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow)
+                guard let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: false, bytesPerRow: bytesPerRow) else {
+                    return nil
+                }
                     
                 data.withUnsafeBytes { bytes -> Void in
                     memcpy(context.bytes, bytes.baseAddress!, height * bytesPerRow)
@@ -133,7 +135,9 @@ private final class ItemAnimationContext {
             case let .rgba(data, width, height, bytesPerRow):
                 let blurredWidth = 12
                 let blurredHeight = 12
-                let context = DrawingContext(size: CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight)), scale: 1.0, opaque: true, bytesPerRow: bytesPerRow)
+                guard let context = DrawingContext(size: CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight)), scale: 1.0, opaque: true, bytesPerRow: bytesPerRow) else {
+                    return nil
+                }
                 
                 let size = CGSize(width: CGFloat(blurredWidth), height: CGFloat(blurredHeight))
                 

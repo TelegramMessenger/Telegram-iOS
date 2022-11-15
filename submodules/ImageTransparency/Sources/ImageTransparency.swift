@@ -61,12 +61,14 @@ public func imageHasTransparency(_ cgImage: CGImage) -> Bool {
     return false
 }
 
-private func scaledDrawingContext(_ cgImage: CGImage, maxSize: CGSize) -> DrawingContext {
+private func scaledDrawingContext(_ cgImage: CGImage, maxSize: CGSize) -> DrawingContext? {
     var size = CGSize(width: cgImage.width, height: cgImage.height)
     if (size.width > maxSize.width && size.height > maxSize.height) {
         size = size.aspectFilled(maxSize)
     }
-    let context = DrawingContext(size: size, scale: 1.0, clear: true)
+    guard let context = DrawingContext(size: size, scale: 1.0, clear: true) else {
+        return nil
+    }
     context.withFlippedContext { context in
         context.draw(cgImage, in: CGRect(origin: CGPoint(), size: size))
     }
@@ -81,7 +83,9 @@ public func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
         return false
     }
     
-    let context = scaledDrawingContext(cgImage, maxSize: CGSize(width: 128.0, height: 128.0))
+    guard let context = scaledDrawingContext(cgImage, maxSize: CGSize(width: 128.0, height: 128.0)) else {
+        return false
+    }
     if let cgImage = context.generateImage()?.cgImage, let (histogramBins, alphaBinIndex) = generateHistogram(cgImage: cgImage) {
         var hasAlpha = false
         for i in 0 ..< 255 {
@@ -92,7 +96,9 @@ public func imageRequiresInversion(_ cgImage: CGImage) -> Bool {
         }
         
         if hasAlpha {
-            let probingContext = DrawingContext(size: CGSize(width: cgImage.width, height: cgImage.height))
+            guard let probingContext = DrawingContext(size: CGSize(width: cgImage.width, height: cgImage.height)) else {
+                return false
+            }
             probingContext.withContext { c in
                 c.draw(cgImage, in: CGRect(origin: CGPoint(), size: probingContext.size))
             }
