@@ -335,9 +335,15 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                     textColor = UIColor(rgb: colors.1.first ?? 0x000000)
                     arrowIcon = PresentationResourcesChat.chatBubbleArrowImage(color: textColor.withAlphaComponent(0.3))
                 } else {
-                    backgroundColor = (incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor)
-                    textColor = incoming ? arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor : arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
-                    arrowIcon = incoming ? PresentationResourcesChat.chatBubbleArrowIncomingImage(arguments.presentationData.theme.theme) : PresentationResourcesChat.chatBubbleArrowOutgoingImage(arguments.presentationData.theme.theme)
+                    if incoming {
+                        backgroundColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
+                        textColor = arguments.presentationData.theme.theme.chat.message.incoming.accentTextColor
+                        arrowIcon = PresentationResourcesChat.chatBubbleArrowIncomingImage(arguments.presentationData.theme.theme)
+                    } else {
+                        backgroundColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        textColor = arguments.presentationData.theme.theme.chat.message.outgoing.accentTextColor
+                        arrowIcon = PresentationResourcesChat.chatBubbleArrowOutgoingImage(arguments.presentationData.theme.theme)
+                    }
                 }
             case .standalone:
                 textColor = .white

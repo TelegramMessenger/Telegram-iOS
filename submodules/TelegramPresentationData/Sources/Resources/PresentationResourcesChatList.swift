@@ -384,4 +384,22 @@ public struct PresentationResourcesChatList {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/TopicArrowIcon"), color: theme.chatList.titleColor)
         })
     }
+    
+    public static func generalTopicSmallIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListGeneralTopicSmallIcon.rawValue, { theme in
+            let image = generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chatList.unreadBadgeInactiveBackgroundColor)
+            return generateImage(CGSize(width: 18.0, height: 18.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                if let cgImage = image?.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                }
+            })
+        })
+    }
+    
+    public static func generalTopicIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatListGeneralTopicIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chatList.unreadBadgeInactiveBackgroundColor)
+        })
+    }
 }

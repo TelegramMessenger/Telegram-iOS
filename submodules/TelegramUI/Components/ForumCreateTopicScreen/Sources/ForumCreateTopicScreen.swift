@@ -24,6 +24,7 @@ private final class TitleFieldComponent: Component {
     let textColor: UIColor
     let accentColor: UIColor
     let placeholderColor: UIColor
+    let isGeneral: Bool
     let fileId: Int64
     let iconColor: Int32
     let text: String
@@ -36,6 +37,7 @@ private final class TitleFieldComponent: Component {
         textColor: UIColor,
         accentColor: UIColor,
         placeholderColor: UIColor,
+        isGeneral: Bool,
         fileId: Int64,
         iconColor: Int32,
         text: String,
@@ -47,6 +49,7 @@ private final class TitleFieldComponent: Component {
         self.textColor = textColor
         self.accentColor = accentColor
         self.placeholderColor = placeholderColor
+        self.isGeneral = isGeneral
         self.fileId = fileId
         self.iconColor = iconColor
         self.text = text
@@ -66,6 +69,9 @@ private final class TitleFieldComponent: Component {
             return false
         }
         if lhs.placeholderColor != rhs.placeholderColor {
+            return false
+        }
+        if lhs.isGeneral != rhs.isGeneral {
             return false
         }
         if lhs.fileId != rhs.fileId {
@@ -140,7 +146,10 @@ private final class TitleFieldComponent: Component {
             self.state = state
             
             let iconContent: EmojiStatusComponent.Content
-            if component.fileId == 0 {
+            if component.isGeneral {
+                iconContent = .image(image: generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: component.placeholderColor))
+                self.iconButton.isUserInteractionEnabled = false
+            } else if component.fileId == 0 {
                 iconContent = .topic(title: String(component.text.prefix(1)), color: component.iconColor, size: CGSize(width: 32.0, height: 32.0))
                 self.iconButton.isUserInteractionEnabled = true
             } else {
@@ -413,6 +422,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         private var defaultIconFilesDisposable: Disposable?
         private var defaultIconFiles = Set<Int64>()
         
+        let isGeneral: Bool
         var title: String
         var fileId: Int64
         var iconColor: Int32
@@ -427,11 +437,13 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             
             switch mode {
             case .create:
+                self.isGeneral = false
                 self.title = ""
                 self.fileId = 0
                 
                 self.iconColor = ForumCreateTopicScreen.iconColors.randomElement() ?? 0x0
-            case let .edit(info):
+            case let .edit(threadId, info):
+                self.isGeneral = threadId == 1
                 self.title = info.title
                 self.fileId = info.icon ?? 0
                 self.iconColor = info.iconColor
@@ -638,6 +650,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     textColor: environment.theme.list.itemPrimaryTextColor,
                     accentColor: environment.theme.list.itemAccentColor,
                     placeholderColor: environment.theme.list.disclosureArrowColor,
+                    isGeneral: state.isGeneral,
                     fileId: state.fileId,
                     iconColor: state.iconColor,
                     text: state.title,
@@ -658,124 +671,128 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             
             contentHeight += titleBackground.size.height + sectionSpacing
             
-            let iconHeader = iconHeader.update(
-                component: MultilineTextComponent(
-                    text: .plain(NSAttributedString(
-                        string: environment.strings.CreateTopic_SelectTopicIcon,
-                        font: Font.regular(13.0),
-                        textColor: environment.theme.list.freeTextColor,
-                        paragraphAlignment: .natural)
-                    ),
-                    horizontalAlignment: .natural,
-                    maximumNumberOfLines: 1
-                ),
-                availableSize: CGSize(
-                    width: context.availableSize.width - sideInset * 2.0,
-                    height: CGFloat.greatestFiniteMagnitude
-                ),
-                transition: .immediate
-            )
-            context.add(iconHeader
-                .position(CGPoint(x: sideInset * 2.0 + iconHeader.size.width / 2.0, y: contentHeight + iconHeader.size.height / 2.0))
-            )
-            contentHeight += iconHeader.size.height + headerSpacing
-            
-            let bottomInset = max(environment.safeInsets.bottom, 12.0)
-            
-            let iconBackground = iconBackground.update(
-                component: RoundedRectangle(
-                    color: environment.theme.list.itemBlocksBackgroundColor,
-                    cornerRadius: 10.0
-                ),
-                availableSize: CGSize(
-                    width: context.availableSize.width - sideInset * 2.0,
-                    height: context.availableSize.height - contentHeight - bottomInset
-                ),
-                transition: context.transition
-            )
-            context.add(iconBackground
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconBackground.size.height / 2.0))
-            )
-            
-            if let emojiContent = state.emojiContent {
-                let availableHeight = context.availableSize.height - contentHeight - max(bottomInset, environment.inputHeight)
+            if case let .edit(threadId, _) = context.component.mode, threadId == 1 {
                 
-                let iconSelector = iconSelector.update(
-                    component: TopicIconSelectionComponent(
-                        theme: environment.theme,
-                        strings: environment.strings,
-                        deviceMetrics: environment.deviceMetrics,
-                        emojiContent: emojiContent,
-                        backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
-                        separatorColor: environment.theme.list.blocksBackgroundColor
+            } else {
+                let iconHeader = iconHeader.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.CreateTopic_SelectTopicIcon,
+                            font: Font.regular(13.0),
+                            textColor: environment.theme.list.freeTextColor,
+                            paragraphAlignment: .natural)
+                        ),
+                        horizontalAlignment: .natural,
+                        maximumNumberOfLines: 1
                     ),
-                    environment: {},
-                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: availableHeight),
+                    availableSize: CGSize(
+                        width: context.availableSize.width - sideInset * 2.0,
+                        height: CGFloat.greatestFiniteMagnitude
+                    ),
+                    transition: .immediate
+                )
+                context.add(iconHeader
+                    .position(CGPoint(x: sideInset * 2.0 + iconHeader.size.width / 2.0, y: contentHeight + iconHeader.size.height / 2.0))
+                )
+                contentHeight += iconHeader.size.height + headerSpacing
+                
+                let bottomInset = max(environment.safeInsets.bottom, 12.0)
+                
+                let iconBackground = iconBackground.update(
+                    component: RoundedRectangle(
+                        color: environment.theme.list.itemBlocksBackgroundColor,
+                        cornerRadius: 10.0
+                    ),
+                    availableSize: CGSize(
+                        width: context.availableSize.width - sideInset * 2.0,
+                        height: context.availableSize.height - contentHeight - bottomInset
+                    ),
                     transition: context.transition
                 )
-                context.add(iconSelector
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconSelector.size.height / 2.0))
-                    .cornerRadius(10.0)
-                    .clipsToBounds(true)
+                context.add(iconBackground
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconBackground.size.height / 2.0))
                 )
                 
-                let accountContext = context.component.context
-                emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
-                    performItemAction: { [weak state] groupId, item, _, _, _, _ in
-                        state?.applyItem(groupId: groupId, item: item)
-                    },
-                    deleteBackwards: {
-                    },
-                    openStickerSettings: {
-                    },
-                    openFeatured: {
-                    },
-                    addGroupAction: { groupId, isPremiumLocked in
-                        guard let collectionId = groupId.base as? ItemCollectionId else {
-                            return
-                        }
-                        
-                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
-                        let _ = (accountContext.account.postbox.combinedView(keys: [viewKey])
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { views in
-                            guard let view = views.views[viewKey] as? OrderedItemListView else {
+                if let emojiContent = state.emojiContent {
+                    let availableHeight = context.availableSize.height - contentHeight - max(bottomInset, environment.inputHeight)
+                    
+                    let iconSelector = iconSelector.update(
+                        component: TopicIconSelectionComponent(
+                            theme: environment.theme,
+                            strings: environment.strings,
+                            deviceMetrics: environment.deviceMetrics,
+                            emojiContent: emojiContent,
+                            backgroundColor: environment.theme.list.itemBlocksBackgroundColor,
+                            separatorColor: environment.theme.list.blocksBackgroundColor
+                        ),
+                        environment: {},
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: availableHeight),
+                        transition: context.transition
+                    )
+                    context.add(iconSelector
+                        .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + iconSelector.size.height / 2.0))
+                        .cornerRadius(10.0)
+                        .clipsToBounds(true)
+                    )
+                    
+                    let accountContext = context.component.context
+                    emojiContent.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+                        performItemAction: { [weak state] groupId, item, _, _, _, _ in
+                            state?.applyItem(groupId: groupId, item: item)
+                        },
+                        deleteBackwards: {
+                        },
+                        openStickerSettings: {
+                        },
+                        openFeatured: {
+                        },
+                        addGroupAction: { groupId, isPremiumLocked in
+                            guard let collectionId = groupId.base as? ItemCollectionId else {
                                 return
                             }
-                            for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
-                                if featuredEmojiPack.info.id == collectionId {
-//                                    if let strongSelf = self {
-//                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
-//                                    }
-                                    let _ = accountContext.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
-                                    
-                                    break
+                            
+                            let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedEmojiPacks)
+                            let _ = (accountContext.account.postbox.combinedView(keys: [viewKey])
+                                     |> take(1)
+                                     |> deliverOnMainQueue).start(next: { views in
+                                guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                    return
                                 }
-                            }
-                        })
-                    },
-                    clearGroup: { _ in
-                    },
-                    pushController: { c in
-                    },
-                    presentController: { c in
-                    },
-                    presentGlobalOverlayController: { c in
-                    },
-                    navigationController: {
-                        return nil
-                    },
-                    requestUpdate: { _ in
-                    },
-                    updateSearchQuery: { _, _ in
-                    },
-                    chatPeerId: nil,
-                    peekBehavior: nil,
-                    customLayout: nil,
-                    externalBackground: nil,
-                    externalExpansionView: nil,
-                    useOpaqueTheme: true
-                )
+                                for featuredEmojiPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                    if featuredEmojiPack.info.id == collectionId {
+                                        //                                    if let strongSelf = self {
+                                        //                                        strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupInstalled(id: collectionId))
+                                        //                                    }
+                                        let _ = accountContext.engine.stickers.addStickerPackInteractively(info: featuredEmojiPack.info, items: featuredEmojiPack.topItems).start()
+                                        
+                                        break
+                                    }
+                                }
+                            })
+                        },
+                        clearGroup: { _ in
+                        },
+                        pushController: { c in
+                        },
+                        presentController: { c in
+                        },
+                        presentGlobalOverlayController: { c in
+                        },
+                        navigationController: {
+                            return nil
+                        },
+                        requestUpdate: { _ in
+                        },
+                        updateSearchQuery: { _, _ in
+                        },
+                        chatPeerId: nil,
+                        peekBehavior: nil,
+                        customLayout: nil,
+                        externalBackground: nil,
+                        externalExpansionView: nil,
+                        useOpaqueTheme: true
+                    )
+                }
             }
             
             return context.availableSize
@@ -788,7 +805,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     
     public enum Mode: Equatable {
         case create
-        case edit(topic: EngineMessageHistoryThread.Info)
+        case edit(threadId: Int64, threadInfo: EngineMessageHistoryThread.Info)
     }
     
     private let context: AccountContext
@@ -835,9 +852,9 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         case .create:
             title = presentationData.strings.CreateTopic_CreateTitle
             doneTitle = presentationData.strings.CreateTopic_Create
-        case let .edit(topic):
+        case let .edit(_, topic):
             title = presentationData.strings.CreateTopic_EditTitle
-            doneTitle =  presentationData.strings.Common_Done
+            doneTitle = presentationData.strings.Common_Done
             
             self.state = (topic.title, topic.icon)
         }

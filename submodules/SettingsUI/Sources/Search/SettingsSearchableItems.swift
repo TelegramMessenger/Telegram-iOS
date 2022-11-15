@@ -33,7 +33,6 @@ enum SettingsSearchableItemIcon {
     case appearance
     case language
     case watch
-    case wallet
     case passport
     case support
     case faq
@@ -56,7 +55,6 @@ public enum SettingsSearchableItemId: Hashable {
     case language(Int32)
     case watch(Int32)
     case passport(Int32)
-    case wallet(Int32)
     case support(Int32)
     case faq(Int32)
     case chatFolders(Int32)
@@ -90,8 +88,6 @@ public enum SettingsSearchableItemId: Hashable {
             return 11
         case .passport:
             return 12
-        case .wallet:
-            return 13
         case .support:
             return 14
         case .faq:
@@ -121,7 +117,6 @@ public enum SettingsSearchableItemId: Hashable {
                  let .language(id),
                  let .watch(id),
                  let .passport(id),
-                 let .wallet(id),
                  let .support(id),
                  let .faq(id),
                  let .chatFolders(id),
@@ -164,8 +159,6 @@ public enum SettingsSearchableItemId: Hashable {
             self = .watch(id)
         case 12:
             self = .passport(id)
-        case 13:
-            self = .wallet(id)
         case 14:
             self = .support(id)
         case 15:

@@ -923,7 +923,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                         })
                     })))
                 } else {
-                    if !isPremium, let size = downloadResource?.size, size >= 300 * 1024 * 1024 {
+                    if !isPremium, let size = downloadResource?.size, size >= 150 * 1024 * 1024 {
                         items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.DownloadList_IncreaseSpeed, textColor: .primary, icon: { theme in
                             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Speed"), color: theme.contextMenu.primaryColor)
                         }, action: { _, f in

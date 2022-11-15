@@ -261,23 +261,33 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
-    private func updateTopicInfo(topicInfo: EngineMessageHistoryThread.Info) {
-        func generateTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
-            return ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
-        }
-        
-        let topicColors: [Int32: ([UInt32], [UInt32])] = [
-            0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
-            0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
-            0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
-            0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
-            0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
-            0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
-        ]
-        let colors = topicColors[topicInfo.iconColor] ?? generateTopicColors(topicInfo.iconColor)
-        
-        if let image = generateTopicIcon(title: String(topicInfo.title.prefix(1)), backgroundColors: colors.0.map(UIColor.init(rgb:)), strokeColors: colors.1.map(UIColor.init(rgb:)), size: CGSize(width: 32.0, height: 32.0)) {
-            self.contents = image.cgImage
+    private func updateTopicInfo(topicInfo: (Int64, EngineMessageHistoryThread.Info)) {
+        if topicInfo.0 == 1 {
+            let image = generateImage(CGSize(width: 18.0, height: 18.0), contextGenerator: { size, context in
+                context.clear(CGRect(origin: .zero, size: size))
+                if let cgImage = generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: .white)?.cgImage {
+                    context.draw(cgImage, in: CGRect(origin: .zero, size: size))
+                }
+            })
+            self.contents = image?.cgImage
+        } else {
+            func generateTopicColors(_ color: Int32) -> ([UInt32], [UInt32]) {
+                return ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7])
+            }
+            
+            let topicColors: [Int32: ([UInt32], [UInt32])] = [
+                0x6FB9F0: ([0x6FB9F0, 0x0261E4], [0x026CB5, 0x064BB7]),
+                0xFFD67E: ([0xFFD67E, 0xFC8601], [0xDA9400, 0xFA5F00]),
+                0xCB86DB: ([0xCB86DB, 0x9338AF], [0x812E98, 0x6F2B87]),
+                0x8EEE98: ([0x8EEE98, 0x02B504], [0x02A01B, 0x009716]),
+                0xFF93B2: ([0xFF93B2, 0xE23264], [0xFC447A, 0xC80C46]),
+                0xFB6F5F: ([0xFB6F5F, 0xD72615], [0xDC1908, 0xB61506])
+            ]
+            let colors = topicColors[topicInfo.1.iconColor] ?? generateTopicColors(topicInfo.1.iconColor)
+            
+            if let image = generateTopicIcon(title: String(topicInfo.1.title.prefix(1)), backgroundColors: colors.0.map(UIColor.init(rgb:)), strokeColors: colors.1.map(UIColor.init(rgb:)), size: CGSize(width: 32.0, height: 32.0)) {
+                self.contents = image.cgImage
+            }
         }
     }
     

@@ -693,13 +693,6 @@ public enum ChatListSearchFilter: Equatable {
     }
 }
 
-#if ENABLE_WALLET
-public enum OpenWalletContext {
-    case generic
-    case send(address: String, amount: Int64?, comment: String?)
-}
-#endif
-
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
 public enum CreateGroupMode {
@@ -839,73 +832,6 @@ public enum PremiumIntroSource {
     case fasterDownload
 }
 
-#if ENABLE_WALLET
-private final class TonInstanceData {
-    var config: String?
-    var blockchainName: String?
-    var instance: TonInstance?
-}
-
-private final class TonNetworkProxyImpl: TonNetworkProxy {
-    private let network: Network
-    
-    init(network: Network) {
-        self.network = network
-    }
-    
-    func request(data: Data, timeout timeoutValue: Double, completion: @escaping (TonNetworkProxyResult) -> Void) -> Disposable {
-        return (walletProxyRequest(network: self.network, data: data)
-        |> timeout(timeoutValue, queue: .concurrentDefaultQueue(), alternate: .fail(.generic(500, "Local Timeout")))).start(next: { data in
-            completion(.reponse(data))
-        }, error: { error in
-            switch error {
-            case let .generic(_, text):
-                completion(.error(text))
-            }
-        })
-    }
-}
-
-public final class StoredTonContext {
-    private let basePath: String
-    private let postbox: Postbox
-    private let network: Network
-    public let keychain: TonKeychain
-    private let currentInstance = Atomic<TonInstanceData>(value: TonInstanceData())
-    
-    public init(basePath: String, postbox: Postbox, network: Network, keychain: TonKeychain) {
-        self.basePath = basePath
-        self.postbox = postbox
-        self.network = network
-        self.keychain = keychain
-    }
-    
-    public func context(config: String, blockchainName: String, enableProxy: Bool) -> TonContext {
-        return self.currentInstance.with { data -> TonContext in
-            if let instance = data.instance, data.config == config, data.blockchainName == blockchainName {
-                return TonContext(instance: instance, keychain: self.keychain)
-            } else {
-                data.config = config
-                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, proxy: enableProxy ? TonNetworkProxyImpl(network: self.network) : nil)
-                data.instance = instance
-                return TonContext(instance: instance, keychain: self.keychain)
-            }
-        }
-    }
-}
-
-public final class TonContext {
-    public let instance: TonInstance
-    public let keychain: TonKeychain
-    
-    fileprivate init(instance: TonInstance, keychain: TonKeychain) {
-        self.instance = instance
-        self.keychain = keychain
-    }
-}
-
-#endif
-
 public protocol ComposeController: ViewController {
 }
 
@@ -974,6 +900,26 @@ public struct PremiumConfiguration {
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
         if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
             return PremiumConfiguration(isPremiumDisabled: value)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
+public struct AntiSpamBotConfiguration {
+    public static var defaultValue: AntiSpamBotConfiguration {
+        return AntiSpamBotConfiguration(antiSpamBotId: nil)
+    }
+    
+    public let antiSpamBotId: EnginePeer.Id?
+    
+    fileprivate init(antiSpamBotId: EnginePeer.Id?) {
+        self.antiSpamBotId = antiSpamBotId
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> AntiSpamBotConfiguration {
+        if let data = appConfiguration.data, let string = data["telegram_antispam_user_id"] as? String, let value = Int64(string) {
+            return AntiSpamBotConfiguration(antiSpamBotId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(value)))
         } else {
             return .defaultValue
         }

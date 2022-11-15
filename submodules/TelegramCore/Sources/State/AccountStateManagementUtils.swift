@@ -1760,6 +1760,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                                                     maxKnownMessageId: topMessage,
                                                     maxOutgoingReadId: readOutboxMaxId,
                                                     isClosed: (flags & (1 << 2)) != 0,
+                                                    isHidden: (flags & (1 << 6)) != 0,
                                                     notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                                 ),
                                                 topMessageId: topMessage,
@@ -1859,6 +1860,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
+                                                isHidden: (flags & (1 << 6)) != 0,
                                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                             )
                                             if let entry = StoredMessageHistoryThreadInfo(data) {
@@ -1982,6 +1984,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                                 maxKnownMessageId: topMessage,
                                                 maxOutgoingReadId: readOutboxMaxId,
                                                 isClosed: (flags & (1 << 2)) != 0,
+                                                isHidden: (flags & (1 << 6)) != 0,
                                                 notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                             ),
                                             topMessageId: topMessage,
@@ -3195,6 +3198,8 @@ func replayFinalState(
                                                         data.info = EngineMessageHistoryThread.Info(title: data.info.title, icon: fileId == 0 ? nil : fileId, iconColor: data.info.iconColor)
                                                     case let .isClosed(isClosed):
                                                         data.isClosed = isClosed
+                                                    case let .isHidden(isHidden):
+                                                        data.isHidden = isHidden
                                                     }
                                                 }
                                                 

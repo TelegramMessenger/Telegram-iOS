@@ -105,6 +105,9 @@ public enum PresentationResourceKey: Int32 {
     case chatListRecentStatusVoiceChatHighlightedIcon
     case chatListRecentStatusVoiceChatPinnedIcon
     case chatListRecentStatusVoiceChatPanelIcon
+    
+    case chatListGeneralTopicIcon
+    case chatListGeneralTopicSmallIcon
 
     case chatTitleLockIcon
     case chatTitleMuteIcon
@@ -284,6 +287,8 @@ public enum PresentationResourceKey: Int32 {
     case chatKeyboardActionButtonProfileIcon
     case chatKeyboardActionButtonAddToChatIcon
     case chatKeyboardActionButtonWebAppIcon
+    
+    case chatGeneralThreadIcon
     
     case uploadToneIcon
 }
