@@ -239,7 +239,6 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
-    case walletCollection = 18
     case contentSettings = 19
     case chatListFilters = 20
     case peersNearby = 21
@@ -339,13 +338,7 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.secretChatSettings.rawValue)
         return key
     }()
-    
-    public static let walletCollection: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.walletCollection.rawValue)
-        return key
-    }()
-    
+        
     public static let contentSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.contentSettings.rawValue)

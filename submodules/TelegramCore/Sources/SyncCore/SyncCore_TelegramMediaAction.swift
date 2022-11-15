@@ -28,6 +28,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case title(String)
         case iconFileId(Int64?)
         case isClosed(Bool)
+        case isHidden(Bool)
         
         public init(decoder: PostboxDecoder) {
             switch decoder.decodeInt32ForKey("_t", orElse: 0) {
@@ -37,6 +38,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
                 self = .iconFileId(decoder.decodeOptionalInt64ForKey("fileId"))
             case 2:
                 self = .isClosed(decoder.decodeBoolForKey("isClosed", orElse: false))
+            case 3:
+                self = .isHidden(decoder.decodeBoolForKey("isHidden", orElse: false))
             default:
                 assertionFailure()
                 self = .title("")
@@ -58,6 +61,9 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             case let .isClosed(isClosed):
                 encoder.encodeInt32(2, forKey: "_t")
                 encoder.encodeBool(isClosed, forKey: "isClosed")
+            case let .isHidden(isHidden):
+                encoder.encodeInt32(3, forKey: "_t")
+                encoder.encodeBool(isHidden, forKey: "isHidden")
             }
         }
     }

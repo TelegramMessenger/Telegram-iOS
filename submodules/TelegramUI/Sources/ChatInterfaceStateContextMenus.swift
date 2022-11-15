@@ -960,7 +960,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
             var isLargeFile = false
             for media in message.media {
                 if let file = media as? TelegramMediaFile {
-                    if let size = file.size, size >= 300 * 1024 * 1024 {
+                    if let size = file.size, size >= 150 * 1024 * 1024 {
                         isLargeFile = true
                     }
                     break

@@ -49,6 +49,7 @@ public final class EmojiStatusComponent: Component {
         case text(color: UIColor, string: String)
         case animation(content: AnimationContent, size: CGSize, placeholderColor: UIColor, themeColor: UIColor?, loopMode: LoopMode)
         case topic(title: String, color: Int32, size: CGSize)
+        case image(image: UIImage?)
     }
     
     public let context: AccountContext
@@ -230,6 +231,8 @@ public final class EmojiStatusComponent: Component {
                     } else {
                         iconImage = nil
                     }
+                case let .image(image):
+                    iconImage = image
                 case let .verified(fillColor, foregroundColor, sizeType):
                     let imageNamePrefix: String
                     switch sizeType {

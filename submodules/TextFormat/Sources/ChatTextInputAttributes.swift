@@ -195,10 +195,10 @@ public final class ChatTextInputTextUrlAttribute: NSObject {
 public final class ChatTextInputTextCustomEmojiAttribute: NSObject {
     public let interactivelySelectedFromPackId: ItemCollectionId?
     public let fileId: Int64
-    public let topicInfo: EngineMessageHistoryThread.Info?
+    public let topicInfo: (Int64, EngineMessageHistoryThread.Info)?
     public let file: TelegramMediaFile?
     
-    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, topicInfo: EngineMessageHistoryThread.Info? = nil) {
+    public init(interactivelySelectedFromPackId: ItemCollectionId?, fileId: Int64, file: TelegramMediaFile?, topicInfo: (Int64, EngineMessageHistoryThread.Info)? = nil) {
         self.interactivelySelectedFromPackId = interactivelySelectedFromPackId
         self.fileId = fileId
         self.file = file

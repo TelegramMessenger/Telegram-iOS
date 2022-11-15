@@ -41,8 +41,6 @@ extension SettingsSearchableItemIcon {
                 return PresentationResourcesSettings.watch
             case .passport:
                 return PresentationResourcesSettings.passport
-            case .wallet:
-                return PresentationResourcesSettings.wallet
             case .support:
                 return PresentationResourcesSettings.support
             case .faq:

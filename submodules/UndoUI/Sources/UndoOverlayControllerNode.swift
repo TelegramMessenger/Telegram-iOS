@@ -861,7 +861,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .image(image, text):
+            case let .image(image, title, text, undo):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
                 self.iconNode?.clipsToBounds = true
@@ -872,9 +872,26 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 self.iconCheckNode = nil
                 self.animationNode = nil
                 self.animatedStickerNode = nil
-                self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
-                displayUndo = true
-                self.originalRemainingSeconds = 5
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                } else {
+                    self.titleNode.attributedText = nil
+                }
+            
+                let body = MarkdownAttributeSet(font: Font.regular(14.0), textColor: .white)
+                let bold = MarkdownAttributeSet(font: Font.semibold(14.0), textColor: .white)
+                let link = MarkdownAttributeSet(font: Font.regular(14.0), textColor: undoTextColor)
+                let attributedText = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: link, linkAttribute: { contents in
+                    return ("URL", contents)
+                }), textAlignment: .natural)
+                self.textNode.attributedText = attributedText
+
+                displayUndo = undo
+                self.originalRemainingSeconds = undo ? 5 : 3
+            
+                if text.contains("](") {
+                    isUserInteractionEnabled = true
+                }
             case let .peers(context, peers, title, text, customUndoText):
                 self.avatarNode = nil
                 let multiAvatarsNode = AnimatedAvatarSetNode()
@@ -1084,8 +1101,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.content = content
         
         switch content {
-            case let .image(image, text):
+            case let .image(image, title, text, _):
                 self.iconNode?.image = image
+                if let title = title {
+                    self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)
+                } else {
+                    self.titleNode.attributedText = nil
+                }
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
             default:
                 break

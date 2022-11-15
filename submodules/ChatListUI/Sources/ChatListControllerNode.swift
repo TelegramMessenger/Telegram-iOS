@@ -183,7 +183,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
             let timestamp1: Int32 = 100000
             let peers: [EnginePeer.Id: EnginePeer] = [:]
             let interaction = ChatListNodeInteraction(context: context, animationCache: animationCache, animationRenderer: animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
-            }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
+            }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, setPeerThreadHidden: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in }, activateChatPreview: { _, _, _, gesture, _ in
                 gesture?.cancel()
             }, present: { _ in }, openForumThread: { _, _ in })
             interaction.isInlineMode = isInlineMode
@@ -532,6 +532,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             previousItemNode.listNode.deletePeerThread = nil
             previousItemNode.listNode.setPeerThreadStopped = nil
             previousItemNode.listNode.setPeerThreadPinned = nil
+            previousItemNode.listNode.setPeerThreadHidden = nil
             previousItemNode.listNode.peerSelected = nil
             previousItemNode.listNode.groupSelected = nil
             previousItemNode.listNode.updatePeerGrouping = nil
@@ -575,6 +576,9 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
         itemNode.listNode.setPeerThreadPinned = { [weak self] peerId, threadId, isPinned in
             self?.setPeerThreadPinned?(peerId, threadId, isPinned)
+        }
+        itemNode.listNode.setPeerThreadHidden = { [weak self] peerId, threadId, isHidden in
+            self?.setPeerThreadHidden?(peerId, threadId, isHidden)
         }
         itemNode.listNode.peerSelected = { [weak self] peerId, threadId, animated, activateInput, promoInfo in
             self?.peerSelected?(peerId, threadId, animated, activateInput, promoInfo)
@@ -637,6 +641,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var deletePeerThread: ((EnginePeer.Id, Int64) -> Void)?
     var setPeerThreadStopped: ((EnginePeer.Id, Int64, Bool) -> Void)?
     var setPeerThreadPinned: ((EnginePeer.Id, Int64, Bool) -> Void)?
+    var setPeerThreadHidden: ((EnginePeer.Id, Int64, Bool) -> Void)?
     var peerSelected: ((EnginePeer, Int64?, Bool, Bool, ChatListNodeEntryPromoInfo?) -> Void)?
     var groupSelected: ((EngineChatList.Group) -> Void)?
     var updatePeerGrouping: ((EnginePeer.Id, Bool) -> Void)?

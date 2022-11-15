@@ -87,6 +87,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
     
+    private weak var antiSpamTooltipController: UndoOverlayController?
+    
     private weak var controller: ChatRecentActionsController?
     
     init(context: AccountContext, controller: ChatRecentActionsController, peer: Peer, presentationData: PresentationData, interaction: ChatRecentActionsInteraction, pushController: @escaping (ViewController) -> Void, presentController: @escaping (ViewController, PresentationContextType, Any?) -> Void, getNavigationController: @escaping () -> NavigationController?) {
@@ -774,18 +776,33 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     }
     
     private func openPeer(peer: EnginePeer, peekData: ChatPeekTimeout? = nil) {
-        let peerSignal: Signal<Peer?, NoError> = .single(peer._asPeer())
-        self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
-            if let strongSelf = self, let peer = peer {
-                if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
-                    strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), peekData: peekData, animated: true))
-                } else {
-                    if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
-                        strongSelf.pushController(infoController)
+        let antiSpamBotConfiguration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        if peer.id == antiSpamBotConfiguration.antiSpamBotId {
+            self.dismissAllTooltips()
+            
+            self.presentController(UndoOverlayController(presentationData: self.presentationData, content: .image(image: UIImage(bundleImageName: "Chat/AntiSpamTooltipIcon")!, title: self.presentationData.strings.Group_AdminLog_AntiSpamTitle, text: self.presentationData.strings.Group_AdminLog_AntiSpamText, undo: false), elevatedLayout: true, action: { [weak self] action in
+                if let strongSelf = self {
+                    if case .info = action {
+                        let _ = strongSelf.getNavigationController()?.popViewController(animated: true)
+                        return true
                     }
                 }
-            }
-        }))
+                return false
+            }), .window(.root), nil)
+        } else {
+            let peerSignal: Signal<Peer?, NoError> = .single(peer._asPeer())
+            self.navigationActionDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { [weak self] peer in
+                if let strongSelf = self, let peer = peer {
+                    if peer is TelegramChannel, let navigationController = strongSelf.getNavigationController() {
+                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), peekData: peekData, animated: true))
+                    } else {
+                        if let infoController = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                            strongSelf.pushController(infoController)
+                        }
+                    }
+                }
+            }))
+        }
     }
     
     private func openPeerMention(_ name: String) {
@@ -966,10 +983,6 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
                         break
                     case .theme:
                         break
-                    #if ENABLE_WALLET
-                    case .wallet:
-                        break
-                    #endif
                     case .settings:
                         break
                     case .premiumOffer:
@@ -1013,5 +1026,21 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         })
         self.view.endEditing(true)
         self.present(controller, in: .window(.root))*/
+    }
+    
+    private func dismissAllTooltips() {
+        self.antiSpamTooltipController?.dismiss()
+        
+        self.controller?.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+        })
+        self.controller?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                controller.dismissWithCommitAction()
+            }
+            return true
+        })
     }
 }

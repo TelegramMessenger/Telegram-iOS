@@ -81,6 +81,7 @@ public final class HashtagSearchController: TelegramBaseController {
         }, deletePeerThread: { _, _ in
         }, setPeerThreadStopped: { _, _, _ in
         }, setPeerThreadPinned: { _, _, _ in
+        }, setPeerThreadHidden: { _, _, _ in
         }, updatePeerGrouping: { _, _ in
         }, togglePeerMarkedUnread: { _, _ in
         }, toggleArchivedFolderHiddenByDefault: {

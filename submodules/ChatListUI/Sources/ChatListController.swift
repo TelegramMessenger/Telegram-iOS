@@ -1377,6 +1377,12 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             strongSelf.setPeerThreadPinned(peerId: peerId, threadId: threadId, isPinned: isPinned)
         }
+        self.chatListDisplayNode.containerNode.setPeerThreadHidden = { [weak self] peerId, threadId, isHidden in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.setPeerThreadHidden(peerId: peerId, threadId: threadId, isHidden: isHidden)
+        }
         
         self.chatListDisplayNode.containerNode.peerSelected = { [weak self] peer, threadId, animated, activateInput, promoInfo in
             if let strongSelf = self {
@@ -1674,7 +1680,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 chatListController.navigationPresentation = .master
                 let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatListController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController)), items: archiveContextMenuItems(context: strongSelf.context, groupId: groupId._asGroup(), chatListController: strongSelf) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                 strongSelf.presentInGlobalOverlay(contextController)
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _):
+            case let .peer(_, peer, threadInfo, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _):
                 switch item.index {
                 case .chatList:
                     if case let .channel(channel) = peer.peer, channel.flags.contains(.isForum) {
@@ -1686,7 +1692,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                             chatController.canReadHistory.set(false)
                             source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                             
-                            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatForumTopicMenuItems(context: strongSelf.context, peerId: peer.peerId, threadId: threadId, isPinned: nil, chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                            let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatForumTopicMenuItems(context: strongSelf.context, peerId: peer.peerId, threadId: threadId, isPinned: nil, isClosed: nil, chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                             strongSelf.presentInGlobalOverlay(contextController)
                         } else {
                             let chatListController = ChatListControllerImpl(context: strongSelf.context, location: .forum(peerId: channel.id), controlsHistoryPreload: false, hideNetworkActivityStatus: true, previewing: true, enableDebugActions: false)
@@ -1722,7 +1728,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     chatController.canReadHistory.set(false)
                     source = .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node, navigationController: strongSelf.navigationController as? NavigationController))
                     
-                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatForumTopicMenuItems(context: strongSelf.context, peerId: peer.peerId, threadId: threadId, isPinned: isPinned, chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
+                    let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: source, items: chatForumTopicMenuItems(context: strongSelf.context, peerId: peer.peerId, threadId: threadId, isPinned: isPinned, isClosed: threadInfo?.isClosed, chatListController: strongSelf, joined: joined) |> map { ContextController.Items(content: .list($0)) }, gesture: gesture)
                     strongSelf.presentInGlobalOverlay(contextController)
                 }
             }
@@ -3456,7 +3462,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             strongSelf.chatListDisplayNode.containerNode.updateState { state in
                 var state = state
                 if updatedValue {
-                    state.archiveShouldBeTemporaryRevealed = false
+                    state.hiddenItemShouldBeTemporaryRevealed = false
                 }
                 state.peerIdWithRevealedOptions = nil
                 return state
@@ -3918,6 +3924,35 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private func setPeerThreadPinned(peerId: EnginePeer.Id, threadId: Int64, isPinned: Bool) {
         self.actionDisposables.add(self.context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId).start())
+    }
+    
+    private func setPeerThreadHidden(peerId: EnginePeer.Id, threadId: Int64, isHidden: Bool) {
+        self.actionDisposables.add((self.context.engine.peers.setForumChannelTopicHidden(id: peerId, threadId: threadId, isHidden: isHidden)
+        |> deliverOnMainQueue).start(completed: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.chatListDisplayNode.containerNode.updateState { state in
+                    var state = state
+                    state.hiddenItemShouldBeTemporaryRevealed = false
+                    return state
+                }
+                
+                if isHidden {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: "General hidden", text: "Pull down to see the general topic.", undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                        guard let strongSelf = self else {
+                            return false
+                        }
+                        if value == .undo {
+                            strongSelf.setPeerThreadHidden(peerId: peerId, threadId: threadId, isHidden: false)
+                            return true
+                        }
+                        return false
+                    }), in: .current)
+                } else {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: "General unhidden", text: "Swipe left on the general topic to hide it.", undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false
+                    }), in: .current)
+                }
+            }
+        }))
     }
     
     public func maybeAskForPeerChatRemoval(peer: EngineRenderedPeer, joined: Bool = false, deleteGloballyIfPossible: Bool = false, completion: @escaping (Bool) -> Void, removed: @escaping () -> Void) {

@@ -2,8 +2,6 @@ import Foundation
 import Postbox
 
 public extension Peer {
-    
-    
     var debugDisplayTitle: String {
         switch self {
         case let user as TelegramUser:

@@ -1377,68 +1377,6 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         return ChatMessageDateHeader(timestamp: timestamp, scheduled: false, presentationData: ChatPresentationData(theme: ChatPresentationThemeData(theme: theme, wallpaper: wallpaper), fontSize: fontSize, strings: strings, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameOrder, disableAnimations: false, largeEmoji: false, chatBubbleCorners: chatBubbleCorners, animatedEmojiScale: 1.0, isPreview: true), controllerInteraction: nil, context: context)
     }
     
-    #if ENABLE_WALLET
-    public func openWallet(context: AccountContext, walletContext: OpenWalletContext, present: @escaping (ViewController) -> Void) {
-        guard let storedContext = context.tonContext else {
-            return
-        }
-        let _ = (combineLatest(queue: .mainQueue(),
-            WalletStorageInterfaceImpl(postbox: context.account.postbox).getWalletRecords(),
-            storedContext.keychain.encryptionPublicKey(),
-            context.account.postbox.preferencesView(keys: [PreferencesKeys.appConfiguration])
-        )
-        |> deliverOnMainQueue).start(next: { wallets, currentPublicKey, preferences in
-            let appConfiguration = preferences.values[PreferencesKeys.appConfiguration] as? AppConfiguration ?? .defaultValue
-            let walletConfiguration = WalletConfiguration.with(appConfiguration: appConfiguration)
-            guard let config = walletConfiguration.config, let blockchainName = walletConfiguration.blockchainName else {
-                return
-            }
-            let tonContext = storedContext.context(config: config, blockchainName: blockchainName, enableProxy: !walletConfiguration.disableProxy)
-            
-            if wallets.isEmpty {
-                if case .send = walletContext {
-                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                    let controller = textAlertController(context: context, title: presentationData.strings.Conversation_WalletRequiredTitle, text: presentationData.strings.Conversation_WalletRequiredText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Conversation_WalletRequiredNotNow, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Conversation_WalletRequiredSetup, action: { [weak self] in
-                        self?.openWallet(context: context, walletContext: .generic, present: present)
-                    })])
-                    present(controller)
-                } else {
-                    if let _ = currentPublicKey {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .intro, walletCreatedPreloadState: nil))
-                    } else {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageNotAvailable, walletCreatedPreloadState: nil))
-                    }
-                }
-            } else {
-                let walletInfo = wallets[0].info
-                let exportCompleted = wallets[0].exportCompleted
-                if let currentPublicKey = currentPublicKey {
-                    if currentPublicKey == walletInfo.encryptedSecret.publicKey {
-                        let _ = (walletAddress(publicKey: walletInfo.publicKey, tonInstance: tonContext.instance)
-                        |> deliverOnMainQueue).start(next: { address in
-                            switch walletContext {
-                            case .generic:
-                                if exportCompleted {
-                                    present(WalletInfoScreen(context: WalletContextImpl(context: context, tonContext: tonContext), walletInfo: walletInfo, address: address, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild))
-                                } else {
-                                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .created(walletInfo, nil), walletCreatedPreloadState: nil))
-                                }
-                            case let .send(address, amount, comment):
-                                present(walletSendScreen(context: WalletContextImpl(context: context, tonContext: tonContext), randomId: Int64.random(in: Int64.min ... Int64.max), walletInfo: walletInfo, address: address, amount: amount, comment: comment))
-                            }
-                            
-                        })
-                    } else {
-                        present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.changed), walletCreatedPreloadState: nil))
-                    }
-                } else {
-                    present(WalletSplashScreen(context: WalletContextImpl(context: context, tonContext: tonContext), mode: .secureStorageReset(.notAvailable), walletCreatedPreloadState: nil))
-                }
-            }
-        })
-    }
-    #endif
-    
     public func openImagePicker(context: AccountContext, completion: @escaping (UIImage) -> Void, present: @escaping (ViewController) -> Void) {
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         let _ = legacyWallpaperPicker(context: context, presentationData: presentationData).start(next: { generator in

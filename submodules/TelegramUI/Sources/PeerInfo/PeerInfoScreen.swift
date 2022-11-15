@@ -2907,7 +2907,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 if case let .replyThread(message) = strongSelf.chatLocation {
                     let threadId = Int64(message.messageId.id)
                     if let threadInfo = strongSelf.data?.threadData?.info {
-                        let controller = ForumCreateTopicScreen(context: strongSelf.context, peerId: strongSelf.peerId, mode: .edit(topic: threadInfo))
+                        let controller = ForumCreateTopicScreen(context: strongSelf.context, peerId: strongSelf.peerId, mode: .edit(threadId: threadId, threadInfo: threadInfo))
                         controller.navigationPresentation = .modal
                         let context = strongSelf.context
                         controller.completion = { [weak controller] title, fileId in
