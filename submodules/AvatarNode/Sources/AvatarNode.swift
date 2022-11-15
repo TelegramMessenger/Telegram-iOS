@@ -233,12 +233,19 @@ public final class AvatarNode: ASDisplayNode {
         } set(value) {
             let updateImage = !value.size.equalTo(super.frame.size)
             super.frame = value
-            self.imageNode.frame = CGRect(origin: CGPoint(), size: value.size)
-            self.editOverlayNode?.frame = self.imageNode.frame
-            if updateImage && !self.displaySuspended {
-                self.setNeedsDisplay()
-                self.editOverlayNode?.setNeedsDisplay()
+            
+            if updateImage {
+                self.updateSize(size: value.size)
             }
+        }
+    }
+    
+    public func updateSize(size: CGSize) {
+        self.imageNode.frame = CGRect(origin: CGPoint(), size: size)
+        self.editOverlayNode?.frame = self.imageNode.frame
+        if !self.displaySuspended {
+            self.setNeedsDisplay()
+            self.editOverlayNode?.setNeedsDisplay()
         }
     }
     

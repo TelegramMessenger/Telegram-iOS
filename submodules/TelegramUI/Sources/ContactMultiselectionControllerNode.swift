@@ -96,7 +96,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         if case let .chatSelection(_, selectedChats, additionalCategories, chatListFilters) = mode {
             placeholder = self.presentationData.strings.ChatListFilter_AddChatsTitle
-            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true)
+            let chatListNode = ChatListNode(context: context, location: .chatList(groupId: .root), previewing: false, fillPreloadItems: false, mode: .peers(filter: [.excludeSecretChats], isSelecting: true, additionalCategories: additionalCategories?.categories ?? [], chatListFilters: chatListFilters), theme: self.presentationData.theme, fontSize: self.presentationData.listsFontSize, strings: self.presentationData.strings, dateTimeFormat: self.presentationData.dateTimeFormat, nameSortOrder: self.presentationData.nameSortOrder, nameDisplayOrder: self.presentationData.nameDisplayOrder, animationCache: self.animationCache, animationRenderer: self.animationRenderer, disableAnimations: true, isInlineMode: false)
             if let limit = limit {
                 chatListNode.selectionLimit = limit
                 chatListNode.reachedSelectionLimit = reachedSelectionLimit
@@ -279,7 +279,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
             combinedInsets.right += layout.safeInsets.right
             let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
             let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: combinedInsets, headerInsets: headerInsets, duration: duration, curve: curve)
-            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets)
+            chatsNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil)
         }
         self.contentNode.node.frame = CGRect(origin: CGPoint(), size: layout.size)
         

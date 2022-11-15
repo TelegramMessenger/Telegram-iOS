@@ -1020,7 +1020,7 @@ public extension Api {
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetMessagesTTL(period: Int32)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
-        case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?)
+        case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
         case messageActionWebViewDataSent(text: String)
         case messageActionWebViewDataSentMe(text: String, data: String)
     
@@ -1265,14 +1265,15 @@ public extension Api {
                     serializeInt32(iconColor, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
                     break
-                case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed):
+                case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
                     if boxed {
-                        buffer.appendInt32(-1316338916)
+                        buffer.appendInt32(-1064024032)
                     }
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeString(title!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 1) != 0 {serializeInt64(iconEmojiId!, buffer: buffer, boxed: false)}
                     if Int(flags) & Int(1 << 2) != 0 {closed!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 3) != 0 {hidden!.serialize(buffer, true)}
                     break
                 case .messageActionWebViewDataSent(let text):
                     if boxed {
@@ -1356,8 +1357,8 @@ public extension Api {
                 return ("messageActionSetMessagesTTL", [("period", String(describing: period))])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                 return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId))])
-                case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed):
-                return ("messageActionTopicEdit", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId)), ("closed", String(describing: closed))])
+                case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
+                return ("messageActionTopicEdit", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconEmojiId", String(describing: iconEmojiId)), ("closed", String(describing: closed)), ("hidden", String(describing: hidden))])
                 case .messageActionWebViewDataSent(let text):
                 return ("messageActionWebViewDataSent", [("text", String(describing: text))])
                 case .messageActionWebViewDataSentMe(let text, let data):
@@ -1783,12 +1784,17 @@ public extension Api {
             if Int(_1!) & Int(1 << 2) != 0 {if let signature = reader.readInt32() {
                 _4 = Api.parse(reader, signature: signature) as? Api.Bool
             } }
+            var _5: Api.Bool?
+            if Int(_1!) & Int(1 << 3) != 0 {if let signature = reader.readInt32() {
+                _5 = Api.parse(reader, signature: signature) as? Api.Bool
+            } }
             let _c1 = _1 != nil
             let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
             let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
             let _c4 = (Int(_1!) & Int(1 << 2) == 0) || _4 != nil
-            if _c1 && _c2 && _c3 && _c4 {
-                return Api.MessageAction.messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3, closed: _4)
+            let _c5 = (Int(_1!) & Int(1 << 3) == 0) || _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.MessageAction.messageActionTopicEdit(flags: _1!, title: _2, iconEmojiId: _3, closed: _4, hidden: _5)
             }
             else {
                 return nil

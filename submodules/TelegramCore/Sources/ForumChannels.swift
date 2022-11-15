@@ -293,7 +293,8 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
             topicId: Int32(clamping: threadId),
             title: title,
             iconEmojiId: iconFileId ?? 0,
-            closed: nil
+            closed: nil,
+            hidden: nil
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic
@@ -338,7 +339,8 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
             topicId: Int32(clamping: threadId),
             title: nil,
             iconEmojiId: nil,
-            closed: isClosed ? .boolTrue : .boolFalse
+            closed: isClosed ? .boolTrue : .boolFalse,
+            hidden: nil
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic

@@ -1144,6 +1144,8 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         if bottomItemFound {
             bottomItemEdge = self.itemNodes[self.itemNodes.count - 1].apparentFrame.maxY
+        } else {
+            bottomItemEdge = self.visibleSize.height
         }
         
         if topItemFound && bottomItemFound {
@@ -1734,7 +1736,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
 
     private func deleteAndInsertItemsTransaction(deleteIndices: [ListViewDeleteItem], insertIndicesAndItems: [ListViewInsertItem], updateIndicesAndItems: [ListViewUpdateItem], options: ListViewDeleteAndInsertOptions, scrollToItem: ListViewScrollToItem?, additionalScrollDistance: CGFloat, updateSizeAndInsets: ListViewUpdateSizeAndInsets?, stationaryItemRange: (Int, Int)?, updateOpaqueState: Any?, completion: @escaping () -> Void) {
         if deleteIndices.isEmpty && insertIndicesAndItems.isEmpty && updateIndicesAndItems.isEmpty && scrollToItem == nil {
-            if let updateSizeAndInsets = updateSizeAndInsets, (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets)) {
+            if let updateSizeAndInsets = updateSizeAndInsets, (self.items.count == 0 || (updateSizeAndInsets.size == self.visibleSize && updateSizeAndInsets.insets == self.insets && !options.contains(.ForceUpdate))) {
                 self.visibleSize = updateSizeAndInsets.size
                 self.insets = updateSizeAndInsets.insets
                 self.headerInsets = updateSizeAndInsets.headerInsets ?? self.insets
@@ -1769,7 +1771,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         
         let widthUpdated: Bool
         if let updateSizeAndInsets = updateSizeAndInsets {
-            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat.ulpOfOne
+            widthUpdated = abs(state.visibleSize.width - updateSizeAndInsets.size.width) > CGFloat.ulpOfOne || options.contains(.ForceUpdate)
             
             state.visibleSize = updateSizeAndInsets.size
             state.insets = updateSizeAndInsets.insets
@@ -2820,7 +2822,7 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                         case let .bottom(additionalOffset):
                             offset = (self.visibleSize.height - insets.bottom) - itemNode.apparentFrame.maxY + itemNode.scrollPositioningInsets.bottom + additionalOffset
                         case let .top(additionalOffset):
-                            offset = insets.top - itemNode.apparentFrame.minY - itemNode.scrollPositioningInsets.top + additionalOffset
+                            offset = (insets.top + additionalOffset + itemNode.scrollPositioningInsets.top) - itemNode.apparentFrame.minY
                         case let .center(overflow):
                             let contentAreaHeight = self.visibleSize.height - insets.bottom - insets.top
                             if itemNode.apparentFrame.size.height <= contentAreaHeight + CGFloat.ulpOfOne {
@@ -2912,7 +2914,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 } else if self.snapToBottomInsetUntilFirstInteraction {
                     offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
                 } else {
-                    offsetFix = updateSizeAndInsets.insets.top - self.insets.top
+                    if let visualInsets = self.visualInsets, animated, (visualInsets.top == updateSizeAndInsets.insets.top || visualInsets.top == self.insets.top) {
+                        offsetFix = 0.0
+                    } else {
+                        offsetFix = updateSizeAndInsets.insets.top - self.insets.top
+                    }
                 }
                 
                 offsetFix += additionalScrollDistance
@@ -4783,10 +4789,14 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
         }
     }
     
-    public func scrollToOffsetFromTop(_ offset: CGFloat) -> Bool {
+    public func scrollToOffsetFromTop(_ offset: CGFloat, animated: Bool) -> Bool {
         for itemNode in self.itemNodes {
             if itemNode.index == 0 {
-                self.scroller.setContentOffset(CGPoint(x: 0.0, y: offset), animated: true)
+                if animated {
+                    self.scroller.setContentOffset(CGPoint(x: 0.0, y: offset), animated: animated)
+                } else {
+                    self.scroller.contentOffset = CGPoint(x: 0.0, y: offset)
+                }
                 return true
             }
         }
