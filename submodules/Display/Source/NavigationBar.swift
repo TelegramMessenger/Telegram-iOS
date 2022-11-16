@@ -438,6 +438,10 @@ open class BlurredBackgroundView: UIView {
     }
 }
 
+public protocol NavigationBarHeaderView: UIView {
+    func update(size: CGSize, transition: ContainedViewLayoutTransition)
+}
+
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
@@ -644,6 +648,18 @@ open class NavigationBar: ASDisplayNode {
             
             self.invalidateCalculatedLayout()
             self.requestLayout()
+        }
+    }
+    
+    public var customHeaderContentView: NavigationBarHeaderView? {
+        didSet {
+            if self.customHeaderContentView !== oldValue {
+                self.customHeaderContentView?.removeFromSuperview()
+                
+                if let customHeaderContentView = self.customHeaderContentView {
+                    self.view.addSubview(customHeaderContentView)
+                }
+            }
         }
     }
     
@@ -1353,6 +1369,12 @@ open class NavigationBar: ASDisplayNode {
         leftTitleInset = floor(leftTitleInset)
         if Int(leftTitleInset) % 2 != 0 {
             leftTitleInset -= 1.0
+        }
+        
+        if let customHeaderContentView = self.customHeaderContentView {
+            let headerSize = CGSize(width: size.width, height: nominalHeight)
+            customHeaderContentView.update(size: headerSize, transition: transition)
+            transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
         }
         
         if self.titleNode.supernode != nil {

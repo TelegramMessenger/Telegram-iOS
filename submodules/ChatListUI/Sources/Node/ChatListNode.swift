@@ -1966,7 +1966,7 @@ public final class ChatListNode: ListView {
             }
         })
         
-        self.visibleContentOffsetChanged = { [weak self] offset, transition in
+        self.visibleContentOffsetChanged = { [weak self] offset in
             guard let strongSelf = self else {
                 return
             }

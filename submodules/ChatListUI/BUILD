@@ -84,6 +84,7 @@ swift_library(
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
         "//submodules/AnimationUI:AnimationUI",
         "//submodules/PeerInfoUI",
+        "//submodules/TelegramUI/Components/ChatListHeaderComponent:ChatListHeaderComponent",
     ],
     visibility = [
         "//visibility:public",
