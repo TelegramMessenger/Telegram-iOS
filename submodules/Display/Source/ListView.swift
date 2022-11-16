@@ -2914,11 +2914,11 @@ open class ListView: ASDisplayNode, UIScrollViewAccessibilityDelegate, UIGesture
                 } else if self.snapToBottomInsetUntilFirstInteraction {
                     offsetFix = -updateSizeAndInsets.insets.bottom + self.insets.bottom
                 } else {
-                    if let visualInsets = self.visualInsets, animated, (visualInsets.top == updateSizeAndInsets.insets.top || visualInsets.top == self.insets.top) {
+                    /*if let visualInsets = self.visualInsets, animated, (visualInsets.top == updateSizeAndInsets.insets.top || visualInsets.top == self.insets.top) {
                         offsetFix = 0.0
-                    } else {
+                    } else {*/
                         offsetFix = updateSizeAndInsets.insets.top - self.insets.top
-                    }
+                    //}
                 }
                 
                 offsetFix += additionalScrollDistance

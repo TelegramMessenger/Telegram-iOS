@@ -889,6 +889,7 @@ public final class ChatListNode: ListView {
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
     private var visibleTopInset: CGFloat?
+    private var originalTopInset: CGFloat?
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
         self.context = context
@@ -1965,7 +1966,7 @@ public final class ChatListNode: ListView {
             }
         })
         
-        self.visibleContentOffsetChanged = { [weak self] offset in
+        self.visibleContentOffsetChanged = { [weak self] offset, transition in
             guard let strongSelf = self else {
                 return
             }
@@ -2375,27 +2376,54 @@ public final class ChatListNode: ListView {
         self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })*/
     }
     
-    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?) {
-        self.visibleTopInset = visibleTopInset
-        
-        self.visualInsets = UIEdgeInsets(top: visibleTopInset, left: 0.0, bottom: 0.0, right: 0.0)
+    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
         
         var highlightedLocation: ChatListHighlightedLocation?
         if case let .forum(peerId) = inlineNavigationLocation {
-            highlightedLocation = ChatListHighlightedLocation(location: .peer(id: peerId), progress: 1.0)
+            highlightedLocation = ChatListHighlightedLocation(location: .peer(id: peerId), progress: inlineNavigationTransitionFraction)
         }
+        var navigationLocationPresenceUpdated = false
+        if (self.interaction?.inlineNavigationLocation == nil) != (highlightedLocation == nil) {
+            navigationLocationPresenceUpdated = true
+        }
+        
         var navigationLocationUpdated = false
         if self.interaction?.inlineNavigationLocation != highlightedLocation {
             self.interaction?.inlineNavigationLocation = highlightedLocation
             navigationLocationUpdated = true
         }
         
+        let insetDelta: CGFloat = 0.0
+        if navigationLocationPresenceUpdated {
+            let targetTopInset: CGFloat
+            if highlightedLocation != nil {
+                targetTopInset = self.visibleTopInset ?? self.insets.top
+            } else {
+                targetTopInset = self.originalTopInset ?? self.insets.top
+            }
+            let immediateInsetDelta = self.insets.top - targetTopInset
+            
+            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, additionalScrollDistance: immediateInsetDelta, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: self.visibleSize, insets: UIEdgeInsets(top: targetTopInset, left: self.insets.left, bottom: self.insets.bottom, right: self.insets.right), duration: 0.0, curve: .Default(duration: 0.0)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
+        
+        self.visualInsets = UIEdgeInsets(top: visibleTopInset, left: 0.0, bottom: 0.0, right: 0.0)
+            
+        self.visibleTopInset = visibleTopInset
+        self.originalTopInset = originalTopInset
+        
+        var additionalScrollDistance: CGFloat = 0.0
+        
         var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
         if navigationLocationUpdated {
             options.insert(.ForceUpdate)
-            options.insert(.AnimateInsertion)
+            
+            if transition.isAnimated {
+                options.insert(.AnimateInsertion)
+            }
+            
+            additionalScrollDistance += insetDelta
         }
-        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

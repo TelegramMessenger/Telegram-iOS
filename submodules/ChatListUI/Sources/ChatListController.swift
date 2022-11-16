@@ -746,7 +746,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                                 if strongSelf.navigationItem.leftBarButtonItem?.accessibilityLabel != leftBarButtonItem.accessibilityLabel {
                                     strongSelf.navigationItem.setLeftBarButton(leftBarButtonItem, animated: true)
                                 }
-                            } else if strongSelf.chatListDisplayNode.inlineStackContainerNode != nil {
+                            } else if strongSelf.chatListDisplayNode.inlineStackContainerTransitionFraction != 0.0 {
                             } else {
                                 let editItem: UIBarButtonItem
                                 if stateAndFilterId.state.editing {
@@ -1280,7 +1280,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 editItem = self.moreBarButtonItem
             }
         }
-        if self.chatListDisplayNode.inlineStackContainerNode != nil {
+        if self.chatListDisplayNode.inlineStackContainerTransitionFraction != 0.0 {
             self.backNavigationItem?.title = self.presentationData.strings.Common_Back
         } else if case .chatList(.root) = self.location {
             self.navigationItem.leftBarButtonItem = editItem
@@ -2483,6 +2483,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     }
     
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+        self.navigationBar?.secondaryContentNodeDisplayFraction = 1.0 - self.chatListDisplayNode.inlineStackContainerTransitionFraction
+        
+        if let inlineStackContainerNode = self.chatListDisplayNode.inlineStackContainerNode {
+            let _ = inlineStackContainerNode
+        } else {
+        }
+        
         super.containerLayoutUpdated(layout, transition: transition)
         
         let wasInVoiceOver = self.validLayout?.inVoiceOver ?? false
@@ -2503,8 +2510,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             tabContainerOffset += layout.statusBarHeight ?? 0.0
             tabContainerOffset += 44.0 + 20.0
         }
+        tabContainerOffset += self.chatListDisplayNode.inlineStackContainerTransitionFraction * NavigationBar.defaultSecondaryContentHeight
 
         let navigationBarHeight = self.navigationBar?.frame.maxY ?? 0.0
+        
+        transition.updateAlpha(node: self.tabContainerNode, alpha: 1.0 - self.chatListDisplayNode.inlineStackContainerTransitionFraction)
         
         transition.updateFrame(node: self.tabContainerNode, frame: CGRect(origin: CGPoint(x: 0.0, y: navigationBarHeight - self.additionalNavigationBarHeight - 46.0 + tabContainerOffset), size: CGSize(width: layout.size.width, height: 46.0)))
         self.tabContainerNode.update(size: CGSize(width: layout.size.width, height: 46.0), sideInset: layout.safeInsets.left, filters: self.tabContainerData?.0 ?? [], selectedFilter: self.chatListDisplayNode.containerNode.currentItemFilter, isReordering: self.chatListDisplayNode.isReorderingFilters || (self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing && !self.chatListDisplayNode.didBeginSelectingChatsWhileEditing), isEditing: self.chatListDisplayNode.containerNode.currentItemNode.currentState.editing, canReorderAllChats: self.isPremium, filtersLimit: self.tabContainerData?.2, transitionFraction: self.chatListDisplayNode.containerNode.transitionFraction, presentationData: self.presentationData, transition: .animated(duration: 0.4, curve: .spring))

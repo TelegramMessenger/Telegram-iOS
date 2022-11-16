@@ -489,6 +489,7 @@ open class NavigationBar: ASDisplayNode {
     
     public private(set) var contentNode: NavigationBarContentNode?
     public private(set) var secondaryContentNode: ASDisplayNode?
+    public var secondaryContentNodeDisplayFraction: CGFloat = 1.0
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
@@ -1200,7 +1201,7 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -1218,11 +1219,11 @@ open class NavigationBar: ASDisplayNode {
             case .expansion:
                 expansionHeight = contentNode.height
                 
-                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? NavigationBar.defaultSecondaryContentHeight : 0.0
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
                     }
                 }
             }
@@ -1545,7 +1546,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += NavigationBar.defaultSecondaryContentHeight
+            result += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
         }
         
         return result

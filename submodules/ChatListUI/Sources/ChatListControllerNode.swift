@@ -309,7 +309,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private var shimmerNodeOffset: CGFloat = 0.0
     let listNode: ChatListNode
     
-    private var validLayout: (CGSize, UIEdgeInsets, CGFloat, ChatListControllerLocation?)?
+    private var validLayout: (CGSize, UIEdgeInsets, CGFloat, CGFloat, ChatListControllerLocation?, CGFloat)?
     
     init(context: AccountContext, location: ChatListControllerLocation, filter: ChatListFilter?, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
@@ -375,7 +375,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                         })
                         strongSelf.emptyNode = emptyNode
                         strongSelf.addSubnode(emptyNode)
-                        if let (size, insets, _, _) = strongSelf.validLayout {
+                        if let (size, insets, _, _, _, _) = strongSelf.validLayout {
                             let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
                             emptyNode.frame = emptyNodeFrame
                             emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
@@ -401,7 +401,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                     let emptyShimmerEffectNode = ChatListShimmerNode()
                     strongSelf.emptyShimmerEffectNode = emptyShimmerEffectNode
                     strongSelf.insertSubnode(emptyShimmerEffectNode, belowSubnode: strongSelf.listNode)
-                    if let (size, insets, _, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
+                    if let (size, insets, _, _, _, _) = strongSelf.validLayout, let offset = strongSelf.floatingHeaderOffset {
                         strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset + strongSelf.shimmerNodeOffset, transition: .immediate)
                     }
                 }
@@ -421,7 +421,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
                 return
             }
             strongSelf.floatingHeaderOffset = offset
-            if let (size, insets, _, _) = strongSelf.validLayout, let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
+            if let (size, insets, _, _, _, _) = strongSelf.validLayout, let emptyShimmerEffectNode = strongSelf.emptyShimmerEffectNode {
                 strongSelf.layoutEmptyShimmerEffectNode(node: emptyShimmerEffectNode, size: size, insets: insets, verticalOffset: offset + strongSelf.shimmerNodeOffset, transition: transition)
             }
         }
@@ -444,14 +444,14 @@ private final class ChatListContainerItemNode: ASDisplayNode {
         self.emptyNode?.updateThemeAndStrings(theme: presentationData.theme, strings: presentationData.strings)
     }
     
-    func updateLayout(size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (size, insets, visualNavigationHeight, inlineNavigationLocation)
+    func updateLayout(size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, insets, visualNavigationHeight, originalNavigationHeight, inlineNavigationLocation, inlineNavigationTransitionFraction)
         
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: size, insets: insets, duration: duration, curve: curve)
         
         transition.updateFrame(node: self.listNode, frame: CGRect(origin: CGPoint(), size: size))
-        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: visualNavigationHeight, inlineNavigationLocation: inlineNavigationLocation)
+        self.listNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: visualNavigationHeight, originalTopInset: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction)
         
         if let emptyNode = self.emptyNode {
             let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
@@ -487,7 +487,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var transitionFraction: CGFloat = 0.0
     private var transitionFractionOffset: CGFloat = 0.0
     private var disableItemNodeOperationsWhileAnimating: Bool = false
-    private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?)?
+    private var validLayout: (layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat)?
     
     private var enableAdjacentFilterLoading: Bool = false
     
@@ -744,7 +744,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             self.onFilterSwitch?()
             
             self.transitionFractionOffset = 0.0
-            if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
+            if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout, let itemNode = self.itemNodes[self.selectedId] {
                 for (id, itemNode) in self.itemNodes {
                     if id != selectedId {
                         itemNode.emptyNode?.restartAnimation()
@@ -757,13 +757,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         for (_, itemNode) in self.itemNodes {
                             itemNode.layer.removeAllAnimations()
                         }
-                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                         self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, true)
                     }
                 }
             }
         case .changed:
-            if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
+            if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
                 let translation = recognizer.translation(in: self.view)
                 var transitionFraction = translation.x / layout.size.width
                 
@@ -800,11 +800,11 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         }
                     }
                 }
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, .immediate, false)
             }
         case .cancelled, .ended:
-            if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
+            if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout, let selectedIndex = self.availableFilters.firstIndex(where: { $0.id == self.selectedId }) {
                 let translation = recognizer.translation(in: self.view)
                 let velocity = recognizer.velocity(in: self.view)
                 var directionIsToRight: Bool?
@@ -843,12 +843,12 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 self.transitionFraction = 0.0
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.45, curve: .spring)
                 self.disableItemNodeOperationsWhileAnimating = true
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: transition)
+                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: transition)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
                 DispatchQueue.main.async {
                     self.disableItemNodeOperationsWhileAnimating = false
-                    if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout {
-                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                    if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout {
+                        self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                     }
                 }
             }
@@ -864,7 +864,13 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func updatePresentationData(_ presentationData: PresentationData) {
         self.presentationData = presentationData
         
-        self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+        if let validLayout = self.validLayout {
+            if let _ = validLayout.inlineNavigationLocation {
+                self.backgroundColor = self.presentationData.theme.chatList.backgroundColor.mixedWith(self.presentationData.theme.chatList.pinnedItemBackgroundColor, alpha: validLayout.inlineNavigationTransitionFraction)
+            } else {
+                self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
+            }
+        }
         
         self.leftSeparatorLayer.backgroundColor = self.presentationData.theme.rootController.navigationBar.separatorColor.cgColor
         
@@ -922,8 +928,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 strongSelf.availableFilters = availableFilters
                 strongSelf.filtersLimit = limit
-                if let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = strongSelf.validLayout {
-                    strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                if let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = strongSelf.validLayout {
+                    strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                 }
             }
             if !availableFilters.contains(where: { $0.id == self.selectedId }) {
@@ -940,8 +946,8 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         if value != self.enableAdjacentFilterLoading {
             self.enableAdjacentFilterLoading = value
             
-            if self.enableAdjacentFilterLoading, let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout {
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+            if self.enableAdjacentFilterLoading, let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout {
+                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
             }
         }
     }
@@ -950,7 +956,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.onFilterSwitch?()
         if id != self.selectedId, let index = self.availableFilters.firstIndex(where: { $0.id == id }) {
             if let itemNode = self.itemNodes[id] {
-                guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = self.validLayout else {
+                guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = self.validLayout else {
                     return
                 }
                 self.selectedId = id
@@ -959,7 +965,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 self.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
-                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: transition)
+                self.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: transition)
                 self.currentItemFilterUpdated?(self.currentItemFilter, self.transitionFraction, transition, false)
                 itemNode.emptyNode?.restartAnimation()
                 completion?()
@@ -989,7 +995,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                     
                     strongSelf.pendingItemNode = nil
                     
-                    guard let (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation) = strongSelf.validLayout else {
+                    guard let (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction) = strongSelf.validLayout else {
                         strongSelf.itemNodes[id] = itemNode
                         strongSelf.addSubnode(itemNode)
                         
@@ -1038,7 +1044,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         
                         transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: -offset, y: 0.0))
                                                 
-                        itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                        itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                         
                         strongSelf.selectedId = id
                         if let currentItemNode = strongSelf.currentItemNodeValue {
@@ -1046,7 +1052,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         }
                         strongSelf.applyItemNodeAsCurrent(id: id, itemNode: itemNode)
                         
-                        strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, transition: .immediate)
+                        strongSelf.update(layout: layout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: insets, isReorderingFilters: isReorderingFilters, isEditing: isEditing, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: .immediate)
                         
                         strongSelf.currentItemFilterUpdated?(strongSelf.currentItemFilter, strongSelf.transitionFraction, transition, false)
                     }
@@ -1057,13 +1063,19 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         }
     }
     
-    func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, transition: ContainedViewLayoutTransition) {
-        self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation)
+    func update(layout: ContainerViewLayout, navigationBarHeight: CGFloat, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, cleanNavigationBarHeight: CGFloat, insets: UIEdgeInsets, isReorderingFilters: Bool, isEditing: Bool, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (layout, navigationBarHeight, visualNavigationHeight, originalNavigationHeight, cleanNavigationBarHeight, insets, isReorderingFilters, isEditing, inlineNavigationLocation, inlineNavigationTransitionFraction)
         
         self._validLayoutReady.set(.single(true))
         
         transition.updateAlpha(node: self, alpha: isReorderingFilters ? 0.5 : 1.0)
         self.isUserInteractionEnabled = !isReorderingFilters
+        
+        if let _ = inlineNavigationLocation {
+            transition.updateBackgroundColor(node: self, color: self.presentationData.theme.chatList.backgroundColor.mixedWith(self.presentationData.theme.chatList.pinnedItemBackgroundColor, alpha: inlineNavigationTransitionFraction))
+        } else {
+            transition.updateBackgroundColor(node: self, color: self.presentationData.theme.chatList.backgroundColor)
+        }
         
         self.panRecognizer?.isEnabled = !isEditing
         
@@ -1113,7 +1125,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 nodeTransition.updateFrame(node: itemNode, frame: itemFrame, completion: { _ in
                 })
                 
-                itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, transition: nodeTransition)
+                itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: nodeTransition)
                 
                 if wasAdded, case .animated = transition {
                     animateSlidingIds.append(id)
@@ -1138,7 +1150,7 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
 }
 
-final class ChatListControllerNode: ASDisplayNode {
+final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let location: ChatListControllerLocation
     private var presentationData: PresentationData
@@ -1146,7 +1158,11 @@ final class ChatListControllerNode: ASDisplayNode {
     private let animationRenderer: MultiAnimationRenderer
     
     let containerNode: ChatListContainerNode
+    
+    private(set) var inlineStackContainerTransitionFraction: CGFloat = 0.0
     private(set) var inlineStackContainerNode: ChatListContainerNode?
+    private var inlineContentPanRecognizer: InteractiveTransitionGestureRecognizer?
+    
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
     weak var controller: ChatListControllerImpl?
@@ -1247,6 +1263,19 @@ final class ChatListControllerNode: ASDisplayNode {
                 strongSelf.controller?.dismissAllUndoControllers()
             }
         }
+        
+        let inlineContentPanRecognizer = InteractiveTransitionGestureRecognizer(target: self, action: #selector(self.inlineContentPanGesture(_:)), allowedDirections: { [weak self] _ in
+            guard let strongSelf = self, strongSelf.inlineStackContainerNode != nil else {
+                return []
+            }
+            let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
+            return directions
+        }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
+        inlineContentPanRecognizer.delegate = self
+        inlineContentPanRecognizer.delaysTouchesBegan = false
+        inlineContentPanRecognizer.cancelsTouchesInView = true
+        self.inlineContentPanRecognizer = inlineContentPanRecognizer
+        self.view.addGestureRecognizer(inlineContentPanRecognizer)
     }
     
     override func didLoad() {
@@ -1261,6 +1290,69 @@ final class ChatListControllerNode: ASDisplayNode {
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.cancelEditing?()
+        }
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        return false
+    }
+    
+    func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldBeRequiredToFailBy otherGestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let _ = otherGestureRecognizer as? InteractiveTransitionGestureRecognizer {
+            return false
+        }
+        if let _ = otherGestureRecognizer as? UIPanGestureRecognizer {
+            return true
+        }
+        return false
+    }
+    
+    @objc private func inlineContentPanGesture(_ recognizer: UIPanGestureRecognizer) {
+        switch recognizer.state {
+        case .began:
+            break
+        case .changed:
+            if let inlineStackContainerNode = self.inlineStackContainerNode {
+                let translation = recognizer.translation(in: self.view)
+                var transitionFraction = translation.x / inlineStackContainerNode.bounds.width
+                transitionFraction = 1.0 - max(0.0, min(1.0, transitionFraction))
+                self.inlineStackContainerTransitionFraction = transitionFraction
+                self.controller?.requestLayout(transition: .immediate)
+            }
+        case .cancelled, .ended:
+            if let inlineStackContainerNode = self.inlineStackContainerNode {
+                let translation = recognizer.translation(in: self.view)
+                let velocity = recognizer.velocity(in: self.view)
+                var directionIsToRight: Bool?
+                if abs(velocity.x) > 10.0 {
+                    if translation.x > 0.0 {
+                        if velocity.x <= 0.0 {
+                            directionIsToRight = nil
+                        } else {
+                            directionIsToRight = true
+                        }
+                    } else {
+                        if velocity.x >= 0.0 {
+                            directionIsToRight = nil
+                        } else {
+                            directionIsToRight = false
+                        }
+                    }
+                } else {
+                    if abs(translation.x) > inlineStackContainerNode.bounds.width / 2.0 {
+                        directionIsToRight = translation.x > inlineStackContainerNode.bounds.width / 2.0
+                    }
+                }
+                
+                if let directionIsToRight = directionIsToRight, directionIsToRight {
+                    self.setInlineChatList(location: nil)
+                } else {
+                    self.inlineStackContainerTransitionFraction = 1.0
+                    self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
+                }
+            }
+        default:
+            break
         }
     }
     
@@ -1342,12 +1434,12 @@ final class ChatListControllerNode: ASDisplayNode {
         var mainNavigationBarHeight = navigationBarHeight
         var cleanMainNavigationBarHeight = cleanNavigationBarHeight
         var mainInsets = insets
-        if self.inlineStackContainerNode != nil {
+        if self.inlineStackContainerNode != nil && "".isEmpty {
             mainNavigationBarHeight = visualNavigationHeight
             cleanMainNavigationBarHeight = visualNavigationHeight
             mainInsets.top = visualNavigationHeight
         }
-        self.containerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location, transition: transition)
+        self.containerNode.update(layout: layout, navigationBarHeight: mainNavigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanMainNavigationBarHeight, insets: mainInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: self.inlineStackContainerNode?.location, inlineNavigationTransitionFraction: self.inlineStackContainerTransitionFraction, transition: transition)
         
         if let inlineStackContainerNode = self.inlineStackContainerNode {
             var inlineStackContainerNodeTransition = transition
@@ -1359,7 +1451,9 @@ final class ChatListControllerNode: ASDisplayNode {
             }
             
             let inlineSideInset: CGFloat = layout.safeInsets.left + 72.0
-            inlineStackContainerNodeTransition.updateFrame(node: inlineStackContainerNode, frame: CGRect(origin: CGPoint(x: inlineSideInset, y: 0.0), size: layout.size))
+            var inlineStackFrame = CGRect(origin: CGPoint(x: inlineSideInset, y: 0.0), size: CGSize(width: layout.size.width - inlineSideInset, height: layout.size.height))
+            inlineStackFrame.origin.x += (1.0 - self.inlineStackContainerTransitionFraction) * inlineStackFrame.width
+            inlineStackContainerNodeTransition.updateFrame(node: inlineStackContainerNode, frame: inlineStackFrame)
             var inlineLayout = layout
             inlineLayout.size.width -= inlineSideInset
             inlineLayout.safeInsets.left = 0.0
@@ -1369,7 +1463,7 @@ final class ChatListControllerNode: ASDisplayNode {
             var inlineInsets = insets
             inlineInsets.left = 0.0
             
-            inlineStackContainerNode.update(layout: inlineLayout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: inlineInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: nil, transition: inlineStackContainerNodeTransition)
+            inlineStackContainerNode.update(layout: inlineLayout, navigationBarHeight: navigationBarHeight, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: navigationBarHeight, cleanNavigationBarHeight: cleanNavigationBarHeight, insets: inlineInsets, isReorderingFilters: self.isReorderingFilters, isEditing: self.isEditing, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0, transition: inlineStackContainerNodeTransition)
             
             if animateIn {
                 transition.animatePosition(node: inlineStackContainerNode, from: CGPoint(x: inlineStackContainerNode.position.x + inlineStackContainerNode.bounds.width + UIScreenPixel, y: inlineStackContainerNode.position.y))
@@ -1561,8 +1655,9 @@ final class ChatListControllerNode: ASDisplayNode {
                 let previousInlineStackContainerNode = self.inlineStackContainerNode
                 
                 self.inlineStackContainerNode = inlineStackContainerNode
+                self.inlineStackContainerTransitionFraction = 1.0
                 
-                if let containerLayout = self.containerLayout {
+                if let _ = self.containerLayout {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
                     
                     if let previousInlineStackContainerNode {
@@ -1571,7 +1666,7 @@ final class ChatListControllerNode: ASDisplayNode {
                         })
                     }
                     
-                    self.containerLayoutUpdated(containerLayout.layout, navigationBarHeight: containerLayout.navigationBarHeight, visualNavigationHeight: containerLayout.visualNavigationHeight, cleanNavigationBarHeight: containerLayout.cleanNavigationBarHeight, transition: transition)
+                    self.controller?.requestLayout(transition: transition)
                 } else {
                     previousInlineStackContainerNode?.removeFromSupernode()
                 }
@@ -1579,16 +1674,18 @@ final class ChatListControllerNode: ASDisplayNode {
         } else {
             if let inlineStackContainerNode = self.inlineStackContainerNode {
                 self.inlineStackContainerNode = nil
+                self.inlineStackContainerTransitionFraction = 0.0
                 
                 self.containerNode.contentScrollingEnded = self.contentScrollingEnded
                 
-                if let containerLayout = self.containerLayout {
+                if let _ = self.containerLayout {
                     let transition: ContainedViewLayoutTransition = .animated(duration: 0.4, curve: .spring)
-                    self.containerLayoutUpdated(containerLayout.layout, navigationBarHeight: containerLayout.navigationBarHeight, visualNavigationHeight: containerLayout.visualNavigationHeight, cleanNavigationBarHeight: containerLayout.cleanNavigationBarHeight, transition: transition)
                     
                     transition.updatePosition(node: inlineStackContainerNode, position: CGPoint(x: inlineStackContainerNode.position.x + inlineStackContainerNode.bounds.width + UIScreenPixel, y: inlineStackContainerNode.position.y), completion: { [weak inlineStackContainerNode] _ in
                         inlineStackContainerNode?.removeFromSupernode()
                     })
+                    
+                    self.controller?.requestLayout(transition: transition)
                 } else {
                     inlineStackContainerNode.removeFromSupernode()
                 }

@@ -576,7 +576,7 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         let (duration, curve) = listViewAnimationDurationAndCurve(transition: transition)
         let updateSizeAndInsets = ListViewUpdateSizeAndInsets(size: layout.size, insets: insets, headerInsets: headerInsets, duration: duration, curve: curve)
         
-        self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil)
+        self.chatListNode.updateLayout(transition: transition, updateSizeAndInsets: updateSizeAndInsets, visibleTopInset: updateSizeAndInsets.insets.top, originalTopInset: updateSizeAndInsets.insets.top, inlineNavigationLocation: nil, inlineNavigationTransitionFraction: 0.0)
         
         if let contactListNode = self.contactListNode {
             contactListNode.bounds = CGRect(x: 0.0, y: 0.0, width: layout.size.width, height: layout.size.height)

@@ -2349,25 +2349,27 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.contextContainer.position = contextContainerFrame.center
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
                     
-                    if item.interaction.inlineNavigationLocation != nil {
-                        let mainContentFrame = CGRect(origin: CGPoint(x: params.leftInset + 72.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
-                        transition.updatePosition(node: strongSelf.mainContentContainerNode, position: mainContentFrame.center)
+                    var mainContentFrame: CGRect
+                    var mainContentBoundsOffset: CGFloat
+                    var mainContentAlpha: CGFloat = 1.0
+                    
+                    if case .chatList = item.chatListLocation {
+                        mainContentFrame = CGRect(origin: CGPoint(x: params.leftInset + 72.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                        mainContentBoundsOffset = mainContentFrame.origin.x
                         
-                        transition.updateBounds(node: strongSelf.mainContentContainerNode, bounds: CGRect(origin: CGPoint(x: mainContentFrame.size.width, y: 0.0), size: mainContentFrame.size))
-                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 0.0)
-                    } else if case .chatList = item.chatListLocation {
-                        let mainContentFrame = CGRect(origin: CGPoint(x: params.leftInset + 72.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
-                        transition.updatePosition(node: strongSelf.mainContentContainerNode, position: mainContentFrame.center)
-                        
-                        transition.updateBounds(node: strongSelf.mainContentContainerNode, bounds: CGRect(origin: CGPoint(x: mainContentFrame.origin.x, y: 0.0), size: mainContentFrame.size))
-                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
+                        if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
+                            mainContentAlpha = 1.0 - inlineNavigationLocation.progress
+                            mainContentBoundsOffset += (mainContentFrame.width - mainContentFrame.minX) * inlineNavigationLocation.progress
+                        }
                     } else {
-                        let mainContentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
-                        transition.updatePosition(node: strongSelf.mainContentContainerNode, position: mainContentFrame.center)
-                        
-                        transition.updateBounds(node: strongSelf.mainContentContainerNode, bounds: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: mainContentFrame.size))
-                        transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: 1.0)
+                        mainContentFrame = CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                        mainContentBoundsOffset = 0.0
                     }
+                    
+                    transition.updatePosition(node: strongSelf.mainContentContainerNode, position: mainContentFrame.center)
+                    
+                    transition.updateBounds(node: strongSelf.mainContentContainerNode, bounds: CGRect(origin: CGPoint(x: mainContentBoundsOffset, y: 0.0), size: mainContentFrame.size))
+                    transition.updateAlpha(node: strongSelf.mainContentContainerNode, alpha: mainContentAlpha)
                     
                     var crossfadeContent = false
                     if let selectableControlSizeAndApply = selectableControlSizeAndApply {
@@ -2441,9 +2443,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let avatarFrame = CGRect(origin: CGPoint(x: leftInset - avatarLeftInset + editingOffset + 10.0 + revealOffset, y: floor((itemHeight - avatarDiameter) / 2.0)), size: CGSize(width: avatarDiameter, height: avatarDiameter))
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
-                    if item.interaction.inlineNavigationLocation != nil {
-                        avatarScale = 54.0 / avatarFrame.width
-                        avatarScaleOffset = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
+                    if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
+                        let targetAvatarScale: CGFloat = 54.0 / avatarFrame.width
+                        avatarScale = targetAvatarScale * inlineNavigationLocation.progress + 1.0 * (1.0 - inlineNavigationLocation.progress)
+                        
+                        let targetAvatarScaleOffset: CGFloat = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
+                        avatarScaleOffset = targetAvatarScaleOffset * inlineNavigationLocation.progress
                     }
                     transition.updatePosition(node: strongSelf.avatarNode, position: avatarFrame.center.offsetBy(dx: avatarScaleOffset, dy: 0.0))
                     transition.updateBounds(node: strongSelf.avatarNode, bounds: CGRect(origin: CGPoint(), size: avatarFrame.size))
@@ -2470,7 +2475,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                         inlineNavigationMarkLayer.backgroundColor = item.presentationData.theme.list.itemAccentColor.cgColor
                         let markHeight: CGFloat = 50.0
-                        let markFrame = CGRect(origin: CGPoint(x: -4.0, y: avatarFrame.midY - markHeight * 0.5), size: CGSize(width: 8.0, height: markHeight))
+                        var markFrame = CGRect(origin: CGPoint(x: -4.0, y: avatarFrame.midY - markHeight * 0.5), size: CGSize(width: 8.0, height: markHeight))
+                        markFrame.origin.x -= (1.0 - inlineNavigationLocation.progress) * markFrame.width * 0.5
                         if animateIn {
                             inlineNavigationMarkLayer.frame = markFrame
                             transition.animatePositionAdditive(layer: inlineNavigationMarkLayer, offset: CGPoint(x: -markFrame.width * 0.5, y: 0.0))
@@ -2979,15 +2985,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     }
                     
                     transition.updateFrame(node: strongSelf.separatorNode, frame: CGRect(origin: CGPoint(x: separatorInset, y: layoutOffset + itemHeight - separatorHeight), size: CGSize(width: params.width - separatorInset, height: separatorHeight)))
-                    transition.updateAlpha(node: strongSelf.separatorNode, alpha: item.interaction.inlineNavigationLocation != nil ? 0.0 : 1.0)
+                    if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
+                        transition.updateAlpha(node: strongSelf.separatorNode, alpha: 1.0 - inlineNavigationLocation.progress)
+                    } else {
+                        transition.updateAlpha(node: strongSelf.separatorNode, alpha: 1.0)
+                    }
                     
                     transition.updateFrame(node: strongSelf.backgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: itemHeight)))
                     let backgroundColor: UIColor
                     let highlightedBackgroundColor: UIColor
-                    if item.interaction.inlineNavigationLocation != nil {
-                        backgroundColor = theme.pinnedItemBackgroundColor
-                        highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
-                    } else if item.selected {
+                    if item.selected {
                         backgroundColor = theme.itemSelectedBackgroundColor
                         highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
                     } else if isPinned {
@@ -3002,11 +3009,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         backgroundColor = theme.itemBackgroundColor
                         highlightedBackgroundColor = theme.itemHighlightedBackgroundColor
                     }
+                    
                     if animated {
                         transition.updateBackgroundColor(node: strongSelf.backgroundNode, color: backgroundColor)
                     } else {
                         strongSelf.backgroundNode.backgroundColor = backgroundColor
                     }
+                    
+                    if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
+                        transition.updateAlpha(node: strongSelf.backgroundNode, alpha: 1.0 - inlineNavigationLocation.progress)
+                    } else {
+                        transition.updateAlpha(node: strongSelf.backgroundNode, alpha: 1.0)
+                    }
+                    
                     strongSelf.highlightedBackgroundNode.backgroundColor = highlightedBackgroundColor
                     let topNegativeInset: CGFloat = 0.0
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: layoutOffset - separatorHeight - topNegativeInset), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height + separatorHeight + topNegativeInset))
