@@ -296,12 +296,6 @@ public final class ChatListHeaderComponent: Component {
         }
         
         override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-            if let view = self.titleContentView?.view, let result = view.hitTest(self.convert(point, to: view), with: event) {
-                return result
-            }
-            if let view = self.chatListTitleView, let result = view.hitTest(self.convert(point, to: view), with: event) {
-                return result
-            }
             if let backButtonView = self.backButtonView {
                 if let result = backButtonView.hitTest(self.convert(point, to: backButtonView), with: event) {
                     return result
@@ -316,6 +310,12 @@ public final class ChatListHeaderComponent: Component {
                 if let view = buttonView.view, let result = view.hitTest(self.convert(point, to: view), with: event) {
                     return result
                 }
+            }
+            if let view = self.titleContentView?.view, let result = view.hitTest(self.convert(point, to: view), with: event) {
+                return result
+            }
+            if let view = self.chatListTitleView, let result = view.hitTest(self.convert(point, to: view), with: event) {
+                return result
             }
             return nil
         }
