@@ -6,7 +6,7 @@ import TelegramPresentationData
 import ActivityIndicator
 import AppBundle
 
-enum ChatTitleProxyStatus {
+public enum ChatTitleProxyStatus {
     case connecting
     case connected
     case available
@@ -35,11 +35,11 @@ private func generateIcon(color: UIColor, connected: Bool, off: Bool) -> UIImage
     })
 }
 
-final class ChatTitleProxyNode: ASDisplayNode {
+public final class ChatTitleProxyNode: ASDisplayNode {
     private let iconNode: ASImageNode
     private let activityIndicator: ActivityIndicator
     
-    var theme: PresentationTheme {
+    public var theme: PresentationTheme {
         didSet {
             if self.theme !== oldValue {
                 switch self.status {
@@ -55,7 +55,7 @@ final class ChatTitleProxyNode: ASDisplayNode {
         }
     }
     
-    var status: ChatTitleProxyStatus = .connected {
+    public var status: ChatTitleProxyStatus = .connected {
         didSet {
             if self.status != oldValue {
                 switch self.status {
@@ -73,7 +73,7 @@ final class ChatTitleProxyNode: ASDisplayNode {
         }
     }
     
-    init(theme: PresentationTheme) {
+    public init(theme: PresentationTheme) {
         self.theme = theme
         
         self.iconNode = ASImageNode()

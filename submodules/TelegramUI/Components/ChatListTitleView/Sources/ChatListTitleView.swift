@@ -14,24 +14,42 @@ import AccountContext
 
 private let titleFont = Font.with(size: 17.0, design: .regular, weight: .semibold, traits: [.monospacedNumbers])
 
-struct NetworkStatusTitle: Equatable {
-    enum Status: Equatable {
+public struct NetworkStatusTitle: Equatable {
+    public enum Status: Equatable {
         case premium
         case emoji(PeerEmojiStatus)
     }
     
-    let text: String
-    let activity: Bool
-    let hasProxy: Bool
-    let connectsViaProxy: Bool
-    let isPasscodeSet: Bool
-    let isManuallyLocked: Bool
-    let peerStatus: Status?
+    public var text: String
+    public var activity: Bool
+    public var hasProxy: Bool
+    public var connectsViaProxy: Bool
+    public var isPasscodeSet: Bool
+    public var isManuallyLocked: Bool
+    public var peerStatus: Status?
+    
+    public init(
+        text: String,
+        activity: Bool,
+        hasProxy: Bool,
+        connectsViaProxy: Bool,
+        isPasscodeSet: Bool,
+        isManuallyLocked: Bool,
+        peerStatus: Status?
+    ) {
+        self.text = text
+        self.activity = activity
+        self.hasProxy = hasProxy
+        self.connectsViaProxy = connectsViaProxy
+        self.isPasscodeSet = isPasscodeSet
+        self.isManuallyLocked = isManuallyLocked
+        self.peerStatus = peerStatus
+    }
 }
 
-final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
+public final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitleTransitionNode {
     private let context: AccountContext
-    private let titleNode: ImmediateTextNode
+    public let titleNode: ImmediateTextNode
     private let lockView: ChatListTitleLockView
     private weak var lockSnapshotView: UIView?
     private let activityIndicator: ActivityIndicator
@@ -42,12 +60,14 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
-    var openStatusSetup: ((UIView) -> Void)?
+    public var openStatusSetup: ((UIView) -> Void)?
     
     private var validLayout: (CGSize, CGRect)?
     
+    public var manualLayout: Bool = false
+    
     private var _title: NetworkStatusTitle = NetworkStatusTitle(text: "", activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
-    var title: NetworkStatusTitle {
+    public var title: NetworkStatusTitle {
         get {
             return self._title
         }
@@ -56,7 +76,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    func setTitle(_ title: NetworkStatusTitle, animated: Bool) {
+    public func setTitle(_ title: NetworkStatusTitle, animated: Bool) {
         let oldValue = self._title
         self._title = title
         
@@ -170,17 +190,19 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
                 }
             }
             
-            self.setNeedsLayout()
+            if !self.manualLayout {
+                self.setNeedsLayout()
+            }
         }
     }
     
-    var toggleIsLocked: (() -> Void)?
-    var openProxySettings: (() -> Void)?
+    public var toggleIsLocked: (() -> Void)?
+    public var openProxySettings: (() -> Void)?
     
     private var isPasscodeSet = false
     private var isManuallyLocked = false
     
-    var theme: PresentationTheme {
+    public var theme: PresentationTheme {
         didSet {
             self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
             
@@ -191,13 +213,13 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    var strings: PresentationStrings {
+    public var strings: PresentationStrings {
         didSet {
             self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
         }
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer) {
         self.context = context
         self.theme = theme
         self.strings = strings
@@ -283,19 +305,19 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         self.proxyButton.addTarget(self, action: #selector(self.proxyButtonPressed), for: .touchUpInside)
     }
     
-    required init?(coder aDecoder: NSCoder) {
+    required public init?(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func layoutSubviews() {
+    override public func layoutSubviews() {
         super.layoutSubviews()
         
-        if let (size, clearBounds) = self.validLayout {
+        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
             self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
         }
     }
     
-    func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, clearBounds: CGRect, transition: ContainedViewLayoutTransition) {
         self.validLayout = (size, clearBounds)
         
         var indicatorPadding: CGFloat = 0.0
@@ -409,7 +431,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         self.openProxySettings?()
     }
     
-    func makeTransitionMirrorNode() -> ASDisplayNode {
+    public func makeTransitionMirrorNode() -> ASDisplayNode {
         let snapshotView = self.snapshotView(afterScreenUpdates: false)
         
         return ASDisplayNode(viewBlock: {
@@ -417,17 +439,17 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }, didLoad: nil)
     }
     
-    func animateLayoutTransition() {
+    public func animateLayoutTransition() {
     }
     
-    var proxyButtonFrame: CGRect? {
+    public var proxyButtonFrame: CGRect? {
         if !self.proxyNode.isHidden {
             return proxyNode.frame
         }
         return nil
     }
     
-    var lockViewFrame: CGRect? {
+    public var lockViewFrame: CGRect? {
         if !self.lockView.isHidden && !self.lockView.frame.isEmpty {
             return self.lockView.frame
         } else {
@@ -435,7 +457,7 @@ final class ChatListTitleView: UIView, NavigationBarTitleView, NavigationBarTitl
         }
     }
     
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
+    override public func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
         if let titleCredibilityIconView = self.titleCredibilityIconView, !titleCredibilityIconView.isHidden, titleCredibilityIconView.alpha != 0.0 {
             if titleCredibilityIconView.bounds.insetBy(dx: -8.0, dy: -8.0).contains(self.convert(point, to: titleCredibilityIconView)) {
                 if let result = titleCredibilityIconView.hitTest(titleCredibilityIconView.bounds.center, with: event) {

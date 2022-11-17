@@ -302,6 +302,7 @@ swift_library(
         "//submodules/TelegramUI/Components/ChatTitleView",
         "//submodules/InviteLinksUI:InviteLinksUI",
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
+        "//submodules/TelegramUI/Components/ChatListHeaderComponent",
         "//submodules/MediaPasteboardUI:MediaPasteboardUI",
     ] + select({
         "@build_bazel_rules_apple//apple:ios_armv7": [],

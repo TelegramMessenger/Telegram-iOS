@@ -816,6 +816,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     let statusNode: ChatListStatusNode
     let badgeNode: ChatListBadgeNode
     let mentionBadgeNode: ChatListBadgeNode
+    var avatarBadgeNode: ChatListBadgeNode?
+    var avatarBadgeBackground: ASImageNode?
     let onlineNode: PeerOnlineMarkerNode
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
@@ -1115,9 +1117,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         })
         
         self.contextContainer.shouldBegin = { [weak self] location in
-            guard let strongSelf = self else {
+            guard let strongSelf = self, let item = strongSelf.item else {
                 return false
             }
+            
+            if item.interaction.inlineNavigationLocation != nil {
+                return false
+            }
+            
             if let value = strongSelf.hitTest(location, with: nil), value === strongSelf.compoundTextButtonNode?.view {
                 strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.compoundHighlightingNode
             } else {
@@ -1373,6 +1380,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let badgeFont = Font.with(size: floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
+            let avatarBadgeFont = Font.with(size: 16.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
             
             let account = item.context.account
             var messages: [EngineMessage]
@@ -1497,6 +1505,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var statusState = ChatListStatusNodeState.none
             
             var currentBadgeBackgroundImage: UIImage?
+            var currentAvatarBadgeBackgroundImage: UIImage?
             var currentMentionBadgeImage: UIImage?
             var currentPinnedIconImage: UIImage?
             var currentMutedIconImage: UIImage?
@@ -1547,6 +1556,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let badgeDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 20.0 / 17.0)
+            let avatarBadgeDiameter: CGFloat = 22.0
+            
+            let currentAvatarBadgeCleanBackgroundImage: UIImage? = PresentationResourcesChatList.badgeBackgroundBorder(item.presentationData.theme, diameter: avatarBadgeDiameter + 4.0)
             
             let leftInset: CGFloat = params.leftInset + avatarLeftInset
             
@@ -1935,17 +1947,21 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if unreadCount.isProvisonal {
                             badgeTextColor = theme.unreadBadgeInactiveBackgroundColor
                             currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactiveProvisional(item.presentationData.theme, diameter: badgeDiameter)
+                            currentAvatarBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactiveProvisional(item.presentationData.theme, diameter: avatarBadgeDiameter)
                         } else {
                             badgeTextColor = theme.unreadBadgeInactiveTextColor
                             currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme, diameter: badgeDiameter)
+                            currentAvatarBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundInactive(item.presentationData.theme, diameter: avatarBadgeDiameter)
                         }
                     } else {
                         if unreadCount.isProvisonal {
                             badgeTextColor = theme.unreadBadgeActiveBackgroundColor
                             currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActiveProvisional(item.presentationData.theme, diameter: badgeDiameter)
+                            currentAvatarBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActiveProvisional(item.presentationData.theme, diameter: avatarBadgeDiameter)
                         } else {
                             badgeTextColor = theme.unreadBadgeActiveTextColor
                             currentBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme, diameter: badgeDiameter)
+                            currentAvatarBadgeBackgroundImage = PresentationResourcesChatList.badgeBackgroundActive(item.presentationData.theme, diameter: avatarBadgeDiameter)
                         }
                     }
                     let unreadCountText = compactNumericCountString(Int(unreadCount.count), decimalSeparator: item.presentationData.dateTimeFormat.decimalSeparator)
@@ -2487,6 +2503,61 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let inlineNavigationMarkLayer = strongSelf.inlineNavigationMarkLayer {
                             strongSelf.inlineNavigationMarkLayer = nil
                             transition.updatePosition(layer: inlineNavigationMarkLayer, position: CGPoint(x: -inlineNavigationMarkLayer.bounds.width * 0.5, y: avatarFrame.midY))
+                        }
+                    }
+                    
+                    if let inlineNavigationLocation = item.interaction.inlineNavigationLocation, badgeContent != .none {
+                        var animateIn = false
+                        
+                        let avatarBadgeBackground: ASImageNode
+                        if let current = strongSelf.avatarBadgeBackground {
+                            avatarBadgeBackground = current
+                        } else {
+                            avatarBadgeBackground = ASImageNode()
+                            strongSelf.avatarBadgeBackground = avatarBadgeBackground
+                            strongSelf.avatarNode.addSubnode(avatarBadgeBackground)
+                        }
+                        
+                        avatarBadgeBackground.image = currentAvatarBadgeCleanBackgroundImage
+                        
+                        let avatarBadgeNode: ChatListBadgeNode
+                        if let current = strongSelf.avatarBadgeNode {
+                            avatarBadgeNode = current
+                        } else {
+                            animateIn = true
+                            avatarBadgeNode = ChatListBadgeNode()
+                            avatarBadgeNode.disableBounce = true
+                            strongSelf.avatarBadgeNode = avatarBadgeNode
+                            strongSelf.avatarNode.addSubnode(avatarBadgeNode)
+                        }
+                        
+                        let makeAvatarBadgeLayout = avatarBadgeNode.asyncLayout()
+                        let (avatarBadgeLayout, avatarBadgeApply) = makeAvatarBadgeLayout(CGSize(width: rawContentWidth, height: CGFloat.greatestFiniteMagnitude), avatarBadgeDiameter, avatarBadgeFont, currentAvatarBadgeBackgroundImage, badgeContent)
+                        let _ = avatarBadgeApply(animateBadges, false)
+                        let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.width - avatarBadgeLayout.width, y: avatarFrame.height - avatarBadgeLayout.height), size: avatarBadgeLayout)
+                        avatarBadgeNode.position = avatarBadgeFrame.center
+                        avatarBadgeNode.bounds = CGRect(origin: CGPoint(), size: avatarBadgeFrame.size)
+                        
+                        let avatarBadgeBackgroundFrame = avatarBadgeFrame.insetBy(dx: -2.0, dy: -2.0)
+                        avatarBadgeBackground.position = avatarBadgeBackgroundFrame.center
+                        avatarBadgeBackground.bounds = CGRect(origin: CGPoint(), size: avatarBadgeBackgroundFrame.size)
+                        
+                        if animateIn {
+                            ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.001)
+                            ContainedViewLayoutTransition.immediate.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.001)
+                        }
+                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: max(0.001, inlineNavigationLocation.progress))
+                        transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: max(0.001, inlineNavigationLocation.progress))
+                    } else if let avatarBadgeNode = strongSelf.avatarBadgeNode {
+                        strongSelf.avatarBadgeNode = nil
+                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.001, completion: { [weak avatarBadgeNode] _ in
+                            avatarBadgeNode?.removeFromSupernode()
+                        })
+                        if let avatarBadgeBackground = strongSelf.avatarBadgeBackground {
+                            strongSelf.avatarBadgeBackground = nil
+                            transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.001, completion: { [weak avatarBadgeBackground] _ in
+                                avatarBadgeBackground?.removeFromSupernode()
+                            })
                         }
                     }
                     

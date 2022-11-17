@@ -110,24 +110,24 @@ public final class NavigationBarPresentationData {
     }
 }
 
-enum NavigationPreviousAction: Equatable {
+public enum NavigationPreviousAction: Equatable {
     case item(UINavigationItem)
     case close
     
-    static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
+    public static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
         switch lhs {
-            case let .item(lhsItem):
-                if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
-                    return true
-                } else {
-                    return false
-                }
-            case .close:
-                if case .close = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case let .item(lhsItem):
+            if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
+                return true
+            } else {
+                return false
+            }
+        case .close:
+            if case .close = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -439,7 +439,6 @@ open class BlurredBackgroundView: UIView {
 }
 
 public protocol NavigationBarHeaderView: UIView {
-    func update(size: CGSize, transition: ContainedViewLayoutTransition)
 }
 
 open class NavigationBar: ASDisplayNode {
@@ -657,7 +656,12 @@ open class NavigationBar: ASDisplayNode {
                 self.customHeaderContentView?.removeFromSuperview()
                 
                 if let customHeaderContentView = self.customHeaderContentView {
-                    self.view.addSubview(customHeaderContentView)
+                    self.buttonsContainerNode.view.addSubview(customHeaderContentView)
+                    self.backButtonNode.isHidden = true
+                    self.backButtonArrow.isHidden = true
+                } else {
+                    self.backButtonNode.isHidden = false
+                    self.backButtonArrow.isHidden = false
                 }
             }
         }
@@ -708,7 +712,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     var _previousItem: NavigationPreviousAction?
-    var previousItem: NavigationPreviousAction? {
+    public internal(set) var previousItem: NavigationPreviousAction? {
         get {
             return self._previousItem
         } set(value) {
@@ -1373,7 +1377,7 @@ open class NavigationBar: ASDisplayNode {
         
         if let customHeaderContentView = self.customHeaderContentView {
             let headerSize = CGSize(width: size.width, height: nominalHeight)
-            customHeaderContentView.update(size: headerSize, transition: transition)
+            //customHeaderContentView.update(size: headerSize, transition: transition)
             transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
         }
         

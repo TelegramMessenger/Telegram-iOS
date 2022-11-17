@@ -85,6 +85,7 @@ import ChatTitleView
 import EmojiStatusComponent
 import ChatTimerScreen
 import MediaPasteboardUI
+import ChatListHeaderComponent
 
 #if DEBUG
 import os.signpost

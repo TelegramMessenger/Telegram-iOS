@@ -310,6 +310,7 @@ public enum PresentationResourceParameterKey: Hashable {
     case badgeBackgroundInactiveReactions(CGFloat)
     case chatListBadgeBackgroundInactiveMention(CGFloat)
     case chatListBadgeBackgroundPinned(CGFloat)
+    case badgeBackgroundBorder(CGFloat)
     
     case chatBubbleMediaCorner(incoming: Bool, mainRadius: CGFloat, inset: CGFloat)
     

@@ -1268,7 +1268,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             guard let strongSelf = self, strongSelf.inlineStackContainerNode != nil else {
                 return []
             }
-            let directions: InteractiveTransitionGestureRecognizerDirections = [.leftCenter, .rightCenter]
+            let directions: InteractiveTransitionGestureRecognizerDirections = [.rightCenter]
             return directions
         }, edgeWidth: .widthMultiplier(factor: 1.0 / 6.0, min: 22.0, max: 80.0))
         inlineContentPanRecognizer.delegate = self
@@ -1345,7 +1345,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 }
                 
                 if let directionIsToRight = directionIsToRight, directionIsToRight {
-                    self.setInlineChatList(location: nil)
+                    self.controller?.setInlineChatList(location: nil)
                 } else {
                     self.inlineStackContainerTransitionFraction = 1.0
                     self.controller?.requestLayout(transition: .animated(duration: 0.4, curve: .spring))
@@ -1482,12 +1482,14 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
             return nil
         }
         
+        let effectiveLocation = self.inlineStackContainerNode?.location ?? self.location
+        
         var filter: ChatListNodePeersFilter = []
-        if case .forum = self.location {
+        if case .forum = effectiveLocation {
             filter.insert(.excludeRecent)
         }
         
-        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: location, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
+        let contentNode = ChatListSearchContainerNode(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filter: filter, location: effectiveLocation, displaySearchFilters: displaySearchFilters, hasDownloads: hasDownloads, initialFilter: initialFilter, openPeer: { [weak self] peer, _, threadId, dismissSearch in
             self?.requestOpenPeerFromSearch?(peer, threadId, dismissSearch)
         }, openDisabledPeer: { _, _ in
         }, openRecentPeerOptions: { [weak self] peer in
