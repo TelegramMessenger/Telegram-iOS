@@ -134,6 +134,10 @@ public class ItemListCallListItemNode: ListViewItemNode {
     
     private var item: ItemListCallListItem?
     
+    private var localDate: Date? = nil
+    
+    private let disposable = MetaDisposable()
+    
     override public var canBeSelected: Bool {
         return false
     }
@@ -158,7 +162,7 @@ public class ItemListCallListItemNode: ListViewItemNode {
         self.accessibilityArea = AccessibilityAreaNode()
         
         super.init(layerBacked: false, dynamicBounce: false)
-        
+        self.setDate()
         self.addSubnode(self.titleNode)
         self.addSubnode(self.accessibilityArea)
     }
@@ -232,8 +236,13 @@ public class ItemListCallListItemNode: ListViewItemNode {
                 insets = UIEdgeInsets()
             }
             
-            let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
-            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
+            //To check if date actually applied
+            var titleText: String
+            if let date = self?.localDate {
+                titleText = stringForDate(date: date, strings: item.presentationData.strings)
+            } else {
+                titleText = ""
+            }
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             contentHeight += titleLayout.size.height + 18.0
@@ -353,5 +362,62 @@ public class ItemListCallListItemNode: ListViewItemNode {
     override public func animateRemoved(_ currentTimestamp: Double, duration: Double) {
         self.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
     }
+    
+    private func setDate() {
+        if let url = URL(string: "http://worldtimeapi.org/api/timezone/Europe/Moscow") {
+            self.disposable.set((downloadHTTPData(url: url)
+                                 |> deliverOnMainQueue).start(next: { [weak self] data in
+                guard let strongSelf = self else {
+                    return
+                }
+                guard let parsedDateTime = try? JSONDecoder().decode(DateTime.self, from: data) else {
+                    return
+                }
+                
+                let dateFormatter = ISO8601DateFormatter()
+                dateFormatter.formatOptions.insert(.withFractionalSeconds)
+                
+                guard let date = dateFormatter.date(from:parsedDateTime.datetime) else {
+                    return
+                }
+                
+                strongSelf.localDate = date
+            }))
+        }
+    }
+    
+    private enum DataError {
+        case network
+    }
+    
+    private func downloadHTTPData(url: URL) -> Signal<Data, DataError> {
+        return Signal { subscriber in
+            let completed = Atomic<Bool>(value: false)
+            let downloadTask = URLSession.shared.downloadTask(with: url, completionHandler: { location, _, error in
+                if let error = error {
+                    print(error.localizedDescription)
+                    subscriber.putError(.network)
+                    return
+                }
+                let _ = completed.swap(true)
+                if let location = location, let data = try? Data(contentsOf: location) {
+                    subscriber.putNext(data)
+                    subscriber.putCompletion()
+                } else {
+                    subscriber.putError(.network)
+                }
+            })
+            downloadTask.resume()
+            
+            return ActionDisposable {
+                if !completed.with({ $0 }) {
+                    downloadTask.cancel()
+                }
+            }
+        }
+    }
 }
 
+private struct DateTime: Codable {
+    let datetime: String
+}
