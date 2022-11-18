@@ -374,6 +374,7 @@ final class PeerInfoSelectionPanelNode: ASDisplayNode {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, requestLayout: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)
@@ -2906,15 +2907,22 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             case .edit:
                 if case let .replyThread(message) = strongSelf.chatLocation {
                     let threadId = Int64(message.messageId.id)
-                    if let threadInfo = strongSelf.data?.threadData?.info {
-                        let controller = ForumCreateTopicScreen(context: strongSelf.context, peerId: strongSelf.peerId, mode: .edit(threadId: threadId, threadInfo: threadInfo))
+                    if let threadData = strongSelf.data?.threadData {
+                        let controller = ForumCreateTopicScreen(context: strongSelf.context, peerId: strongSelf.peerId, mode: .edit(threadId: threadId, threadInfo: threadData.info, isHidden: threadData.isHidden))
                         controller.navigationPresentation = .modal
                         let context = strongSelf.context
-                        controller.completion = { [weak controller] title, fileId in
+                        controller.completion = { [weak controller] title, fileId, isHidden in
                             let _ = (context.engine.peers.editForumChannelTopic(id: peerId, threadId: threadId, title: title, iconFileId: fileId)
                             |> deliverOnMainQueue).start(completed: {
                                 controller?.dismiss()
                             })
+                            
+                            if let isHidden = isHidden {
+                                let _ = (context.engine.peers.setForumChannelTopicHidden(id: peerId, threadId: threadId, isHidden: isHidden)
+                                |> deliverOnMainQueue).start(completed: {
+                                    controller?.dismiss()
+                                })
+                            }
                         }
                         strongSelf.controller?.push(controller)
                     }

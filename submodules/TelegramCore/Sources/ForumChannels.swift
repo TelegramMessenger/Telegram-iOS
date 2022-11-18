@@ -341,6 +341,12 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
         var flags: Int32 = 0
         flags |= (1 << 2)
         
+        var hidden: Api.Bool? = nil
+        if threadId == 1, !isClosed {
+            flags |= (1 << 3)
+            hidden = .boolFalse
+        }
+        
         return account.network.request(Api.functions.channels.editForumTopic(
             flags: flags,
             channel: inputChannel,
@@ -348,7 +354,7 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
             title: nil,
             iconEmojiId: nil,
             closed: isClosed ? .boolTrue : .boolFalse,
-            hidden: nil
+            hidden: hidden
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic
@@ -361,6 +367,9 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
                     var data = initialData
                     
                     data.isClosed = isClosed
+                    if let _ = hidden {
+                        data.isHidden = false
+                    }
                     
                     if data != initialData {
                         if let entry = StoredMessageHistoryThreadInfo(data) {

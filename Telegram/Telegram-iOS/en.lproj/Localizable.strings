@@ -8299,3 +8299,6 @@ Sorry for the inconvenience.";
 "Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhidden topic";
 "Notification.OverviewTopicHidden" = "%1$@ hidden %2$@ %3$@";
 "Notification.OverviewTopicUnhidden" = "%1$@ unhidden %2$@ %3$@";
+
+"CreateTopic.ShowGeneral" = "Show in Topics";
+"CreateTopic.ShowGeneralInfo" = "If the 'General' topic is hidden, group members can pull down in the topic list to view it.";

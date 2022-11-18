@@ -456,7 +456,8 @@ public func usernameSetupController(context: AccountContext) -> ViewController {
         dismissInputImpl?()
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         presentControllerImpl?(textAlertController(context: context, title: presentationData.strings.Username_ActivateAlertTitle, text: presentationData.strings.Username_ActivateAlertText, actions: [TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {}), TextAlertAction(type: .defaultAction, title: presentationData.strings.Username_ActivateAlertShow, action: {
-            let _ = context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: true).start(error: { error in
+            let _ = (context.engine.peers.toggleAddressNameActive(domain: .account, name: name, active: true)
+            |> deliverOnMainQueue).start(error: { error in
                 let errorText: String
                 switch error {
                 case .activeLimitReached:

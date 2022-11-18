@@ -1262,6 +1262,8 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             },
             openFeatured: {
             },
+            openSearch: {
+            },
             addGroupAction: { [weak self] groupId, isPremiumLocked in
                 guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {
                     return

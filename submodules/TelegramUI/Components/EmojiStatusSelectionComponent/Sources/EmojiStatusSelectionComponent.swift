@@ -350,7 +350,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     return
                 }
                 strongSelf.controller?._ready.set(.single(true))
-                
+                                
                 var emojiContent = emojiContent
                 if let emojiSearchResult = emojiSearchResult {
                     var emptySearchResults: EmojiPagerContentComponent.EmptySearchResults?
@@ -386,6 +386,8 @@ public final class EmojiStatusSelectionController: ViewController {
                     openStickerSettings: {
                     },
                     openFeatured: {
+                    },
+                    openSearch: {
                     },
                     addGroupAction: { groupId, isPremiumLocked in
                         guard let strongSelf = self, let collectionId = groupId.base as? ItemCollectionId else {

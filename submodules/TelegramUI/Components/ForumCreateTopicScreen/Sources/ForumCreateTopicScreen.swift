@@ -17,6 +17,72 @@ import Postbox
 import PremiumUI
 import ProgressNavigationButtonNode
 
+private final class SwitchComponent: Component {
+    typealias EnvironmentType = Empty
+    
+    let value: Bool
+    let valueUpdated: (Bool) -> Void
+    
+    init(
+        value: Bool,
+        valueUpdated: @escaping (Bool) -> Void
+    ) {
+        self.value = value
+        self.valueUpdated = valueUpdated
+    }
+    
+    static func ==(lhs: SwitchComponent, rhs: SwitchComponent) -> Bool {
+        if lhs.value != rhs.value {
+            return false
+        }
+        return true
+    }
+    
+    final class View: UIView {
+        private let switchView: UISwitch
+    
+        private var component: SwitchComponent?
+        
+        override init(frame: CGRect) {
+            self.switchView = UISwitch()
+            
+            super.init(frame: frame)
+            
+            self.addSubview(self.switchView)
+            
+            self.switchView.addTarget(self, action: #selector(self.valueChanged(_:)), for: .valueChanged)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        @objc func valueChanged(_ sender: Any) {
+            self.component?.valueUpdated(self.switchView.isOn)
+        }
+        
+        func update(component: SwitchComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+            self.component = component
+          
+            self.switchView.setOn(component.value, animated: !transition.animation.isImmediate)
+            
+            self.switchView.sizeToFit()
+            self.switchView.frame = CGRect(origin: .zero, size: self.switchView.frame.size)
+                        
+            return self.switchView.frame.size
+        }
+    }
+
+    public func makeView() -> View {
+        return View(frame: CGRect())
+    }
+    
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
+        return view.update(component: self, availableSize: availableSize, state: state, environment: environment, transition: transition)
+    }
+}
+
+
 private final class TitleFieldComponent: Component {
     typealias EnvironmentType = Empty
     
@@ -384,14 +450,16 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
     let mode: ForumCreateTopicScreen.Mode
     let titleUpdated: (String) -> Void
     let iconUpdated: (Int64?) -> Void
+    let isHiddenUpdated: (Bool) -> Void
     let openPremium: () -> Void
     
-    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, openPremium: @escaping () -> Void) {
+    init(context: AccountContext, peerId: EnginePeer.Id, mode: ForumCreateTopicScreen.Mode, titleUpdated:  @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
         self.context = context
         self.peerId = peerId
         self.mode = mode
         self.titleUpdated = titleUpdated
         self.iconUpdated = iconUpdated
+        self.isHiddenUpdated = isHiddenUpdated
         self.openPremium = openPremium
     }
     
@@ -412,6 +480,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         private let context: AccountContext
         private let titleUpdated: (String) -> Void
         private let iconUpdated: (Int64?) -> Void
+        private let isHiddenUpdated: (Bool) -> Void
         private let openPremium: () -> Void
         
         var emojiContent: EmojiPagerContentComponent?
@@ -426,13 +495,15 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         var title: String
         var fileId: Int64
         var iconColor: Int32
+        var isHidden: Bool
         
         private var hasPremium: Bool = false
         
-        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, openPremium: @escaping () -> Void) {
+        init(context: AccountContext, mode: ForumCreateTopicScreen.Mode, titleUpdated: @escaping (String) -> Void, iconUpdated: @escaping (Int64?) -> Void, isHiddenUpdated: @escaping (Bool) -> Void, openPremium: @escaping () -> Void) {
             self.context = context
             self.titleUpdated = titleUpdated
             self.iconUpdated = iconUpdated
+            self.isHiddenUpdated = isHiddenUpdated
             self.openPremium = openPremium
             
             switch mode {
@@ -440,13 +511,14 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                 self.isGeneral = false
                 self.title = ""
                 self.fileId = 0
-                
                 self.iconColor = ForumCreateTopicScreen.iconColors.randomElement() ?? 0x0
-            case let .edit(threadId, info):
+                self.isHidden = false
+            case let .edit(threadId, info, isHidden):
                 self.isGeneral = threadId == 1
                 self.title = info.title
                 self.fileId = info.icon ?? 0
                 self.iconColor = info.iconColor
+                self.isHidden = isHidden
             }
             
             super.init()
@@ -509,6 +581,12 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             self.updated(transition: .immediate)
             self.titleUpdated(text)
             self.updateEmojiContent()
+        }
+        
+        func updateIsHidden(_ isHidden: Bool) {
+            self.isHidden = isHidden
+            self.updated(transition: .immediate)
+            self.isHiddenUpdated(isHidden)
         }
         
         func updateEmojiContent() {
@@ -575,6 +653,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             mode: self.mode,
             titleUpdated: self.titleUpdated,
             iconUpdated: self.iconUpdated,
+            isHiddenUpdated: self.isHiddenUpdated,
             openPremium: self.openPremium
         )
     }
@@ -584,6 +663,11 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
         let titleHeader = Child(MultilineTextComponent.self)
         let titleBackground = Child(RoundedRectangle.self)
         let titleField = Child(TitleFieldComponent.self)
+        
+        let hideBackground = Child(RoundedRectangle.self)
+        let hideTitle = Child(MultilineTextComponent.self)
+        let hideSwitch = Child(SwitchComponent.self)
+        let hideInfo = Child(MultilineTextComponent.self)
         
         let iconHeader = Child(MultilineTextComponent.self)
         let iconBackground = Child(RoundedRectangle.self)
@@ -624,7 +708,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     horizontalAlignment: .natural,
                     maximumNumberOfLines: 1
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: CGFloat.greatestFiniteMagnitude),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0  - environment.safeInsets.left - environment.safeInsets.right, height: CGFloat.greatestFiniteMagnitude),
                 transition: .immediate
             )
             context.add(titleHeader
@@ -637,7 +721,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                     color: environment.theme.list.itemBlocksBackgroundColor,
                     cornerRadius: 10.0
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
                 transition: context.transition
             )
             context.add(titleBackground
@@ -662,7 +746,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         state?.switchIcon()
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: 44.0),
+                availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
                 transition: context.transition
             )
             context.add(titleField
@@ -671,8 +755,79 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
             
             contentHeight += titleBackground.size.height + sectionSpacing
             
-            if case let .edit(threadId, _) = context.component.mode, threadId == 1 {
+            if case let .edit(threadId, _, _) = context.component.mode, threadId == 1 {
+                let hideBackground = hideBackground.update(
+                    component: RoundedRectangle(
+                        color: environment.theme.list.itemBlocksBackgroundColor,
+                        cornerRadius: 10.0
+                    ),
+                    availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: 44.0),
+                    transition: context.transition
+                )
+                context.add(hideBackground
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: contentHeight + hideBackground.size.height / 2.0))
+                )
                 
+                let hideTitle = hideTitle.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.CreateTopic_ShowGeneral,
+                            font: Font.regular(17.0),
+                            textColor: environment.theme.list.itemPrimaryTextColor,
+                            paragraphAlignment: .natural)
+                        ),
+                        horizontalAlignment: .natural,
+                        maximumNumberOfLines: 0
+                    ),
+                    availableSize: CGSize(
+                        width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
+                        height: CGFloat.greatestFiniteMagnitude
+                    ),
+                    transition: .immediate
+                )
+                context.add(hideTitle
+                    .position(CGPoint(x: environment.safeInsets.left + sideInset + 16.0 + hideTitle.size.width / 2.0, y: contentHeight + hideBackground.size.height / 2.0))
+                )
+                
+                let hideSwitch = hideSwitch.update(
+                    component: SwitchComponent(
+                        value: !state.isHidden,
+                        valueUpdated: { [weak state] newValue in
+                            state?.updateIsHidden(!newValue)
+                        }
+                    ),
+                    availableSize: CGSize(
+                        width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
+                        height: CGFloat.greatestFiniteMagnitude
+                    ),
+                    transition: .immediate
+                )
+                context.add(hideSwitch
+                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - sideInset - 16.0 - hideSwitch.size.width / 2.0, y: contentHeight + hideBackground.size.height / 2.0))
+                )
+                
+                contentHeight += hideBackground.size.height
+                
+                let hideInfo = hideInfo.update(
+                    component: MultilineTextComponent(
+                        text: .plain(NSAttributedString(
+                            string: environment.strings.CreateTopic_ShowGeneralInfo,
+                            font: Font.regular(13.0),
+                            textColor: environment.theme.list.freeTextColor,
+                            paragraphAlignment: .natural)
+                        ),
+                        horizontalAlignment: .natural,
+                        maximumNumberOfLines: 0
+                    ),
+                    availableSize: CGSize(
+                        width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
+                        height: CGFloat.greatestFiniteMagnitude
+                    ),
+                    transition: .immediate
+                )
+                context.add(hideInfo
+                    .position(CGPoint(x: environment.safeInsets.left + sideInset + 16.0 + hideInfo.size.width / 2.0, y: contentHeight + 7.0 + hideInfo.size.height / 2.0))
+                )
             } else {
                 let iconHeader = iconHeader.update(
                     component: MultilineTextComponent(
@@ -686,13 +841,13 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         maximumNumberOfLines: 1
                     ),
                     availableSize: CGSize(
-                        width: context.availableSize.width - sideInset * 2.0,
+                        width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
                         height: CGFloat.greatestFiniteMagnitude
                     ),
                     transition: .immediate
                 )
                 context.add(iconHeader
-                    .position(CGPoint(x: sideInset * 2.0 + iconHeader.size.width / 2.0, y: contentHeight + iconHeader.size.height / 2.0))
+                    .position(CGPoint(x: environment.safeInsets.left + sideInset + 16.0 + iconHeader.size.width / 2.0, y: contentHeight + iconHeader.size.height / 2.0))
                 )
                 contentHeight += iconHeader.size.height + headerSpacing
                 
@@ -704,7 +859,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         cornerRadius: 10.0
                     ),
                     availableSize: CGSize(
-                        width: context.availableSize.width - sideInset * 2.0,
+                        width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right,
                         height: context.availableSize.height - contentHeight - bottomInset
                     ),
                     transition: context.transition
@@ -726,7 +881,7 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                             separatorColor: environment.theme.list.blocksBackgroundColor
                         ),
                         environment: {},
-                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0, height: availableHeight),
+                        availableSize: CGSize(width: context.availableSize.width - sideInset * 2.0 - environment.safeInsets.left - environment.safeInsets.right, height: availableHeight),
                         transition: context.transition
                     )
                     context.add(iconSelector
@@ -745,6 +900,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         openStickerSettings: {
                         },
                         openFeatured: {
+                        },
+                        openSearch: {
                         },
                         addGroupAction: { groupId, isPremiumLocked in
                             guard let collectionId = groupId.base as? ItemCollectionId else {
@@ -805,7 +962,7 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     
     public enum Mode: Equatable {
         case create
-        case edit(threadId: Int64, threadInfo: EngineMessageHistoryThread.Info)
+        case edit(threadId: Int64, threadInfo: EngineMessageHistoryThread.Info, isHidden: Bool)
     }
     
     private let context: AccountContext
@@ -813,8 +970,8 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     
     private var doneBarItem: UIBarButtonItem?
     
-    private var state: (String, Int64?) = ("", nil)
-    public var completion: (String, Int64?) -> Void = { _, _ in }
+    private var state: (String, Int64?, Bool?) = ("", nil, nil)
+    public var completion: (String, Int64?, Bool?) -> Void = { _, _, _ in }
     
     public var isInProgress: Bool = false {
         didSet {
@@ -835,12 +992,15 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         
         var titleUpdatedImpl: ((String) -> Void)?
         var iconUpdatedImpl: ((Int64?) -> Void)?
+        var isHiddenUpdatedImpl: ((Bool) -> Void)?
         var openPremiumImpl: (() -> Void)?
         
         super.init(context: context, component: ForumCreateTopicScreenComponent(context: context, peerId: peerId, mode: mode, titleUpdated: { title in
             titleUpdatedImpl?(title)
         }, iconUpdated: { fileId in
             iconUpdatedImpl?(fileId)
+        }, isHiddenUpdated: { isHidden in
+            isHiddenUpdatedImpl?(isHidden)
         }, openPremium: {
             openPremiumImpl?()
         }), navigationBarAppearance: .transparent)
@@ -852,11 +1012,11 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         case .create:
             title = presentationData.strings.CreateTopic_CreateTitle
             doneTitle = presentationData.strings.CreateTopic_Create
-        case let .edit(_, topic):
+        case let .edit(threadId, topic, isHidden):
             title = presentationData.strings.CreateTopic_EditTitle
             doneTitle = presentationData.strings.Common_Done
             
-            self.state = (topic.title, topic.icon)
+            self.state = (topic.title, topic.icon, threadId == 1 ? isHidden : nil)
         }
         
         self.title = title
@@ -872,12 +1032,12 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
         }
         
         titleUpdatedImpl = { [weak self] title in
-            guard let self else {
+            guard let strongSelf = self else {
                 return
             }
-            self.doneBarItem?.isEnabled = !title.isEmpty
+            strongSelf.doneBarItem?.isEnabled = !title.isEmpty
             
-            self.state = (title, self.state.1)
+            strongSelf.state = (title, strongSelf.state.1, strongSelf.state.2)
         }
         
         iconUpdatedImpl = { [weak self] fileId in
@@ -885,7 +1045,15 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
                 return
             }
             
-            strongSelf.state = (strongSelf.state.0, fileId)
+            strongSelf.state = (strongSelf.state.0, fileId, strongSelf.state.2)
+        }
+        
+        isHiddenUpdatedImpl = { [weak self] isHidden in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            strongSelf.state = (strongSelf.state.0, strongSelf.state.1, isHidden)
         }
         
         openPremiumImpl = { [weak self] in
@@ -916,6 +1084,6 @@ public class ForumCreateTopicScreen: ViewControllerComponentContainer {
     }
     
     @objc private func createPressed() {
-        self.completion(self.state.0, self.state.1)
+        self.completion(self.state.0, self.state.1, self.state.2)
     }
 }

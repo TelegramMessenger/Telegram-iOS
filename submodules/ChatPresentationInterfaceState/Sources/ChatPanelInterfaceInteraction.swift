@@ -148,6 +148,7 @@ public final class ChatPanelInterfaceInteraction {
     public let insertText: (NSAttributedString) -> Void
     public let backwardsDeleteText: () -> Void
     public let restartTopic: () -> Void
+    public let requestLayout: (ContainedViewLayoutTransition) -> Void
     public let chatController: () -> ViewController?
     public let statuses: ChatPanelInterfaceInteractionStatuses?
     
@@ -245,6 +246,7 @@ public final class ChatPanelInterfaceInteraction {
         insertText: @escaping (NSAttributedString) -> Void,
         backwardsDeleteText: @escaping () -> Void,
         restartTopic: @escaping () -> Void,
+        requestLayout: @escaping (ContainedViewLayoutTransition) -> Void,
         chatController: @escaping () -> ViewController?,
         statuses: ChatPanelInterfaceInteractionStatuses?
     ) {
@@ -341,6 +343,7 @@ public final class ChatPanelInterfaceInteraction {
         self.insertText = insertText
         self.backwardsDeleteText = backwardsDeleteText
         self.restartTopic = restartTopic
+        self.requestLayout = requestLayout
 
         self.chatController = chatController
         self.statuses = statuses
@@ -445,6 +448,7 @@ public final class ChatPanelInterfaceInteraction {
         }, insertText: { _ in
         }, backwardsDeleteText: {
         }, restartTopic: {
+        }, requestLayout: { _ in
         }, chatController: {
             return nil
         }, statuses: nil)
