@@ -793,6 +793,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
+    func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
@@ -830,6 +831,22 @@ public enum PremiumIntroSource {
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case voiceToText
     case fasterDownload
+}
+
+public enum PremiumDemoSubject {
+    case doubleLimits
+    case moreUpload
+    case fasterDownload
+    case voiceToText
+    case noAds
+    case uniqueReactions
+    case premiumStickers
+    case advancedChatManagement
+    case profileBadge
+    case animatedUserpics
+    case appIcons
+    case animatedEmoji
+    case emojiStatus
 }
 
 public protocol ComposeController: ViewController {

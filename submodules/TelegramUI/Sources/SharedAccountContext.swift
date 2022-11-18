@@ -1424,48 +1424,81 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     public func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController {
         let mappedSource: PremiumSource
         switch source {
-            case .settings:
-                mappedSource = .settings
-            case .stickers:
-                mappedSource = .stickers
-            case .reactions:
-                mappedSource = .reactions
-            case .ads:
-                mappedSource = .ads
-            case .upload:
-                mappedSource = .upload
-            case .groupsAndChannels:
-                mappedSource = .groupsAndChannels
-            case .pinnedChats:
-                mappedSource = .pinnedChats
-            case .publicLinks:
-                mappedSource = .publicLinks
-            case .savedGifs:
-                mappedSource = .savedGifs
-            case .savedStickers:
-                mappedSource = .savedStickers
-            case .folders:
-                mappedSource = .folders
-            case .chatsPerFolder:
-                mappedSource = .chatsPerFolder
-            case .appIcons:
-                mappedSource = .appIcons
-            case .accounts:
-                mappedSource = .accounts
-            case .about:
-                mappedSource = .about
-            case let .deeplink(reference):
-                mappedSource = .deeplink(reference)
-            case let .profile(peerId):
-                mappedSource = .profile(peerId)
-            case let .emojiStatus(peerId, fileId, file, packTitle):
-                mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
-            case .voiceToText:
-                mappedSource = .voiceToText
-            case .fasterDownload:
-                mappedSource = .fasterDownload
+        case .settings:
+            mappedSource = .settings
+        case .stickers:
+            mappedSource = .stickers
+        case .reactions:
+            mappedSource = .reactions
+        case .ads:
+            mappedSource = .ads
+        case .upload:
+            mappedSource = .upload
+        case .groupsAndChannels:
+            mappedSource = .groupsAndChannels
+        case .pinnedChats:
+            mappedSource = .pinnedChats
+        case .publicLinks:
+            mappedSource = .publicLinks
+        case .savedGifs:
+            mappedSource = .savedGifs
+        case .savedStickers:
+            mappedSource = .savedStickers
+        case .folders:
+            mappedSource = .folders
+        case .chatsPerFolder:
+            mappedSource = .chatsPerFolder
+        case .appIcons:
+            mappedSource = .appIcons
+        case .accounts:
+            mappedSource = .accounts
+        case .about:
+            mappedSource = .about
+        case let .deeplink(reference):
+            mappedSource = .deeplink(reference)
+        case let .profile(peerId):
+            mappedSource = .profile(peerId)
+        case let .emojiStatus(peerId, fileId, file, packTitle):
+            mappedSource = .emojiStatus(peerId, fileId, file, packTitle)
+        case .voiceToText:
+            mappedSource = .voiceToText
+        case .fasterDownload:
+            mappedSource = .fasterDownload
         }
         return PremiumIntroScreen(context: context, source: mappedSource)
+    }
+    
+    public func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController {
+        let mappedSubject: PremiumDemoScreen.Subject
+        switch subject {
+        case .doubleLimits:
+            mappedSubject = .doubleLimits
+        case .moreUpload:
+            mappedSubject = .moreUpload
+        case .fasterDownload:
+            mappedSubject = .fasterDownload
+        case .voiceToText:
+            mappedSubject = .voiceToText
+        case .noAds:
+            mappedSubject = .noAds
+        case .uniqueReactions:
+            mappedSubject = .uniqueReactions
+        case .premiumStickers:
+            mappedSubject = .premiumStickers
+        case .advancedChatManagement:
+            mappedSubject = .advancedChatManagement
+        case .profileBadge:
+            mappedSubject = .profileBadge
+        case .animatedUserpics:
+            mappedSubject = .animatedUserpics
+        case .appIcons:
+            mappedSubject = .appIcons
+        case .animatedEmoji:
+            mappedSubject = .animatedEmoji
+        case .emojiStatus:
+            mappedSubject = .emojiStatus
+        }
+        return PremiumDemoScreen(context: context, subject: mappedSubject, action: action)
     }
     
     public func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController {

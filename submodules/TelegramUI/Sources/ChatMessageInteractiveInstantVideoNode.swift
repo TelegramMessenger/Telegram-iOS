@@ -141,6 +141,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     private var isWaitingForCollapse: Bool = false
     
+    private var hapticFeedback: HapticFeedback?
+    
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     
     override init() {
@@ -1486,11 +1488,24 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
                 
         guard item.associatedData.isPremium else {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.impact(.medium)
+            
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
             let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                 if case .undo = action {
-                    let introController = item.context.sharedContext.makePremiumIntroController(context: item.context, source: .settings)
-                    item.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
+                    let context = item.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
                     
                     let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).start()
                 }
