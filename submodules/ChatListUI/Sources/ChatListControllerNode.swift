@@ -1162,6 +1162,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private(set) var inlineStackContainerTransitionFraction: CGFloat = 0.0
     private(set) var inlineStackContainerNode: ChatListContainerNode?
     private var inlineContentPanRecognizer: InteractiveTransitionGestureRecognizer?
+    private(set) var temporaryContentOffsetChangeTransition: ContainedViewLayoutTransition?
     
     private var tapRecognizer: UITapGestureRecognizer?
     var navigationBar: NavigationBar?
@@ -1687,7 +1688,9 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                         inlineStackContainerNode?.removeFromSupernode()
                     })
                     
+                    self.temporaryContentOffsetChangeTransition = transition
                     self.controller?.requestLayout(transition: transition)
+                    self.temporaryContentOffsetChangeTransition = nil
                 } else {
                     inlineStackContainerNode.removeFromSupernode()
                 }

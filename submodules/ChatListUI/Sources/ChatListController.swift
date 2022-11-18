@@ -1163,7 +1163,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 if validLayout.inVoiceOver {
                     offset = .known(0.0)
                 }
-                searchContentNode.updateListVisibleContentOffset(offset)
+                searchContentNode.updateListVisibleContentOffset(offset, transition: strongSelf.chatListDisplayNode.temporaryContentOffsetChangeTransition ?? .immediate)
             }
         }
         
