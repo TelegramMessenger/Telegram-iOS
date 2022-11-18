@@ -1702,6 +1702,8 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     func scrollToTop() {
         if let searchDisplayController = self.searchDisplayController {
             searchDisplayController.contentNode.scrollToTop()
+        } else if let inlineStackContainerNode = self.inlineStackContainerNode {
+            inlineStackContainerNode.scrollToTop()
         } else {
             self.containerNode.scrollToTop()
         }

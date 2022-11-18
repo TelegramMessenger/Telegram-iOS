@@ -326,11 +326,17 @@ public final class ChatListHeaderComponent: Component {
             })
             transition.setAlpha(view: self.rightButtonOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
             
+            if let backButtonView = self.backButtonView {
+                transition.setBounds(view: backButtonView, bounds: CGRect(origin: CGPoint(x: fraction * self.bounds.width * 0.5, y: 0.0), size: backButtonView.bounds.size), completion: { _ in
+                    completion()
+                })
+            }
+            
             if let chatListTitleView = self.chatListTitleView, let nextBackButtonView = nextView.backButtonView {
                 let titleFrame = chatListTitleView.titleNode.view.convert(chatListTitleView.titleNode.bounds, to: self.titleOffsetContainer)
                 let backButtonTitleFrame = nextBackButtonView.convert(nextBackButtonView.titleView.frame, to: nextView)
                 
-                let totalOffset = titleFrame.midX - backButtonTitleFrame.midX
+                let totalOffset = titleFrame.minX - backButtonTitleFrame.minX
                 
                 transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: totalOffset * fraction, y: 0.0), size: self.titleOffsetContainer.bounds.size))
                 transition.setAlpha(view: self.titleOffsetContainer, alpha: (1.0 - fraction))
@@ -350,7 +356,7 @@ public final class ChatListHeaderComponent: Component {
                     let previousTitleFrame = previousChatListTitleView.titleNode.view.convert(previousChatListTitleView.titleNode.bounds, to: previousView.titleOffsetContainer)
                     let backButtonTitleFrame = backButtonView.convert(backButtonView.titleView.frame, to: self)
                     
-                    let totalOffset = previousTitleFrame.midX - backButtonTitleFrame.midX
+                    let totalOffset = previousTitleFrame.minX - backButtonTitleFrame.minX
                     
                     transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -totalOffset * (1.0 - fraction), y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
                     transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: fraction)

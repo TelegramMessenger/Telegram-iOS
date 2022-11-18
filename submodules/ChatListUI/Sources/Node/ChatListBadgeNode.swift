@@ -191,7 +191,7 @@ final class ChatListBadgeNode: ASDisplayNode {
      
                     let backgroundFrame = CGRect(x: 0.0, y: 0.0, width: badgeWidth, height: strongSelf.backgroundNode.image?.size.height ?? 0.0)
                     if let (textLayout, _) = textLayoutAndApply {
-                        let badgeTextFrame = CGRect(origin: CGPoint(x: backgroundFrame.midX - textLayout.size.width / 2.0, y: backgroundFrame.minY + floorToScreenPixels((backgroundFrame.height - textLayout.size.height) / 2.0)), size: textLayout.size)
+                        let badgeTextFrame = CGRect(origin: CGPoint(x: backgroundFrame.midX - textLayout.size.width / 2.0, y: backgroundFrame.minY + UIScreenPixel + floorToScreenPixels((backgroundFrame.height - textLayout.size.height) / 2.0)), size: textLayout.size)
                         strongSelf.textNode.position = badgeTextFrame.center
                         strongSelf.textNode.bounds = CGRect(origin: CGPoint(), size: badgeTextFrame.size)
                         if animateTextNode {

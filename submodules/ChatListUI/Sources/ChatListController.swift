@@ -366,7 +366,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 case let .known(offset):
                     let isFirstFilter = strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter == strongSelf.chatListDisplayNode.containerNode.availableFilters.first?.filter
                     
-                    if offset <= navigationBarSearchContentHeight + 1.0 && !isFirstFilter {
+                    if offset <= navigationBarSearchContentHeight + 1.0 && strongSelf.chatListDisplayNode.inlineStackContainerNode != nil {
+                        strongSelf.setInlineChatList(location: nil)
+                    } else if offset <= navigationBarSearchContentHeight + 1.0 && !isFirstFilter {
                         let firstFilter = strongSelf.chatListDisplayNode.containerNode.availableFilters.first ?? .all
                         let targetTab: ChatListFilterTabEntryId
                         switch firstFilter {
@@ -380,7 +382,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         if let searchContentNode = strongSelf.searchContentNode {
                             searchContentNode.updateExpansionProgress(1.0, animated: true)
                         }
-                        strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
+                        if let inlineStackContainerNode = strongSelf.chatListDisplayNode.inlineStackContainerNode {
+                            inlineStackContainerNode.currentItemNode.scrollToPosition(.top)
+                        } else {
+                            strongSelf.chatListDisplayNode.containerNode.currentItemNode.scrollToPosition(.top)
+                        }
                     }
                 }
             }
@@ -949,7 +955,11 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     if case let .channel(channel) = peer, channel.flags.contains(.isForum), threadId == nil {
                         strongSelf.chatListDisplayNode.clearHighlightAnimated(true)
                         
-                        strongSelf.setInlineChatList(location: .forum(peerId: channel.id))
+                        if strongSelf.chatListDisplayNode.inlineStackContainerNode?.location == .forum(peerId: channel.id) {
+                            strongSelf.setInlineChatList(location: nil)
+                        } else {
+                            strongSelf.setInlineChatList(location: .forum(peerId: channel.id))
+                        }
                     } else {
                         if let threadId = threadId {
                             let _ = strongSelf.context.sharedContext.navigateToForumThread(context: strongSelf.context, peerId: peer.id, threadId: threadId, messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .never).start()
@@ -2633,6 +2643,9 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             if strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter?.id == updatedFilter?.id {
                 strongSelf.scrollToTop?()
             } else {
+                if strongSelf.chatListDisplayNode.inlineStackContainerNode != nil {
+                    strongSelf.setInlineChatList(location: nil)
+                }
                 strongSelf.chatListDisplayNode.containerNode.switchToFilter(id: updatedFilter.flatMap { .filter($0.id) } ?? .all)
             }
         })
