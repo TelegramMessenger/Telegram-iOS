@@ -35,7 +35,7 @@ struct ChatListNodeListViewTransition {
     let animateCrossfade: Bool
 }
 
-final class ChatListHighlightedLocation {
+final class ChatListHighlightedLocation: Equatable {
     let location: ChatLocation
     let progress: CGFloat
     
@@ -46,6 +46,16 @@ final class ChatListHighlightedLocation {
     
     func withUpdatedProgress(_ progress: CGFloat) -> ChatListHighlightedLocation {
         return ChatListHighlightedLocation(location: location, progress: progress)
+    }
+    
+    static func ==(lhs: ChatListHighlightedLocation, rhs: ChatListHighlightedLocation) -> Bool {
+        if lhs.location != rhs.location {
+            return false
+        }
+        if lhs.progress != rhs.progress {
+            return false
+        }
+        return true
     }
 }
 
@@ -84,6 +94,9 @@ public final class ChatListNodeInteraction {
     
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
+    
+    var isInlineMode: Bool = false
+    var inlineNavigationLocation: ChatListHighlightedLocation?
     
     let animationCache: AnimationCache
     let animationRenderer: MultiAnimationRenderer
@@ -875,7 +888,10 @@ public final class ChatListNode: ListView {
     public var selectionLimit: Int32 = 100
     public var reachedSelectionLimit: ((Int32) -> Void)?
     
-    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool) {
+    private var visibleTopInset: CGFloat?
+    private var originalTopInset: CGFloat?
+    
+    public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
         self.context = context
         self.location = location
         self.chatListFilter = chatListFilter
@@ -1162,6 +1178,7 @@ public final class ChatListNode: ListView {
                 self.peerSelected?(peer, threadId, true, true, nil)
             })
         })
+        nodeInteraction.isInlineMode = isInlineMode
         
         let viewProcessingQueue = self.viewProcessingQueue
         
@@ -1953,6 +1970,9 @@ public final class ChatListNode: ListView {
             guard let strongSelf = self else {
                 return
             }
+            if !strongSelf.dequeuedInitialTransitionOnLayout {
+                return
+            }
             let atTop: Bool
             var revealHiddenItems: Bool = false
             switch offset {
@@ -2284,11 +2304,15 @@ public final class ChatListNode: ListView {
             var scrollToItem = transition.scrollToItem
             if transition.adjustScrollToFirstItem {
                 var offset: CGFloat = 0.0
-                switch self.visibleContentOffset() {
-                case let .known(value) where abs(value) < .ulpOfOne:
-                    offset = 0.0
-                default:
-                    offset = -navigationBarSearchContentHeight
+                if let visibleTopInset = self.visibleTopInset {
+                    offset = visibleTopInset - self.insets.top
+                } else {
+                    switch self.visibleContentOffset() {
+                    case let .known(value) where abs(value) < .ulpOfOne:
+                        offset = 0.0
+                    default:
+                        offset = -navigationBarSearchContentHeight
+                    }
                 }
                 scrollToItem = ListViewScrollToItem(index: 0, position: .top(offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
             }
@@ -2345,8 +2369,61 @@ public final class ChatListNode: ListView {
         }
     }
     
-    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets) {
-        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: nil, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+    public func fixContentOffset(offset: CGFloat) {
+        let _ = self.scrollToOffsetFromTop(offset, animated: false)
+        
+        /*let scrollToItem: ListViewScrollToItem = ListViewScrollToItem(index: 0, position: .top(-offset), animated: false, curve: .Default(duration: 0.0), directionHint: .Up)
+        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: scrollToItem, updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })*/
+    }
+    
+    public func updateLayout(transition: ContainedViewLayoutTransition, updateSizeAndInsets: ListViewUpdateSizeAndInsets, visibleTopInset: CGFloat, originalTopInset: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat) {
+        
+        var highlightedLocation: ChatListHighlightedLocation?
+        if case let .forum(peerId) = inlineNavigationLocation {
+            highlightedLocation = ChatListHighlightedLocation(location: .peer(id: peerId), progress: inlineNavigationTransitionFraction)
+        }
+        var navigationLocationPresenceUpdated = false
+        if (self.interaction?.inlineNavigationLocation == nil) != (highlightedLocation == nil) {
+            navigationLocationPresenceUpdated = true
+        }
+        
+        var navigationLocationUpdated = false
+        if self.interaction?.inlineNavigationLocation != highlightedLocation {
+            self.interaction?.inlineNavigationLocation = highlightedLocation
+            navigationLocationUpdated = true
+        }
+        
+        let insetDelta: CGFloat = 0.0
+        if navigationLocationPresenceUpdated {
+            let targetTopInset: CGFloat
+            if highlightedLocation != nil {
+                targetTopInset = self.visibleTopInset ?? self.insets.top
+            } else {
+                targetTopInset = self.originalTopInset ?? self.insets.top
+            }
+            let immediateInsetDelta = self.insets.top - targetTopInset
+            
+            self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous], scrollToItem: nil, additionalScrollDistance: immediateInsetDelta, updateSizeAndInsets: ListViewUpdateSizeAndInsets(size: self.visibleSize, insets: UIEdgeInsets(top: targetTopInset, left: self.insets.left, bottom: self.insets.bottom, right: self.insets.right), duration: 0.0, curve: .Default(duration: 0.0)), stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
+        }
+        
+        self.visualInsets = UIEdgeInsets(top: visibleTopInset, left: 0.0, bottom: 0.0, right: 0.0)
+            
+        self.visibleTopInset = visibleTopInset
+        self.originalTopInset = originalTopInset
+        
+        var additionalScrollDistance: CGFloat = 0.0
+        
+        var options: ListViewDeleteAndInsertOptions = [.Synchronous, .LowLatency]
+        if navigationLocationUpdated {
+            options.insert(.ForceUpdate)
+            
+            if transition.isAnimated {
+                options.insert(.AnimateInsertion)
+            }
+            
+            additionalScrollDistance += insetDelta
+        }
+        self.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: options, scrollToItem: nil, additionalScrollDistance: additionalScrollDistance, updateSizeAndInsets: updateSizeAndInsets, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
         
         if !self.dequeuedInitialTransitionOnLayout {
             self.dequeuedInitialTransitionOnLayout = true

@@ -260,12 +260,6 @@ class CallKitProviderDelegate: NSObject, CXProviderDelegate {
         
         OngoingCallContext.setupAudioSession()
         
-        /*do {
-            try AVAudioSession.sharedInstance().setMode(.voiceChat)
-        } catch let e {
-            print("AVAudioSession.sharedInstance().setMode(.voiceChat) error \(e)")
-        }*/
-        
         self.provider.reportNewIncomingCall(with: uuid, update: update, completion: { error in
             completion?(error as NSError?)
         })

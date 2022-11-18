@@ -235,6 +235,12 @@ public struct PresentationResourcesChatList {
         })
     }
     
+    public static func badgeBackgroundBorder(_ theme: PresentationTheme, diameter: CGFloat) -> UIImage? {
+        return theme.image(PresentationResourceParameterKey.badgeBackgroundBorder(diameter), { theme in
+            return generateStretchableFilledCircleImage(diameter: diameter, color: theme.chatList.pinnedItemBackgroundColor.blitOver(theme.chatList.backgroundColor, alpha: 1.0))
+        })
+    }
+    
     public static func mutedIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatListMutedIcon.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat List/PeerMutedIcon"), color: theme.chatList.muteIconColor)

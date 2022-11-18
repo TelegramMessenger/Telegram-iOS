@@ -812,6 +812,7 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
     RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
     sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
     sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+    sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionAllowBluetoothA2DP;
     sharedConfiguration.outputNumberOfChannels = 1;
     [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
     
@@ -889,12 +890,9 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
         
 #ifdef WEBRTC_IOS
         RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
-        if (useManualAudioSessionControl) {
-            sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
-        } else {
-            sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
-        }
+        sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
         sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+        sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionAllowBluetoothA2DP;
         sharedConfiguration.outputNumberOfChannels = 1;
         [RTCAudioSessionConfiguration setWebRTCConfiguration:sharedConfiguration];
         
@@ -1495,6 +1493,7 @@ private:
         RTCAudioSessionConfiguration *sharedConfiguration = [RTCAudioSessionConfiguration webRTCConfiguration];
         sharedConfiguration.mode = AVAudioSessionModeVoiceChat;
         sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionMixWithOthers;
+        sharedConfiguration.categoryOptions |= AVAudioSessionCategoryOptionAllowBluetoothA2DP;
         if (disableAudioInput) {
             sharedConfiguration.outputNumberOfChannels = 2;
         } else {

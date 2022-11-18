@@ -206,6 +206,17 @@ final class ViewTracker {
         let record = (view, ValuePipe<CombinedView>())
         let index = self.combinedViews.add(record)
         
+        if view.views.keys.contains(where: { key in
+            switch key {
+            case .messageHistoryThreadIndex:
+                return true
+            default:
+                return false
+            }
+        }) {
+            self.updateTrackedForumTopicListHoles()
+        }
+        
         return (index, record.1.signal())
     }
     

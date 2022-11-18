@@ -70,7 +70,9 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
     }
     |> map { data, size, bytesPerRow in
         return (size, { arguments in
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
 
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize.aspectFilled(arguments.boundingSize).fitted(arguments.imageSize)
@@ -105,7 +107,9 @@ public func qrCode(string: String, color: UIColor, backgroundColor: UIColor? = n
             }
             
             let squareSize = CGSize(width: side, height: side)
-            let tmpContext = DrawingContext(size: CGSize(width: squareSize.width * 4.0, height: squareSize.height), scale: arguments.scale ?? 0.0, clear: true)
+            guard let tmpContext = DrawingContext(size: CGSize(width: squareSize.width * 4.0, height: squareSize.height), scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
             tmpContext.withContext { c in
                 if let backgroundColor = backgroundColor {
                     c.setFillColor(backgroundColor.cgColor)

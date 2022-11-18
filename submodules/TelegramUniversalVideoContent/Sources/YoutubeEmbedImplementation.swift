@@ -495,7 +495,9 @@ private func youtubeEmbedStoryboardImage(account: Account, resource: YoutubeEmbe
     
     return signal |> map { fullSizeData in
         let drawingSize = CGSize(width: CGFloat(size.width), height: CGFloat(size.height))
-        let context = DrawingContext(size: drawingSize, clear: true)
+        guard let context = DrawingContext(size: drawingSize, clear: true) else {
+            return nil
+        }
         
         var fullSizeImage: CGImage?
         if let fullSizeData = fullSizeData {

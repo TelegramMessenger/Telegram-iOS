@@ -103,7 +103,7 @@ private func generateGradient(size: CGSize, colors inputColors: [UIColor], posit
         positionFloats.advanced(by: i * 2 + 1).pointee = Float(1.0 - positions[i].y)
     }
 
-    let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: true, clear: false)
+    let context = DrawingContext(size: CGSize(width: CGFloat(width), height: CGFloat(height)), scale: 1.0, opaque: true, clear: false)!
     let imageBytes = context.bytes.assumingMemoryBound(to: UInt8.self)
 
     for y in 0 ..< height {

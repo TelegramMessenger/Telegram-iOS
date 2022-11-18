@@ -490,7 +490,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
     }
 }
 
-func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool?, isClosed: Bool?, chatListController: ChatListControllerImpl?, joined: Bool) -> Signal<[ContextMenuItem], NoError> {
+func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: Int64, isPinned: Bool?, isClosed: Bool?, chatListController: ChatListControllerImpl?, joined: Bool, canSelect: Bool) -> Signal<[ContextMenuItem], NoError> {
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
 
@@ -763,11 +763,13 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
             }
         }
         
-        items.append(.separator)
-        items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
-            f(.default)
-            chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
-        })))
+        if canSelect {
+            items.append(.separator)
+            items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_Select, textColor: .primary, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Select"), color: theme.contextMenu.primaryColor) }, action: { _, f in
+                f(.default)
+                chatListController?.selectPeerThread(peerId: peerId, threadId: threadId)
+            })))
+        }
         
         return .single(items)
     }

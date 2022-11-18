@@ -110,24 +110,24 @@ public final class NavigationBarPresentationData {
     }
 }
 
-enum NavigationPreviousAction: Equatable {
+public enum NavigationPreviousAction: Equatable {
     case item(UINavigationItem)
     case close
     
-    static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
+    public static func ==(lhs: NavigationPreviousAction, rhs: NavigationPreviousAction) -> Bool {
         switch lhs {
-            case let .item(lhsItem):
-                if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
-                    return true
-                } else {
-                    return false
-                }
-            case .close:
-                if case .close = rhs {
-                    return true
-                } else {
-                    return false
-                }
+        case let .item(lhsItem):
+            if case let .item(rhsItem) = rhs, lhsItem === rhsItem {
+                return true
+            } else {
+                return false
+            }
+        case .close:
+            if case .close = rhs {
+                return true
+            } else {
+                return false
+            }
         }
     }
 }
@@ -438,6 +438,9 @@ open class BlurredBackgroundView: UIView {
     }
 }
 
+public protocol NavigationBarHeaderView: UIView {
+}
+
 open class NavigationBar: ASDisplayNode {
     public static var defaultSecondaryContentHeight: CGFloat {
         return 38.0
@@ -489,6 +492,7 @@ open class NavigationBar: ASDisplayNode {
     
     public private(set) var contentNode: NavigationBarContentNode?
     public private(set) var secondaryContentNode: ASDisplayNode?
+    public var secondaryContentNodeDisplayFraction: CGFloat = 1.0
     
     private var itemTitleListenerKey: Int?
     private var itemTitleViewListenerKey: Int?
@@ -646,6 +650,23 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public var customHeaderContentView: NavigationBarHeaderView? {
+        didSet {
+            if self.customHeaderContentView !== oldValue {
+                self.customHeaderContentView?.removeFromSuperview()
+                
+                if let customHeaderContentView = self.customHeaderContentView {
+                    self.buttonsContainerNode.view.addSubview(customHeaderContentView)
+                    self.backButtonNode.isHidden = true
+                    self.backButtonArrow.isHidden = true
+                } else {
+                    self.backButtonNode.isHidden = false
+                    self.backButtonArrow.isHidden = false
+                }
+            }
+        }
+    }
+    
     public var layoutSuspended: Bool = false
     
     private let titleNode: ImmediateTextNode
@@ -691,7 +712,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     var _previousItem: NavigationPreviousAction?
-    var previousItem: NavigationPreviousAction? {
+    public internal(set) var previousItem: NavigationPreviousAction? {
         get {
             return self._previousItem
         } set(value) {
@@ -1200,7 +1221,7 @@ open class NavigationBar: ASDisplayNode {
             self.backgroundNode.update(size: backgroundFrame.size, transition: transition)
         }
         
-        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? NavigationBar.defaultSecondaryContentHeight : 0.0
+        let apparentAdditionalHeight: CGFloat = self.secondaryContentNode != nil ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
         
         let leftButtonInset: CGFloat = leftInset + 16.0
         let backButtonInset: CGFloat = leftInset + 27.0
@@ -1218,11 +1239,11 @@ open class NavigationBar: ASDisplayNode {
             case .expansion:
                 expansionHeight = contentNode.height
                 
-                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? NavigationBar.defaultSecondaryContentHeight : 0.0
+                let additionalExpansionHeight: CGFloat = self.secondaryContentNode != nil && appearsHidden ? (NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction) : 0.0
                 contentNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: size.height - (appearsHidden ? 0.0 : additionalContentHeight) - expansionHeight - apparentAdditionalHeight - additionalExpansionHeight), size: CGSize(width: size.width, height: expansionHeight))
                 if appearsHidden {
                     if self.secondaryContentNode != nil {
-                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight
+                        contentNodeFrame.origin.y += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
                     }
                 }
             }
@@ -1352,6 +1373,12 @@ open class NavigationBar: ASDisplayNode {
         leftTitleInset = floor(leftTitleInset)
         if Int(leftTitleInset) % 2 != 0 {
             leftTitleInset -= 1.0
+        }
+        
+        if let customHeaderContentView = self.customHeaderContentView {
+            let headerSize = CGSize(width: size.width, height: nominalHeight)
+            //customHeaderContentView.update(size: headerSize, transition: transition)
+            transition.updateFrame(view: customHeaderContentView, frame: CGRect(origin: CGPoint(x: 0.0, y: contentVerticalOrigin), size: headerSize))
         }
         
         if self.titleNode.supernode != nil {
@@ -1545,7 +1572,7 @@ open class NavigationBar: ASDisplayNode {
         }
         
         if let _ = self.secondaryContentNode {
-            result += NavigationBar.defaultSecondaryContentHeight
+            result += NavigationBar.defaultSecondaryContentHeight * self.secondaryContentNodeDisplayFraction
         }
         
         return result

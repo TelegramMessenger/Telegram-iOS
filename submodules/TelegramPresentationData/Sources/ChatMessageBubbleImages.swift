@@ -32,7 +32,7 @@ func mediaBubbleCornerImage(incoming: Bool, radius: CGFloat, inset: CGFloat) -> 
     let imageSize = CGSize(width: radius + 7.0, height: 8.0)
     let fixedMainDiameter: CGFloat = 33.0
     
-    let formContext = DrawingContext(size: imageSize)
+    let formContext = DrawingContext(size: imageSize)!
     formContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: imageSize))
         context.translateBy(x: imageSize.width / 2.0, y: imageSize.height / 2.0)
@@ -205,7 +205,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     let bottomEllipse = CGRect(origin: CGPoint(x: 24.0, y: 16.0), size: CGSize(width: 27.0, height: 17.0))
     let topEllipse = CGRect(origin: CGPoint(x: 33.0, y: 14.0), size: CGSize(width: 23.0, height: 21.0))
     
-    let formContext = DrawingContext(size: imageSize)
+    let formContext = DrawingContext(size: imageSize)!
     formContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: rawSize))
         context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -240,7 +240,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     }
     let formImage = formContext.generateImage()!
     
-    let outlineContext = DrawingContext(size: imageSize)
+    let outlineContext = DrawingContext(size: imageSize)!
     outlineContext.withFlippedContext { context in
         context.clear(CGRect(origin: CGPoint(), size: rawSize))
         context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -298,7 +298,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
             context.addLine(to: CGPoint(x: fixedMainDiameter + borderOffset, y: outlineBottomEllipse.midY))
             context.strokePath()
             
-            let bubbleTailContext = DrawingContext(size: imageSize)
+            let bubbleTailContext = DrawingContext(size: imageSize)!
             bubbleTailContext.withFlippedContext { context in
                 context.clear(CGRect(origin: CGPoint(), size: rawSize))
                 context.translateBy(x: additionalInset + strokeInset, y: additionalInset + strokeInset)
@@ -358,7 +358,7 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
         context.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
     })!
     
-    let drawingContext = DrawingContext(size: imageSize)
+    let drawingContext = DrawingContext(size: imageSize)!
     drawingContext.withFlippedContext { context in
         if onlyShadow {
             context.clear(CGRect(origin: CGPoint(), size: rawSize))

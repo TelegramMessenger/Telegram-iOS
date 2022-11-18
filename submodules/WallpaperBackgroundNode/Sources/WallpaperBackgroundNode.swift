@@ -20,7 +20,9 @@ private let motionAmount: CGFloat = 32.0
 
 private func generateBlurredContents(image: UIImage) -> UIImage? {
     let size = image.size.aspectFitted(CGSize(width: 64.0, height: 64.0))
-    let context = DrawingContext(size: size, scale: 1.0, opaque: true, clear: false)
+    guard let context = DrawingContext(size: size, scale: 1.0, opaque: true, clear: false) else {
+        return nil
+    }
     context.withFlippedContext { c in
         c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: size))
     }

@@ -88,7 +88,7 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
         self.size = size
         
         let contextSize = size.aspectFilled(CGSize(width: 320.0, height: 320.0))
-        let foregroundContext = DrawingContext(size: contextSize, scale: 1.0)
+        let foregroundContext = DrawingContext(size: contextSize, scale: 1.0)!
         let bounds = CGRect(origin: CGPoint(), size: contextSize)
         
         let filledImageSize = image.size.aspectFilled(contextSize)
@@ -109,7 +109,7 @@ final class ImageBasedPasscodeBackground: PasscodeBackground {
         }
         self.foregroundImage = foregroundContext.generateImage()!
         
-        let backgroundContext = DrawingContext(size: contextSize, scale: 1.0)
+        let backgroundContext = DrawingContext(size: contextSize, scale: 1.0)!
         backgroundContext.withFlippedContext { c in
             c.interpolationQuality = .medium
             c.draw(image.cgImage!, in: filledImageRect)
