@@ -380,6 +380,18 @@ func _internal_setForumChannelTopicHidden(account: Account, id: EnginePeer.Id, t
         return .fail(.generic)
     }
     return account.postbox.transaction { transaction -> Api.InputChannel? in
+        if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+            var data = initialData
+            
+            data.isHidden = isHidden
+            
+            if data != initialData {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
+                    transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                }
+            }
+        }
+        
         return transaction.getPeer(id).flatMap(apiInputChannel)
     }
     |> castError(EditForumChannelTopicError.self)
@@ -399,11 +411,16 @@ func _internal_setForumChannelTopicHidden(account: Account, id: EnginePeer.Id, t
             closed: nil,
             hidden: isHidden ? .boolTrue : .boolFalse
         ))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
         |> mapError { _ -> EditForumChannelTopicError in
-            return .generic
         }
         |> mapToSignal { result -> Signal<Never, EditForumChannelTopicError> in
-            account.stateManager.addUpdates(result)
+            if let result = result {
+                account.stateManager.addUpdates(result)
+            }
             
             return account.postbox.transaction { transaction -> Void in
                 if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {

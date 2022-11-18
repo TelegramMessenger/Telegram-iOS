@@ -1640,6 +1640,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 inlineStackContainerNode.deletePeerThread = self.containerNode.deletePeerThread
                 inlineStackContainerNode.setPeerThreadStopped = self.containerNode.setPeerThreadStopped
                 inlineStackContainerNode.setPeerThreadPinned = self.containerNode.setPeerThreadPinned
+                inlineStackContainerNode.setPeerThreadHidden = self.containerNode.setPeerThreadHidden
                 inlineStackContainerNode.peerSelected = self.containerNode.peerSelected
                 inlineStackContainerNode.groupSelected = self.containerNode.groupSelected
                 inlineStackContainerNode.updatePeerGrouping = self.containerNode.updatePeerGrouping
