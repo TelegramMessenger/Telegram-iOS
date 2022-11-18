@@ -665,6 +665,20 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
         }
         
+        func assignParentNode(parentNode: ASDisplayNode?) {
+            for (id, topicNode) in self.topicNodes {
+                if id == self.topicNodeOrder.first, let parentNode {
+                    if topicNode.supernode !== parentNode {
+                        parentNode.addSubnode(topicNode)
+                    }
+                } else {
+                    if topicNode.supernode !== self {
+                        self.addSubnode(topicNode)
+                    }
+                }
+            }
+        }
+        
         func asyncLayout() -> (_ context: AccountContext, _ constrainedWidth: CGFloat, _ theme: PresentationTheme, _ authorTitle: NSAttributedString?, _ topics: [(id: Int64, title: NSAttributedString, iconId: Int64?, iconColor: Int32)]) -> (CGSize, () -> CGRect?) {
             let makeAuthorLayout = TextNode.asyncLayout(self.authorNode)
             var makeExistingTopicLayouts: [Int64: (_ constrainedWidth: CGFloat, _ context: AccountContext, _ theme: PresentationTheme, _ threadId: Int64, _ title: NSAttributedString, _ iconId: Int64?, _ iconColor: Int32) -> (CGSize, () -> TopicItemNode)] = [:]
@@ -755,7 +769,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if self.topicNodes[item.0] != itemNode {
                             self.topicNodes[item.0]?.removeFromSupernode()
                             self.topicNodes[item.0] = itemNode
-                            self.addSubnode(itemNode)
                         }
                         let itemFrame = CGRect(origin: CGPoint(x: nextX - 1.0, y: 0.0), size: item.1)
                         itemNode.frame = itemFrame
@@ -1124,10 +1137,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 return false
             }
             
+            strongSelf.contextContainer.additionalActivationProgressLayer = nil
             if item.interaction.inlineNavigationLocation != nil {
                 strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.avatarContainerNode
             } else if let value = strongSelf.hitTest(location, with: nil), value === strongSelf.compoundTextButtonNode?.view {
-                strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.compoundHighlightingNode
+                strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.compoundTextButtonNode
+                strongSelf.contextContainer.additionalActivationProgressLayer = strongSelf.compoundHighlightingNode?.layer
             } else {
                 strongSelf.contextContainer.targetNodeForActivationProgress = nil
             }
@@ -2775,7 +2790,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     let authorNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height), size: authorLayout)
                     strongSelf.authorNode.frame = authorNodeFrame
                     let textNodeFrame = CGRect(origin: CGPoint(x: contentRect.origin.x - 1.0, y: contentRect.minY + titleLayout.size.height - 1.0 + UIScreenPixel + (authorLayout.height.isZero ? 0.0 : (authorLayout.height - 3.0))), size: textLayout.size)
-                    strongSelf.textNode.textNode.frame = textNodeFrame
                     
                     if let topForumTopicRect, !isSearching {
                         let compoundHighlightingNode: LinkHighlightingNode
@@ -2877,6 +2891,22 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.textArrowNode = nil
                             textArrowNode.removeFromSupernode()
                         }
+                    }
+                    
+                    if let compoundTextButtonNode = strongSelf.compoundTextButtonNode {
+                        if strongSelf.textNode.textNode.supernode !== compoundTextButtonNode {
+                            compoundTextButtonNode.addSubnode(strongSelf.textNode.textNode)
+                        }
+                        strongSelf.textNode.textNode.frame = textNodeFrame.offsetBy(dx: -compoundTextButtonNode.frame.minX, dy: -compoundTextButtonNode.frame.minY)
+                        
+                        strongSelf.authorNode.assignParentNode(parentNode: compoundTextButtonNode)
+                    } else {
+                        if strongSelf.textNode.textNode.supernode !== strongSelf.mainContentContainerNode {
+                            strongSelf.mainContentContainerNode.addSubnode(strongSelf.textNode.textNode)
+                        }
+                        strongSelf.textNode.textNode.frame = textNodeFrame
+                        
+                        strongSelf.authorNode.assignParentNode(parentNode: nil)
                     }
                     
                     if !textLayout.spoilers.isEmpty {
