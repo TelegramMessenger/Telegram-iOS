@@ -360,7 +360,7 @@ public final class TextNodeLayout: NSObject {
     
     public var trailingLineWidth: CGFloat {
         if let lastLine = self.lines.last {
-            return lastLine.frame.width
+            return lastLine.frame.maxX
         } else {
             return 0.0
         }

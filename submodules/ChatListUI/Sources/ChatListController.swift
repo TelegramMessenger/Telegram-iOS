@@ -852,8 +852,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             )))
         }*/
         
-        self.primaryContext?.updatePresentationData(presentationData: self.presentationData)
-        
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         self.navigationBar?.updatePresentationData(NavigationBarPresentationData(presentationData: self.presentationData))
         
@@ -4170,7 +4168,6 @@ private final class ChatListLocationContext {
     let context: AccountContext
     let location: ChatListControllerLocation
     weak var parentController: ChatListControllerImpl?
-    var presentationData: PresentationData
     
     private var proxyUnavailableTooltipController: TooltipController?
     private var didShowProxyUnavailableTooltipController = false
@@ -4212,7 +4209,6 @@ private final class ChatListLocationContext {
         self.context = context
         self.location = location
         self.parentController = parentController
-        self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         
         let hasProxy = context.sharedContext.accountManager.sharedData(keys: [SharedDataKeys.proxySettings])
         |> map { sharedData -> (Bool, Bool) in
@@ -4262,8 +4258,9 @@ private final class ChatListLocationContext {
                     passcode,
                     chatListDisplayNode.containerNode.currentItemState,
                     isReorderingTabs,
-                    peerStatus
-                ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs, peerStatus in
+                    peerStatus,
+                    parentController.updatedPresentationData.1
+                ).start(next: { [weak self] networkState, proxy, passcode, stateAndFilterId, isReorderingTabs, peerStatus, presentationData in
                     guard let self else {
                         return
                     }
@@ -4273,37 +4270,15 @@ private final class ChatListLocationContext {
                         passcode: passcode,
                         stateAndFilterId: stateAndFilterId,
                         isReorderingTabs: isReorderingTabs,
-                        peerStatus: peerStatus
+                        peerStatus: peerStatus,
+                        presentationData: presentationData
                     )
                 })
             } else {
                 self.didSetReady = true
                 self.ready.set(.single(true))
             }
-        case let .forum(peerId):
-            //self.navigationItem.titleView = chatTitleView
-            
-            /*chatTitleView.pressed = { [weak self] in
-                guard let self = self else {
-                    return
-                }
-                let _ = (self.context.engine.data.get(
-                    TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-                )
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
-                    guard let self = self, let peer = peer, let controller = context.sharedContext.makePeerInfoController(context: self.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) else {
-                        return
-                    }
-                    (self.navigationController as? NavigationController)?.pushViewController(controller)
-                })
-            }
-            self.chatTitleView?.longPressed = { [weak self] in
-                guard let self else {
-                    return
-                }
-                self.activateSearch()
-            }*/
-            
+        case let .forum(peerId):     
             let peerView = Promise<PeerView>()
             peerView.set(context.account.viewTracker.peerView(peerId))
             
@@ -4342,9 +4317,10 @@ private final class ChatListLocationContext {
             self.titleDisposable = (combineLatest(queue: Queue.mainQueue(),
                 peerView.get(),
                 onlineMemberCount,
-                chatListDisplayNode.containerNode.currentItemState
+                chatListDisplayNode.containerNode.currentItemState,
+                parentController.updatedPresentationData.1
             )
-            |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, stateAndFilterId in
+            |> deliverOnMainQueue).start(next: { [weak self] peerView, onlineMemberCount, stateAndFilterId, presentationData in
                 guard let self else {
                     return
                 }
@@ -4352,7 +4328,8 @@ private final class ChatListLocationContext {
                     peerId: peerId,
                     peerView: peerView,
                     onlineMemberCount: onlineMemberCount,
-                    stateAndFilterId: stateAndFilterId
+                    stateAndFilterId: stateAndFilterId,
+                    presentationData: presentationData
                 )
             })
         }
@@ -4364,15 +4341,16 @@ private final class ChatListLocationContext {
         passcode: (Bool, Bool),
         stateAndFilterId: (state: ChatListNodeState, filterId: Int32?),
         isReorderingTabs: Bool,
-        peerStatus: NetworkStatusTitle.Status?
+        peerStatus: NetworkStatusTitle.Status?,
+        presentationData: PresentationData
     ) {
         let defaultTitle: String
         switch location {
         case let .chatList(groupId):
             if groupId == .root {
-                defaultTitle = self.presentationData.strings.DialogList_Title
+                defaultTitle = presentationData.strings.DialogList_Title
             } else {
-                defaultTitle = self.presentationData.strings.ChatList_ArchivedChatsTitle
+                defaultTitle = presentationData.strings.ChatList_ArchivedChatsTitle
             }
         case .forum:
             defaultTitle = ""
@@ -4385,7 +4363,7 @@ private final class ChatListLocationContext {
             if case .chatList(.root) = self.location {
                 self.rightButton = nil
             }
-            let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? self.presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
+            let title = !stateAndFilterId.state.selectedPeerIds.isEmpty ? presentationData.strings.ChatList_SelectedChats(Int32(stateAndFilterId.state.selectedPeerIds.count)) : defaultTitle
             
             var animated = false
             if let (previousEditing, previousNetworkState) = previousEditingAndNetworkState {
@@ -4400,7 +4378,7 @@ private final class ChatListLocationContext {
                 self.rightButton = nil
             }
             self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
+                content: .text(title: presentationData.strings.Common_Done, isBold: true),
                 pressed: { [weak self] _ in
                     self?.parentController?.reorderingDonePressed()
                 }
@@ -4410,16 +4388,16 @@ private final class ChatListLocationContext {
             
             switch networkState {
             case .waitingForNetwork:
-                titleContent = NetworkStatusTitle(text: self.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                titleContent = NetworkStatusTitle(text: presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
             case let .connecting(proxy):
-                let text = self.presentationData.strings.State_Connecting
+                let text = presentationData.strings.State_Connecting
                 let _ = proxy
                 /*if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {
                     text = self.presentationData.strings.State_ConnectingToProxy
                 }*/
                 titleContent = NetworkStatusTitle(text: text, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
             case .updating:
-                titleContent = NetworkStatusTitle(text: self.presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
+                titleContent = NetworkStatusTitle(text: presentationData.strings.State_Updating, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
             case .online:
                 titleContent = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: false, isManuallyLocked: false, peerStatus: peerStatus)
             }
@@ -4430,7 +4408,7 @@ private final class ChatListLocationContext {
                 
                 if isReorderingTabs {
                     self.rightButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                        content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
+                        content: .text(title: presentationData.strings.Common_Done, isBold: true),
                         pressed: { [weak self] _ in
                             self?.parentController?.editPressed()
                         }
@@ -4446,7 +4424,7 @@ private final class ChatListLocationContext {
                 
                 if isReorderingTabs {
                     self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                        content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
+                        content: .text(title: presentationData.strings.Common_Done, isBold: true),
                         pressed: { [weak self] _ in
                             self?.parentController?.reorderingDonePressed()
                         }
@@ -4454,14 +4432,14 @@ private final class ChatListLocationContext {
                 } else {
                     if stateAndFilterId.state.editing {
                         self.leftButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                            content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
+                            content: .text(title: presentationData.strings.Common_Done, isBold: true),
                             pressed: { [weak self] _ in
                                 self?.parentController?.donePressed()
                             }
                         )))
                     } else {
                         self.leftButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
-                            content: .text(title: self.presentationData.strings.Common_Edit, isBold: false),
+                            content: .text(title: presentationData.strings.Common_Edit, isBold: false),
                             pressed: { [weak self] _ in
                                 self?.parentController?.editPressed()
                             }
@@ -4470,7 +4448,7 @@ private final class ChatListLocationContext {
                 }
             } else {
                 self.rightButton = AnyComponentWithIdentity(id: "edit", component: AnyComponent(NavigationButtonComponent(
-                    content: .text(title: self.presentationData.strings.Common_Edit, isBold: false),
+                    content: .text(title: presentationData.strings.Common_Edit, isBold: false),
                     pressed: { [weak self] _ in
                         self?.parentController?.editPressed()
                     }
@@ -4482,9 +4460,9 @@ private final class ChatListLocationContext {
             var checkProxy = false
             switch networkState {
             case .waitingForNetwork:
-                titleContent = NetworkStatusTitle(text: self.presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
+                titleContent = NetworkStatusTitle(text: presentationData.strings.State_WaitingForNetwork, activity: true, hasProxy: false, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             case let .connecting(proxy):
-                let text = self.presentationData.strings.State_Connecting
+                let text = presentationData.strings.State_Connecting
                 /*if let layout = strongSelf.validLayout, proxy != nil && layout.metrics.widthClass != .regular && layout.size.width > 320.0 {*/
                     //text = self.presentationData.strings.State_ConnectingToProxy
                 //}
@@ -4493,7 +4471,7 @@ private final class ChatListLocationContext {
                 }
                 titleContent = NetworkStatusTitle(text: text, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             case .updating:
-                titleContent = NetworkStatusTitle(text: self.presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
+                titleContent = NetworkStatusTitle(text: presentationData.strings.State_Updating, activity: true, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             case .online:
                 titleContent = NetworkStatusTitle(text: defaultTitle, activity: false, hasProxy: isRoot && hasProxy, connectsViaProxy: connectsViaProxy, isPasscodeSet: isRoot && isPasscodeSet, isManuallyLocked: isRoot && isManuallyLocked, peerStatus: peerStatus)
             }
@@ -4527,7 +4505,7 @@ private final class ChatListLocationContext {
             if case .chatList(.root) = self.location, checkProxy {
                 if self.proxyUnavailableTooltipController == nil, !self.didShowProxyUnavailableTooltipController, let parentController = self.parentController, parentController.isNodeLoaded, parentController.displayNode.view.window != nil, parentController.navigationController?.topViewController == nil {
                     self.didShowProxyUnavailableTooltipController = true
-                    let tooltipController = TooltipController(content: .text(self.presentationData.strings.Proxy_TooltipUnavailable), baseFontSize: self.presentationData.listsFontSize.baseDisplaySize, timeout: 60.0, dismissByTapOutside: true)
+                    let tooltipController = TooltipController(content: .text(presentationData.strings.Proxy_TooltipUnavailable), baseFontSize: presentationData.listsFontSize.baseDisplaySize, timeout: 60.0, dismissByTapOutside: true)
                     self.proxyUnavailableTooltipController = tooltipController
                     tooltipController.dismissed = { [weak self, weak tooltipController] _ in
                         if let strongSelf = self, let tooltipController = tooltipController, strongSelf.proxyUnavailableTooltipController === tooltipController {
@@ -4562,23 +4540,24 @@ private final class ChatListLocationContext {
         peerId: EnginePeer.Id,
         peerView: PeerView,
         onlineMemberCount: Int32?,
-        stateAndFilterId: (state: ChatListNodeState, filterId: Int32?)
+        stateAndFilterId: (state: ChatListNodeState, filterId: Int32?),
+        presentationData: PresentationData
     ) {
         if stateAndFilterId.state.editing && stateAndFilterId.state.selectedThreadIds.count > 0 {
             self.chatTitleComponent = ChatTitleComponent(
                 context: self.context,
-                theme: self.presentationData.theme,
-                strings: self.presentationData.strings,
-                dateTimeFormat: self.presentationData.dateTimeFormat,
-                nameDisplayOrder: self.presentationData.nameDisplayOrder,
-                content: .custom(self.presentationData.strings.ChatList_SelectedTopics(Int32(stateAndFilterId.state.selectedThreadIds.count)), nil, false),
+                theme: presentationData.theme,
+                strings: presentationData.strings,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
+                content: .custom(presentationData.strings.ChatList_SelectedTopics(Int32(stateAndFilterId.state.selectedThreadIds.count)), nil, false),
                 tapped: {
                 },
                 longTapped: {
                 }
             )
             self.rightButton = AnyComponentWithIdentity(id: "done", component: AnyComponent(NavigationButtonComponent(
-                content: .text(title: self.presentationData.strings.Common_Done, isBold: true),
+                content: .text(title: presentationData.strings.Common_Done, isBold: true),
                 pressed: { [weak self] _ in
                     self?.parentController?.donePressed()
                 }
@@ -4586,10 +4565,10 @@ private final class ChatListLocationContext {
         } else {
             self.chatTitleComponent = ChatTitleComponent(
                 context: self.context,
-                theme: self.presentationData.theme,
-                strings: self.presentationData.strings,
-                dateTimeFormat: self.presentationData.dateTimeFormat,
-                nameDisplayOrder: self.presentationData.nameDisplayOrder,
+                theme: presentationData.theme,
+                strings: presentationData.strings,
+                dateTimeFormat: presentationData.dateTimeFormat,
+                nameDisplayOrder: presentationData.nameDisplayOrder,
                 content: .peer(peerView: peerView, customTitle: nil, onlineMemberCount: onlineMemberCount, isScheduledMessages: false, isMuted: nil, customMessageCount: nil),
                 tapped: { [weak self] in
                     guard let self else {
@@ -4643,9 +4622,6 @@ private final class ChatListLocationContext {
         } else {
             self.parentController?.requestUpdateHeaderContent(transition: .immediate)
         }
-    }
-    
-    func updatePresentationData(presentationData: PresentationData) {
     }
     
     deinit {

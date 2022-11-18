@@ -1363,6 +1363,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
         self.backgroundColor = self.presentationData.theme.chatList.backgroundColor
         
         self.containerNode.updatePresentationData(presentationData)
+        self.inlineStackContainerNode?.updatePresentationData(presentationData)
         self.searchDisplayController?.updatePresentationData(presentationData)
         
         if let toolbarNode = self.toolbarNode {

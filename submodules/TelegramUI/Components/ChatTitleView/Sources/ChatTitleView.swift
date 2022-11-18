@@ -694,17 +694,19 @@ public final class ChatTitleView: UIView, NavigationBarTitleView {
     }
     
     public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings, hasEmbeddedTitleContent: Bool) {
-        self.theme = theme
-        self.hasEmbeddedTitleContent = hasEmbeddedTitleContent
-        self.strings = strings
-        
-        let titleContent = self.titleContent
-        self.titleCredibilityIcon = .none
-        self.titleContent = titleContent
-        let _ = self.updateStatus()
-        
-        if !self.manualLayout, let (size, clearBounds) = self.validLayout {
-            self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+        if self.theme !== theme || self.strings !== strings || self.hasEmbeddedTitleContent != hasEmbeddedTitleContent {
+            self.theme = theme
+            self.hasEmbeddedTitleContent = hasEmbeddedTitleContent
+            self.strings = strings
+            
+            let titleContent = self.titleContent
+            self.titleCredibilityIcon = .none
+            self.titleContent = titleContent
+            let _ = self.updateStatus()
+            
+            if !self.manualLayout, let (size, clearBounds) = self.validLayout {
+                self.updateLayout(size: size, clearBounds: clearBounds, transition: .immediate)
+            }
         }
     }
     
@@ -1009,6 +1011,7 @@ public final class ChatTitleComponent: Component {
             if contentView.titleContent != component.content {
                 contentView.titleContent = component.content
             }
+            contentView.updateThemeAndStrings(theme: component.theme, strings: component.strings, hasEmbeddedTitleContent: false)
             
             contentView.updateLayout(size: availableSize, clearBounds: CGRect(origin: CGPoint(), size: availableSize), transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: contentView, frame: CGRect(origin: CGPoint(), size: availableSize))

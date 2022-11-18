@@ -3021,7 +3021,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.textNode.textNode.recursivelyEnsureDisplaySynchronously(true)
                     }
                     
-                    var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.size.width + 3.0 + titleOffset
+                    var nextTitleIconOrigin: CGFloat = contentRect.origin.x + titleLayout.trailingLineWidth + 3.0 + titleOffset
                     
                     if let currentCredibilityIconContent = currentCredibilityIconContent {
                         let credibilityIconView: ComponentHostView<Empty>

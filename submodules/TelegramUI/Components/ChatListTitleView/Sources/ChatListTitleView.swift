@@ -204,18 +204,22 @@ public final class ChatListTitleView: UIView, NavigationBarTitleView, Navigation
     
     public var theme: PresentationTheme {
         didSet {
-            self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
-            
-            self.lockView.updateTheme(self.theme)
-            
-            self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
-            self.proxyNode.theme = self.theme
+            if self.theme !== oldValue {
+                self.titleNode.attributedText = NSAttributedString(string: self.title.text, font: titleFont, textColor: self.theme.rootController.navigationBar.primaryTextColor)
+                
+                self.lockView.updateTheme(self.theme)
+                
+                self.activityIndicator.type = .custom(self.theme.rootController.navigationBar.primaryTextColor, 22.0, 1.5, false)
+                self.proxyNode.theme = self.theme
+            }
         }
     }
     
     public var strings: PresentationStrings {
         didSet {
-            self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+            if self.strings !== oldValue {
+                self.proxyButton.accessibilityLabel = self.strings.VoiceOver_Navigation_ProxySettings
+            }
         }
     }
     

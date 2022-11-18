@@ -548,6 +548,8 @@ public final class ChatListHeaderComponent: Component {
                 let chatListTitleContentSize = size
                 chatListTitleView.setTitle(chatListTitle, animated: false)
                 chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), transition: transition.containedViewLayoutTransition)
+                chatListTitleView.theme = theme
+                chatListTitleView.strings = strings
                 
                 chatListTitleView.openStatusSetup = { [weak self] sourceView in
                     guard let self else {
@@ -761,6 +763,7 @@ public final class NavigationButtonComponent: Component {
         private var moreButton: MoreHeaderButton?
         
         private var component: NavigationButtonComponent?
+        private var theme: PresentationTheme?
         
         override init(frame: CGRect) {
             super.init(frame: frame)
@@ -800,6 +803,11 @@ public final class NavigationButtonComponent: Component {
             self.component = component
             
             let theme = environment[NavigationButtonComponentEnvironment.self].value.theme
+            var themeUpdated = false
+            if self.theme !== theme {
+                self.theme = theme
+                themeUpdated = true
+            }
             
             let iconOffset: CGFloat = 4.0
             
@@ -852,7 +860,7 @@ public final class NavigationButtonComponent: Component {
                     self.iconView = iconView
                     self.addSubview(iconView)
                 }
-                if self.iconImageName != imageName {
+                if self.iconImageName != imageName || themeUpdated {
                     self.iconImageName = imageName
                     iconView.image = generateTintedImage(image: UIImage(bundleImageName: imageName), color: theme.rootController.navigationBar.accentTextColor)
                 }
@@ -893,9 +901,14 @@ public final class NavigationButtonComponent: Component {
             
             if isMore {
                 let moreButton: MoreHeaderButton
-                if let current = self.moreButton {
+                if let current = self.moreButton, !themeUpdated {
                     moreButton = current
                 } else {
+                    if let moreButton = self.moreButton {
+                        moreButton.removeFromSupernode()
+                        self.moreButton = nil
+                    }
+                    
                     moreButton = MoreHeaderButton(color: theme.rootController.navigationBar.buttonColor)
                     moreButton.isUserInteractionEnabled = true
                     moreButton.setContent(.more(MoreHeaderButton.optionsCircleImage(color: theme.rootController.navigationBar.buttonColor)))
@@ -911,6 +924,7 @@ public final class NavigationButtonComponent: Component {
                         }
                         component.contextAction?(self, gesture)
                     }
+                    self.moreButton = moreButton
                     self.addSubnode(moreButton)
                 }
                 
