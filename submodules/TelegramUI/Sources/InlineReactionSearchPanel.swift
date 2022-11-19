@@ -455,6 +455,9 @@ private final class InlineReactionSearchStickersNode: ASDisplayNode, UIScrollVie
                 itemNode.isVisibleInGrid = isActivated
                 validIds.insert(item.file.fileId)
             }
+            if itemFrame.minY > maxVisibleY {
+                break
+            }
         }
         
         var removeIds: [MediaId] = []
