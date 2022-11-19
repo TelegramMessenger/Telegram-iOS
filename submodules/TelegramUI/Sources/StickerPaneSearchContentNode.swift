@@ -390,7 +390,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                     }
                     subscriber.putNext(result)
                 }, completed: {
-                    subscriber.putCompletion()
+//                    subscriber.putCompletion()
                 })
             }
             

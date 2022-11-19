@@ -2822,7 +2822,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 }
             }
             let previousReplyInfoNodeFrame = replyInfoNode.frame
-            replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: replyInfoSizeApply.0)
+            replyInfoNode.frame = CGRect(origin: CGPoint(x: contentOrigin.x + layoutConstants.text.bubbleInsets.left, y: layoutConstants.bubble.contentInsets.top + replyInfoOriginY), size: CGSize(width: backgroundFrame.width - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: replyInfoSizeApply.0.height))
             if case let .System(duration, _) = animation {
                 if animateFrame {
                     replyInfoNode.layer.animateFrame(from: previousReplyInfoNodeFrame, to: replyInfoNode.frame, duration: duration, timingFunction: timingFunction)

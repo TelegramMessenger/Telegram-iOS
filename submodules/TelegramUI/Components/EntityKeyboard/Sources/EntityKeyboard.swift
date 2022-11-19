@@ -337,16 +337,16 @@ public final class EntityKeyboardComponent: Component {
                     }
                 ))))
                 contentIcons.append(PagerComponentContentIcon(id: "gifs", imageName: "Chat/Input/Media/EntityInputGifsIcon"))
-                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Media/EntityInputSearchIcon",
-                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                        maxSize: nil
-                    )),
-                    action: { [weak self] in
-                        self?.openSearch()
-                    }
-                ).minSize(CGSize(width: 38.0, height: 38.0)))))
+//                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "gifs", component: AnyComponent(Button(
+//                    content: AnyComponent(BundleIconComponent(
+//                        name: "Chat/Input/Media/EntityInputSearchIcon",
+//                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+//                        maxSize: nil
+//                    )),
+//                    action: { [weak self] in
+//                        self?.openSearch()
+//                    }
+//                ).minSize(CGSize(width: 38.0, height: 38.0)))))
             }
             
             if let stickerContent = component.stickerContent {
@@ -451,16 +451,16 @@ public final class EntityKeyboardComponent: Component {
                     }
                 ))))
                 contentIcons.append(PagerComponentContentIcon(id: "stickers", imageName: "Chat/Input/Media/EntityInputStickersIcon"))
-                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
-                    content: AnyComponent(BundleIconComponent(
-                        name: "Chat/Input/Media/EntityInputSearchIcon",
-                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
-                        maxSize: nil
-                    )),
-                    action: { [weak self] in
-                        self?.openSearch()
-                    }
-                ).minSize(CGSize(width: 38.0, height: 38.0)))))
+//                contentAccessoryLeftButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
+//                    content: AnyComponent(BundleIconComponent(
+//                        name: "Chat/Input/Media/EntityInputSearchIcon",
+//                        tintColor: component.theme.chat.inputMediaPanel.panelIconColor,
+//                        maxSize: nil
+//                    )),
+//                    action: { [weak self] in
+//                        self?.openSearch()
+//                    }
+//                ).minSize(CGSize(width: 38.0, height: 38.0)))))
                 contentAccessoryRightButtons.append(AnyComponentWithIdentity(id: "stickers", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Chat/Input/Media/EntityInputSettingsIcon",
@@ -749,7 +749,7 @@ public final class EntityKeyboardComponent: Component {
             component.hideTopPanelUpdated(self.isTopPanelHidden, transition)
         }
         
-        private func openSearch() {
+        public func openSearch() {
             guard let component = self.component else {
                 return
             }

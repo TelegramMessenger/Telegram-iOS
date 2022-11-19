@@ -1185,7 +1185,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId in
+                    controller.completion = { [weak controller] title, fileId, _ in
                         controller?.isInProgress = true
                         
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)
@@ -2431,7 +2431,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal
                     
-                    controller.completion = { [weak controller] title, fileId in
+                    controller.completion = { [weak controller] title, fileId, _ in
                         controller?.isInProgress = true
                         
                         let _ = (context.engine.peers.createForumChannelTopic(id: peerId, title: title, iconColor: ForumCreateTopicScreen.iconColors.randomElement()!, iconFileId: fileId)

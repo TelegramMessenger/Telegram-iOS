@@ -1349,7 +1349,7 @@ class ChatControllerNode: ASDisplayNode, UIScrollViewDelegate {
             
             let heightAndOverflow = inputNode.updateLayout(width: layout.size.width, leftInset: layout.safeInsets.left, rightInset: layout.safeInsets.right, bottomInset: cleanInsets.bottom, standardInputHeight: inputHeight, inputHeight: layout.inputHeight ?? 0.0, maximumHeight: maximumInputNodeHeight, inputPanelHeight: inputPanelNodeBaseHeight, transition: immediatelyLayoutInputNodeAndAnimateAppearance ? .immediate : transition, interfaceState: self.chatPresentationInterfaceState, deviceMetrics: layout.deviceMetrics, isVisible: self.isInFocus, isExpanded: self.inputPanelContainerNode.stableIsExpanded)
             
-            let boundedHeight = min(heightAndOverflow.0, layout.standardInputHeight)
+            let boundedHeight = inputNode.followsDefaultHeight ? min(heightAndOverflow.0, layout.standardInputHeight) : heightAndOverflow.0
             
             inputNodeHeightAndOverflow = (
                 boundedHeight,
