@@ -39,6 +39,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <fstream>
 #include <functional>
 #include <memory>
 #include <sstream>
@@ -131,6 +132,21 @@ std::int_fast64_t Decode64(const char* cp) {
   const auto s64maxU = static_cast<std::uint_fast64_t>(s64max);
   if (v <= s64maxU) return static_cast<std::int_fast64_t>(v);
   return static_cast<std::int_fast64_t>(v - s64maxU - 1) - s64max - 1;
+}
+
+// Does the rule for future transitions call for year-round daylight time?
+// See tz/zic.c:stringzone() for the details on how such rules are encoded.
+bool AllYearDST(const PosixTimeZone& posix) {
+  if (posix.dst_start.date.fmt != PosixTransition::N) return false;
+  if (posix.dst_start.date.n.day != 0) return false;
+  if (posix.dst_start.time.offset != 0) return false;
+
+  if (posix.dst_end.date.fmt != PosixTransition::J) return false;
+  if (posix.dst_end.date.j.day != kDaysPerYear[0]) return false;
+  const auto offset = posix.std_offset - posix.dst_offset;
+  if (posix.dst_end.time.offset + offset != kSecsPerDay) return false;
+
+  return true;
 }
 
 // Generate a year-relative offset for a PosixTransition.
@@ -350,6 +366,12 @@ bool TimeZoneInfo::ExtendTransitions() {
   if (!GetTransitionType(posix.dst_offset, true, posix.dst_abbr, &dst_ti))
     return false;
 
+  if (AllYearDST(posix)) {  // dst only
+    // The future specification should match the last transition, and
+    // that means that handling the future will fall out naturally.
+    return EquivTransitions(transitions_.back().type_index, dst_ti);
+  }
+
   // Extend the transitions for an additional 400 years using the
   // future specification. Years beyond those can be handled by
   // mapping back to a cycle-equivalent year within that range.
@@ -480,9 +502,9 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
   // encoded zoneinfo. The ttisstd/ttisgmt indicators only apply when
   // interpreting a POSIX spec that does not include start/end rules, and
   // that isn't the case here (see "zic -p").
-  bp += (8 + 4) * hdr.leapcnt;  // leap-time + TAI-UTC
-  bp += 1 * hdr.ttisstdcnt;     // UTC/local indicators
-  bp += 1 * hdr.ttisutcnt;      // standard/wall indicators
+  bp += (time_len + 4) * hdr.leapcnt;  // leap-time + TAI-UTC
+  bp += 1 * hdr.ttisstdcnt;            // UTC/local indicators
+  bp += 1 * hdr.ttisutcnt;             // standard/wall indicators
   assert(bp == tbuf.data() + tbuf.size());
 
   future_spec_.clear();
@@ -511,8 +533,8 @@ bool TimeZoneInfo::Load(ZoneInfoSource* zip) {
 
   // Trim redundant transitions. zic may have added these to work around
   // differences between the glibc and reference implementations (see
-  // zic.c:dontmerge) and the Qt library (see zic.c:WORK_AROUND_QTBUG_53071).
-  // For us, they just get in the way when we do future_spec_ extension.
+  // zic.c:dontmerge) or to avoid bugs in old readers. For us, they just
+  // get in the way when we do future_spec_ extension.
   while (hdr.timecnt > 1) {
     if (!EquivTransitions(transitions_[hdr.timecnt - 1].type_index,
                           transitions_[hdr.timecnt - 2].type_index)) {
@@ -649,7 +671,7 @@ std::unique_ptr<ZoneInfoSource> FileZoneInfoSource::Open(
 
   // Open the zoneinfo file.
   auto fp = FOpen(path.c_str(), "rb");
-  if (fp.get() == nullptr) return nullptr;
+  if (fp == nullptr) return nullptr;
   return std::unique_ptr<ZoneInfoSource>(new FileZoneInfoSource(std::move(fp)));
 }
 
@@ -674,7 +696,7 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   for (const char* tzdata : {"/data/misc/zoneinfo/current/tzdata",
                              "/system/usr/share/zoneinfo/tzdata"}) {
     auto fp = FOpen(tzdata, "rb");
-    if (fp.get() == nullptr) continue;
+    if (fp == nullptr) continue;
 
     char hbuf[24];  // covers header.zonetab_offset too
     if (fread(hbuf, 1, sizeof(hbuf), fp.get()) != sizeof(hbuf)) continue;
@@ -708,6 +730,69 @@ std::unique_ptr<ZoneInfoSource> AndroidZoneInfoSource::Open(
   return nullptr;
 }
 
+// A zoneinfo source for use inside Fuchsia components. This attempts to
+// read zoneinfo files from one of several known paths in a component's
+// incoming namespace. [Config data][1] is preferred, but package-specific
+// resources are also supported.
+//
+// Fuchsia's implementation supports `FileZoneInfoSource::Version()`.
+//
+// [1]:
+// https://fuchsia.dev/fuchsia-src/development/components/data#using_config_data_in_your_component
+class FuchsiaZoneInfoSource : public FileZoneInfoSource {
+ public:
+  static std::unique_ptr<ZoneInfoSource> Open(const std::string& name);
+  std::string Version() const override { return version_; }
+
+ private:
+  explicit FuchsiaZoneInfoSource(FilePtr fp, std::string version)
+      : FileZoneInfoSource(std::move(fp)), version_(std::move(version)) {}
+  std::string version_;
+};
+
+std::unique_ptr<ZoneInfoSource> FuchsiaZoneInfoSource::Open(
+    const std::string& name) {
+  // Use of the "file:" prefix is intended for testing purposes only.
+  const std::size_t pos = (name.compare(0, 5, "file:") == 0) ? 5 : 0;
+
+  // Prefixes where a Fuchsia component might find zoneinfo files,
+  // in descending order of preference.
+  const auto kTzdataPrefixes = {
+      "/config/data/tzdata/",
+      "/pkg/data/tzdata/",
+      "/data/tzdata/",
+  };
+  const auto kEmptyPrefix = {""};
+  const bool name_absolute = (pos != name.size() && name[pos] == '/');
+  const auto prefixes = name_absolute ? kEmptyPrefix : kTzdataPrefixes;
+
+  // Fuchsia builds place zoneinfo files at "<prefix><format><name>".
+  for (const std::string prefix : prefixes) {
+    std::string path = prefix;
+    if (!prefix.empty()) path += "zoneinfo/tzif2/";  // format
+    path.append(name, pos, std::string::npos);
+
+    auto fp = FOpen(path.c_str(), "rb");
+    if (fp == nullptr) continue;
+
+    std::string version;
+    if (!prefix.empty()) {
+      // Fuchsia builds place the version in "<prefix>revision.txt".
+      std::ifstream version_stream(prefix + "revision.txt");
+      if (version_stream.is_open()) {
+        // revision.txt should contain no newlines, but to be
+        // defensive we read just the first line.
+        std::getline(version_stream, version);
+      }
+    }
+
+    return std::unique_ptr<ZoneInfoSource>(
+        new FuchsiaZoneInfoSource(std::move(fp), std::move(version)));
+  }
+
+  return nullptr;
+}
+
 }  // namespace
 
 bool TimeZoneInfo::Load(const std::string& name) {
@@ -725,6 +810,7 @@ bool TimeZoneInfo::Load(const std::string& name) {
       name, [](const std::string& n) -> std::unique_ptr<ZoneInfoSource> {
         if (auto z = FileZoneInfoSource::Open(n)) return z;
         if (auto z = AndroidZoneInfoSource::Open(n)) return z;
+        if (auto z = FuchsiaZoneInfoSource::Open(n)) return z;
         return nullptr;
       });
   return zip != nullptr && Load(zip.get());
