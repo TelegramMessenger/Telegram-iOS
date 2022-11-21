@@ -8302,3 +8302,6 @@ Sorry for the inconvenience.";
 
 "CreateTopic.ShowGeneral" = "Show in Topics";
 "CreateTopic.ShowGeneralInfo" = "If the 'General' topic is hidden, group members can pull down in the topic list to view it.";
+
+"Conversation.ContextMenuReportFalsePositive" = "Report False Positive";
+"Group.AdminLog.AntiSpamFalsePositiveReportedText" = "Telegram moderators will review your report. Thank you!";
