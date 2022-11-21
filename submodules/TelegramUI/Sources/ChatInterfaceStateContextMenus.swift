@@ -1689,7 +1689,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 actions.insert(.custom(ChatReadReportContextItem(context: context, message: message, hasReadReports: hasReadReports, stats: readStats, action: { c, f, stats, customReactionEmojiPacks, firstCustomEmojiReaction in
                     if reactionCount == 0, let stats = stats, stats.peers.count == 1 {
                         c.dismiss(completion: {
-                            controllerInteraction.openPeer(stats.peers[0], .default, nil, false)
+                            controllerInteraction.openPeer(stats.peers[0], .default, nil, .default)
                         })
                     } else if (stats != nil && !stats!.peers.isEmpty) || reactionCount != 0 {
                         var tip: ContextController.Tip?
@@ -1733,7 +1733,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                             },
                             openPeer: { [weak c] peer in
                                 c?.dismiss(completion: {
-                                    controllerInteraction.openPeer(peer, .default, MessageReference(message), true)
+                                    controllerInteraction.openPeer(peer, .default, MessageReference(message), .reaction)
                                 })
                             }
                         )), tip: tip)))

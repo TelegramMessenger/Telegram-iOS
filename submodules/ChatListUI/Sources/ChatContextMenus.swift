@@ -512,14 +512,14 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         
         var items: [ContextMenuItem] = []
         
-        if let isClosed = isClosed, isClosed {
+        if let isClosed = isClosed, isClosed && threadId != 1 {
         } else {
             if let isPinned = isPinned, channel.hasPermission(.manageTopics) {
                 items.append(.action(ContextMenuActionItem(text: isPinned ? presentationData.strings.ChatList_Context_Unpin : presentationData.strings.ChatList_Context_Pin, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isPinned ? "Chat/Context Menu/Unpin": "Chat/Context Menu/Pin"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                     f(.default)
                     
                     let _ = (context.engine.peers.toggleForumChannelTopicPinned(id: peerId, threadId: threadId)
-                             |> deliverOnMainQueue).start(error: { error in
+                    |> deliverOnMainQueue).start(error: { error in
                         switch error {
                         case let .limitReached(count):
                             if let chatListController = chatListController {

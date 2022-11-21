@@ -855,7 +855,7 @@ public class ChatMessageItemView: ListViewItemNode, ChatMessageItemNodeProtocol 
                     let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                     |> deliverOnMainQueue).start(next: { peer in
                         if let peer = peer {
-                            item.controllerInteraction.openPeer(peer, .info, nil, false)
+                            item.controllerInteraction.openPeer(peer, .info, nil, .default)
                         }
                     })
                 case let .openWebView(url, simple):

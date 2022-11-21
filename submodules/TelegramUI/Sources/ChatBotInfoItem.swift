@@ -457,7 +457,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                                         let _ = (item.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                                         |> deliverOnMainQueue).start(next: { [weak self] peer in
                                             if let peer = peer {
-                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                                self?.item?.controllerInteraction.openPeer(peer, .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                             }
                                         })
                                     }

@@ -926,7 +926,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, openPeer: { [weak self] peer in
                 if let strongSelf = self {
-                    strongSelf.controllerInteraction?.openPeer(peer, .default, nil, false)
+                    strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
                 }
             }, openHashtag: { [weak self] peerName, hashtag in
                 if let strongSelf = self {
@@ -995,8 +995,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     }
                 })
             })))
-        }, openPeer: { [weak self] peer, navigation, fromMessage, isReaction in
-            self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: isReaction ? fromMessage?.id : nil)
+        }, openPeer: { [weak self] peer, navigation, fromMessage, source in
+            self?.openPeer(peer: peer, navigation: navigation, fromMessage: fromMessage, fromReactionMessageId: source == .reaction ? fromMessage?.id : nil, expandAvatar: source == .groupParticipant)
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
         }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
@@ -13224,7 +13224,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                     |> deliverOnMainQueue).start(next: { peer in
                         if let strongSelf = self, let peer = peer {
-                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, false)
+                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
                         }
                     })
                 case .longTap:
@@ -13317,7 +13317,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                     |> deliverOnMainQueue).start(next: { peer in
                         if let strongSelf = self, let peer = peer {
-                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, false)
+                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
                         }
                     })
                 case .longTap:
@@ -13431,7 +13431,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
                     |> deliverOnMainQueue).start(next: { peer in
                         if let strongSelf = self, let peer = peer {
-                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, false)
+                            strongSelf.controllerInteraction?.openPeer(peer, .default, nil, .default)
                         }
                     })
                 case .longTap:
