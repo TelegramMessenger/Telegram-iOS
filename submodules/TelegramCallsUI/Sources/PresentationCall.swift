@@ -536,8 +536,6 @@ public final class PresentationCallImpl: PresentationCall {
             }
         }
         
-        #if DEBUG
-        #else
         if let audioSessionControl = audioSessionControl, previous == nil || previousControl == nil {
             if let callKitIntegration = self.callKitIntegration {
                 callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
@@ -546,7 +544,6 @@ public final class PresentationCallImpl: PresentationCall {
                 audioSessionControl.setup(synchronous: true)
             }
         }
-        #endif
         
         let mappedVideoState: PresentationCallState.VideoState
         let mappedRemoteVideoState: PresentationCallState.RemoteVideoState
@@ -869,13 +866,13 @@ public final class PresentationCallImpl: PresentationCall {
         }
         if tone != self.toneRenderer?.tone {
             if let tone = tone {
-                #if DEBUG
-                let _ = tone
-                #else
-                let toneRenderer = PresentationCallToneRenderer(tone: tone)
-                self.toneRenderer = toneRenderer
-                toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
-                #endif
+                if "".isEmpty {
+                    let _ = tone
+                } else {
+                    let toneRenderer = PresentationCallToneRenderer(tone: tone)
+                    self.toneRenderer = toneRenderer
+                    toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+                }
             } else {
                 self.toneRenderer = nil
             }
@@ -1052,8 +1049,6 @@ public final class PresentationCallImpl: PresentationCall {
             |> delay(1.0, queue: Queue.mainQueue())
         ))
         
-        #if DEBUG
-        #else
         if let audioSessionControl = self.audioSessionControl {
             if let callKitIntegration = self.callKitIntegration {
                 callKitIntegration.applyVoiceChatOutputMode(outputMode: .custom(self.currentAudioOutputValue))
@@ -1061,7 +1056,6 @@ public final class PresentationCallImpl: PresentationCall {
                 audioSessionControl.setOutputMode(.custom(output))
             }
         }
-        #endif
     }
     
     public func debugInfo() -> Signal<(String, String), NoError> {
