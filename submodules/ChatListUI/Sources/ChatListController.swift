@@ -1933,8 +1933,13 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                     backTitle = self.presentationData.strings.Common_Close
                 }
             }
+            var navigationBackTitle: String?
+            if case .chatList(.archive) = self.location {
+                navigationBackTitle = self.presentationData.strings.Common_Back
+            }
             primaryContent = ChatListHeaderComponent.Content(
                 title: self.plainTitle,
+                navigationBackTitle: navigationBackTitle,
                 titleComponent: primaryContext.chatTitleComponent.flatMap { AnyComponent<Empty>($0) },
                 chatListTitle: primaryContext.chatListTitle,
                 leftButton: primaryContext.leftButton,
@@ -1952,6 +1957,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         if let secondaryContext = self.secondaryContext {
             secondaryContent = ChatListHeaderComponent.Content(
                 title: self.plainTitle,
+                navigationBackTitle: nil,
                 titleComponent: secondaryContext.chatTitleComponent.flatMap { AnyComponent<Empty>($0) },
                 chatListTitle: secondaryContext.chatListTitle,
                 leftButton: secondaryContext.leftButton,

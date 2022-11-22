@@ -71,6 +71,7 @@ public final class HeaderNetworkStatusComponent: Component {
 public final class ChatListHeaderComponent: Component {
     public final class Content: Equatable {
         public let title: String
+        public let navigationBackTitle: String?
         public let titleComponent: AnyComponent<Empty>?
         public let chatListTitle: NetworkStatusTitle?
         public let leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?
@@ -80,6 +81,7 @@ public final class ChatListHeaderComponent: Component {
         
         public init(
             title: String,
+            navigationBackTitle: String?,
             titleComponent: AnyComponent<Empty>?,
             chatListTitle: NetworkStatusTitle?,
             leftButton: AnyComponentWithIdentity<NavigationButtonComponentEnvironment>?,
@@ -88,6 +90,7 @@ public final class ChatListHeaderComponent: Component {
             backPressed: (() -> Void)?
         ) {
             self.title = title
+            self.navigationBackTitle = navigationBackTitle
             self.titleComponent = titleComponent
             self.chatListTitle = chatListTitle
             self.leftButton = leftButton
@@ -98,6 +101,9 @@ public final class ChatListHeaderComponent: Component {
         
         public static func ==(lhs: Content, rhs: Content) -> Bool {
             if lhs.title != rhs.title {
+                return false
+            }
+            if lhs.navigationBackTitle != rhs.navigationBackTitle {
                 return false
             }
             if lhs.titleComponent != rhs.titleComponent {
@@ -339,7 +345,7 @@ public final class ChatListHeaderComponent: Component {
                 let totalOffset = titleFrame.minX - backButtonTitleFrame.minX
                 
                 transition.setBounds(view: self.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: totalOffset * fraction, y: 0.0), size: self.titleOffsetContainer.bounds.size))
-                transition.setAlpha(view: self.titleOffsetContainer, alpha: (1.0 - fraction))
+                transition.setAlpha(view: self.titleOffsetContainer, alpha: pow(1.0 - fraction, 2.0))
             }
         }
         
@@ -359,7 +365,7 @@ public final class ChatListHeaderComponent: Component {
                     let totalOffset = previousTitleFrame.minX - backButtonTitleFrame.minX
                     
                     transition.setBounds(view: backButtonView.titleOffsetContainer, bounds: CGRect(origin: CGPoint(x: -totalOffset * (1.0 - fraction), y: 0.0), size: backButtonView.titleOffsetContainer.bounds.size))
-                    transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: fraction)
+                    transition.setAlpha(view: backButtonView.titleOffsetContainer, alpha: pow(fraction, 2.0))
                 }
             }
         }
@@ -664,7 +670,7 @@ public final class ChatListHeaderComponent: Component {
                     self.secondaryContentView = secondaryContentView
                     self.addSubview(secondaryContentView)
                 }
-                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, backTitle: component.primaryContent?.title, sideInset: component.sideInset, size: availableSize, transition: secondaryContentTransition)
+                secondaryContentView.update(context: component.context, theme: component.theme, strings: component.strings, content: secondaryContent, backTitle: component.primaryContent?.navigationBackTitle ?? component.primaryContent?.title, sideInset: component.sideInset, size: availableSize, transition: secondaryContentTransition)
                 secondaryContentTransition.setFrame(view: secondaryContentView, frame: CGRect(origin: CGPoint(), size: availableSize))
                 
                 if let primaryContentView = self.primaryContentView {

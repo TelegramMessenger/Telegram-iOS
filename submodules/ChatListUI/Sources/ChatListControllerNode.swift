@@ -313,7 +313,7 @@ private final class ChatListContainerItemNode: ASDisplayNode {
     private var shimmerNodeOffset: CGFloat = 0.0
     let listNode: ChatListNode
     
-    private var validLayout: (CGSize, UIEdgeInsets, CGFloat, CGFloat, ChatListControllerLocation?, CGFloat)?
+    private(set) var validLayout: (size: CGSize, insets: UIEdgeInsets, visualNavigationHeight: CGFloat, originalNavigationHeight: CGFloat, inlineNavigationLocation: ChatListControllerLocation?, inlineNavigationTransitionFraction: CGFloat)?
     
     init(context: AccountContext, location: ChatListControllerLocation, filter: ChatListFilter?, previewing: Bool, isInlineMode: Bool, controlsHistoryPreload: Bool, presentationData: PresentationData, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, becameEmpty: @escaping (ChatListFilter?) -> Void, emptyAction: @escaping (ChatListFilter?) -> Void, secondaryEmptyAction: @escaping () -> Void) {
         self.context = context
@@ -1129,7 +1129,14 @@ final class ChatListContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 nodeTransition.updateFrame(node: itemNode, frame: itemFrame, completion: { _ in
                 })
                 
-                itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: inlineNavigationTransitionFraction, transition: nodeTransition)
+                var itemInlineNavigationTransitionFraction = inlineNavigationTransitionFraction
+                if indexDistance != 0 {
+                    if itemInlineNavigationTransitionFraction != 0.0 || itemInlineNavigationTransitionFraction != 1.0 {
+                        itemInlineNavigationTransitionFraction = itemNode.validLayout?.inlineNavigationTransitionFraction ?? 0.0
+                    }
+                }
+                
+                itemNode.updateLayout(size: layout.size, insets: insets, visualNavigationHeight: visualNavigationHeight, originalNavigationHeight: originalNavigationHeight, inlineNavigationLocation: inlineNavigationLocation, inlineNavigationTransitionFraction: itemInlineNavigationTransitionFraction, transition: nodeTransition)
                 
                 if wasAdded, case .animated = transition {
                     animateSlidingIds.append(id)
