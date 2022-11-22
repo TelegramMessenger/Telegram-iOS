@@ -1575,20 +1575,17 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         self.internalStatePromise.set(.single(internalState))
         
         if let audioSessionControl = audioSessionControl, previousControl == nil {
-            if "".isEmpty {
+            if self.isStream {
+                audioSessionControl.setOutputMode(.system)
             } else {
-                if self.isStream {
-                    audioSessionControl.setOutputMode(.system)
-                } else {
-                    switch self.currentSelectedAudioOutputValue {
-                    case .speaker:
-                        audioSessionControl.setOutputMode(.custom(self.currentSelectedAudioOutputValue))
-                    default:
-                        break
-                    }
+                switch self.currentSelectedAudioOutputValue {
+                case .speaker:
+                    audioSessionControl.setOutputMode(.custom(self.currentSelectedAudioOutputValue))
+                default:
+                    break
                 }
-                audioSessionControl.setup(synchronous: false)
             }
+            audioSessionControl.setup(synchronous: false)
         }
         
         self.audioSessionShouldBeActive.set(true)

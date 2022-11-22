@@ -854,8 +854,6 @@ public final class ManagedAudioSession {
     }
     
     private func setupOutputMode(_ outputMode: AudioSessionOutputMode, type: ManagedAudioSessionType) throws {
-        var outputMode = outputMode
-        outputMode = .custom(.builtin)
         managedAudioSessionLog("ManagedAudioSession setup \(outputMode) for \(type)")
         var resetToBuiltin = false
         switch outputMode {
