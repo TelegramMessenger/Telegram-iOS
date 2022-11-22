@@ -291,6 +291,10 @@ public extension TelegramEngine {
         public func toggleAntiSpamProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
             return _internal_toggleAntiSpamProtection(account: self.account, peerId: peerId, enabled: enabled)
         }
+        
+        public func reportAntiSpamFalsePositive(peerId: PeerId, messageId: MessageId) -> Signal<Bool, NoError> {
+            return _internal_reportAntiSpamFalsePositive(account: self.account, peerId: peerId, messageId: messageId)
+        }
 
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
             return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
