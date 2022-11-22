@@ -2954,6 +2954,7 @@ webrtc_sources = [
     "api/video_codecs/video_encoder_factory_template_libvpx_vp9_adapter.h",
     "p2p/base/ice_agent_interface.h",
     "api/video_codecs/video_encoder_factory_template_open_h264_adapter.h",
+    "api/video_codecs/simulcast_stream.cc",
 ]
 
 ios_objc_sources = [
