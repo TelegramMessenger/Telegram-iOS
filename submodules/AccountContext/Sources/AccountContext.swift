@@ -925,18 +925,20 @@ public struct PremiumConfiguration {
 
 public struct AntiSpamBotConfiguration {
     public static var defaultValue: AntiSpamBotConfiguration {
-        return AntiSpamBotConfiguration(antiSpamBotId: nil)
+        return AntiSpamBotConfiguration(antiSpamBotId: nil, minimumGroupParticipants: 100)
     }
     
     public let antiSpamBotId: EnginePeer.Id?
+    public let minimumGroupParticipants: Int32
     
-    fileprivate init(antiSpamBotId: EnginePeer.Id?) {
+    fileprivate init(antiSpamBotId: EnginePeer.Id?, minimumGroupParticipants: Int32) {
         self.antiSpamBotId = antiSpamBotId
+        self.minimumGroupParticipants = minimumGroupParticipants
     }
     
     public static func with(appConfiguration: AppConfiguration) -> AntiSpamBotConfiguration {
-        if let data = appConfiguration.data, let string = data["telegram_antispam_user_id"] as? String, let value = Int64(string) {
-            return AntiSpamBotConfiguration(antiSpamBotId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(value)))
+        if let data = appConfiguration.data, let botIdString = data["telegram_antispam_user_id"] as? String, let botIdValue = Int64(botIdString), let groupSize = data["telegram_antispam_group_size_min"] as? Double {
+            return AntiSpamBotConfiguration(antiSpamBotId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(botIdValue)), minimumGroupParticipants: Int32(groupSize))
         } else {
             return .defaultValue
         }

@@ -1247,7 +1247,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                         return
                                     } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                         return
                                     } else if let _ = forwardInfo.authorSignature {
                                         item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)

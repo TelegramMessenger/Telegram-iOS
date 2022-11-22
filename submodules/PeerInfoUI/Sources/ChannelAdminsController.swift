@@ -338,7 +338,7 @@ private struct ChannelAdminsControllerState: Equatable {
     }
 }
 
-private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, view: PeerView, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamEnabled: Bool) -> [ChannelAdminsEntry] {
+private func channelAdminsControllerEntries(presentationData: PresentationData, accountPeerId: PeerId, view: PeerView, state: ChannelAdminsControllerState, participants: [RenderedChannelParticipant]?, antiSpamAvailable: Bool, antiSpamEnabled: Bool) -> [ChannelAdminsEntry] {
     if participants == nil || participants?.count == nil {
         return []
     }
@@ -351,7 +351,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         }
         entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         
-        if isGroup && peer.hasPermission(.deleteAllMessages) {
+        if isGroup && peer.hasPermission(.deleteAllMessages) && antiSpamAvailable {
             entries.append(.antiSpam(presentationData.theme, presentationData.strings.Group_Management_AntiSpam, antiSpamEnabled))
             entries.append(.antiSpamInfo(presentationData.theme, presentationData.strings.Group_Management_AntiSpamInfo))
         }
@@ -539,10 +539,10 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
     
     let adminsPromise = Promise<[RenderedChannelParticipant]?>(nil)
         
-    let antiSpamBotConfiguration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+    let antiSpamConfiguration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
     
     let resolveAntiSpamPeerDisposable = MetaDisposable()
-    if let antiSpamBotId = antiSpamBotConfiguration.antiSpamBotId {
+    if let antiSpamBotId = antiSpamConfiguration.antiSpamBotId {
         resolveAntiSpamPeerDisposable.set(
             (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: antiSpamBotId))
             |> mapToSignal { peer -> Signal<Never, NoError> in
@@ -786,6 +786,11 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
     |> map { presentationData, state, view, admins, antiSpamEnabled -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let peerId = view.peerId
         
+        var antiSpamAvailable = false
+        if let cachedData = view.cachedData as? CachedChannelData, let memberCount = cachedData.participantsSummary.memberCount, memberCount >= antiSpamConfiguration.minimumGroupParticipants {
+            antiSpamAvailable = true
+        }
+        
         var rightNavigationButton: ItemListNavigationButton?
         var secondaryRightNavigationButton: ItemListNavigationButton?
         if let admins = admins, admins.count > 1 {
@@ -857,7 +862,7 @@ public func channelAdminsController(context: AccountContext, updatedPresentation
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.ChatAdmins_Title : presentationData.strings.Channel_Management_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, view: view, state: state, participants: admins, antiSpamEnabled: antiSpamEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelAdminsControllerEntries(presentationData: presentationData, accountPeerId: context.account.peerId, view: view, state: state, participants: admins, antiSpamAvailable: antiSpamAvailable, antiSpamEnabled: antiSpamEnabled), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: previous != nil && admins != nil && previous!.count >= admins!.count)
         
         return (controllerState, (listState, arguments))
     } |> afterDisposed {

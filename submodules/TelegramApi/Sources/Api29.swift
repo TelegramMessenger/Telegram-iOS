@@ -1852,15 +1852,16 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
-                static func createChannel(flags: Int32, title: String, about: String, geoPoint: Api.InputGeoPoint?, address: String?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func createChannel(flags: Int32, title: String, about: String, geoPoint: Api.InputGeoPoint?, address: String?, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(1029681423)
+                    buffer.appendInt32(-1862244601)
                     serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeString(title, buffer: buffer, boxed: false)
                     serializeString(about, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 2) != 0 {geoPoint!.serialize(buffer, true)}
                     if Int(flags) & Int(1 << 2) != 0 {serializeString(address!, buffer: buffer, boxed: false)}
-                    return (FunctionDescription(name: "channels.createChannel", parameters: [("flags", String(describing: flags)), ("title", String(describing: title)), ("about", String(describing: about)), ("geoPoint", String(describing: geoPoint)), ("address", String(describing: address))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 4) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "channels.createChannel", parameters: [("flags", String(describing: flags)), ("title", String(describing: title)), ("about", String(describing: about)), ("geoPoint", String(describing: geoPoint)), ("address", String(describing: address)), ("ttlPeriod", String(describing: ttlPeriod))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -3725,16 +3726,18 @@ public extension Api.functions.messages {
                 }
 }
 public extension Api.functions.messages {
-                static func createChat(users: [Api.InputUser], title: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                static func createChat(flags: Int32, users: [Api.InputUser], title: String, ttlPeriod: Int32?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
-                    buffer.appendInt32(164303470)
+                    buffer.appendInt32(3450904)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     buffer.appendInt32(481674261)
                     buffer.appendInt32(Int32(users.count))
                     for item in users {
                         item.serialize(buffer, true)
                     }
                     serializeString(title, buffer: buffer, boxed: false)
-                    return (FunctionDescription(name: "messages.createChat", parameters: [("users", String(describing: users)), ("title", String(describing: title))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt32(ttlPeriod!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "messages.createChat", parameters: [("flags", String(describing: flags)), ("users", String(describing: users)), ("title", String(describing: title)), ("ttlPeriod", String(describing: ttlPeriod))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
                         let reader = BufferReader(buffer)
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
@@ -4346,6 +4349,21 @@ public extension Api.functions.messages {
                         var result: [Api.Document]?
                         if let _ = reader.readInt32() {
                             result = Api.parseVector(reader, elementSignature: 0, elementType: Api.Document.self)
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func getDefaultHistoryTTL() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.DefaultHistoryTTL>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1703637384)
+                    
+                    return (FunctionDescription(name: "messages.getDefaultHistoryTTL", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.DefaultHistoryTTL? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.DefaultHistoryTTL?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.DefaultHistoryTTL
                         }
                         return result
                     })
@@ -6330,6 +6348,21 @@ public extension Api.functions.messages {
                         var result: Api.Updates?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.messages {
+                static func setDefaultHistoryTTL(period: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Bool>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1632299963)
+                    serializeInt32(period, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "messages.setDefaultHistoryTTL", parameters: [("period", String(describing: period))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Bool? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Bool?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Bool
                         }
                         return result
                     })

@@ -30,7 +30,6 @@ public final class ChatTimerScreen: ViewController {
     private var animatedIn = false
     
     private let context: AccountContext
-    private let peerId: PeerId
     private let style: ChatTimerScreenStyle
     private let mode: ChatTimerScreenMode
     private let currentTime: Int32?
@@ -40,9 +39,8 @@ public final class ChatTimerScreen: ViewController {
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, peerId: PeerId, style: ChatTimerScreenStyle, mode: ChatTimerScreenMode = .sendTimer, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, style: ChatTimerScreenStyle, mode: ChatTimerScreenMode = .sendTimer, currentTime: Int32? = nil, dismissByTapOutside: Bool = true, completion: @escaping (Int32) -> Void) {
         self.context = context
-        self.peerId = peerId
         self.style = style
         self.mode = mode
         self.currentTime = currentTime

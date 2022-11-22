@@ -34,7 +34,7 @@ private func createChannel(account: Account, title: String, description: String?
         
         transaction.clearItemCacheCollection(collectionId: Namespaces.CachedItemCollection.cachedGroupCallDisplayAsPeers)
         
-        return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address), automaticFloodWait: false)
+        return account.network.request(Api.functions.channels.createChannel(flags: flags, title: title, about: description ?? "", geoPoint: geoPoint, address: address, ttlPeriod: nil), automaticFloodWait: false)
         |> mapError { error -> CreateChannelError in
             if error.errorCode == 406 {
                 return .serverProvided(error.errorDescription)

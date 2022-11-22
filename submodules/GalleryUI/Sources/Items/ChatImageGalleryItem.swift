@@ -338,75 +338,75 @@ final class ChatImageGalleryItemNode: ZoomableContentGalleryItemNode {
                         case .medium, .full:
                             strongSelf.statusNodeContainer.isHidden = true
                             
-//                            Queue.concurrentDefaultQueue().async {
-//                                if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
-//                                    strongSelf.recognitionDisposable.set((recognizedContent(engine: strongSelf.context.engine, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
-//                                    |> deliverOnMainQueue).start(next: { [weak self] results in
-//                                        if let strongSelf = self {
-//                                            strongSelf.recognizedContentNode?.removeFromSupernode()
-//                                            if !results.isEmpty {
-//                                                let size = strongSelf.imageNode.bounds.size
-//                                                let recognizedContentNode = RecognizedContentContainer(size: size, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
-//                                                    if let strongSelf = self {
-//                                                        strongSelf.galleryController()?.presentInGlobalOverlay(c, with: a)
-//                                                    }
-//                                                }, performAction: { [weak self] string, action in
-//                                                    guard let strongSelf = self else {
-//                                                        return
-//                                                    }
-//                                                    switch action {
-//                                                    case .copy:
-//                                                        UIPasteboard.general.string = string
-//                                                        if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-//                                                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with({ $0 })
-//                                                            let tooltipController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false })
-//                                                            controller.present(tooltipController, in: .window(.root))
-//                                                        }
-//                                                    case .share:
-//                                                        if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-//                                                            let shareController = ShareController(context: strongSelf.context, subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData))
-//                                                            controller.present(shareController, in: .window(.root))
-//                                                        }
-//                                                    case .lookup:
-//                                                        let controller = UIReferenceLibraryViewController(term: string)
-//                                                        if let window = strongSelf.baseNavigationController()?.view.window {
-//                                                            controller.popoverPresentationController?.sourceView = window
-//                                                            controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
-//                                                            window.rootViewController?.present(controller, animated: true)
-//                                                        }
-//                                                    case .speak:
-//                                                        let _ = speakText(context: strongSelf.context, text: string)
-//                                                    case .translate:
-//                                                        if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
-//                                                            let controller = TranslateScreen(context: strongSelf.context, text: string, fromLanguage: nil)
-//                                                            controller.pushController = { [weak parentController] c in
-//                                                                (parentController?.navigationController as? NavigationController)?._keepModalDismissProgress = true
-//                                                                parentController?.push(c)
-//                                                            }
-//                                                            controller.presentController = { [weak parentController] c in
-//                                                                parentController?.present(c, in: .window(.root))
-//                                                            }
-//                                                            parentController.present(controller, in: .window(.root))
-//                                                        }
-//                                                    }
-//                                                })
-//                                                recognizedContentNode.barcodeAction = { [weak self] payload, rect in
-//                                                    guard let strongSelf = self, let message = strongSelf.message else {
-//                                                        return
-//                                                    }
-//                                                    strongSelf.footerContentNode.openActionOptions?(.url(url: payload, concealed: true), message)
-//                                                }
-//                                                recognizedContentNode.alpha = 0.0
-//                                                recognizedContentNode.frame = CGRect(origin: CGPoint(), size: size)
-//                                                recognizedContentNode.update(size: strongSelf.imageNode.bounds.size, transition: .immediate)
-//                                                strongSelf.imageNode.addSubnode(recognizedContentNode)
-//                                                strongSelf.recognizedContentNode = recognizedContentNode
-//                                                strongSelf.recognitionOverlayContentNode.transitionIn()
-//                                            }
-//                                        }
-//                                    }))
-//                                }
-//                            }
+                            Queue.concurrentDefaultQueue().async {
+                                if let message = strongSelf.message, !message.isCopyProtected() && !imageReference.media.flags.contains(.hasStickers) {
+                                    strongSelf.recognitionDisposable.set((recognizedContent(engine: strongSelf.context.engine, image: { return generate(TransformImageArguments(corners: ImageCorners(), imageSize: displaySize, boundingSize: displaySize, intrinsicInsets: UIEdgeInsets()))?.generateImage() }, messageId: message.id)
+                                    |> deliverOnMainQueue).start(next: { [weak self] results in
+                                        if let strongSelf = self {
+                                            strongSelf.recognizedContentNode?.removeFromSupernode()
+                                            if !results.isEmpty {
+                                                let size = strongSelf.imageNode.bounds.size
+                                                let recognizedContentNode = RecognizedContentContainer(size: size, recognitions: results, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
+                                                    if let strongSelf = self {
+                                                        strongSelf.galleryController()?.presentInGlobalOverlay(c, with: a)
+                                                    }
+                                                }, performAction: { [weak self] string, action in
+                                                    guard let strongSelf = self else {
+                                                        return
+                                                    }
+                                                    switch action {
+                                                    case .copy:
+                                                        UIPasteboard.general.string = string
+                                                        if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
+                                                            let presentationData = strongSelf.context.sharedContext.currentPresentationData.with({ $0 })
+                                                            let tooltipController = UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_TextCopied), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false })
+                                                            controller.present(tooltipController, in: .window(.root))
+                                                        }
+                                                    case .share:
+                                                        if let controller = strongSelf.baseNavigationController()?.topViewController as? ViewController {
+                                                            let shareController = ShareController(context: strongSelf.context, subject: .text(string), externalShare: true, immediateExternalShare: false, updatedPresentationData: (strongSelf.context.sharedContext.currentPresentationData.with({ $0 }), strongSelf.context.sharedContext.presentationData))
+                                                            controller.present(shareController, in: .window(.root))
+                                                        }
+                                                    case .lookup:
+                                                        let controller = UIReferenceLibraryViewController(term: string)
+                                                        if let window = strongSelf.baseNavigationController()?.view.window {
+                                                            controller.popoverPresentationController?.sourceView = window
+                                                            controller.popoverPresentationController?.sourceRect = CGRect(origin: CGPoint(x: window.bounds.width / 2.0, y: window.bounds.size.height - 1.0), size: CGSize(width: 1.0, height: 1.0))
+                                                            window.rootViewController?.present(controller, animated: true)
+                                                        }
+                                                    case .speak:
+                                                        let _ = speakText(context: strongSelf.context, text: string)
+                                                    case .translate:
+                                                        if let parentController = strongSelf.baseNavigationController()?.topViewController as? ViewController {
+                                                            let controller = TranslateScreen(context: strongSelf.context, text: string, canCopy: true, fromLanguage: nil)
+                                                            controller.pushController = { [weak parentController] c in
+                                                                (parentController?.navigationController as? NavigationController)?._keepModalDismissProgress = true
+                                                                parentController?.push(c)
+                                                            }
+                                                            controller.presentController = { [weak parentController] c in
+                                                                parentController?.present(c, in: .window(.root))
+                                                            }
+                                                            parentController.present(controller, in: .window(.root))
+                                                        }
+                                                    }
+                                                })
+                                                recognizedContentNode.barcodeAction = { [weak self] payload, rect in
+                                                    guard let strongSelf = self, let message = strongSelf.message else {
+                                                        return
+                                                    }
+                                                    strongSelf.footerContentNode.openActionOptions?(.url(url: payload, concealed: true), message)
+                                                }
+                                                recognizedContentNode.alpha = 0.0
+                                                recognizedContentNode.frame = CGRect(origin: CGPoint(), size: size)
+                                                recognizedContentNode.update(size: strongSelf.imageNode.bounds.size, transition: .immediate)
+                                                strongSelf.imageNode.addSubnode(recognizedContentNode)
+                                                strongSelf.recognizedContentNode = recognizedContentNode
+                                                strongSelf.recognitionOverlayContentNode.transitionIn()
+                                            }
+                                        }
+                                    }))
+                                }
+                            }
                             
                         case .none, .blurred:
                             strongSelf.statusNodeContainer.isHidden = false
@@ -1353,6 +1353,9 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
     var action: ((Bool) -> Void)?
     private var appeared = false
     
+    private var validLayout: (CGSize, LayoutMetrics, UIEdgeInsets)?
+    private var interfaceIsHidden: Bool = false
+    
     init(theme: PresentationTheme) {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
@@ -1377,13 +1380,25 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.selectedIconNode.isHidden = true
         
         super.init()
-        
+                
         self.buttonNode.addTarget(self, action: #selector(self.buttonPressed), forControlEvents: .touchUpInside)
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.backgroundNode)
         self.buttonNode.addSubnode(self.selectedBackgroundNode)
         self.buttonNode.addSubnode(self.iconNode)
         self.buttonNode.addSubnode(self.selectedIconNode)
+        
+        self.buttonNode.highligthedChanged = { [weak self] highlighted in
+            if let strongSelf = self {
+                if highlighted {
+                    strongSelf.iconNode.layer.removeAnimation(forKey: "opacity")
+                    strongSelf.iconNode.alpha = 0.4
+                } else {
+                    strongSelf.iconNode.alpha = 1.0
+                    strongSelf.iconNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                }
+            }
+        }
     }
     
     @objc private func buttonPressed() {
@@ -1391,6 +1406,10 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.buttonNode.isSelected = newValue
         self.selectedBackgroundNode.isHidden = !newValue
         self.selectedIconNode.isHidden = !newValue
+        
+        if !newValue && !self.interfaceIsHidden, let (size, metrics, insets) = self.validLayout {
+            self.updateLayout(size: size, metrics: metrics, insets: insets, isHidden: self.interfaceIsHidden, transition: .animated(duration: 0.3, curve: .easeInOut))
+        }
         
         self.action?(newValue)
         
@@ -1409,8 +1428,9 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
         self.buttonNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
     }
     
-    private var interfaceIsHidden: Bool = false
     override func updateLayout(size: CGSize, metrics: LayoutMetrics, insets: UIEdgeInsets, isHidden: Bool, transition: ContainedViewLayoutTransition) {
+        self.validLayout = (size, metrics, insets)
+        
         self.interfaceIsHidden = isHidden
         
         let buttonSize = CGSize(width: 32.0, height: 32.0)
@@ -1427,7 +1447,14 @@ private class ImageRecognitionOverlayContentNode: GalleryOverlayContentNode {
             }
         }
         
-        transition.updateFrame(node: self.buttonNode, frame: CGRect(x: size.width - insets.right - buttonSize.width - 24.0, y: insets.top - 50.0, width: buttonSize.width + 24.0, height: buttonSize.height + 24.0))
+        var buttonPosition: CGPoint
+        if isHidden && !self.buttonNode.isSelected {
+            buttonPosition = CGPoint(x: size.width - insets.right - buttonSize.width - 59.0, y: -50.0)
+        } else {
+            buttonPosition = CGPoint(x: size.width - insets.right - buttonSize.width - (self.buttonNode.isSelected ? 24.0 : 59.0), y: insets.top - 50.0)
+        }
+        
+        transition.updateFrame(node: self.buttonNode, frame: CGRect(origin: buttonPosition, size: CGSize(width: buttonSize.width + 24.0, height: buttonSize.height + 24.0)))
     }
     
     override func animateIn(previousContentNode: GalleryOverlayContentNode?, transition: ContainedViewLayoutTransition) {

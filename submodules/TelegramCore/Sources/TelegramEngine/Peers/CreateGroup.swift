@@ -23,7 +23,7 @@ func _internal_createGroup(account: Account, title: String, peerIds: [PeerId]) -
                 return .single(nil)
             }
         }
-        return account.network.request(Api.functions.messages.createChat(users: inputUsers, title: title))
+        return account.network.request(Api.functions.messages.createChat(flags: 0, users: inputUsers, title: title, ttlPeriod: nil))
         |> mapError { error -> CreateGroupError in
             if error.errorDescription == "USERS_TOO_FEW" {
                 return .privacy
