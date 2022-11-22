@@ -8295,10 +8295,10 @@ Sorry for the inconvenience.";
 
 "Notification.ForumTopicHidden" = "Topic hidden";
 "Notification.ForumTopicUnhidden" = "Topic unhidden";
-"Notification.ForumTopicHiddenAuthor" = "%1$@ hidden topic";
-"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhidden topic";
-"Notification.OverviewTopicHidden" = "%1$@ hidden %2$@ %3$@";
-"Notification.OverviewTopicUnhidden" = "%1$@ unhidden %2$@ %3$@";
+"Notification.ForumTopicHiddenAuthor" = "%1$@ hid topic";
+"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid topic";
+"Notification.OverviewTopicHidden" = "%1$@ hid %2$@ %3$@";
+"Notification.OverviewTopicUnhidden" = "%1$@ unhid %2$@ %3$@";
 
 "CreateTopic.ShowGeneral" = "Show in Topics";
 "CreateTopic.ShowGeneralInfo" = "If the 'General' topic is hidden, group members can pull down in the topic list to view it.";
@@ -8309,3 +8309,6 @@ Sorry for the inconvenience.";
 "ChatList.DeletedThreads_any" = "Deleted %@ threads";
 
 "DialogList.SearchSectionMessagesIn" = "Messages in %@";
+
+"Conversation.ContextMenuReportFalsePositive" = "Report False Positive";
+"Group.AdminLog.AntiSpamFalsePositiveReportedText" = "Telegram moderators will review your report. Thank you!";

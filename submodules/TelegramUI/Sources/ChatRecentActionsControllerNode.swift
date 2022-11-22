@@ -24,6 +24,8 @@ import UndoUI
 import TelegramCallsUI
 import WallpaperBackgroundNode
 import BotPaymentsUI
+import ContextUI
+import Pasteboard
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]
@@ -56,13 +58,14 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var automaticMediaDownloadSettings: MediaAutoDownloadSettings
     
     private var containerLayout: (ContainerViewLayout, CGFloat)?
+    private var visibleAreaInset = UIEdgeInsets()
     
     private let backgroundNode: WallpaperBackgroundNode
     private let panelBackgroundNode: NavigationBackgroundNode
     private let panelSeparatorNode: ASDisplayNode
     private let panelButtonNode: HighlightableButtonNode
     
-    private let listNode: ListView
+    fileprivate let listNode: ListView
     private let loadingNode: ChatLoadingNode
     private let emptyNode: ChatRecentActionsEmptyNode
     
@@ -86,6 +89,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
     private var adminsDisposable: Disposable?
     private var adminsState: ChannelMemberListState?
     private let banDisposables = DisposableDict<PeerId>()
+    private let reportFalsePositiveDisposables = DisposableDict<MessageId>()
     
     private weak var antiSpamTooltipController: UndoOverlayController?
     
@@ -258,8 +262,10 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
         }, openPeerMention: { [weak self] name in
             self?.openPeerMention(name)
-        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, _, location in
-            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, location: location)
+        }, openMessageContextMenu: { [weak self] message, selectAll, node, frame, anyRecognizer, location in
+            let recognizer: TapLongTapOrDoubleTapGestureRecognizer? = anyRecognizer as? TapLongTapOrDoubleTapGestureRecognizer
+            let gesture: ContextGesture? = anyRecognizer as? ContextGesture
+            self?.openMessageContextMenu(message: message, selectAll: selectAll, node: node, frame: frame, recognizer: recognizer, gesture: gesture, location: location)
         }, openMessageReactionContextMenu: { _, _, _, _ in
         }, updateMessageReaction: { _, _ in
         }, activateMessagePinch: { _ in
@@ -628,6 +634,7 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.resolvePeerByNameDisposable.dispose()
         self.adminsDisposable?.dispose()
         self.banDisposables.dispose()
+        self.reportFalsePositiveDisposables.dispose()
     }
     
     func updatePresentationData(_ presentationData: PresentationData) {
@@ -663,6 +670,8 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         self.panelBackgroundNode.update(size: self.panelBackgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.panelSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.panelButtonNode, frame: CGRect(origin: CGPoint(x: 0.0, y: layout.size.height - panelHeight), size: CGSize(width: layout.size.width, height: intrinsicPanelHeight)))
+        
+        self.visibleAreaInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: panelHeight, right: 0.0)
         
         transition.updateBounds(node: self.listNode, bounds: CGRect(origin: CGPoint(), size: layout.size))
         transition.updatePosition(node: self.listNode, position: CGRect(origin: CGPoint(), size: layout.size).center)
@@ -819,15 +828,51 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
         }))
     }
     
-    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, location: CGPoint?) {
-        var actions: [ContextMenuAction] = []
+    private func openMessageContextMenu(message: Message, selectAll: Bool, node: ASDisplayNode, frame: CGRect, recognizer: TapLongTapOrDoubleTapGestureRecognizer? = nil, gesture: ContextGesture? = nil, location: CGPoint? = nil) {
+        guard let controller = self.controller else {
+            return
+        }
+        self.dismissAllTooltips()
+        
+        let context = self.context
+        let source: ContextContentSource
+        if let location = location {
+            source = .location(ChatMessageContextLocationContentSource(controller: controller, location: node.view.convert(node.bounds, to: nil).origin.offsetBy(dx: location.x, dy: location.y)))
+        } else {
+            source = .extracted(ChatRecentActionsMessageContextExtractedContentSource(controllerNode: self, message: message, selectAll: selectAll))
+        }
+        
+        var actions: [ContextMenuItem] = []
         if !message.text.isEmpty {
-            actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuCopy, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuCopy), action: {
-                UIPasteboard.general.string = message.text
-                
-                let content: UndoOverlayContent = .copy(text: self.presentationData.strings.Conversation_TextCopied)
-                self.presentController(UndoOverlayController(presentationData: self.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
-            }))
+            actions.append(
+                .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                    f(.default)
+                    
+                    if let strongSelf = self {
+                        var messageEntities: [MessageTextEntity]?
+                        var restrictedText: String?
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? TextEntitiesMessageAttribute {
+                                messageEntities = attribute.entities
+                            }
+                            if let attribute = attribute as? RestrictedContentMessageAttribute {
+                                restrictedText = attribute.platformText(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) ?? ""
+                            }
+                        }
+                        
+                        if let restrictedText = restrictedText {
+                            storeMessageTextInPasteboard(restrictedText, entities: nil)
+                        } else {
+                            storeMessageTextInPasteboard(message.text, entities: messageEntities)
+                        }
+                        
+                        Queue.mainQueue().after(0.2, {
+                            let content: UndoOverlayContent = .copy(text: strongSelf.presentationData.strings.Conversation_TextCopied)
+                            strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                        })
+                    }
+                }))
+            )
         }
         
         if let author = message.author, let adminsState = self.adminsState {
@@ -847,42 +892,54 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             
             if canBan {
-                actions.append(ContextMenuAction(content: .text(title: self.presentationData.strings.Conversation_ContextMenuBan, accessibilityLabel: self.presentationData.strings.Conversation_ContextMenuBan), action: { [weak self] in
-                    if let strongSelf = self {
-                        strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
-                        |> deliverOnMainQueue).start(next: { participant in
-                            if let strongSelf = self {
-                                strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
-                            }
-                        }), forKey: author.id)
-                    }
-                }))
+                actions.append(
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuBan, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Restrict"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                        if let strongSelf = self {
+                            f(.default)
+                            strongSelf.banDisposables.set((strongSelf.context.engine.peers.fetchChannelParticipant(peerId: strongSelf.peer.id, participantId: author.id)
+                            |> deliverOnMainQueue).start(next: { participant in
+                                if let strongSelf = self {
+                                    strongSelf.presentController(channelBannedMemberController(context: strongSelf.context, peerId: strongSelf.peer.id, memberId: author.id, initialParticipant: participant, updated: { _ in }, upgradedToSupergroup: { _, f in f() }), .window(.root), ViewControllerPresentationArguments(presentationAnimation: .modalSheet))
+                                }
+                            }), forKey: author.id)
+                        }
+                    }))
+                )
             }
         }
         
-        if !actions.isEmpty {
-            let contextMenuController = ContextMenuController(actions: actions)
-            
-            self.controllerInteraction.highlightedState = ChatInterfaceHighlightedState(messageStableId: message.stableId)
-            self.updateItemNodesHighlightedStates(animated: true)
-            
-            contextMenuController.dismissed = { [weak self] in
-                if let strongSelf = self {
-                    if strongSelf.controllerInteraction.highlightedState?.messageStableId == message.stableId {
-                        strongSelf.controllerInteraction.highlightedState = nil
-                        strongSelf.updateItemNodesHighlightedStates(animated: true)
-                    }
+        let configuration = AntiSpamBotConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
+        for peer in message.peers {
+            if peer.0 == configuration.antiSpamBotId {
+                if !actions.isEmpty {
+                    actions.insert(.separator, at: 0)
                 }
+                actions.insert(
+                    .action(ContextMenuActionItem(text: self.presentationData.strings.Conversation_ContextMenuReportFalsePositive, icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/AntiSpam"), color: theme.contextMenu.primaryColor) }, action: { [weak self] _, f in
+                        f(.default)
+                        
+                        if let strongSelf = self {
+                            strongSelf.reportFalsePositiveDisposables.set((strongSelf.context.engine.peers.reportAntiSpamFalsePositive(peerId: message.id.peerId, messageId: message.id)
+                            |> deliverOnMainQueue).start(), forKey: message.id)
+                            
+                            Queue.mainQueue().after(0.2, {
+                                let content: UndoOverlayContent = .image(image: UIImage(bundleImageName: "Chat/AntiSpamTooltipIcon")!, title: nil, text: strongSelf.presentationData.strings.Group_AdminLog_AntiSpamFalsePositiveReportedText, undo: false)
+                                strongSelf.presentController(UndoOverlayController(presentationData: strongSelf.presentationData, content: content, elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), .current, nil)
+                            })
+                        }
+                    })), at: 0
+                )
+                
+                break
             }
-            
-            self.presentController(contextMenuController, .window(.root), ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self, weak node] in
-                if let strongSelf = self, let node = node {
-                    return (node, frame, strongSelf, strongSelf.bounds)
-                } else {
-                    return nil
-                }
-            }))
         }
+        
+        guard !actions.isEmpty else {
+            return
+        }
+        
+        let contextController = ContextController(account: self.context.account, presentationData: self.presentationData, source: source, items: .single(ContextController.Items(content: .list(actions))), recognizer: recognizer, gesture: gesture)
+        controller.window?.presentInGlobalOverlay(contextController)
     }
     
     private func updateItemNodesHighlightedStates(animated: Bool) {
@@ -1042,5 +1099,71 @@ final class ChatRecentActionsControllerNode: ViewControllerTracingNode {
             }
             return true
         })
+    }
+    
+    func frameForVisibleArea() -> CGRect {
+        let rect = CGRect(origin: CGPoint(x: self.visibleAreaInset.left, y: self.visibleAreaInset.top), size: CGSize(width: self.bounds.size.width - self.visibleAreaInset.left - self.visibleAreaInset.right, height: self.bounds.size.height - self.visibleAreaInset.top - self.visibleAreaInset.bottom))
+        
+        return rect
+    }
+}
+
+final class ChatRecentActionsMessageContextExtractedContentSource: ContextExtractedContentSource {
+    let keepInPlace: Bool = false
+    let ignoreContentTouches: Bool = false
+    let blurBackground: Bool = true
+    
+    private weak var controllerNode: ChatRecentActionsControllerNode?
+    private let message: Message
+    private let selectAll: Bool
+    
+    var shouldBeDismissed: Signal<Bool, NoError> {
+        return .single(false)
+    }
+    
+    init(controllerNode: ChatRecentActionsControllerNode, message: Message, selectAll: Bool) {
+        self.controllerNode = controllerNode
+        self.message = message
+        self.selectAll = selectAll
+    }
+    
+    func takeView() -> ContextControllerTakeViewInfo? {
+        guard let controllerNode = self.controllerNode else {
+            return nil
+        }
+        
+        var result: ContextControllerTakeViewInfo?
+        controllerNode.listNode.forEachItemNode { itemNode in
+            guard let itemNode = itemNode as? ChatMessageItemView else {
+                return
+            }
+            guard let item = itemNode.item else {
+                return
+            }
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }), let contentNode = itemNode.getMessageContextSourceNode(stableId: self.selectAll ? nil : self.message.stableId) {
+                result = ContextControllerTakeViewInfo(containingItem: .node(contentNode), contentAreaInScreenSpace: controllerNode.convert(controllerNode.frameForVisibleArea(), to: nil))
+            }
+        }
+        return result
+    }
+    
+    func putBack() -> ContextControllerPutBackViewInfo? {
+        guard let controllerNode = self.controllerNode else {
+            return nil
+        }
+        
+        var result: ContextControllerPutBackViewInfo?
+        controllerNode.listNode.forEachItemNode { itemNode in
+            guard let itemNode = itemNode as? ChatMessageItemView else {
+                return
+            }
+            guard let item = itemNode.item else {
+                return
+            }
+            if item.content.contains(where: { $0.0.stableId == self.message.stableId }) {
+                result = ContextControllerPutBackViewInfo(contentAreaInScreenSpace: controllerNode.convert(controllerNode.frameForVisibleArea(), to: nil))
+            }
+        }
+        return result
     }
 }

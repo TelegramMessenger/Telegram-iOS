@@ -186,7 +186,7 @@ final class PeerInfoGroupsInCommonPaneNode: ASDisplayNode, PeerInfoPaneNode {
             }
         }
         let transaction = preparedTransition(from: self.currentEntries, to: entries, context: self.context, presentationData: presentationData, openPeer: { [weak self] peer in
-            self?.chatControllerInteraction.openPeer(EnginePeer(peer), .default, nil, false)
+            self?.chatControllerInteraction.openPeer(EnginePeer(peer), .default, nil, .default)
         }, openPeerContextAction: { [weak self] peer, node, gesture in
             self?.openPeerContextAction(peer, node, gesture)
         })
