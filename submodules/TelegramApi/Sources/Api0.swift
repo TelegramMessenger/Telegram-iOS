@@ -180,6 +180,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[383348795] = { return Api.ContactStatus.parse_contactStatus($0) }
     dict[2104790276] = { return Api.DataJSON.parse_dataJSON($0) }
     dict[414687501] = { return Api.DcOption.parse_dcOption($0) }
+    dict[1135897376] = { return Api.DefaultHistoryTTL.parse_defaultHistoryTTL($0) }
     dict[-1460809483] = { return Api.Dialog.parse_dialog($0) }
     dict[1908216652] = { return Api.Dialog.parse_dialogFolder($0) }
     dict[1949890536] = { return Api.DialogFilter.parse_dialogFilter($0) }
@@ -1254,6 +1255,8 @@ public extension Api {
             case let _1 as Api.DataJSON:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.DcOption:
+                _1.serialize(buffer, boxed)
+            case let _1 as Api.DefaultHistoryTTL:
                 _1.serialize(buffer, boxed)
             case let _1 as Api.Dialog:
                 _1.serialize(buffer, boxed)

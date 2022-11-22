@@ -28,6 +28,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import ComponentDisplayAdapters
 import ChatTitleView
+import AppBundle
 
 enum PeerInfoHeaderButtonKey: Hashable {
     case message
@@ -2083,6 +2084,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     let subtitleNodeContainer: ASDisplayNode
     let subtitleNodeRawContainer: ASDisplayNode
     let subtitleNode: MultiScaleTextNode
+    var subtitleBackgroundNode: ASDisplayNode?
+    var subtitleBackgroundButton: HighlightTrackingButtonNode?
+    var subtitleArrowNode: ASImageNode?
     let panelSubtitleNode: MultiScaleTextNode
     let nextPanelSubtitleNode: MultiScaleTextNode
     let usernameNodeContainer: ASDisplayNode
@@ -2110,6 +2114,8 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
+    
+    var navigateToForum: (() -> Void)?
     
     var navigationTransition: PeerInfoHeaderNavigationTransition?
     
@@ -2161,7 +2167,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.usernameNode.displaysAsynchronously = false
         
         self.buttonsContainerNode = SparseNode()
-        self.buttonsContainerNode.clipsToBounds = true
+        self.buttonsContainerNode.clipsToBounds = false
         
         self.regularContentNode = PeerInfoHeaderRegularContentNode()
         var requestUpdateLayoutImpl: (() -> Void)?
@@ -2298,6 +2304,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if gestureRecognizer.state == .began {
             self.displayCopyContextMenu?(self.subtitleNodeRawContainer, true, !self.isAvatarExpanded)
         }
+    }
+    
+    @objc private func subtitleBackgroundPressed() {
+        self.navigateToForum?()
     }
     
     func invokeDisplayPremiumIntro() {
@@ -2616,6 +2626,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         let titleString: NSAttributedString
         let smallSubtitleString: NSAttributedString
         let subtitleString: NSAttributedString
+        var subtitleIsButton: Bool = false
         var panelSubtitleString: NSAttributedString?
         var nextPanelSubtitleString: NSAttributedString?
         let usernameString: NSAttributedString
@@ -2659,18 +2670,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
             } else if let _ = threadData {
-                let subtitleColor: UIColor = presentationData.theme.list.itemSecondaryTextColor
+                let subtitleColor: UIColor
+                subtitleColor = presentationData.theme.list.itemAccentColor
                 
                 let statusText: String
-                if let addressName = peer.addressName {
-                    statusText = presentationData.strings.PeerInfo_TopicHeaderLocation("@\(addressName)").string
-                } else {
-                    statusText = presentationData.strings.PeerInfo_TopicHeaderLocation(peer.debugDisplayTitle).string
-                }
+                statusText = peer.debugDisplayTitle
                 
                 smallSubtitleString = NSAttributedString(string: statusText, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                subtitleString = NSAttributedString(string: statusText, font: Font.regular(17.0), textColor: subtitleColor)
+                subtitleString = NSAttributedString(string: statusText, font: Font.semibold(15.0), textColor: subtitleColor)
                 usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                
+                subtitleIsButton = true
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
@@ -2739,6 +2749,81 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         ], mainState: TitleNodeStateRegular)
         self.subtitleNode.accessibilityLabel = subtitleString.string
         
+        if subtitleIsButton {
+            let subtitleBackgroundNode: ASDisplayNode
+            if let current = self.subtitleBackgroundNode {
+                subtitleBackgroundNode = current
+            } else {
+                subtitleBackgroundNode = ASDisplayNode()
+                self.subtitleBackgroundNode = subtitleBackgroundNode
+                self.subtitleNode.insertSubnode(subtitleBackgroundNode, at: 0)
+            }
+            
+            let subtitleBackgroundButton: HighlightTrackingButtonNode
+            if let current = self.subtitleBackgroundButton {
+                subtitleBackgroundButton = current
+            } else {
+                subtitleBackgroundButton = HighlightTrackingButtonNode()
+                self.subtitleBackgroundButton = subtitleBackgroundButton
+                self.subtitleNode.addSubnode(subtitleBackgroundButton)
+                
+                subtitleBackgroundButton.addTarget(self, action: #selector(self.subtitleBackgroundPressed), forControlEvents: .touchUpInside)
+                subtitleBackgroundButton.highligthedChanged = { [weak self] highlighted in
+                    guard let self else {
+                        return
+                    }
+                    if highlighted {
+                        self.subtitleNode.layer.removeAnimation(forKey: "opacity")
+                        self.subtitleNode.alpha = 0.4
+                    } else {
+                        self.subtitleNode.alpha = 1.0
+                        self.subtitleNode.layer.animateAlpha(from: 0.4, to: 1.0, duration: 0.2)
+                    }
+                }
+            }
+            
+            let subtitleArrowNode: ASImageNode
+            if let current = self.subtitleArrowNode {
+                subtitleArrowNode = current
+                if themeUpdated {
+                    subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
+                }
+            } else {
+                subtitleArrowNode = ASImageNode()
+                self.subtitleArrowNode = subtitleArrowNode
+                self.subtitleNode.insertSubnode(subtitleArrowNode, at: 1)
+                
+                subtitleArrowNode.image = generateTintedImage(image: UIImage(bundleImageName: "Item List/DisclosureArrow"), color: presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.5))
+            }
+            subtitleBackgroundNode.backgroundColor = presentationData.theme.list.itemAccentColor.withMultipliedAlpha(0.1)
+            let subtitleSize = subtitleNodeLayout[TitleNodeStateRegular]!.size
+            var subtitleBackgroundFrame = CGRect(origin: CGPoint(), size: subtitleSize).offsetBy(dx: -subtitleSize.width * 0.5, dy: -subtitleSize.height * 0.5).insetBy(dx: -6.0, dy: -4.0)
+            subtitleBackgroundFrame.size.width += 12.0
+            transition.updateFrame(node: subtitleBackgroundNode, frame: subtitleBackgroundFrame)
+            transition.updateCornerRadius(node: subtitleBackgroundNode, cornerRadius: subtitleBackgroundFrame.height * 0.5)
+            
+            transition.updateFrame(node: subtitleBackgroundButton, frame: subtitleBackgroundFrame)
+            
+            if let arrowImage = subtitleArrowNode.image {
+                let scaleFactor: CGFloat = 0.8
+                let arrowSize = CGSize(width: floorToScreenPixels(arrowImage.size.width * scaleFactor), height: floorToScreenPixels(arrowImage.size.height * scaleFactor))
+                subtitleArrowNode.frame = CGRect(origin: CGPoint(x: subtitleBackgroundFrame.maxX - arrowSize.width - 1.0, y: subtitleBackgroundFrame.minY + floor((subtitleBackgroundFrame.height - arrowSize.height) / 2.0)), size: arrowSize)
+            }
+        } else {
+            if let subtitleBackgroundNode = self.subtitleBackgroundNode {
+                self.subtitleBackgroundNode = nil
+                subtitleBackgroundNode.removeFromSupernode()
+            }
+            if let subtitleArrowNode = self.subtitleArrowNode {
+                self.subtitleArrowNode = nil
+                subtitleArrowNode.removeFromSupernode()
+            }
+            if let subtitleBackgroundButton = self.subtitleBackgroundButton {
+                self.subtitleBackgroundButton = nil
+                subtitleBackgroundButton.removeFromSupernode()
+            }
+        }
+        
         if let previousPanelStatusData = previousPanelStatusData, let currentPanelStatusData = panelStatusData.0, let previousPanelStatusDataKey = previousPanelStatusData.key, let currentPanelStatusDataKey = currentPanelStatusData.key, previousPanelStatusDataKey != currentPanelStatusDataKey {
             if let snapshotView = self.panelSubtitleNode.view.snapshotContentTree() {
                 let direction: CGFloat = previousPanelStatusDataKey.rawValue > currentPanelStatusDataKey.rawValue ? 1.0 : -1.0
@@ -2803,7 +2888,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         
         var titleFrame: CGRect
-        let subtitleFrame: CGRect
+        var subtitleFrame: CGRect
         let usernameFrame: CGRect
         let usernameSpacing: CGFloat = 4.0
         
@@ -2827,6 +2912,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 subtitleFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((width - totalSubtitleWidth) / 2.0), y: titleFrame.maxY + 1.0), size: subtitleSize)
                 usernameFrame = CGRect(origin: CGPoint(x: subtitleFrame.maxX + usernameSpacing, y: titleFrame.maxY + 1.0), size: usernameSize)
             }
+        }
+        
+        if subtitleIsButton {
+            subtitleFrame.origin.y += 11.0
         }
         
         let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
@@ -3025,7 +3114,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             self.avatarListNode.avatarContainerNode.canAttachVideo = false
         }
         
-        let panelWithAvatarHeight: CGFloat = 35.0 + avatarSize
+        var panelWithAvatarHeight: CGFloat = 35.0 + avatarSize
+        if threadData != nil {
+            panelWithAvatarHeight += 10.0
+        }
         
         let rawHeight: CGFloat
         let height: CGFloat
@@ -3307,6 +3399,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
+        if let subtitleBackgroundButton = self.subtitleBackgroundButton, subtitleBackgroundButton.view.convert(subtitleBackgroundButton.bounds, to: self.view).contains(point) {
+            if let result = subtitleBackgroundButton.view.hitTest(self.view.convert(point, to: subtitleBackgroundButton.view), with: event) {
+                return result
+            }
+        }
+        
         if result.isDescendant(of: self.navigationButtonContainer.view) {
             return result
         }
@@ -3314,6 +3412,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         if result == self.view || result == self.regularContentNode.view || result == self.editingContentNode.view {
             return nil
         }
+        
         return result
     }
     

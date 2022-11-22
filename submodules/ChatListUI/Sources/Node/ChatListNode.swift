@@ -469,8 +469,15 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         var isForum = false
                         if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                             isForum = true
-                            if editing {
+                            if editing, case .chatList = mode {
                                 enabled = false
+                            }
+                        }
+                    
+                        var selectable = editing
+                        if case .chatList = mode {
+                            if isForum {
+                                selectable = false
                             }
                         }
 
@@ -483,7 +490,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
-                            selection: editing && !isForum ? .selectable(selected: selected) : .none,
+                            selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                             index: nil,
                             header: header,
@@ -644,8 +651,15 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         var isForum = false
                         if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                             isForum = true
-                            if editing {
+                            if editing, case .chatList = mode {
                                 enabled = false
+                            }
+                        }
+                    
+                        var selectable = editing
+                        if case .chatList = mode {
+                            if isForum {
+                                selectable = false
                             }
                         }
                     
@@ -658,7 +672,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
-                            selection: editing && !isForum ? .selectable(selected: selected) : .none,
+                            selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                             index: nil,
                             header: header,

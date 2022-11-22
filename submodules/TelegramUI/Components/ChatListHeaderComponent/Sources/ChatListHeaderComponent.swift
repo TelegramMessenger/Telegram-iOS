@@ -916,12 +916,14 @@ public final class NavigationButtonComponent: Component {
                         guard let self, let component = self.component else {
                             return
                         }
+                        self.moreButton?.play()
                         component.pressed(self)
                     }
                     moreButton.contextAction = { [weak self] sourceNode, gesture in
                         guard let self, let component = self.component else {
                             return
                         }
+                        self.moreButton?.play()
                         component.contextAction?(self, gesture)
                     }
                     self.moreButton = moreButton
