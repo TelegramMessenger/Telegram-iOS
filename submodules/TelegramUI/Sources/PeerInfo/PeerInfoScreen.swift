@@ -3453,7 +3453,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 }
                 if let icon = threadData.info.icon, icon != 0 {
                     let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [icon])
-                    |> deliverOnMainQueue).start(next: { [weak self] files in
+                             |> deliverOnMainQueue).start(next: { [weak self] files in
                         if let file = files.first?.value {
                             var stickerPackReference: StickerPackReference?
                             for attribute in file.attributes {
@@ -3465,7 +3465,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             if let stickerPackReference = stickerPackReference {
                                 let _ = (strongSelf.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
-                                |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
+                                         |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
                                     if let strongSelf = self, case let .result(info, _, _) = stickerPack {
                                         strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Stickers_EmojiPackInfoText(info.title).string, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                             if let strongSelf = self, action == .undo {
@@ -3479,6 +3479,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     })
                 }
+            }
+            
+            self.headerNode.navigateToForum = { [weak self] in
+                guard let self, let navigationController = self.controller?.navigationController as? NavigationController, let peer = self.data?.peer else {
+                    return
+                }
+                self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(EnginePeer(peer))))
             }
             
             if [Namespaces.Peer.CloudGroup, Namespaces.Peer.CloudChannel].contains(peerId.namespace) {

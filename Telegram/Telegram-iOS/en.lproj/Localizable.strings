@@ -8303,6 +8303,13 @@ Sorry for the inconvenience.";
 "CreateTopic.ShowGeneral" = "Show in Topics";
 "CreateTopic.ShowGeneralInfo" = "If the \"General\" topic is hidden, group members can pull down in the topic list to view it.";
 
+"ChatList.DeleteThreadsConfirmation_1" = "Delete";
+"ChatList.DeleteThreadsConfirmation_any" = "Delete %@ Threads";
+"ChatList.DeletedThreads_1" = "Deleted 1 thread";
+"ChatList.DeletedThreads_any" = "Deleted %@ threads";
+
+"DialogList.SearchSectionMessagesIn" = "Messages in %@";
+
 "Conversation.ContextMenuReportFalsePositive" = "Report False Positive";
 "Group.AdminLog.AntiSpamFalsePositiveReportedText" = "Telegram moderators will review your report. Thank you!";
 

@@ -469,8 +469,15 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                         var isForum = false
                         if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                             isForum = true
-                            if editing {
+                            if editing, case .chatList = mode {
                                 enabled = false
+                            }
+                        }
+                    
+                        var selectable = editing
+                        if case .chatList = mode {
+                            if isForum {
+                                selectable = false
                             }
                         }
 
@@ -483,7 +490,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
-                            selection: editing && !isForum ? .selectable(selected: selected) : .none,
+                            selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                             index: nil,
                             header: header,
@@ -644,8 +651,15 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                         var isForum = false
                         if let peer = chatPeer, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
                             isForum = true
-                            if editing {
+                            if editing, case .chatList = mode {
                                 enabled = false
+                            }
+                        }
+                    
+                        var selectable = editing
+                        if case .chatList = mode {
+                            if isForum {
+                                selectable = false
                             }
                         }
                     
@@ -658,7 +672,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             peer: peerContent,
                             status: status,
                             enabled: enabled,
-                            selection: editing && !isForum ? .selectable(selected: selected) : .none,
+                            selection: selectable ? .selectable(selected: selected) : .none,
                             editing: ContactsPeerItemEditing(editable: false, editing: false, revealed: false),
                             index: nil,
                             header: header,
@@ -890,6 +904,8 @@ public final class ChatListNode: ListView {
     
     private var visibleTopInset: CGFloat?
     private var originalTopInset: CGFloat?
+    
+    let hideArhiveIntro = ValuePromise<Bool>(false, ignoreRepeated: true)
     
     public init(context: AccountContext, location: ChatListControllerLocation, chatListFilter: ChatListFilter? = nil, previewing: Bool, fillPreloadItems: Bool, mode: ChatListNodeMode, theme: PresentationTheme, fontSize: PresentationFontSize, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, animationCache: AnimationCache, animationRenderer: MultiAnimationRenderer, disableAnimations: Bool, isInlineMode: Bool) {
         self.context = context
@@ -1216,7 +1232,7 @@ public final class ChatListNode: ListView {
         
         let displayArchiveIntro: Signal<Bool, NoError>
         if case .chatList(.archive) = location {
-            displayArchiveIntro = context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.archiveIntroDismissedKey())
+            let displayArchiveIntroData = context.sharedContext.accountManager.noticeEntry(key: ApplicationSpecificNotice.archiveIntroDismissedKey())
             |> map { entry -> Bool in
                 if let value = entry.value?.get(ApplicationSpecificVariantNotice.self) {
                     return !value.value
@@ -1233,6 +1249,10 @@ public final class ChatListNode: ListView {
                         }).start()
                     }
                 }
+            }
+            displayArchiveIntro = combineLatest(displayArchiveIntroData, self.hideArhiveIntro.get())
+            |> map { a, b -> Bool in
+                return a && !b
             }
         } else {
             displayArchiveIntro = .single(false)

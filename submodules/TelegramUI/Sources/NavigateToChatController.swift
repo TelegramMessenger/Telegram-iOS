@@ -17,12 +17,28 @@ import ForumCreateTopicScreen
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         for controller in params.navigationController.viewControllers.reversed() {
-            if let controller = controller as? ChatListControllerImpl, case let .forum(peerId) = controller.location, peer.id == peerId {
-                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                if let activateMessageSearch = params.activateMessageSearch {
-                    controller.activateSearch(query: activateMessageSearch.1)
+            var chatListController: ChatListControllerImpl?
+            if let controller = controller as? ChatListControllerImpl {
+                chatListController = controller
+            } else if let controller = controller as? TabBarController {
+                chatListController = controller.currentController as? ChatListControllerImpl
+            }
+            
+            if let chatListController = chatListController {
+                var matches = false
+                if case let .forum(peerId) = chatListController.location, peer.id == peerId {
+                    matches = true
+                } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
+                    matches = true
                 }
-                return
+                
+                if matches {
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    if let activateMessageSearch = params.activateMessageSearch {
+                        chatListController.activateSearch(query: activateMessageSearch.1)
+                    }
+                    return
+                }
             }
         }
         

@@ -42,18 +42,6 @@ inline cord_internal::CordRepSubstring* MakeSubstring(
   return sub;
 }
 
-inline cord_internal::CordRepConcat* MakeConcat(cord_internal::CordRep* left,
-                                                cord_internal::CordRep* right,
-                                                int depth = 0) {
-  auto* concat = new cord_internal::CordRepConcat;
-  concat->tag = cord_internal::CONCAT;
-  concat->length = left->length + right->length;
-  concat->left = left;
-  concat->right = right;
-  concat->set_depth(depth);
-  return concat;
-}
-
 inline cord_internal::CordRepFlat* MakeFlat(absl::string_view value) {
   assert(value.length() <= cord_internal::kMaxFlatLength);
   auto* flat = cord_internal::CordRepFlat::New(value.length());
@@ -113,6 +101,38 @@ inline cord_internal::CordRepBtree* CordRepBtreeFromFlats(
     node = cord_internal::CordRepBtree::Append(node, flats[i]);
   }
   return node;
+}
+
+template <typename Fn>
+inline void CordVisitReps(cord_internal::CordRep* rep, Fn&& fn) {
+  fn(rep);
+  while (rep->tag == cord_internal::SUBSTRING) {
+    rep = rep->substring()->child;
+    fn(rep);
+  }
+  if (rep->tag == cord_internal::BTREE) {
+    for (cord_internal::CordRep* edge : rep->btree()->Edges()) {
+      CordVisitReps(edge, fn);
+    }
+  }
+}
+
+template <typename Predicate>
+inline std::vector<cord_internal::CordRep*> CordCollectRepsIf(
+    Predicate&& predicate, cord_internal::CordRep* rep) {
+  std::vector<cord_internal::CordRep*> reps;
+  CordVisitReps(rep, [&reps, &predicate](cord_internal::CordRep* rep) {
+    if (predicate(rep)) reps.push_back(rep);
+  });
+  return reps;
+}
+
+inline std::vector<cord_internal::CordRep*> CordCollectReps(
+    cord_internal::CordRep* rep) {
+  std::vector<cord_internal::CordRep*> reps;
+  auto fn = [&reps](cord_internal::CordRep* rep) { reps.push_back(rep); };
+  CordVisitReps(rep, fn);
+  return reps;
 }
 
 inline void CordToString(cord_internal::CordRep* rep, std::string& s) {

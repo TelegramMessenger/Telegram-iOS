@@ -291,10 +291,11 @@ public extension TelegramEngine {
         public func toggleAntiSpamProtection(peerId: PeerId, enabled: Bool) -> Signal<Void, NoError> {
             return _internal_toggleAntiSpamProtection(account: self.account, peerId: peerId, enabled: enabled)
         }
-
+        
         public func reportAntiSpamFalsePositive(peerId: PeerId, messageId: MessageId) -> Signal<Bool, NoError> {
             return _internal_reportAntiSpamFalsePositive(account: self.account, peerId: peerId, messageId: messageId)
         }
+
         
         public func requestPeerPhotos(peerId: PeerId) -> Signal<[TelegramPeerPhoto], NoError> {
             return _internal_requestPeerPhotos(postbox: self.account.postbox, network: self.account.network, peerId: peerId)
@@ -866,6 +867,19 @@ public extension TelegramEngine {
                 transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: nil)
                 
                 _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
+            }
+            |> ignoreValues
+        }
+        
+        public func removeForumChannelThreads(id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for threadId in threadIds {
+                    cloudChatAddClearHistoryOperation(transaction: transaction, peerId: id, threadId: threadId, explicitTopMessageId: nil, minTimestamp: nil, maxTimestamp: nil, type: CloudChatClearHistoryType(.forEveryone))
+                    
+                    transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: nil)
+                    
+                    _internal_clearHistory(transaction: transaction, mediaBox: self.account.postbox.mediaBox, peerId: id, threadId: threadId, namespaces: .not(Namespaces.Message.allScheduled))
+                }
             }
             |> ignoreValues
         }

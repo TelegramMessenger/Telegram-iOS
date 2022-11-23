@@ -24,11 +24,11 @@
 //   * A set of helper functions for creating status codes and checking their
 //     values
 //
-// Within Google, `absl::Status` is the primary mechanism for gracefully
-// handling errors across API boundaries (and in particular across RPC
-// boundaries). Some of these errors may be recoverable, but others may not.
-// Most functions that can produce a recoverable error should be designed to
-// return an `absl::Status` (or `absl::StatusOr`).
+// Within Google, `absl::Status` is the primary mechanism for communicating
+// errors in C++, and is used to represent error state in both in-process
+// library calls as well as RPC calls. Some of these errors may be recoverable,
+// but others may not. Most functions that can produce a recoverable error
+// should be designed to return an `absl::Status` (or `absl::StatusOr`).
 //
 // Example:
 //
@@ -51,10 +51,11 @@
 #ifndef ABSL_STATUS_STATUS_H_
 #define ABSL_STATUS_STATUS_H_
 
-#include <iostream>
+#include <ostream>
 #include <string>
+#include <utility>
 
-#include "absl/container/inlined_vector.h"
+#include "absl/functional/function_ref.h"
 #include "absl/status/internal/status_internal.h"
 #include "absl/strings/cord.h"
 #include "absl/strings/string_view.h"
@@ -346,7 +347,7 @@ inline StatusToStringMode& operator^=(StatusToStringMode& lhs,
 // API developers should construct their functions to return `absl::OkStatus()`
 // upon success, or an `absl::StatusCode` upon another type of error (e.g
 // an `absl::StatusCode::kInvalidArgument` error). The API provides convenience
-// functions to constuct each status code.
+// functions to construct each status code.
 //
 // Example:
 //
@@ -468,8 +469,9 @@ class Status final {
 
   // Status::ok()
   //
-  // Returns `true` if `this->ok()`. Prefer checking for an OK status using this
-  // member function.
+  // Returns `true` if `this->code()` == `absl::StatusCode::kOk`,
+  // indicating the absence of an error.
+  // Prefer checking for an OK status using this member function.
   ABSL_MUST_USE_RESULT bool ok() const;
 
   // Status::code()
@@ -494,7 +496,7 @@ class Status final {
   // Returns the error message associated with this error code, if available.
   // Note that this message rarely describes the error code.  It is not unusual
   // for the error message to be the empty string. As a result, prefer
-  // `Status::ToString()` for debug logging.
+  // `operator<<` or `Status::ToString()` for debug logging.
   absl::string_view message() const;
 
   friend bool operator==(const Status&, const Status&);
@@ -531,7 +533,7 @@ class Status final {
   //----------------------------------------------------------------------------
 
   // A payload may be attached to a status to provide additional context to an
-  // error that may not be satisifed by an existing `absl::StatusCode`.
+  // error that may not be satisfied by an existing `absl::StatusCode`.
   // Typically, this payload serves one of several purposes:
   //
   //   * It may provide more fine-grained semantic information about the error
@@ -590,7 +592,7 @@ class Status final {
   // NOTE: Any mutation on the same 'absl::Status' object during visitation is
   // forbidden and could result in undefined behavior.
   void ForEachPayload(
-      const std::function<void(absl::string_view, const absl::Cord&)>& visitor)
+      absl::FunctionRef<void(absl::string_view, const absl::Cord&)> visitor)
       const;
 
  private:
@@ -611,10 +613,6 @@ class Status final {
   const status_internal::Payloads* GetPayloads() const;
   status_internal::Payloads* GetPayloads();
 
-  // Takes ownership of payload.
-  static uintptr_t NewRep(
-      absl::StatusCode code, absl::string_view msg,
-      std::unique_ptr<status_internal::Payloads> payload);
   static bool EqualsSlow(const absl::Status& a, const absl::Status& b);
 
   // MSVC 14.0 limitation requires the const.
@@ -739,6 +737,19 @@ Status UnauthenticatedError(absl::string_view message);
 Status UnavailableError(absl::string_view message);
 Status UnimplementedError(absl::string_view message);
 Status UnknownError(absl::string_view message);
+
+// ErrnoToStatusCode()
+//
+// Returns the StatusCode for `error_number`, which should be an `errno` value.
+// See https://en.cppreference.com/w/cpp/error/errno_macros and similar
+// references.
+absl::StatusCode ErrnoToStatusCode(int error_number);
+
+// ErrnoToStatus()
+//
+// Convenience function that creates a `absl::Status` using an `error_number`,
+// which should be an `errno` value.
+Status ErrnoToStatus(int error_number, absl::string_view message);
 
 //------------------------------------------------------------------------------
 // Implementation details follow

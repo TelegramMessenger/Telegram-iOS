@@ -172,6 +172,11 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                     if readCounters.isUnread {
                         isUnread = true
                     }
+                    
+                    var isForum = false
+                    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+                        isForum = true
+                    }
 
                     if case let .chatList(currentFilter) = source {
                         if let currentFilter = currentFilter, case let .filter(id, title, emoticon, data) = currentFilter {
@@ -317,7 +322,7 @@ func chatContextMenuItems(context: AccountContext, peerId: PeerId, promoInfo: Ch
                             let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
                             f(.default)
                         })))
-                    } else {
+                    } else if !isForum {
                         items.append(.action(ContextMenuActionItem(text: strings.ChatList_Context_MarkAsUnread, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/MarkAsUnread"), color: theme.contextMenu.primaryColor) }, action: { _, f in
                             let _ = context.engine.messages.togglePeersUnreadMarkInteractively(peerIds: [peerId], setToValue: nil).start()
                             f(.default)
@@ -494,15 +499,12 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
     let presentationData = context.sharedContext.currentPresentationData.with({ $0 })
     let strings = presentationData.strings
 
-    return combineLatest(
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.Peer(id: peerId)
-        ),
-        context.engine.data.get(
-            TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
-        )
+    return context.engine.data.get(
+        TelegramEngine.EngineData.Item.Peer.Peer(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.NotificationSettings(id: peerId),
+        TelegramEngine.EngineData.Item.Peer.ThreadData(id: peerId, threadId: threadId)
     )
-    |> mapToSignal { peer, threadData -> Signal<[ContextMenuItem], NoError> in
+    |> mapToSignal { peer, peerNotificationSettings, threadData -> Signal<[ContextMenuItem], NoError> in
         guard case let .channel(channel) = peer else {
             return .single([])
         }
@@ -548,12 +550,19 @@ func chatForumTopicMenuItems(context: AccountContext, peerId: PeerId, threadId: 
         }
         
         var isMuted = false
-        if case .muted = threadData.notificationSettings.muteState {
+        switch threadData.notificationSettings.muteState {
+        case .muted:
             isMuted = true
+        case .unmuted:
+            isMuted = false
+        case .default:
+            if case .muted = peerNotificationSettings.muteState {
+                isMuted = true
+            }
         }
         items.append(.action(ContextMenuActionItem(text: isMuted ? strings.ChatList_Context_Unmute : strings.ChatList_Context_Mute, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: isMuted ? "Chat/Context Menu/Unmute" : "Chat/Context Menu/Muted"), color: theme.contextMenu.primaryColor) }, action: { [weak chatListController] c, f in
             if isMuted {
-                let _ = (context.engine.peers.togglePeerMuted(peerId: peerId, threadId: threadId)
+                let _ = (context.engine.peers.updatePeerMuteSetting(peerId: peerId, threadId: threadId, muteInterval: 0)
                 |> deliverOnMainQueue).start(completed: {
                     f(.default)
                 })

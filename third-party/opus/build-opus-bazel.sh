@@ -6,7 +6,7 @@ ARCH="$1"
 BUILD_DIR=$(echo "$(cd "$(dirname "$2")"; pwd -P)/$(basename "$2")")
 SOURCE_CODE_ARCHIVE="$3"
 
-MINIOSVERSION="9.0"
+MINIOSVERSION="11.0"
 
 OPT_CFLAGS="-Os -g"
 OPT_LDFLAGS=""

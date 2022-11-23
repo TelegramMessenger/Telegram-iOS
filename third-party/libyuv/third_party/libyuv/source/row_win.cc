@@ -75,7 +75,7 @@ extern "C" {
 
 // Convert 8 pixels: 8 UV and 8 Y.
 #define YUVTORGB(yuvconstants)                                      \
-  xmm3 = _mm_sub_epi8(xmm3, _mm_set1_epi8(0x80));                   \
+  xmm3 = _mm_sub_epi8(xmm3, _mm_set1_epi8((char)0x80));             \
   xmm4 = _mm_mulhi_epu16(xmm4, *(__m128i*)yuvconstants->kYToRgb);   \
   xmm4 = _mm_add_epi16(xmm4, *(__m128i*)yuvconstants->kYBiasToRgb); \
   xmm0 = _mm_maddubs_epi16(*(__m128i*)yuvconstants->kUVToB, xmm3);  \
@@ -2776,6 +2776,44 @@ __declspec(naked) void I422ToRGB24Row_SSSE3(
 
  convertloop:
     READYUV422
+    YUVTORGB(ebx)
+    STORERGB24
+
+    sub        ecx, 8
+    jg         convertloop
+
+    pop        ebx
+    pop        edi
+    pop        esi
+    ret
+  }
+}
+
+// 8 pixels.
+// 8 UV values, mixed with 8 Y producing 8 RGB24 (24 bytes).
+__declspec(naked) void I444ToRGB24Row_SSSE3(
+    const uint8_t* y_buf,
+    const uint8_t* u_buf,
+    const uint8_t* v_buf,
+    uint8_t* dst_rgb24,
+    const struct YuvConstants* yuvconstants,
+    int width) {
+  __asm {
+    push       esi
+    push       edi
+    push       ebx
+    mov        eax, [esp + 12 + 4]  // Y
+    mov        esi, [esp + 12 + 8]  // U
+    mov        edi, [esp + 12 + 12]  // V
+    mov        edx, [esp + 12 + 16]  // argb
+    mov        ebx, [esp + 12 + 20]  // yuvconstants
+    mov        ecx, [esp + 12 + 24]  // width
+    sub        edi, esi
+    movdqa     xmm5, xmmword ptr kShuffleMaskARGBToRGB24_0
+    movdqa     xmm6, xmmword ptr kShuffleMaskARGBToRGB24
+
+ convertloop:
+    READYUV444
     YUVTORGB(ebx)
     STORERGB24
 

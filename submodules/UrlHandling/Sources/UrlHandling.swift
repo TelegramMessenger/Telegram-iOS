@@ -591,12 +591,21 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                 }
                             case let .channelMessage(id, timecode):
                                 if let channel = peer as? TelegramChannel, channel.flags.contains(.isForum) {
-                                    return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(id))
-                                    |> map { info -> ResolvedUrl? in
-                                        if let _ = info {
-                                            return .replyThread(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id))
+                                    let messageId = MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: id)
+                                    return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
+                                    |> take(1)
+                                    |> mapToSignal { messages -> Signal<ResolvedUrl?, NoError> in
+                                        if let threadId = messages.first?.threadId {
+                                            return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
+                                            |> map { info -> ResolvedUrl? in
+                                                if let _ = info {
+                                                    return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
+                                                } else {
+                                                    return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                                }
+                                            }
                                         } else {
-                                            return .peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil))
+                                            return .single(.peer(peer, .chat(textInputState: nil, subject: nil, peekData: nil)))
                                         }
                                     }
                                 } else {

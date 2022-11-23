@@ -104,8 +104,12 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
         switch self.index {
         case let .chatList(index):
             return index.pinningIndex != nil
-        case .forum:
-            return false
+        case let .forum(pinnedIndex, _, _, _, _):
+            if case .index = pinnedIndex {
+                return true
+            } else {
+                return false
+            }
         }
     }
     
@@ -1349,9 +1353,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 transition.updateAlpha(layer: compoundHighlightingNode.layer, alpha: self.authorNode.alpha)
             }
             
-            if let item = self.item, case let .chatList(index) = item.index {
+            if let item = self.item {
                 let onlineIcon: UIImage?
-                if index.pinningIndex != nil {
+                if item.isPinned {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .pinned, voiceChat: self.onlineIsVoiceChat)
                 } else {
                     onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: self.onlineIsVoiceChat)
@@ -2015,7 +2019,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         currentMentionBadgeImage = PresentationResourcesChatList.badgeBackgroundReactions(item.presentationData.theme, diameter: badgeDiameter)
                     }
                     mentionBadgeContent = .mention
-                } else if case let .chatList(chatListIndex) = item.index, chatListIndex.pinningIndex != nil, promoInfo == nil, currentBadgeBackgroundImage == nil {
+                } else if item.isPinned, promoInfo == nil, currentBadgeBackgroundImage == nil {
                     currentPinnedIconImage = PresentationResourcesChatList.badgeBackgroundPinned(item.presentationData.theme, diameter: badgeDiameter)
                 }
             }
@@ -2896,6 +2900,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let compoundTextButtonNode = strongSelf.compoundTextButtonNode {
                         if strongSelf.textNode.textNode.supernode !== compoundTextButtonNode {
                             compoundTextButtonNode.addSubnode(strongSelf.textNode.textNode)
+                            if let dustNode = strongSelf.dustNode {
+                                compoundTextButtonNode.addSubnode(dustNode)
+                            }
                         }
                         strongSelf.textNode.textNode.frame = textNodeFrame.offsetBy(dx: -compoundTextButtonNode.frame.minX, dy: -compoundTextButtonNode.frame.minY)
                         
@@ -2903,6 +2910,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         if strongSelf.textNode.textNode.supernode !== strongSelf.mainContentContainerNode {
                             strongSelf.mainContentContainerNode.addSubnode(strongSelf.textNode.textNode)
+                            if let dustNode = strongSelf.dustNode {
+                                strongSelf.mainContentContainerNode.addSubnode(dustNode)
+                            }
                         }
                         strongSelf.textNode.textNode.frame = textNodeFrame
                         
@@ -2917,7 +2927,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             dustNode = InvisibleInkDustNode(textNode: nil)
                             dustNode.isUserInteractionEnabled = false
                             strongSelf.dustNode = dustNode
-                            strongSelf.mainContentContainerNode.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode.textNode)
+                            
+                            strongSelf.textNode.textNode.supernode?.insertSubnode(dustNode, aboveSubnode: strongSelf.textNode.textNode)
                         }
                         dustNode.update(size: textNodeFrame.size, color: theme.messageTextColor, textColor: theme.messageTextColor, rects: textLayout.spoilers.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) }, wordRects: textLayout.spoilerWords.map { $0.1.offsetBy(dx: 3.0, dy: 3.0).insetBy(dx: 0.0, dy: 1.0) })
                         dustNode.frame = textNodeFrame.insetBy(dx: -3.0, dy: -3.0).offsetBy(dx: 0.0, dy: 3.0)

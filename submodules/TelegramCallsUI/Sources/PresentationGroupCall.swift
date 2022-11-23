@@ -2475,6 +2475,9 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func beginTone(tone: PresentationCallTone) {
+        if "".isEmpty {
+            return
+        }
         if self.isStream {
             switch tone {
             case .groupJoined, .groupLeft:
