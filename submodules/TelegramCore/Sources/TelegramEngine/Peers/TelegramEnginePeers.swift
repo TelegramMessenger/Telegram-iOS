@@ -137,8 +137,8 @@ public extension TelegramEngine {
             return _internal_convertGroupToSupergroup(account: self.account, peerId: peerId)
         }
 
-        public func createGroup(title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
-            return _internal_createGroup(account: self.account, title: title, peerIds: peerIds)
+        public func createGroup(title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<PeerId?, CreateGroupError> {
+            return _internal_createGroup(account: self.account, title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
         }
 
         public func createSecretChat(peerId: PeerId) -> Signal<PeerId, CreateSecretChatError> {
