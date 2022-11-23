@@ -3590,6 +3590,8 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, displayPremiumStickerTooltip: { [weak self] file, message in
             self?.displayPremiumStickerTooltip(file: file, message: message)
+        }, displayEmojiPackTooltip: { [weak self] file, message in
+            self?.displayEmojiPackTooltip(file: file, message: message)
         }, openPeerContextMenu: { [weak self] peer, messageId, node, rect, gesture in
             guard let strongSelf = self else {
                 return
@@ -13573,6 +13575,56 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: info.title, text: strongSelf.presentationData.strings.Stickers_PremiumPackInfoText, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                         if let strongSelf = self, action == .undo {
                             let _ = strongSelf.controllerInteraction?.openMessage(message, .default)
+                        }
+                        return false
+                    }), in: .current)
+                }
+            })
+        }
+    }
+    
+    private func displayEmojiPackTooltip(file: TelegramMediaFile, message: Message) {
+        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: self.context.currentAppConfiguration.with { $0 })
+        guard !premiumConfiguration.isPremiumDisabled else {
+            return
+        }
+                
+        var currentOverlayController: UndoOverlayController?
+        
+        self.window?.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                currentOverlayController = controller
+            }
+        })
+        self.forEachController({ controller in
+            if let controller = controller as? UndoOverlayController {
+                currentOverlayController = controller
+            }
+            return true
+        })
+        
+        if let currentOverlayController = currentOverlayController {
+            if case .sticker = currentOverlayController.content {
+                return
+            }
+            currentOverlayController.dismissWithCommitAction()
+        }
+        
+        var stickerPackReference: StickerPackReference?
+        for attribute in file.attributes {
+            if case let .CustomEmoji(_, _, packReference) = attribute {
+                stickerPackReference = packReference
+                break
+            }
+        }
+        
+        if let stickerPackReference = stickerPackReference {
+            let _ = (self.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
+            |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
+                if let strongSelf = self, case let .result(info, _, _) = stickerPack {
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Stickers_EmojiPackInfoText(info.title).string, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                        if let strongSelf = self, action == .undo {
+                            strongSelf.presentEmojiList(references: [stickerPackReference])
                         }
                         return false
                     }), in: .current)

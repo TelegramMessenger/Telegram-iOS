@@ -134,6 +134,7 @@ public final class ChatControllerInteraction {
     let displayDiceTooltip: (TelegramMediaDice) -> Void
     let animateDiceSuccess: (Bool, Bool) -> Void
     let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
+    let displayEmojiPackTooltip: (TelegramMediaFile, Message) -> Void
     let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
@@ -243,6 +244,7 @@ public final class ChatControllerInteraction {
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
         animateDiceSuccess: @escaping (Bool, Bool) -> Void,
         displayPremiumStickerTooltip: @escaping (TelegramMediaFile, Message) -> Void,
+        displayEmojiPackTooltip: @escaping (TelegramMediaFile, Message) -> Void,
         openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
@@ -335,6 +337,7 @@ public final class ChatControllerInteraction {
         self.displayDiceTooltip = displayDiceTooltip
         self.animateDiceSuccess = animateDiceSuccess
         self.displayPremiumStickerTooltip = displayPremiumStickerTooltip
+        self.displayEmojiPackTooltip = displayEmojiPackTooltip
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage

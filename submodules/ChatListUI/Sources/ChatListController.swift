@@ -1181,7 +1181,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        self.chatListDisplayNode.emptyListAction = { [weak self] in
+        self.chatListDisplayNode.emptyListAction = { [weak self] _ in
             guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
                 return
             }

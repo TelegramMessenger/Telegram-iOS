@@ -337,68 +337,75 @@ private final class ChatListContainerItemNode: ASDisplayNode {
             }
             var needsShimmerNode = false
             var shimmerNodeOffset: CGFloat = 0.0
+            
+            var needsEmptyNode = false
+            var hasOnlyGeneralThread = false
+            var isLoading = false
+            
             switch isEmptyState {
-            case let .empty(isLoading, hasArchiveInfo):
+            case let .empty(isLoadingValue, hasArchiveInfo):
                 if hasArchiveInfo {
                     shimmerNodeOffset = 253.0
                 }
-                if isLoading {
+                if isLoadingValue {
                     needsShimmerNode = true
-                    
-                    if let emptyNode = strongSelf.emptyNode {
-                        strongSelf.emptyNode = nil
-                        transition.updateAlpha(node: emptyNode, alpha: 0.0, completion: { [weak emptyNode] _ in
-                            emptyNode?.removeFromSupernode()
-                        })
-                    }
+                    needsEmptyNode = false
+                    isLoading = isLoadingValue
                 } else {
-                    if let currentNode = strongSelf.emptyNode {
-                        currentNode.updateIsLoading(isLoading)
-                    } else {
-                        let subject: ChatListEmptyNode.Subject
-                        if let filter = filter {
-                            var showEdit = true
-                            if case let .filter(_, _, _, data) = filter {
-                                if data.excludeRead && data.includePeers.peers.isEmpty && data.includePeers.pinnedPeers.isEmpty {
-                                    showEdit = false
-                                }
-                            }
-                            subject = .filter(showEdit: showEdit)
-                        } else {
-                            if case .forum = location {
-                                subject = .forum
-                            } else {
-                                subject = .chats
-                            }
-                        }
-                        
-                        let emptyNode = ChatListEmptyNode(context: context, subject: subject, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
-                            self?.emptyAction(filter)
-                        }, secondaryAction: {
-                            self?.secondaryEmptyAction()
-                        })
-                        strongSelf.emptyNode = emptyNode
-                        strongSelf.addSubnode(emptyNode)
-                        if let (size, insets, _, _, _, _) = strongSelf.validLayout {
-                            let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
-                            emptyNode.frame = emptyNodeFrame
-                            emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
-                        }
-                        emptyNode.alpha = 0.0
-                        transition.updateAlpha(node: emptyNode, alpha: 1.0)
-                    }
+                    needsEmptyNode = true
                 }
-                if !isLoading {
+                if !isLoadingValue {
                     strongSelf.becameEmpty(filter)
                 }
-            case .notEmpty:
-                if let emptyNode = strongSelf.emptyNode {
-                    strongSelf.emptyNode = nil
-                    transition.updateAlpha(node: emptyNode, alpha: 0.0, completion: { [weak emptyNode] _ in
-                        emptyNode?.removeFromSupernode()
-                    })
-                }
+            case let .notEmpty(_, onlyGeneralThreadValue):
+                needsEmptyNode = onlyGeneralThreadValue
+                hasOnlyGeneralThread = onlyGeneralThreadValue
             }
+            
+            if needsEmptyNode {
+                if let currentNode = strongSelf.emptyNode {
+                    currentNode.updateIsLoading(isLoading)
+                } else {
+                    let subject: ChatListEmptyNode.Subject
+                    if let filter = filter {
+                        var showEdit = true
+                        if case let .filter(_, _, _, data) = filter {
+                            if data.excludeRead && data.includePeers.peers.isEmpty && data.includePeers.pinnedPeers.isEmpty {
+                                showEdit = false
+                            }
+                        }
+                        subject = .filter(showEdit: showEdit)
+                    } else {
+                        if case .forum = location {
+                            subject = .forum(hasGeneral: hasOnlyGeneralThread)
+                        } else {
+                            subject = .chats
+                        }
+                    }
+                    
+                    let emptyNode = ChatListEmptyNode(context: context, subject: subject, isLoading: isLoading, theme: strongSelf.presentationData.theme, strings: strongSelf.presentationData.strings, action: {
+                        self?.emptyAction(filter)
+                    }, secondaryAction: {
+                        self?.secondaryEmptyAction()
+                    })
+                    strongSelf.emptyNode = emptyNode
+                    strongSelf.addSubnode(emptyNode)
+                    if let (size, insets, _, _, _, _) = strongSelf.validLayout {
+                        let emptyNodeFrame = CGRect(origin: CGPoint(x: 0.0, y: insets.top), size: CGSize(width: size.width, height: size.height - insets.top - insets.bottom))
+                        emptyNode.frame = emptyNodeFrame
+                        emptyNode.updateLayout(size: emptyNodeFrame.size, transition: .immediate)
+                    }
+                    emptyNode.alpha = 0.0
+                    transition.updateAlpha(node: emptyNode, alpha: 1.0)
+                }
+            } else if let emptyNode = strongSelf.emptyNode {
+                strongSelf.emptyNode = nil
+                transition.updateAlpha(node: emptyNode, alpha: 0.0, completion: { [weak emptyNode] _ in
+                    emptyNode?.removeFromSupernode()
+                })
+            }
+            
+            
             if needsShimmerNode {
                 strongSelf.shimmerNodeOffset = shimmerNodeOffset
                 if strongSelf.emptyShimmerEffectNode == nil {
@@ -1210,7 +1217,7 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     var peerContextAction: ((EnginePeer, ChatListSearchContextActionSource, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?
     var dismissSelfIfCompletedPresentation: (() -> Void)?
     var isEmptyUpdated: ((Bool) -> Void)?
-    var emptyListAction: (() -> Void)?
+    var emptyListAction: ((EnginePeer.Id?) -> Void)?
     var cancelEditing: (() -> Void)?
 
     let debugListView = ListView()
@@ -1262,11 +1269,11 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
                 strongSelf.dismissSelfIfCompletedPresentation?()
             }
         }
-        filterEmptyAction = { [weak self] filter in
+        filterEmptyAction = { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.emptyListAction?()
+            strongSelf.emptyListAction?(nil)
         }
         
         secondaryEmptyAction = { [weak self] in
@@ -1648,7 +1655,12 @@ final class ChatListControllerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     }
     
     func makeInlineChatList(location: ChatListControllerLocation) -> ChatListContainerNode {
-        let inlineStackContainerNode = ChatListContainerNode(context: self.context, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { _ in }, secondaryEmptyAction: {})
+        var forumPeerId: EnginePeer.Id?
+        if case let .forum(peerId) = location {
+            forumPeerId = peerId
+        }
+        
+        let inlineStackContainerNode = ChatListContainerNode(context: self.context, location: location, previewing: false, controlsHistoryPreload: false, isInlineMode: true, presentationData: self.presentationData, animationCache: self.animationCache, animationRenderer: self.animationRenderer, filterBecameEmpty: { _ in }, filterEmptyAction: { [weak self] _ in self?.emptyListAction?(forumPeerId) }, secondaryEmptyAction: {})
         return inlineStackContainerNode
     }
     
