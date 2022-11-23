@@ -371,7 +371,7 @@ final class StickerPaneSearchContentNode: ASDisplayNode, PaneSearchContentNode {
                         let emoticons = keywords.flatMap { $0.emoticons }
                         for emoji in emoticons {
                             signals.append(context.engine.stickers.searchStickers(query: emoji.basicEmoji.0)
-                            |> take(1)
+//                            |> take(1)
                             |> map { (emoji, $0) })
                         }
                         return signals

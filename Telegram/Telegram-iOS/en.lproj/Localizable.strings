@@ -8182,7 +8182,7 @@ Sorry for the inconvenience.";
 "ChatList.SelectedTopics_any" = "%@ Topics Selected";
 
 "ChatList.EmptyTopicsTitle" = "No topics here yet";
-"ChatList.EmptyTopicsCreate" = "Create New Topic";
+"ChatList.EmptyTopicsCreate" = "Create Topic";
 "ChatList.EmptyTopicsShowAsMessages" = "Show as Messages";
 
 "Message.AudioTranscription.SubscribeToPremium" = "Subscribe to **Telegram Premium** to convert voice to text.";
@@ -8301,7 +8301,11 @@ Sorry for the inconvenience.";
 "Notification.OverviewTopicUnhidden" = "%1$@ unhid %2$@ %3$@";
 
 "CreateTopic.ShowGeneral" = "Show in Topics";
-"CreateTopic.ShowGeneralInfo" = "If the 'General' topic is hidden, group members can pull down in the topic list to view it.";
+"CreateTopic.ShowGeneralInfo" = "If the \"General\" topic is hidden, group members can pull down in the topic list to view it.";
 
 "Conversation.ContextMenuReportFalsePositive" = "Report False Positive";
 "Group.AdminLog.AntiSpamFalsePositiveReportedText" = "Telegram moderators will review your report. Thank you!";
+
+"ChatList.EmptyTopicsDescription" = "Older messages from this group have been moved to \"General\".";
+
+"Stickers.EmojiPackInfoText" = "This message contains **%@** emoji.";

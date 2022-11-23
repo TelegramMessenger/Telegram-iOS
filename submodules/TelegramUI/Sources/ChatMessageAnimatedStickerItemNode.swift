@@ -2126,7 +2126,17 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 }
             }
              
-            if let item = self.item, self.imageNode.frame.contains(location) {
+            if let item = self.item, let emojiString = self.emojiString, emojiString.emojis.count > 1 {
+                if let (_, attributes) = self.textNode.textNode.attributesAtPoint(self.view.convert(location, to: self.textNode.textNode.view)) {
+                   for (_, attribute) in attributes {
+                       if let attribute = attribute as? ChatTextInputTextCustomEmojiAttribute, let file = attribute.file {
+                           return .optionalAction({
+                               item.controllerInteraction.displayEmojiPackTooltip(file, item.message)
+                           })
+                       }
+                   }
+               }
+            } else if let item = self.item, self.imageNode.frame.contains(location) {
                 let emojiTapAction: (Bool) -> InternalBubbleTapAction? = { shouldPlay in
                     let beatingHearts: [UInt32] = [0x2764, 0x1F90E, 0x1F9E1, 0x1F499, 0x1F49A, 0x1F49C, 0x1F49B, 0x1F5A4, 0x1F90D]
                     let heart = 0x2764

@@ -759,7 +759,7 @@ public enum ChatListNodeScrollPosition {
 }
 
 public enum ChatListNodeEmptyState: Equatable {
-    case notEmpty(containsChats: Bool)
+    case notEmpty(containsChats: Bool, onlyGeneralThread: Bool)
     case empty(isLoading: Bool, hasArchiveInfo: Bool)
 }
 
@@ -2244,16 +2244,30 @@ public final class ChatListNode: ListView {
                         isEmptyState = .empty(isLoading: isLoading, hasArchiveInfo: false)
                     } else {
                         var containsChats = false
+                        var threadCount = 0
+                        var hasGeneral = false
                         loop: for entry in transition.chatListView.filteredEntries {
                             switch entry {
                             case .GroupReferenceEntry, .HoleEntry, .PeerEntry:
                                 containsChats = true
-                                break loop
+                                if case .forum = strongSelf.location {
+                                    if case let .PeerEntry(_, _, _, _, _, _, _, threadInfo, _, _, _, _, _, _, _, _, _, _, _, _, _) = entry, let threadInfo {
+                                        if threadInfo.id == 1 {
+                                            hasGeneral = true
+                                        }
+                                        threadCount += 1
+                                        if threadCount > 1 {
+                                            break loop
+                                        }
+                                    }
+                                } else {
+                                    break loop
+                                }
                             case .ArchiveIntro, .HeaderEntry, .AdditionalCategory:
                                 break
                             }
                         }
-                        isEmptyState = .notEmpty(containsChats: containsChats)
+                        isEmptyState = .notEmpty(containsChats: containsChats, onlyGeneralThread: hasGeneral && threadCount == 1)
                     }
                     
                     var insertedPeerIds: [EnginePeer.Id] = []

@@ -14,7 +14,7 @@ final class ChatListEmptyNode: ASDisplayNode {
     enum Subject {
         case chats
         case filter(showEdit: Bool)
-        case forum
+        case forum(hasGeneral: Bool)
     }
     private let action: () -> Void
     private let secondaryAction: () -> Void
@@ -131,7 +131,6 @@ final class ChatListEmptyNode: ASDisplayNode {
         let text: String
         var descriptionText = ""
         let buttonText: String
-        var secondaryButtonText = ""
         switch self.subject {
             case .chats:
                 text = strings.ChatList_EmptyChatList
@@ -143,7 +142,7 @@ final class ChatListEmptyNode: ASDisplayNode {
             case .forum:
                 text = strings.ChatList_EmptyTopicsTitle
                 buttonText = strings.ChatList_EmptyTopicsCreate
-                secondaryButtonText = strings.ChatList_EmptyTopicsShowAsMessages
+                descriptionText = strings.ChatList_EmptyTopicsDescription
         }
         let string = NSMutableAttributedString(string: text, font: Font.medium(17.0), textColor: theme.list.itemPrimaryTextColor)
         let descriptionString = NSAttributedString(string: descriptionText, font: Font.regular(14.0), textColor: theme.list.itemSecondaryTextColor)
@@ -152,8 +151,6 @@ final class ChatListEmptyNode: ASDisplayNode {
         self.descriptionNode.attributedText = descriptionString
         
         self.buttonNode.title = buttonText
-        self.secondaryButtonNode.setAttributedTitle(NSAttributedString(string: secondaryButtonText, font: Font.regular(17.0), textColor: theme.list.itemAccentColor), for: .normal)
-        self.secondaryButtonNode.isHidden = secondaryButtonText.isEmpty
     
         self.activityIndicator.type = .custom(theme.list.itemAccentColor, 22.0, 1.0, false)
         
@@ -186,16 +183,21 @@ final class ChatListEmptyNode: ASDisplayNode {
         let textSize = self.textNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
         let descriptionSize = self.descriptionNode.updateLayout(CGSize(width: size.width - 40.0, height: size.height))
                 
-        let buttonSideInset: CGFloat = 16.0
-        let buttonWidth = size.width - buttonSideInset * 2.0
+        let buttonSideInset: CGFloat = 32.0
+        let buttonWidth = min(270.0, size.width - buttonSideInset * 2.0)
         let buttonHeight = self.buttonNode.updateLayout(width: buttonWidth, transition: transition)
         let buttonSize = CGSize(width: buttonWidth, height: buttonHeight)
         
         let secondaryButtonSize = self.secondaryButtonNode.measure(CGSize(width: buttonWidth, height: .greatestFiniteMagnitude))
         
+        var threshold: CGFloat = 0.0
+        if case .forum = self.subject {
+            threshold = 80.0
+        }
+        
         let contentHeight = self.animationSize.height + animationSpacing + textSize.height + buttonSize.height
         var contentOffset: CGFloat = 0.0
-        if size.height < contentHeight {
+        if size.height < contentHeight + threshold {
             contentOffset = -self.animationSize.height - animationSpacing + 44.0
             transition.updateAlpha(node: self.animationNode, alpha: 0.0)
         } else {
@@ -224,7 +226,12 @@ final class ChatListEmptyNode: ASDisplayNode {
             bottomInset += secondaryButtonSize.height + 23.0
         }
         
-        let buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonHeight - bottomInset), size: buttonSize)
+        let buttonFrame: CGRect
+        if case .forum = self.subject {
+            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: descriptionFrame.maxY + 20.0), size: buttonSize)
+        } else {
+            buttonFrame = CGRect(origin: CGPoint(x: floor((size.width - buttonSize.width) / 2.0), y: size.height - buttonHeight - bottomInset), size: buttonSize)
+        }
         transition.updateFrame(node: self.buttonNode, frame: buttonFrame)
     }
     

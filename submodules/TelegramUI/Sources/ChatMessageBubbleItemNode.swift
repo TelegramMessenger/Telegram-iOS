@@ -964,7 +964,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                             break
                         case .ignore:
                             return .fail
-                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji:
+                        case .url, .peerMention, .textMention, .botCommand, .hashtag, .instantPage, .wallpaper, .theme, .call, .openMessage, .timecode, .bankCard, .tooltip, .openPollResults, .copy, .largeEmoji, .customEmoji:
                             return .waitForSingleTap
                     }
                 }
@@ -3742,6 +3742,12 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                                 item.controllerInteraction.openLargeEmojiInfo(emoji, fitz, file)
                             })
                         }
+                    case let .customEmoji(file):
+                        if let item = self.item {
+                            return .optionalAction({
+                                item.controllerInteraction.displayEmojiPackTooltip(file, item.message)
+                            })
+                        }
                     }
                 }
                 return nil
@@ -3825,6 +3831,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         case .copy:
                             break
                         case .largeEmoji:
+                            break
+                        case .customEmoji:
                             break
                         }
                     }

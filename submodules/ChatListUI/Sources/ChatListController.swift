@@ -1173,14 +1173,14 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
         }
         
-        self.chatListDisplayNode.emptyListAction = { [weak self] in
+        self.chatListDisplayNode.emptyListAction = { [weak self] forumPeerId in
             guard let strongSelf = self, let navigationController = strongSelf.navigationController as? NavigationController else {
                 return
             }
             if let filter = strongSelf.chatListDisplayNode.containerNode.currentItemNode.chatListFilter {
                 strongSelf.push(chatListFilterPresetController(context: strongSelf.context, currentPreset: filter, updated: { _ in }))
             } else {
-                if case let .forum(peerId) = strongSelf.location {
+                if let peerId = forumPeerId {
                     let context = strongSelf.context
                     let controller = ForumCreateTopicScreen(context: context, peerId: peerId, mode: .create)
                     controller.navigationPresentation = .modal

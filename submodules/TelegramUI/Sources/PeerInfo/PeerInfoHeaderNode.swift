@@ -322,6 +322,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     }
     
     var tapped: (() -> Void)?
+    var emojiTapped: (() -> Void)?
     var contextAction: ((ASDisplayNode, ContextGesture?) -> Void)?
     
     private var isFirstAvatarLoading = true
@@ -363,6 +364,12 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
     @objc private func tapGesture(_ recognizer: UITapGestureRecognizer) {
         if case .ended = recognizer.state {
             self.tapped?()
+        }
+    }
+    
+    @objc private func emojiTapGesture(_ recognizer: UITapGestureRecognizer) {
+        if case .ended = recognizer.state {
+            self.emojiTapped?()
         }
     }
         
@@ -409,6 +416,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                 self.containerNode.isGestureEnabled = false
             }
             
+            self.avatarNode.imageNode.animateFirstTransition = !isSettings
             self.avatarNode.setPeer(context: self.context, theme: theme, peer: EnginePeer(peer), overrideImage: overrideImage, clipStyle: .none, synchronousLoad: self.isFirstAvatarLoading, displayDimensions: CGSize(width: avatarSize, height: avatarSize), storeUnrounded: true)
             
             if let threadInfo = threadInfo {
@@ -443,7 +451,9 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     containerSize: CGSize(width: avatarSize, height: avatarSize)
                 )
                 if let iconComponentView = iconView.view {
+                    iconComponentView.isUserInteractionEnabled = true
                     if iconComponentView.superview == nil {
+                        iconComponentView.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.emojiTapGesture(_:))))
                         self.avatarNode.view.superview?.addSubview(iconComponentView)
                     }
                     iconComponentView.frame = CGRect(origin: CGPoint(), size: CGSize(width: avatarSize, height: avatarSize))
@@ -987,6 +997,8 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
             }
         } else {
             if let result = self.avatarContainerNode.avatarNode.view.hitTest(self.view.convert(point, to: self.avatarContainerNode.avatarNode.view), with: event) {
+                return result
+            } else if let result = self.avatarContainerNode.iconView?.view?.hitTest(self.view.convert(point, to: self.avatarContainerNode.iconView?.view), with: event) {
                 return result
             }
         }
@@ -2108,6 +2120,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
     
     var displayAvatarContextMenu: ((ASDisplayNode, ContextGesture?) -> Void)?
     var displayCopyContextMenu: ((ASDisplayNode, Bool, Bool) -> Void)?
+    var displayEmojiPackTooltip: (() -> Void)?
     
     var displayPremiumIntro: ((UIView, PeerEmojiStatus?, Signal<(TelegramMediaFile, LoadedStickerPack)?, NoError>, Bool) -> Void)?
     
@@ -2240,6 +2253,9 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         }
         self.avatarListNode.avatarContainerNode.contextAction = { [weak self] node, gesture in
             self?.displayAvatarContextMenu?(node, gesture)
+        }
+        self.avatarListNode.avatarContainerNode.emojiTapped = { [weak self] in
+            self?.displayEmojiPackTooltip?()
         }
         
         self.editingContentNode.avatarNode.tapped = { [weak self] confirm in

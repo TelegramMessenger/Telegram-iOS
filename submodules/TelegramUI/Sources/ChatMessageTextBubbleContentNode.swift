@@ -580,6 +580,8 @@ class ChatMessageTextBubbleContentNode: ChatMessageBubbleContentNode {
                 return .bankCard(bankCard)
             } else if let pre = attributes[NSAttributedString.Key(rawValue: TelegramTextAttributes.Pre)] as? String {
                 return .copy(pre)
+            } else if let emoji = attributes[NSAttributedString.Key(rawValue: ChatTextInputAttributes.customEmoji.rawValue)] as? ChatTextInputTextCustomEmojiAttribute, let file = emoji.file {
+                return .customEmoji(file)
             } else {
                 if let item = self.item, item.message.text.count == 1, !item.presentationData.largeEmoji {
                     let (emoji, fitz) = item.message.text.basicEmoji
