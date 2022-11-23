@@ -3451,9 +3451,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self, let threadData = strongSelf.data?.threadData else {
                     return
                 }
+                
+                let premiumConfiguration = PremiumConfiguration.with(appConfiguration: strongSelf.context.currentAppConfiguration.with { $0 })
+                guard !premiumConfiguration.isPremiumDisabled else {
+                    return
+                }
+                
                 if let icon = threadData.info.icon, icon != 0 {
                     let _ = (strongSelf.context.engine.stickers.resolveInlineStickers(fileIds: [icon])
-                             |> deliverOnMainQueue).start(next: { [weak self] files in
+                    |> deliverOnMainQueue).start(next: { [weak self] files in
                         if let file = files.first?.value {
                             var stickerPackReference: StickerPackReference?
                             for attribute in file.attributes {
@@ -3467,7 +3473,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 let _ = (strongSelf.context.engine.stickers.loadedStickerPack(reference: stickerPackReference, forceActualized: false)
                                          |> deliverOnMainQueue).start(next: { [weak self] stickerPack in
                                     if let strongSelf = self, case let .result(info, _, _) = stickerPack {
-                                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.Stickers_EmojiPackInfoText(info.title).string, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
+                                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .sticker(context: strongSelf.context, file: file, title: nil, text: strongSelf.presentationData.strings.PeerInfo_TopicIconInfoText(info.title).string, undoText: strongSelf.presentationData.strings.Stickers_PremiumPackView, customAction: nil), elevatedLayout: false, action: { [weak self] action in
                                             if let strongSelf = self, action == .undo {
                                                 strongSelf.presentEmojiList(packReference: stickerPackReference)
                                             }

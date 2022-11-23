@@ -2298,7 +2298,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                     isClosed = threadInfo.isClosed
                                 }
                                 if let threadInfo, threadInfo.id == 1 {
-                                    peerRevealOptions = forumGeneralRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canHide: channel.flags.contains(.isCreator) || channel.hasPermission(.pinMessages), hiddenByDefault: threadInfo.isHidden)
+                                    peerRevealOptions = forumGeneralRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canHide: channel.flags.contains(.isCreator) || channel.hasPermission(.manageTopics), hiddenByDefault: threadInfo.isHidden)
                                 } else {
                                     peerRevealOptions = forumThreadRevealOptions(strings: item.presentationData.strings, theme: item.presentationData.theme, isMuted: (currentMutedIconImage != nil), isClosed: isClosed, isEditing: item.editing, canOpenClose: canOpenClose, canDelete: canDelete)
                                 }

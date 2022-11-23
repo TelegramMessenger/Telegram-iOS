@@ -8316,3 +8316,4 @@ Sorry for the inconvenience.";
 "ChatList.EmptyTopicsDescription" = "Older messages from this group have been moved to \"General\".";
 
 "Stickers.EmojiPackInfoText" = "This message contains **%@** emoji.";
+"PeerInfo.TopicIconInfoText" = "This topic's icon is from **%@**.";
