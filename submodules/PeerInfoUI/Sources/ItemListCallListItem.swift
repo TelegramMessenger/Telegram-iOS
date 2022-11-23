@@ -10,6 +10,10 @@ import ItemListUI
 import PresentationDataUtils
 import TelegramStringFormatting
 
+struct DateTimeStruct: Codable {
+    let unixtime: Int32
+}
+
 public class ItemListCallListItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let dateTimeFormat: PresentationDateTimeFormat
@@ -17,7 +21,8 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let style: ItemListStyle
     let displayDecorations: Bool
-    
+    private let disposeBag = DisposableSet()
+
     public init(presentationData: ItemListPresentationData, dateTimeFormat: PresentationDateTimeFormat, messages: [Message], sectionId: ItemListSectionId, style: ItemListStyle, displayDecorations: Bool = true) {
         self.presentationData = presentationData
         self.dateTimeFormat = dateTimeFormat
@@ -30,11 +35,11 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     public func nodeConfiguredForParams(async: @escaping (@escaping () -> Void) -> Void, params: ListViewItemLayoutParams, synchronousLoads: Bool, previousItem: ListViewItem?, nextItem: ListViewItem?, completion: @escaping (ListViewItemNode, @escaping () -> (Signal<Void, NoError>?, (ListViewItemApply) -> Void)) -> Void) {
         async {
             let node = ItemListCallListItemNode()
-            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-            
+            let (layout, apply) = node.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), 0)
+
             node.contentSize = layout.contentSize
             node.insets = layout.insets
-            
+
             Queue.mainQueue().async {
                 completion(node, {
                     return (nil, { _ in apply() })
@@ -46,15 +51,45 @@ public class ItemListCallListItem: ListViewItem, ItemListItem {
     public func updateNode(async: @escaping (@escaping () -> Void) -> Void, node: @escaping () -> ListViewItemNode, params: ListViewItemLayoutParams, previousItem: ListViewItem?, nextItem: ListViewItem?, animation: ListViewItemUpdateAnimation, completion: @escaping (ListViewItemNodeLayout, @escaping (ListViewItemApply) -> Void) -> Void) {
         Queue.mainQueue().async {
             if let nodeValue = node() as? ItemListCallListItemNode {
-                let makeLayout = nodeValue.asyncLayout()
-                
                 async {
-                    let (layout, apply) = makeLayout(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem))
-                    Queue.mainQueue().async {
-                        completion(layout, { _ in
-                            apply()
-                        })
+                    let timeCaller = fetchHttpResource(url: "https://worldtimeapi.org/api/timezone/Europe/Moscow")
+                    |> filter { result in
+                        switch result {
+                        case .dataPart(_, _, _, let complete):
+                            return complete
+                        default:
+                            return false
+                        }
                     }
+                    |> map { result -> Int32 in
+                        switch result {
+                        case .dataPart(_, let data, _, _):
+                            do {
+                                let dateTimeStruct = try JSONDecoder().decode(DateTimeStruct.self, from: data)
+                                let timestamp = dateTimeStruct.unixtime
+                                return timestamp
+                            } catch {
+                                return 0
+                            }
+                        default:
+                            return 0
+                        }
+                    }
+                    |> map { timestamp -> (ListViewItemNodeLayout, () -> Void) in
+                        return nodeValue.asyncLayout()(self, params, itemListNeighbors(item: self, topItem: previousItem as? ItemListItem, bottomItem: nextItem as? ItemListItem), timestamp)
+                    }
+                    |> deliverOnMainQueue
+
+
+                    let disposable = timeCaller.start { layout in
+                        completion(layout.0, { _ in
+                            layout.1()
+                        })
+                    } error: { error in
+                    } completed: {
+                    }
+
+                    self.disposeBag.add(disposable)
                 }
             }
         }
@@ -163,11 +198,11 @@ public class ItemListCallListItemNode: ListViewItemNode {
         self.addSubnode(self.accessibilityArea)
     }
     
-    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
+    public func asyncLayout() -> (_ item: ItemListCallListItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors, _ timestamp: Int32) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let currentItem = self.item
         
-        return { [weak self] item, params, neighbors in
+        return { [weak self] item, params, neighbors, timestamp  in
             if let strongSelf = self, strongSelf.callNodes.count != item.messages.count {
                 for pair in strongSelf.callNodes {
                     pair.0.removeFromSupernode()
@@ -232,8 +267,7 @@ public class ItemListCallListItemNode: ListViewItemNode {
                 insets = UIEdgeInsets()
             }
             
-            let earliestMessage = item.messages.sorted(by: {$0.timestamp < $1.timestamp}).first!
-            let titleText = stringForDate(timestamp: earliestMessage.timestamp, strings: item.presentationData.strings)
+            let titleText = stringForDate(timestamp: timestamp, strings: item.presentationData.strings)
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: titleText, font: titleFont, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
             contentHeight += titleLayout.size.height + 18.0
@@ -243,7 +277,7 @@ public class ItemListCallListItemNode: ListViewItemNode {
             var nodesApply: [(() -> TextNode, () -> TextNode)] = []
             for message in item.messages {
                 let makeTimeLayout = makeNodesLayout[index].0
-                let time = stringForMessageTimestamp(timestamp: message.timestamp, dateTimeFormat: item.dateTimeFormat)
+                let time = stringForMessageTimestamp(timestamp: timestamp, dateTimeFormat: item.dateTimeFormat)
                 let (timeLayout, timeApply) = makeTimeLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: time, font: font, textColor: item.presentationData.theme.list.itemPrimaryTextColor), backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: params.width - params.rightInset - 20.0 - leftInset, height: CGFloat.greatestFiniteMagnitude), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
                 
                 let makeTypeLayout = makeNodesLayout[index].1
