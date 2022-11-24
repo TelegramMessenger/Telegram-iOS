@@ -443,7 +443,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                             }
                         }
                     } else {
-                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds)
+                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: nil)
                     }
                 case .supergroup:
                     createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
