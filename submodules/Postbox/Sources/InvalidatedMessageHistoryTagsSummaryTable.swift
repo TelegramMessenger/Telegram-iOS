@@ -74,6 +74,10 @@ final class InvalidatedMessageHistoryTagsSummaryTable: Table {
         return entries
     }
     
+    func get(peerId: PeerId, threadId: Int64?, tagMask: MessageTags, namespace: MessageId.Namespace) -> InvalidatedMessageHistoryTagsSummaryEntry? {
+        return self.get(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask, threadId: threadId))
+    }
+    
     private func get(_ key: InvalidatedMessageHistoryTagsSummaryKey) -> InvalidatedMessageHistoryTagsSummaryEntry? {
         if let value = self.valueBox.get(self.table, key: self.key(key)) {
             var version: Int32 = 0

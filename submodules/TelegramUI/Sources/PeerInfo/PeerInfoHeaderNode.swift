@@ -2180,7 +2180,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         self.usernameNode.displaysAsynchronously = false
         
         self.buttonsContainerNode = SparseNode()
-        self.buttonsContainerNode.clipsToBounds = false
+        self.buttonsContainerNode.clipsToBounds = true
         
         self.regularContentNode = PeerInfoHeaderRegularContentNode()
         var requestUpdateLayoutImpl: (() -> Void)?
@@ -2930,10 +2930,6 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        if subtitleIsButton {
-            subtitleFrame.origin.y += 11.0
-        }
-        
         let singleTitleLockOffset: CGFloat = (peer?.id == self.context.account.peerId || subtitleSize.height.isZero) ? 8.0 : 0.0
         
         let titleLockOffset: CGFloat = 7.0 + singleTitleLockOffset
@@ -3026,6 +3022,19 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         } else {
             avatarScale = 1.0 * (1.0 - titleCollapseFraction) + avatarMinScale * titleCollapseFraction
             avatarOffset = apparentTitleLockOffset + 0.0 * (1.0 - titleCollapseFraction) + 10.0 * titleCollapseFraction
+        }
+        
+        if subtitleIsButton {
+            subtitleFrame.origin.y += 11.0 * (1.0 - titleCollapseFraction)
+            if let subtitleBackgroundButton = self.subtitleBackgroundButton {
+                transition.updateAlpha(node: subtitleBackgroundButton, alpha: (1.0 - titleCollapseFraction))
+            }
+            if let subtitleBackgroundNode = self.subtitleBackgroundNode {
+                transition.updateAlpha(node: subtitleBackgroundNode, alpha: (1.0 - titleCollapseFraction))
+            }
+            if let subtitleArrowNode = self.subtitleArrowNode {
+                transition.updateAlpha(node: subtitleArrowNode, alpha: (1.0 - titleCollapseFraction))
+            }
         }
         
         let avatarCornerRadius: CGFloat

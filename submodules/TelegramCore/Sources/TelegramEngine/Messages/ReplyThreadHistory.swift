@@ -590,6 +590,14 @@ public struct ChatReplyThreadMessage: Equatable {
         self.initialAnchor = initialAnchor
         self.isNotAvailable = isNotAvailable
     }
+    
+    public var normalized: ChatReplyThreadMessage {
+        if self.isForumPost {
+            return ChatReplyThreadMessage(messageId: self.messageId, channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false)
+        } else {
+            return self
+        }
+    }
 }
 
 public enum FetchChannelReplyThreadMessageError {

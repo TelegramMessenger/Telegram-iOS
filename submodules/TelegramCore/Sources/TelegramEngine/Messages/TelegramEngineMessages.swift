@@ -494,5 +494,10 @@ public extension TelegramEngine {
             }
             |> ignoreValues
         }
+        
+        public func keepMessageCountersSyncrhonized(peerId: EnginePeer.Id, threadId: Int64) -> Signal<Never, NoError> {
+            return managedSynchronizeMessageHistoryTagSummaries(postbox: self.account.postbox, network: self.account.network, stateManager: self.account.stateManager, peerId: peerId, threadId: threadId)
+            |> ignoreValues
+        }
     }
 }

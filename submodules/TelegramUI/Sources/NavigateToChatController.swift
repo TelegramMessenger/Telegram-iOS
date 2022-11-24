@@ -59,7 +59,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     var isFirst = true
     if params.useExisting {
         for controller in params.navigationController.viewControllers.reversed() {
-            if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation.asChatLocation && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+            guard let controller = controller as? ChatControllerImpl else {
+                isFirst = false
+                continue
+            }
+            if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }

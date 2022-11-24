@@ -295,6 +295,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
     private var hasActiveGroupCallDisposable: Disposable?
     private var sendAsPeersDisposable: Disposable?
     private var preloadAttachBotIconsDisposables: DisposableSet?
+    private var keepMessageCountersSyncrhonizedDisposable: Disposable?
     
     private let editingMessage = ValuePromise<Float?>(nil, ignoreRepeated: true)
     private let startingBot = ValuePromise<Bool>(false, ignoreRepeated: true)
@@ -5663,6 +5664,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             self.inviteRequestsDisposable.dispose()
             self.sendAsPeersDisposable?.dispose()
             self.preloadAttachBotIconsDisposables?.dispose()
+            self.keepMessageCountersSyncrhonizedDisposable?.dispose()
         }
         deallocate()
     }
@@ -9326,7 +9328,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             guard let strongSelf = self else {
                 return
             }
-            guard case let .peer(peerId) = strongSelf.chatLocation else {
+            guard let peerId = strongSelf.chatLocation.peerId else {
                 return
             }
             guard let pinnedMessage = strongSelf.presentationInterfaceState.pinnedMessage else {
@@ -9370,7 +9372,14 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 })))
             }
             
-            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerId), subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(previewing: true))
+            let chatLocation: ChatLocation
+            if let _ = strongSelf.chatLocation.threadId {
+                chatLocation = strongSelf.chatLocation
+            } else {
+                chatLocation = .peer(id: peerId)
+            }
+            
+            let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: chatLocation, subject: .pinnedMessages(id: pinnedMessage.message.id), botStart: nil, mode: .standard(previewing: true))
             chatController.canReadHistory.set(false)
             
             strongSelf.chatDisplayNode.messageTransitionNode.dismissMessageReactionContexts()
@@ -9983,6 +9992,12 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             // Limit this to reply threads just to be safe now
             if case .replyThread = self.chatLocation {
                 self.chatDisplayNode.historyNode.refocusOnUnreadMessagesIfNeeded()
+            }
+        }
+        
+        if case let .replyThread(message) = self.chatLocation, message.isForumPost {
+            if self.keepMessageCountersSyncrhonizedDisposable == nil {
+                self.keepMessageCountersSyncrhonizedDisposable = self.context.engine.messages.keepMessageCountersSyncrhonized(peerId: message.messageId.peerId, threadId: Int64(message.messageId.id)).start()
             }
         }
         
@@ -14964,16 +14979,27 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
             
             if isPinnedMessages, let messageId = messageLocation.messageId {
-                let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId))
-                |> deliverOnMainQueue).start(next: { [weak self] peer in
+                let _ = (combineLatest(
+                    self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: messageId.peerId)),
+                    self.context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .local)
+                )
+                |> deliverOnMainQueue).start(next: { [weak self] peer, messages in
                     guard let self, let peer = peer else {
                         return
                     }
-                    
-                    if let navigationController = self.effectiveNavigationController {
-                        self.dismiss()
-                        self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: .peer(peer), subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always))
+                    guard let navigationController = self.effectiveNavigationController else {
+                        return
                     }
+                    
+                    self.dismiss()
+                    
+                    let navigateToLocation: NavigateToChatControllerParams.Location
+                    if let threadId = messages.first?.threadId {
+                        navigateToLocation = .replyThread(ChatReplyThreadMessage(messageId: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false))
+                    } else {
+                        navigateToLocation = .peer(peer)
+                    }
+                    self.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: self.context, chatLocation: navigateToLocation, subject: .message(id: .id(messageId), highlight: true, timecode: nil), keepStack: .always))
                 })
             } else if case let .peer(peerId) = self.chatLocation, let messageId = messageLocation.messageId, (messageId.peerId != peerId && !forceInCurrentChat) || (isScheduledMessages && messageId.id != 0 && !Namespaces.Message.allScheduled.contains(messageId.namespace)) {
                 let _ = (self.context.engine.data.get(

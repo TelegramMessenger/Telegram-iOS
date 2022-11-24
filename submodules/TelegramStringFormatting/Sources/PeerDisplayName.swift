@@ -9,6 +9,8 @@ public func stringForFullAuthorName(message: EngineMessage, strings: Presentatio
         var authorName = ""
         if author.id == accountPeerId {
             authorName = strings.DialogList_You
+        } else if author.isDeleted {
+            authorName = strings.User_DeletedAccount
         } else {
             authorName = author.compactDisplayTitle
         }
