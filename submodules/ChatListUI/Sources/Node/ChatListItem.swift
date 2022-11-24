@@ -2905,8 +2905,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let dustNode = strongSelf.dustNode {
                                 compoundTextButtonNode.addSubnode(dustNode)
                             }
-                            strongSelf.textNode.textNode.frame = textNodeFrame.offsetBy(dx: -compoundTextButtonNode.frame.minX, dy: -compoundTextButtonNode.frame.minY)
                         }
+                        strongSelf.textNode.textNode.frame = textNodeFrame.offsetBy(dx: -compoundTextButtonNode.frame.minX, dy: -compoundTextButtonNode.frame.minY)
                         
                         strongSelf.authorNode.assignParentNode(parentNode: compoundTextButtonNode)
                     } else {
@@ -2915,8 +2915,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             if let dustNode = strongSelf.dustNode {
                                 strongSelf.mainContentContainerNode.addSubnode(dustNode)
                             }
-                            strongSelf.textNode.textNode.frame = textNodeFrame
                         }
+                        strongSelf.textNode.textNode.frame = textNodeFrame
                         
                         strongSelf.authorNode.assignParentNode(parentNode: nil)
                     }
