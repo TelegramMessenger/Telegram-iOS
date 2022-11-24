@@ -103,7 +103,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
     private var callController: CallController?
     public let hasOngoingCall = ValuePromise<Bool>(false)
     private let callState = Promise<PresentationCallState?>(nil)
-    
+    // Rename to LiveStreamingController
     private var groupCallController: VoiceChatController?
     public var currentGroupCallController: ViewController? {
         return self.groupCallController
@@ -665,7 +665,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             
                             if call.isStream {
                                 strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                let groupCallController = MediaStreamComponentController(call: call)
+                                let groupCallController = MediaStreamingControllerImpl(sharedContext: strongSelf, accountContext: call.accountContext, call: call) // MediaStreamComponentController(call: call)
                                 groupCallController.onViewDidAppear = { [weak self] in
                                     if let strongSelf = self {
                                         strongSelf.hasGroupCallOnScreenPromise.set(true)
