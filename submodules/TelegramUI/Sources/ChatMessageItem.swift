@@ -122,7 +122,7 @@ private func messagesShouldBeMerged(accountPeerId: PeerId, _ lhs: Message, _ rhs
     }
     
     var sameThread = true
-    if lhs.threadId != rhs.threadId {
+    if let lhsPeer = lhs.peers[lhs.id.peerId], let rhsPeer = rhs.peers[rhs.id.peerId], arePeersEqual(lhsPeer, rhsPeer), let channel = lhsPeer as? TelegramChannel, channel.flags.contains(.isForum), lhs.threadId != rhs.threadId {
         sameThread = false
     }
     
