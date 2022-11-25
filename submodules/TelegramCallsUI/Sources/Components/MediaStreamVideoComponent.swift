@@ -7,7 +7,9 @@ import AVKit
 import MultilineTextComponent
 import Display
 
-final class MediaStreamVideoComponent: Component {
+typealias MediaStreamVideoComponent = _MediaStreamVideoComponent
+
+final class _MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
     let hasVideo: Bool
     let isVisible: Bool
@@ -40,7 +42,7 @@ final class MediaStreamVideoComponent: Component {
         self.pictureInPictureClosed = pictureInPictureClosed
     }
     
-    public static func ==(lhs: MediaStreamVideoComponent, rhs: MediaStreamVideoComponent) -> Bool {
+    public static func ==(lhs: _MediaStreamVideoComponent, rhs: _MediaStreamVideoComponent) -> Bool {
         if lhs.call !== rhs.call {
             return false
         }
@@ -70,7 +72,7 @@ final class MediaStreamVideoComponent: Component {
         return State()
     }
     
-    public final class View: UIScrollView, AVPictureInPictureControllerDelegate, ComponentTaggedView {
+    public final class View: UIView, AVPictureInPictureControllerDelegate, ComponentTaggedView {
         public final class Tag {
         }
         
@@ -83,7 +85,7 @@ final class MediaStreamVideoComponent: Component {
         
         private var pictureInPictureController: AVPictureInPictureController?
         
-        private var component: MediaStreamVideoComponent?
+        private var component: _MediaStreamVideoComponent?
         private var hadVideo: Bool = false
         
         private var requestedExpansion: Bool = false
@@ -96,9 +98,9 @@ final class MediaStreamVideoComponent: Component {
         override init(frame: CGRect) {
             self.blurTintView = UIView()
             self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
-
             super.init(frame: frame)
             
+//            self.backgroundColor = UIColor.green.withAlphaComponent(0.4)
             self.isUserInteractionEnabled = false
             self.clipsToBounds = true
             
@@ -123,10 +125,18 @@ final class MediaStreamVideoComponent: Component {
             }
         }
         
-        func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
+//        let sheetView = UIView()
+//        let sheetBackdropView = UIView()
+//        var sheetTop: CGFloat = 0
+//        var sheetHeight: CGFloat = 0
+        
+        func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
             
             if component.hasVideo, self.videoView == nil {
+//                self.addSubview(sheetBackdropView)
+//                self.addSubview(sheetView)
+                
                 if let input = component.call.video(endpointId: "unified") {
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
@@ -142,8 +152,7 @@ final class MediaStreamVideoComponent: Component {
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
                             }
-                            
-                            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
+//                            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
                                 final class PlaybackDelegateImpl: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
                                     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
                                         
@@ -168,15 +177,25 @@ final class MediaStreamVideoComponent: Component {
                                         return false
                                     }
                                 }
-                                
-                                let pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: PlaybackDelegateImpl()))
+                            let pictureInPictureController: AVPictureInPictureController
+                            if #available(iOS 15.0, *) {
+                                pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: PlaybackDelegateImpl()))
+                            } else {
+                                // TODO: support PiP for iOS < 15.0
+                                // sampleBufferVideoView.sampleBufferLayer
+                                pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))!
+                            }
                                 
                                 pictureInPictureController.delegate = self
+                            if #available(iOS 14.2, *) {
                                 pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = true
+                            }
+                            if #available(iOS 14.0, *) {
                                 pictureInPictureController.requiresLinearPlayback = true
+                            }
                                 
                                 self.pictureInPictureController = pictureInPictureController
-                            }
+//                            }
                         }
                         
                         videoView.setOnOrientationUpdated { [weak state] _, _ in
@@ -206,6 +225,8 @@ final class MediaStreamVideoComponent: Component {
                     }
                 }
             }
+            
+//            sheetView.frame = .init(x: 0, y: sheetTop, width: availableSize.width, height: sheetHeight)
             
             if let videoView = self.videoView {
                 var isVideoVisible = component.isVisible

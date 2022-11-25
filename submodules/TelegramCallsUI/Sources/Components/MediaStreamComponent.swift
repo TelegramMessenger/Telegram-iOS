@@ -517,7 +517,7 @@ private final class ToolbarComponent: CombinedComponent {
     }
 }
 
-public final class MediaStreamComponent: CombinedComponent {
+public final class _MediaStreamComponent: CombinedComponent {
     struct OriginInfo: Equatable {
         var title: String
         var memberCount: Int
@@ -531,7 +531,7 @@ public final class MediaStreamComponent: CombinedComponent {
         self.call = call
     }
     
-    public static func ==(lhs: MediaStreamComponent, rhs: MediaStreamComponent) -> Bool {
+    public static func ==(lhs: _MediaStreamComponent, rhs: _MediaStreamComponent) -> Bool {
         if lhs.call !== rhs.call {
             return false
         }
@@ -568,6 +568,9 @@ public final class MediaStreamComponent: CombinedComponent {
         private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
+        
+        // MARK: - Added
+        var videoHiddenForPip = false
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
@@ -711,6 +714,8 @@ public final class MediaStreamComponent: CombinedComponent {
         let navigationBar = Child(NavigationBarComponent.self)
         let toolbar = Child(ToolbarComponent.self)
         
+        let sheet = Child(StreamSheetComponent.self)
+        
         let activatePictureInPicture = StoredActionSlot(Action<Void>.self)
         let deactivatePictureInPicture = StoredActionSlot(Void.self)
         let moreButtonTag = GenericComponentViewTag()
@@ -724,7 +729,7 @@ public final class MediaStreamComponent: CombinedComponent {
             }
             
             let background = background.update(
-                component: Rectangle(color: .black),
+                component: Rectangle(color: .black.withAlphaComponent(0.12)),
                 availableSize: context.availableSize,
                 transition: context.transition
             )
@@ -740,6 +745,8 @@ public final class MediaStreamComponent: CombinedComponent {
                 if controller.view.window == nil {
                     return
                 }
+                state.videoHiddenForPip = false
+                state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
             
@@ -759,7 +766,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         }
                         
                         call.accountContext.sharedContext.mainWindow?.inCallNavigate?()
-                        
+                        // TODO: bring up sheet
                         completed()
                     },
                     pictureInPictureClosed: { [weak call] in
@@ -770,8 +777,22 @@ public final class MediaStreamComponent: CombinedComponent {
                 transition: context.transition
             )
             
+            let sheet = sheet.update(
+                component: StreamSheetComponent(
+                    leftItem: AnyComponent(Button(
+                        content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
+                        action: { [weak call] in
+                            let _ = call?.leave(terminateIfPossible: false)
+                        })
+                    )
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
-            if context.state.isPictureInPictureSupported, context.state.hasVideo {
+            let contextView = context.view
+            if /*true || context.state.isPictureInPictureSupported,*/ context.state.hasVideo {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Media Gallery/PictureInPictureButton",
@@ -782,7 +803,15 @@ public final class MediaStreamComponent: CombinedComponent {
                             guard let controller = controller() as? MediaStreamComponentController else {
                                 return
                             }
-                            controller.dismiss(closing: false, manual: true)
+                            state.videoHiddenForPip = true
+                            UIView.animate(withDuration: 5, animations: {
+                                contextView.alpha = 0
+                            }, completion: { _ in
+                                state.videoHiddenForPip = true
+                                state.updateDismissOffset(value: 2000, interactive: false)
+                                controller.dismiss(closing: false, manual: true)
+                                contextView.alpha = 1
+                            })
                         })
                     }
                 ).minSize(CGSize(width: 44.0, height: 44.0)))))
@@ -1115,6 +1144,7 @@ public final class MediaStreamComponent: CombinedComponent {
                     case let .updated(offset):
                         state.updateDismissOffset(value: offset.y, interactive: true)
                     case let .ended(velocity):
+                        // TODO: Dismiss sheet depending on velocity
                         if abs(velocity.y) > 200.0 {
                             activatePictureInPicture.invoke(Action { [weak state] in
                                 guard let state = state, let controller = controller() as? MediaStreamComponentController else {
@@ -1130,6 +1160,13 @@ public final class MediaStreamComponent: CombinedComponent {
                 })
             )
             
+            let sheetHeight: CGFloat = 300
+            let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + context.state.dismissOffset
+            // TODO: work with sheet here
+            context.add(sheet
+                .position(.init(x: context.availableSize.width / 2.0, y: sheetOffset))
+            )
+            print("DismissOffset: \(context.state.dismissOffset)")
             context.add(video
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0 + context.state.dismissOffset))
             )
@@ -1149,7 +1186,7 @@ public final class MediaStreamComponent: CombinedComponent {
     }
 }
 
-public final class MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
+public final class _MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
     private let context: AccountContext
     public let call: PresentationGroupCall
     public private(set) var currentOverlayController: VoiceChatOverlayController? = nil
@@ -1161,6 +1198,10 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
     private var initialOrientation: UIInterfaceOrientation?
     
     private let inviteLinksPromise = Promise<GroupCallInviteLinks?>(nil)
+    
+    public convenience init(sharedContext: SharedAccountContext, accountContext: AccountContext, call: PresentationGroupCall) {
+        self.init(call: call)
+    }
     
     public init(call: PresentationGroupCall) {
         self.context = call.accountContext
@@ -1210,6 +1251,7 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             }
             strongSelf.view.layer.allowsGroupOpacity = false
         })
+        // self.view.backgroundColor = .cyan
     }
     
     override public func viewDidDisappear(_ animated: Bool) {
@@ -1377,3 +1419,5 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         })
     }
 }
+
+public typealias MediaStreamComponentController = _MediaStreamComponentController
