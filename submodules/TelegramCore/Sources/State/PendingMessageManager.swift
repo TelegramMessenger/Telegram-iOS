@@ -950,7 +950,7 @@ public final class PendingMessageManager {
             var sentAsAction = false
             for media in message.media {
                 if let media = media as? TelegramMediaAction {
-                    if case let .messageAutoremoveTimeoutUpdated(value) = media.action {
+                    if case let .messageAutoremoveTimeoutUpdated(value, _) = media.action {
                         sentAsAction = true
                         let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: .setMessageAutoremoveTimeout(layer: layer, actionGloballyUniqueId: message.globallyUniqueId!, timeout: value, messageId: message.id), state: state)
                         if updatedState != state {

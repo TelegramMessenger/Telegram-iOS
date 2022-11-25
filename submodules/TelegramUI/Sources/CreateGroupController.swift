@@ -26,6 +26,9 @@ import MapResourceToAvatarSizes
 import ItemListAddressItem
 import ItemListVenueItem
 import LegacyMediaPickerUI
+import ContextUI
+import ChatTimerScreen
+import AsyncDisplayKit
 
 private struct CreateGroupArguments {
     let context: AccountContext
@@ -35,10 +38,12 @@ private struct CreateGroupArguments {
     let changeProfilePhoto: () -> Void
     let changeLocation: () -> Void
     let updateWithVenue: (TelegramMediaMap) -> Void
+    let updateAutoDelete: () -> Void
 }
 
 private enum CreateGroupSection: Int32 {
     case info
+    case autoDelete
     case members
     case location
     case venues
@@ -46,17 +51,11 @@ private enum CreateGroupSection: Int32 {
 
 private enum CreateGroupEntryTag: ItemListItemTag {
     case info
+    case autoDelete
     
     func isEqual(to other: ItemListItemTag) -> Bool {
         if let other = other as? CreateGroupEntryTag {
-            switch self {
-                case .info:
-                    if case .info = other {
-                        return true
-                    } else {
-                        return false
-                    }
-            }
+            return self == other
         } else {
             return false
         }
@@ -66,6 +65,8 @@ private enum CreateGroupEntryTag: ItemListItemTag {
 private enum CreateGroupEntry: ItemListNodeEntry {
     case groupInfo(PresentationTheme, PresentationStrings, PresentationDateTimeFormat, Peer?, ItemListAvatarAndNameInfoItemState, ItemListAvatarAndNameInfoItemUpdatingAvatar?)
     case setProfilePhoto(PresentationTheme, String)
+    case autoDelete(title: String, value: String)
+    case autoDeleteInfo(String)
     case member(Int32, PresentationTheme, PresentationStrings, PresentationDateTimeFormat, PresentationPersonNameOrder, Peer, PeerPresence?)
     case locationHeader(PresentationTheme, String)
     case location(PresentationTheme, PeerGeoLocation)
@@ -78,6 +79,8 @@ private enum CreateGroupEntry: ItemListNodeEntry {
         switch self {
             case .groupInfo, .setProfilePhoto:
                 return CreateGroupSection.info.rawValue
+            case .autoDelete, .autoDeleteInfo:
+                return CreateGroupSection.autoDelete.rawValue
             case .member:
                 return CreateGroupSection.members.rawValue
             case .locationHeader, .location, .changeLocation, .locationInfo:
@@ -93,8 +96,12 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return 0
             case .setProfilePhoto:
                 return 1
+            case .autoDelete:
+                return 2
+            case .autoDeleteInfo:
+                return 3
             case let .member(index, _, _, _, _, _, _):
-                return 2 + index
+                return 4 + index
             case .locationHeader:
                 return 10000
             case .location:
@@ -142,6 +149,18 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 }
             case let .setProfilePhoto(lhsTheme, lhsText):
                 if case let .setProfilePhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoDelete(title, value):
+                if case .autoDelete(title, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .autoDeleteInfo(text):
+                if case .autoDeleteInfo(text) = rhs {
                     return true
                 } else {
                     return false
@@ -244,6 +263,12 @@ private enum CreateGroupEntry: ItemListNodeEntry {
                 return ItemListActionItem(presentationData: presentationData, title: text, kind: .generic, alignment: .natural, sectionId: ItemListSectionId(self.section), style: .blocks, action: {
                     arguments.changeProfilePhoto()
                 })
+            case let .autoDelete(text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, disclosureStyle: .optionArrows, action: {
+                    arguments.updateAutoDelete()
+                }, tag: CreateGroupEntryTag.autoDelete)
+            case let .autoDeleteInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .member(_, _, _, dateTimeFormat, nameDisplayOrder, peer, presence):
                 return ItemListPeerItem(presentationData: presentationData, dateTimeFormat: dateTimeFormat, nameDisplayOrder: nameDisplayOrder, context: arguments.context, peer: EnginePeer(peer), presence: presence.flatMap(EnginePeer.Presence.init), text: .presence, label: .none, editing: ItemListPeerItemEditing(editable: false, editing: false, revealed: false), switchValue: nil, enabled: true, selectable: true, sectionId: self.section, action: nil, setPeerIdWithRevealedOptions: { _, _ in }, removePeer: { _ in })
             case let .locationHeader(_, title):
@@ -273,25 +298,7 @@ private struct CreateGroupState: Equatable {
     var nameSetFromVenue: Bool
     var avatar: ItemListAvatarAndNameInfoItemUpdatingAvatar?
     var location: PeerGeoLocation?
-    
-    static func ==(lhs: CreateGroupState, rhs: CreateGroupState) -> Bool {
-        if lhs.creating != rhs.creating {
-            return false
-        }
-        if lhs.editingName != rhs.editingName {
-            return false
-        }
-        if lhs.nameSetFromVenue != rhs.nameSetFromVenue {
-            return false
-        }
-        if lhs.avatar != rhs.avatar {
-            return false
-        }
-        if lhs.location != rhs.location {
-            return false
-        }
-        return true
-    }
+    var autoremoveTimeout: Int32
 }
 
 private func createGroupEntries(presentationData: PresentationData, state: CreateGroupState, peerIds: [PeerId], view: MultiplePeersView, venues: [TelegramMediaMap]?) -> [CreateGroupEntry] {
@@ -302,6 +309,16 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     let peer = TelegramGroup(id: PeerId(namespace: .max, id: PeerId.Id._internalFromInt64Value(0)), title: state.editingName.composedTitle, photo: [], participantCount: 0, role: .creator(rank: nil), membership: .Member, flags: [], defaultBannedRights: nil, migrationReference: nil, creationDate: 0, version: 0)
     
     entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
+    
+    //TODO:localize
+    let autoRemoveText: String
+    if state.autoremoveTimeout == 0 {
+        autoRemoveText = "Off"
+    } else {
+        autoRemoveText = timeIntervalString(strings: presentationData.strings, value: state.autoremoveTimeout)
+    }
+    entries.append(.autoDelete(title: "Auto-Delete Messages", value: autoRemoveText))
+    entries.append(.autoDeleteInfo("Automatically delete messages sent in this group for everyone after a period of time."))
     
     var peers: [Peer] = []
     for peerId in peerIds {
@@ -365,7 +382,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
         location = PeerGeoLocation(latitude: latitude, longitude: longitude, address: address ?? "")
     }
     
-    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), nameSetFromVenue: false, avatar: nil, location: location)
+    let initialState = CreateGroupState(creating: false, editingName: .title(title: initialTitle ?? "", type: .group), nameSetFromVenue: false, avatar: nil, location: location, autoremoveTimeout: 0)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)
     let stateValue = Atomic(value: initialState)
     let updateState: ((CreateGroupState) -> CreateGroupState) -> Void = { f in
@@ -375,9 +392,11 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     var replaceControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var presentInGlobalOverlay: ((ViewController) -> Void)?
     var pushImpl: ((ViewController) -> Void)?
     var endEditingImpl: (() -> Void)?
     var ensureItemVisibleImpl: ((CreateGroupEntryTag, Bool) -> Void)?
+    var findAutoremoveReferenceNode: (() -> ItemListDisclosureItemNode?)?
     
     let actionsDisposable = DisposableSet()
     
@@ -422,29 +441,13 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
             endEditingImpl?()
             
+            let autoremoveTimeout = stateValue.with({ $0 }).autoremoveTimeout
+            let ttlPeriod: Int32? = autoremoveTimeout == 0 ? nil : autoremoveTimeout
+            
             let createSignal: Signal<PeerId?, CreateGroupError>
             switch mode {
                 case .generic:
-                    if title.contains("*forum") {
-                        createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
-                        |> map(Optional.init)
-                        |> mapError { error -> CreateGroupError in
-                            switch error {
-                                case .generic:
-                                    return .generic
-                                case .restricted:
-                                    return .restricted
-                                case .tooMuchJoined:
-                                    return .tooMuchJoined
-                                case .tooMuchLocationBasedGroups:
-                                    return .tooMuchLocationBasedGroups
-                                case let .serverProvided(error):
-                                    return .serverProvided(error)
-                            }
-                        }
-                    } else {
-                        createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: nil)
-                    }
+                    createSignal = context.engine.peers.createGroup(title: title, peerIds: peerIds, ttlPeriod: ttlPeriod)
                 case .supergroup:
                     createSignal = context.engine.peers.createSupergroup(title: title, description: nil)
                     |> map(Optional.init)
@@ -821,6 +824,86 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
         })
         ensureItemVisibleImpl?(.info, true)
+    }, updateAutoDelete: {
+        var subItems: [ContextMenuItem] = []
+        
+        let currentValue = stateValue.with({ $0 }).autoremoveTimeout
+        
+        let applyValue: (Int32) -> Void = { value in
+            updateState { state in
+                var state = state
+                state.autoremoveTimeout = value
+                return state
+            }
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        //TODO:localize
+        subItems.append(.action(ContextMenuActionItem(text: "Off", icon: { theme in
+            if currentValue == 0 {
+                return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+            } else {
+                return nil
+            }
+        }, action: { _, f in
+            applyValue(0)
+            f(.default)
+        })))
+        subItems.append(.separator)
+        
+        var presetValues: [Int32] = [
+            1 * 24 * 60 * 60,
+            7 * 24 * 60 * 60,
+            31 * 24 * 60 * 60
+        ]
+        if currentValue != 0 && !presetValues.contains(currentValue) {
+            presetValues.append(currentValue)
+            presetValues.sort()
+        }
+        
+        for value in presetValues {
+            subItems.append(.action(ContextMenuActionItem(text: timeIntervalString(strings: presentationData.strings, value: value), icon: { theme in
+                if currentValue == value {
+                    return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
+                } else {
+                    return nil
+                }
+            }, action: { _, f in
+                applyValue(value)
+                f(.default)
+            })))
+        }
+        
+        //TODO:localize
+        subItems.append(.action(ContextMenuActionItem(text: "Set Custom Time...", icon: { _ in
+            return nil
+        }, action: { _, f in
+            f(.default)
+            
+            let controller = ChatTimerScreen(context: context, updatedPresentationData: nil, style: .default, mode: .autoremove, currentTime: currentValue == 0 ? nil : currentValue, dismissByTapOutside: true, completion: { value in
+                applyValue(value)
+            })
+            endEditingImpl?()
+            presentControllerImpl?(controller, nil)
+        })))
+        
+        if let sourceNode = findAutoremoveReferenceNode?() {
+            let items: Signal<ContextController.Items, NoError> = .single(ContextController.Items(content: .list(subItems)))
+            let source: ContextContentSource = .reference(CreateGroupContextReferenceContentSource(sourceView: sourceNode.labelNode.view))
+            
+            let contextController = ContextController(
+                account: context.account,
+                presentationData: presentationData,
+                source: source,
+                items: items,
+                gesture: nil
+            )
+            sourceNode.updateHasContextMenu(hasContextMenu: true)
+            contextController.dismissed = { [weak sourceNode] in
+                sourceNode?.updateHasContextMenu(hasContextMenu: false)
+            }
+            presentInGlobalOverlay?(contextController)
+        }
     })
     
     let signal = combineLatest(context.sharedContext.presentationData, statePromise.get(), context.account.postbox.multiplePeersView(peerIds), .single(nil) |> then(addressPromise.get()), .single(nil) |> then(venuesPromise.get()))
@@ -856,6 +939,9 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
     }
+    presentInGlobalOverlay = { [weak controller] c in
+        controller?.presentInGlobalOverlay(c, with: nil)
+    }
     pushImpl = { [weak controller] c in
         controller?.push(c)
     }
@@ -888,5 +974,41 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
         })
     }
+    
+    findAutoremoveReferenceNode = { [weak controller] in
+        guard let controller else {
+            return nil
+        }
+        
+        let targetTag: CreateGroupEntryTag = .autoDelete
+        var resultItemNode: ItemListItemNode?
+        controller.forEachItemNode { itemNode in
+            if let itemNode = itemNode as? ItemListItemNode {
+                if let tag = itemNode.tag, tag.isEqual(to: targetTag) {
+                    resultItemNode = itemNode
+                    return
+                }
+            }
+        }
+        
+        if let resultItemNode = resultItemNode as? ItemListDisclosureItemNode {
+            return resultItemNode
+        } else {
+            return nil
+        }
+    }
+    
     return controller
+}
+
+private final class CreateGroupContextReferenceContentSource: ContextReferenceContentSource {
+    private let sourceView: UIView
+    
+    init(sourceView: UIView) {
+        self.sourceView = sourceView
+    }
+    
+    func transitionInfo() -> ContextControllerReferenceViewInfo? {
+        return ContextControllerReferenceViewInfo(referenceView: self.sourceView, contentAreaInScreenSpace: UIScreen.main.bounds, insets: UIEdgeInsets(top: -4.0, left: 0.0, bottom: -4.0, right: 0.0))
+    }
 }

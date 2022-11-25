@@ -336,7 +336,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .channelMigratedFromGroup, .groupMigratedToChannel:
                 attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
-            case let .messageAutoremoveTimeoutUpdated(timeout):
+            case let .messageAutoremoveTimeoutUpdated(timeout, _):
                 let authorString: String
                 if let author = messageMainPeer(message) {
                     authorString = author.compactDisplayTitle

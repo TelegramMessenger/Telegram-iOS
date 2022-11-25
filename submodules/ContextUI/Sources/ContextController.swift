@@ -103,6 +103,7 @@ public final class ContextMenuActionItem {
     public let icon: (PresentationTheme) -> UIImage?
     public let iconSource: ContextMenuActionItemIconSource?
     public let textIcon: (PresentationTheme) -> UIImage?
+    public let textLinkAction: () -> Void
     public let action: ((Action) -> Void)?
     
     convenience public init(
@@ -116,6 +117,7 @@ public final class ContextMenuActionItem {
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
+        textLinkAction: @escaping () -> Void = {},
         action: ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?
     ) {
         self.init(
@@ -129,6 +131,7 @@ public final class ContextMenuActionItem {
             icon: icon,
             iconSource: iconSource,
             textIcon: textIcon,
+            textLinkAction: textLinkAction,
             action: action.flatMap { action in
                 return { impl in
                     action(impl.controller, impl.dismissWithResult)
@@ -148,6 +151,7 @@ public final class ContextMenuActionItem {
         icon: @escaping (PresentationTheme) -> UIImage?,
         iconSource: ContextMenuActionItemIconSource? = nil,
         textIcon: @escaping (PresentationTheme) -> UIImage? = { _ in return nil },
+        textLinkAction: @escaping () -> Void = {},
         action: ((Action) -> Void)?
     ) {
         self.id = id
@@ -160,6 +164,7 @@ public final class ContextMenuActionItem {
         self.icon = icon
         self.iconSource = iconSource
         self.textIcon = textIcon
+        self.textLinkAction = textLinkAction
         self.action = action
     }
 }

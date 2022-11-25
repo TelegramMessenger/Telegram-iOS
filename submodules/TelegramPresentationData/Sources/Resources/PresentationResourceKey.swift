@@ -38,6 +38,7 @@ public enum PresentationResourceKey: Int32 {
     
     case itemListDownArrow
     case itemListDisclosureArrow
+    case disclosureOptionArrowsImage
     case itemListDisclosureLocked
     case itemListCheckIcon
     case itemListSecondaryCheckIcon
@@ -331,4 +332,6 @@ public enum PresentationResourceParameterKey: Hashable {
     
     case chatEntityKeyboardLock(color: UInt32)
     case chatInputMediaPanelGridDismissImage(color: UInt32)
+    
+    case statusAutoremoveIcon(isActive: Bool)
 }

@@ -33,6 +33,12 @@ public struct PresentationResourcesItemList {
         })
     }
     
+    public static func disclosureOptionArrowsImage(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.disclosureOptionArrowsImage.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Item List/ContextDisclosureArrow"), color: theme.list.disclosureArrowColor)
+        })
+    }
+    
     public static func disclosureLockedImage(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.itemListDisclosureLocked.rawValue, { theme in
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Stickers/SmallLock"), color: theme.list.disclosureArrowColor)

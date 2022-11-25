@@ -154,6 +154,56 @@ public extension TelegramEngine {
                 return _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout)
             }
         }
+        
+        public func setChatMessageAutoremoveTimeouts(peerIds: [EnginePeer.Id], timeout: Int32?) -> Signal<Never, NoError> {
+            return self.account.postbox.transaction { transaction -> Void in
+                for peerId in peerIds {
+                    if peerId.namespace == Namespaces.Peer.SecretChat {
+                        _internal_setSecretChatMessageAutoremoveTimeoutInteractively(transaction: transaction, account: self.account, peerId: peerId, timeout: timeout)
+                    } else {
+                        var canManage = false
+                        guard let peer = transaction.getPeer(peerId) else {
+                            continue
+                        }
+                        if let user = peer as? TelegramUser {
+                            if user.botInfo == nil {
+                                canManage = true
+                            }
+                        } else if let _ = peer as? TelegramSecretChat {
+                            canManage = true
+                        } else if let group = peer as? TelegramGroup {
+                            canManage = !group.hasBannedPermission(.banChangeInfo)
+                        } else if let channel = peer as? TelegramChannel {
+                            canManage = channel.hasPermission(.changeInfo)
+                        }
+                        
+                        if !canManage {
+                            continue
+                        }
+                        
+                        let cachedData = transaction.getPeerCachedData(peerId: peerId)
+                        var currentValue: Int32?
+                        if let cachedData = cachedData as? CachedUserData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        } else if let cachedData = cachedData as? CachedGroupData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        } else if let cachedData = cachedData as? CachedChannelData {
+                            if case let .known(value) = cachedData.autoremoveTimeout {
+                                currentValue = value?.effectiveValue
+                            }
+                        }
+                        if currentValue != timeout {
+                            let _ = _internal_setChatMessageAutoremoveTimeoutInteractively(account: self.account, peerId: peerId, timeout: timeout).start()
+                        }
+                    }
+                }
+            }
+            |> ignoreValues
+        }
 
         public func updateChannelSlowModeInteractively(peerId: PeerId, timeout: Int32?) -> Signal<Void, UpdateChannelSlowModeError> {
             return _internal_updateChannelSlowModeInteractively(postbox: self.account.postbox, network: self.account.network, accountStateManager: self.account.stateManager, peerId: peerId, timeout: timeout)

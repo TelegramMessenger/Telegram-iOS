@@ -179,6 +179,8 @@ public enum WallpaperUrlParameter {
 public enum ResolvedUrlSettingsSection {
     case theme
     case devices
+    case autoremoveMessages
+    case twoStepAuth
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {

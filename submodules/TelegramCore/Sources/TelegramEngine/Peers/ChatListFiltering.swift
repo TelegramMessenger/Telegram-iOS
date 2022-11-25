@@ -635,6 +635,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
             var peers: [Peer] = []
             var peerPresences: [PeerId: Api.User] = [:]
             var notificationSettings: [PeerId: PeerNotificationSettings] = [:]
+            var ttlPeriods: [PeerId: CachedPeerAutoremoveTimeout] = [:]
             var channelStates: [PeerId: Int32] = [:]
             
             switch result {
@@ -654,7 +655,7 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                 
                 for dialog in dialogs {
                     switch dialog {
-                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId):
+                    case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId, ttlPeriod):
                         let peerId = peer.peerId
                         
                         if topMessage != 0 {
@@ -708,6 +709,8 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                         
                         notificationSettings[peer.peerId] = TelegramPeerNotificationSettings(apiSettings: notifySettings)
                         
+                        ttlPeriods[peer.peerId] = .known(ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
+                        
                         transaction.resetIncomingReadStates([peerId: [Namespaces.Message.Cloud: .idBased(maxIncomingReadId: readInboxMaxId, maxOutgoingReadId: readOutboxMaxId, maxKnownId: topMessage, count: unreadCount, markedUnread: false)]])
                         
                         transaction.replaceMessageTagSummary(peerId: peerId, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud, count: unreadMentionsCount, maxId: topMessage)
@@ -754,6 +757,20 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
             updatePeerPresences(transaction: transaction, accountPeerId: accountPeerId, peerPresences: peerPresences)
             
             transaction.updateCurrentPeerNotificationSettings(notificationSettings)
+            
+            for (peerId, autoremoveValue) in ttlPeriods {
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if let current = current as? CachedUserData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if let current = current as? CachedGroupData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if let current = current as? CachedChannelData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else {
+                        return current
+                    }
+                })
+            }
         }
         |> ignoreValues
     }

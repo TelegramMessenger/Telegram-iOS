@@ -367,7 +367,7 @@ private func synchronizeUnseenPersonalMentionsTag(postbox: Postbox, network: Net
                                     let apiTopMessage: Int32
                                     let apiUnreadMentionsCount: Int32
                                     switch dialog {
-                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _, _):
+                                        case let .dialog(_, _, topMessage, _, _, _, unreadMentionsCount, _, _, _, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadMentionsCount = unreadMentionsCount
                                         
@@ -409,7 +409,7 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
                                     let apiTopMessage: Int32
                                     let apiUnreadReactionsCount: Int32
                                     switch dialog {
-                                        case let .dialog(_, _, topMessage, _, _, _, _, unreadReactionsCount, _, _, _, _):
+                                        case let .dialog(_, _, topMessage, _, _, _, _, unreadReactionsCount, _, _, _, _, _):
                                             apiTopMessage = topMessage
                                             apiUnreadReactionsCount = unreadReactionsCount
                                         

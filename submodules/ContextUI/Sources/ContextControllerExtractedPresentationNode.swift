@@ -626,7 +626,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
             }
         case let .reference(reference):
             if let transitionInfo = reference.transitionInfo() {
-                contentRect = convertFrame(transitionInfo.referenceView.bounds, from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
+                contentRect = convertFrame(transitionInfo.referenceView.bounds.inset(by: transitionInfo.insets), from: transitionInfo.referenceView, to: self.view).insetBy(dx: -2.0, dy: 0.0)
                 contentRect.size.width += 5.0
                 contentParentGlobalFrame = CGRect(origin: CGPoint(x: 0.0, y: contentRect.minX), size: CGSize(width: layout.size.width, height: contentRect.height))
             } else {
@@ -1040,7 +1040,7 @@ final class ContextControllerExtractedPresentationNode: ASDisplayNode, ContextCo
                     self.clippingNode.layer.animateFrame(from: CGRect(origin: CGPoint(), size: layout.size), to: CGRect(origin: CGPoint(x: 0.0, y: putBackInfo.contentAreaInScreenSpace.minY), size: CGSize(width: layout.size.width, height: putBackInfo.contentAreaInScreenSpace.height)), duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
                     self.clippingNode.layer.animateBoundsOriginYAdditive(from: 0.0, to: putBackInfo.contentAreaInScreenSpace.minY, duration: duration, timingFunction: timingFunction, removeOnCompletion: false)
                     
-                    currentContentScreenFrame = convertFrame(putBackInfo.referenceView.bounds, from: putBackInfo.referenceView, to: self.view)
+                    currentContentScreenFrame = convertFrame(putBackInfo.referenceView.bounds.inset(by: putBackInfo.insets), from: putBackInfo.referenceView, to: self.view)
                 } else {
                     return
                 }

@@ -786,19 +786,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             if let _ = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramSecretChat {
                                 canSetupAutoremoveTimeout = false
                             } else if let group = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramGroup {
-                                if case .creator = group.role {
+                                if !group.hasBannedPermission(.banChangeInfo) {
                                     canSetupAutoremoveTimeout = true
-                                } else if case let .admin(rights, _) = group.role {
-                                    if rights.rights.contains(.canDeleteMessages) {
-                                        canSetupAutoremoveTimeout = true
-                                    }
                                 }
                             } else if let user = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramUser {
                                 if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
                                     canSetupAutoremoveTimeout = true
                                 }
                             } else if let channel = strongSelf.presentationInterfaceState.renderedPeer?.peer as? TelegramChannel {
-                                if channel.hasPermission(.deleteAllMessages) {
+                                if channel.hasPermission(.changeInfo) {
                                     canSetupAutoremoveTimeout = true
                                 }
                             }
@@ -8511,19 +8507,15 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
                     canSetupAutoremoveTimeout = true
                 } else if let group = peer as? TelegramGroup {
-                    if case .creator = group.role {
+                    if !group.hasBannedPermission(.banChangeInfo) {
                         canSetupAutoremoveTimeout = true
-                    } else if case let .admin(rights, _) = group.role {
-                        if rights.rights.contains(.canDeleteMessages) {
-                            canSetupAutoremoveTimeout = true
-                        }
                     }
                 } else if let user = peer as? TelegramUser {
                     if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
                         canSetupAutoremoveTimeout = true
                     }
                 } else if let channel = peer as? TelegramChannel {
-                    if channel.hasPermission(.deleteAllMessages) {
+                    if channel.hasPermission(.changeInfo) {
                         canSetupAutoremoveTimeout = true
                     }
                 }

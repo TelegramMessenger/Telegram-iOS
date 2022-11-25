@@ -2409,7 +2409,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var mainContentAlpha: CGFloat = 1.0
                     
                     if case .chatList = item.chatListLocation {
-                        mainContentFrame = CGRect(origin: CGPoint(x: leftInset, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                        mainContentFrame = CGRect(origin: CGPoint(x: leftInset - 2.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
                         mainContentBoundsOffset = mainContentFrame.origin.x
                         
                         if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {

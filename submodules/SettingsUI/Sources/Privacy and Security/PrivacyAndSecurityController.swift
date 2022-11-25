@@ -105,7 +105,6 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     case accountHeader(PresentationTheme, String)
     case accountTimeout(PresentationTheme, String, String)
     case accountInfo(PresentationTheme, String)
-    case messageAutoremoveHeader(PresentationTheme, String)
     case messageAutoremoveTimeout(PresentationTheme, String, String)
     case messageAutoremoveInfo(PresentationTheme, String)
     case dataSettings(PresentationTheme, String)
@@ -113,18 +112,16 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
-            case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail, .loginEmailInfo:
-                return PrivacyAndSecuritySection.general.rawValue
-            case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .voiceCallPrivacy, .voiceMessagePrivacy, .selectivePrivacyInfo:
-                return PrivacyAndSecuritySection.privacy.rawValue
-            case .autoArchiveHeader, .autoArchive, .autoArchiveInfo:
-                return PrivacyAndSecuritySection.autoArchive.rawValue
-            case .accountHeader, .accountTimeout, .accountInfo:
-                return PrivacyAndSecuritySection.account.rawValue
-            case .messageAutoremoveHeader, .messageAutoremoveTimeout, .messageAutoremoveInfo:
-                return PrivacyAndSecuritySection.messageAutoremove.rawValue
-            case .dataSettings, .dataSettingsInfo:
-                return PrivacyAndSecuritySection.dataSettings.rawValue
+        case .blockedPeers, .activeSessions, .passcode, .twoStepVerification, .loginEmail, .loginEmailInfo, .messageAutoremoveTimeout, .messageAutoremoveInfo:
+            return PrivacyAndSecuritySection.general.rawValue
+        case .privacyHeader, .phoneNumberPrivacy, .lastSeenPrivacy, .profilePhotoPrivacy, .forwardPrivacy, .groupPrivacy, .voiceCallPrivacy, .voiceMessagePrivacy, .selectivePrivacyInfo:
+            return PrivacyAndSecuritySection.privacy.rawValue
+        case .autoArchiveHeader, .autoArchive, .autoArchiveInfo:
+            return PrivacyAndSecuritySection.autoArchive.rawValue
+        case .accountHeader, .accountTimeout, .accountInfo:
+            return PrivacyAndSecuritySection.account.rawValue
+        case .dataSettings, .dataSettingsInfo:
+            return PrivacyAndSecuritySection.dataSettings.rawValue
         }
     }
     
@@ -138,50 +135,48 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return 3
             case .twoStepVerification:
                 return 4
-            case .loginEmail:
-                return 5
-            case .loginEmailInfo:
-                return 6
-            case .privacyHeader:
-                return 7
-            case .phoneNumberPrivacy:
-                return 8
-            case .lastSeenPrivacy:
-                return 9
-            case .profilePhotoPrivacy:
-                return 10
-            case .voiceCallPrivacy:
-                return 11
-            case .voiceMessagePrivacy:
-                return 12
-            case .forwardPrivacy:
-                return 13
-            case .groupPrivacy:
-                return 14
-            case .selectivePrivacyInfo:
-                return 15
-            case .autoArchiveHeader:
-                return 16
-            case .autoArchive:
-                return 17
-            case .autoArchiveInfo:
-                return 18
-            case .accountHeader:
-                return 19
-            case .accountTimeout:
-                return 20
-            case .accountInfo:
-                return 21
-            case .messageAutoremoveHeader:
-                return 22
             case .messageAutoremoveTimeout:
-                return 23
+                return 5
             case .messageAutoremoveInfo:
-                return 24
+                return 6
+            case .loginEmail:
+                return 7
+            case .loginEmailInfo:
+                return 8
+            case .privacyHeader:
+                return 9
+            case .phoneNumberPrivacy:
+                return 10
+            case .lastSeenPrivacy:
+                return 11
+            case .profilePhotoPrivacy:
+                return 12
+            case .voiceCallPrivacy:
+                return 13
+            case .voiceMessagePrivacy:
+                return 14
+            case .forwardPrivacy:
+                return 15
+            case .groupPrivacy:
+                return 16
+            case .selectivePrivacyInfo:
+                return 17
+            case .autoArchiveHeader:
+                return 18
+            case .autoArchive:
+                return 19
+            case .autoArchiveInfo:
+                return 20
+            case .accountHeader:
+                return 21
+            case .accountTimeout:
+                return 22
+            case .accountInfo:
+                return 23
             case .dataSettings:
-                return 25
+                return 24
             case .dataSettingsInfo:
-                return 26
+                return 25
         }
     }
     
@@ -313,12 +308,6 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
-            case let .messageAutoremoveHeader(lhsTheme, lhsText):
-                if case let .messageAutoremoveHeader(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
             case let .messageAutoremoveTimeout(lhsTheme, lhsText, lhsValue):
                 if case let .messageAutoremoveTimeout(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
                     return true
@@ -397,6 +386,12 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/TwoStepAuth")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
                     arguments.openTwoStepVerification(data)
                 })
+            case let .messageAutoremoveTimeout(_, text, value):
+                return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/Timer")?.precomposed(), title: text, label: value, sectionId: self.section, style: .blocks, action: {
+                    arguments.setupMessageAutoremove()
+                }, tag: PrivacyAndSecurityEntryTag.messageAutoremoveTimeout)
+            case let .messageAutoremoveInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .loginEmail(_, text, emailPattern):
                 return ItemListDisclosureItem(presentationData: presentationData, icon: UIImage(bundleImageName: "Settings/Menu/LoginEmail")?.precomposed(), title: text, label: "", sectionId: self.section, style: .blocks, action: {
                     arguments.openEmailSettings(emailPattern)
@@ -422,14 +417,6 @@ private enum PrivacyAndSecurityEntry: ItemListNodeEntry {
                     arguments.setupAccountAutoremove()
                 }, tag: PrivacyAndSecurityEntryTag.accountTimeout)
             case let .accountInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
-            case let .messageAutoremoveHeader(_, text):
-                return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-            case let .messageAutoremoveTimeout(_, text, value):
-                return ItemListDisclosureItem(presentationData: presentationData, title: text, label: value, sectionId: self.section, style: .blocks, action: {
-                    arguments.setupMessageAutoremove()
-                }, tag: PrivacyAndSecurityEntryTag.messageAutoremoveTimeout)
-            case let .messageAutoremoveInfo(_, text):
                 return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
             case let .dataSettings(_, text):
                 return ItemListDisclosureItem(presentationData: presentationData, title: text, label: "", sectionId: self.section, style: .blocks, action: {
@@ -527,6 +514,26 @@ private func privacyAndSecurityControllerEntries(
     }
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
     
+    //TODO:localize
+    if let privacySettings = privacySettings {
+        let value: Int32?
+        if let updatingMessageAutoremoveTimeoutValue = state.updatingMessageAutoremoveTimeoutValue {
+            value = updatingMessageAutoremoveTimeoutValue
+        } else {
+            value = privacySettings.messageAutoremoveTimeout
+        }
+        let valueText: String
+        if let value {
+            valueText = timeIntervalString(strings: presentationData.strings, value: value)
+        } else {
+            valueText = "Off"
+        }
+        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", valueText))
+    } else {
+        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", presentationData.strings.Channel_NotificationLoading))
+    }
+    entries.append(.messageAutoremoveInfo(presentationData.theme, "Automatically delete messages for everyone after a period of time in all new chats you start."))
+    
     if loginEmail != nil {
         entries.append(.loginEmail(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmail, loginEmail))
         entries.append(.loginEmailInfo(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmailInfo))
@@ -587,27 +594,6 @@ private func privacyAndSecurityControllerEntries(
         entries.append(.accountTimeout(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountIfAwayFor, presentationData.strings.Channel_NotificationLoading))
     }
     entries.append(.accountInfo(presentationData.theme, presentationData.strings.PrivacySettings_DeleteAccountHelp))
-    
-    //TODO:localize
-    entries.append(.messageAutoremoveHeader(presentationData.theme, "MESSAGE TIMER"))
-    if let privacySettings = privacySettings {
-        let value: Int32?
-        if let updatingMessageAutoremoveTimeoutValue = state.updatingMessageAutoremoveTimeoutValue {
-            value = updatingMessageAutoremoveTimeoutValue
-        } else {
-            value = privacySettings.messageAutoremoveTimeout
-        }
-        let valueText: String
-        if let value {
-            valueText = timeIntervalString(strings: presentationData.strings, value: value)
-        } else {
-            valueText = "Never"
-        }
-        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", valueText))
-    } else {
-        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", presentationData.strings.Channel_NotificationLoading))
-    }
-    entries.append(.messageAutoremoveInfo(presentationData.theme, "Set a global message timer."))
     
     entries.append(.dataSettings(presentationData.theme, presentationData.strings.PrivacySettings_DataSettings))
     entries.append(.dataSettingsInfo(presentationData.theme, presentationData.strings.PrivacySettings_DataSettingsHelp))
@@ -1067,79 +1053,21 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
         let signal = privacySettingsPromise.get()
         |> take(1)
         |> deliverOnMainQueue
-        updateAccountTimeoutDisposable.set(signal.start(next: { [weak updateAccountTimeoutDisposable] privacySettingsValue in
-            if let privacySettingsValue = privacySettingsValue {
-                let timeoutAction: (Int32?) -> Void = { timeout in
-                    if let updateAccountTimeoutDisposable = updateAccountTimeoutDisposable {
-                        updateState { state in
-                            var state = state
-                            state.updatingMessageAutoremoveTimeoutValue = timeout
-                            return state
-                        }
-                        let applyTimeout: Signal<Void, NoError> = privacySettingsPromise.get()
-                        |> filter { $0 != nil }
-                        |> take(1)
-                        |> deliverOnMainQueue
-                        |> mapToSignal { value -> Signal<Void, NoError> in
-                            if let value = value {
-                                privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: timeout)))
-                            }
-                            return .complete()
-                        }
-                        updateAccountTimeoutDisposable.set((context.engine.privacy.updateGlobalMessageRemovalTimeout(timeout: timeout)
-                        |> then(applyTimeout)
-                        |> deliverOnMainQueue).start(completed: {
-                            updateState { state in
-                                var state = state
-                                state.updatingMessageAutoremoveTimeoutValue = nil
-                                return state
-                            }
-                        }))
-                    }
-                }
-                
-                let controller = ChatTimerScreen(context: context, updatedPresentationData: nil, style: .default, mode: .autoremove, currentTime: privacySettingsValue.messageAutoremoveTimeout, dismissByTapOutside: true, completion: { value in
-                    timeoutAction(value)
-                })
-                presentControllerImpl?(controller)
-                
-                /*
-                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                 let controller = ActionSheetController(presentationData: presentationData)
-                 let dismissAction: () -> Void = { [weak controller] in
-                     controller?.dismissAnimated()
-                 }
-                 let timeoutValues: [Int32] = [
-                    1 * 30 * 24 * 60 * 60,
-                    3 * 30 * 24 * 60 * 60,
-                    6 * 30 * 24 * 60 * 60,
-                    365 * 24 * 60 * 60
-                ]
-                var timeoutItems: [ActionSheetItem] = timeoutValues.map { value in
-                    return ActionSheetButtonItem(title: timeIntervalString(strings: presentationData.strings, value: value), action: {
-                        dismissAction()
-                        timeoutAction(value)
-                    })
-                }
-                timeoutItems.append(ActionSheetButtonItem(title: presentationData.strings.PrivacySettings_DeleteAccountNow, color: .destructive, action: {
-                    dismissAction()
-                    
-                    guard let navigationController = getNavigationControllerImpl?() else {
-                        return
-                    }
-                    
-                    let _ = (combineLatest(twoStepAuth.get(), twoStepAuthDataValue.get())
+        updateAccountTimeoutDisposable.set(signal.start(next: { privacySettingsValue in
+            if let privacySettingsValue {
+                pushControllerImpl?(globalAutoremoveScreen(context: context, initialValue: privacySettingsValue.messageAutoremoveTimeout ?? 0, updated: { updatedValue in
+                    let applyTimeout: Signal<Void, NoError> = privacySettingsPromise.get()
+                    |> filter { $0 != nil }
                     |> take(1)
-                    |> deliverOnMainQueue).start(next: { hasTwoStepAuth, twoStepAuthData in
-                        let optionsController = deleteAccountOptionsController(context: context, navigationController: navigationController, hasTwoStepAuth: hasTwoStepAuth ?? false, twoStepAuthData: twoStepAuthData)
-                        pushControllerImpl?(optionsController, true)
-                    })
-                }))
-                controller.setItemGroups([
-                    ActionSheetItemGroup(items: timeoutItems),
-                    ActionSheetItemGroup(items: [ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, action: { dismissAction() })])
-                ])
-                presentControllerImpl?(controller)*/
+                    |> deliverOnMainQueue
+                    |> mapToSignal { value -> Signal<Void, NoError> in
+                        if let value = value {
+                            privacySettingsPromise.set(.single(AccountPrivacySettings(presence: value.presence, groupInvitations: value.groupInvitations, voiceCalls: value.voiceCalls, voiceCallsP2P: value.voiceCallsP2P, profilePhoto: value.profilePhoto, forwards: value.forwards, phoneNumber: value.phoneNumber, phoneDiscoveryEnabled: value.phoneDiscoveryEnabled, voiceMessages: value.voiceMessages, automaticallyArchiveAndMuteNonContacts: value.automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: value.accountRemovalTimeout, messageAutoremoveTimeout: updatedValue == 0 ? nil : updatedValue)))
+                        }
+                        return .complete()
+                    }
+                    let _ = applyTimeout.start()
+                }), true)
             }
         }))
     }, openDataSettings: {

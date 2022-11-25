@@ -810,12 +810,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
-                            case "themes":
-                                section = .theme
-                            case "devices":
-                                section = .devices
-                            default:
-                                break
+                        case "themes":
+                            section = .theme
+                        case "devices":
+                            section = .devices
+                        case "password":
+                            section = .twoStepAuth
+                        default:
+                            break
                         }
                         if let section = section {
                             handleResolvedUrl(.settings(section))

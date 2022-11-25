@@ -815,6 +815,20 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             let _ = transaction.addMessages(additionalMessages, location: .Random)
             transaction.resetIncomingReadStates(fetchedChats.readStates)
             
+            for (peerId, autoremoveValue) in fetchedChats.ttlPeriods {
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if let current = current as? CachedUserData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if let current = current as? CachedGroupData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else if let current = current as? CachedChannelData {
+                        return current.withUpdatedAutoremoveTimeout(autoremoveValue)
+                    } else {
+                        return current
+                    }
+                })
+            }
+            
             transaction.replaceChatListHole(groupId: groupId, index: hole.index, hole: fetchedChats.lowerNonPinnedIndex.flatMap(ChatListHole.init))
             
             for peerId in fetchedChats.chatPeerIds {
