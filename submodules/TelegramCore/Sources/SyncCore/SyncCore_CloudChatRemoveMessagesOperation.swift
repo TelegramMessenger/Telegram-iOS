@@ -112,13 +112,15 @@ public extension CloudChatClearHistoryType {
 public final class CloudChatClearHistoryOperation: PostboxCoding {
     public let peerId: PeerId
     public let topMessageId: MessageId
+    public let threadId: Int64?
     public let minTimestamp: Int32?
     public let maxTimestamp: Int32?
     public let type: CloudChatClearHistoryType
     
-    public init(peerId: PeerId, topMessageId: MessageId, minTimestamp: Int32?, maxTimestamp: Int32?, type: CloudChatClearHistoryType) {
+    public init(peerId: PeerId, topMessageId: MessageId, threadId: Int64?, minTimestamp: Int32?, maxTimestamp: Int32?, type: CloudChatClearHistoryType) {
         self.peerId = peerId
         self.topMessageId = topMessageId
+        self.threadId = threadId
         self.minTimestamp = minTimestamp
         self.maxTimestamp = maxTimestamp
         self.type = type
@@ -127,6 +129,7 @@ public final class CloudChatClearHistoryOperation: PostboxCoding {
     public init(decoder: PostboxDecoder) {
         self.peerId = PeerId(decoder.decodeInt64ForKey("p", orElse: 0))
         self.topMessageId = MessageId(peerId: PeerId(decoder.decodeInt64ForKey("m.p", orElse: 0)), namespace: decoder.decodeInt32ForKey("m.n", orElse: 0), id: decoder.decodeInt32ForKey("m.i", orElse: 0))
+        self.threadId = decoder.decodeOptionalInt64ForKey("threadId")
         self.minTimestamp = decoder.decodeOptionalInt32ForKey("minTimestamp")
         self.maxTimestamp = decoder.decodeOptionalInt32ForKey("maxTimestamp")
         self.type = CloudChatClearHistoryType(rawValue: decoder.decodeInt32ForKey("type", orElse: 0)) ?? .forLocalPeer
@@ -137,6 +140,11 @@ public final class CloudChatClearHistoryOperation: PostboxCoding {
         encoder.encodeInt64(self.topMessageId.peerId.toInt64(), forKey: "m.p")
         encoder.encodeInt32(self.topMessageId.namespace, forKey: "m.n")
         encoder.encodeInt32(self.topMessageId.id, forKey: "m.i")
+        if let threadId = self.threadId {
+            encoder.encodeInt64(threadId, forKey: "threadId")
+        } else {
+            encoder.encodeNil(forKey: "threadId")
+        }
         if let minTimestamp = self.minTimestamp {
             encoder.encodeInt32(minTimestamp, forKey: "minTimestamp")
         } else {

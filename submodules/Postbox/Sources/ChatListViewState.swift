@@ -59,11 +59,17 @@ private func mappedChatListFilterPredicate(postbox: PostboxImpl, currentTransact
         switch entry {
         case let .message(index, _):
             if let peer = postbox.peerTable.get(index.messageIndex.id.peerId) {
-                let isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
+                var isUnread: Bool
+                if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.effectiveUnreadCount ?? 0) > 0
+                } else {
+                    isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
+                }
+                
                 let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
                 let isContact = postbox.contactsTable.isContact(peerId: notificationsPeerId)
                 let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId))
-                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: predicate.messageTagSummary)
+                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: predicate.messageTagSummary)
                 
                 if predicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: isContact, messageTagSummaryResult: messageTagSummaryResult) {
                     return true
@@ -96,7 +102,7 @@ private func updateMessagePeers(_ message: Message, updatedPeers: [PeerId: Peer]
                 peers[peerId] = currentPeer
             }
         }
-        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia)
+        return Message(stableId: message.stableId, stableVersion: message.stableVersion, id: message.id, globallyUniqueId: message.globallyUniqueId, groupingKey: message.groupingKey, groupInfo: message.groupInfo, threadId: message.threadId, timestamp: message.timestamp, flags: message.flags, tags: message.tags, globalTags: message.globalTags, localTags: message.localTags, forwardInfo: message.forwardInfo, author: message.author, text: message.text, attributes: message.attributes, media: message.media, peers: peers, associatedMessages: message.associatedMessages, associatedMessageIds: message.associatedMessageIds, associatedMedia: message.associatedMedia, associatedThreadInfo: message.associatedThreadInfo)
     }
     return nil
 }
@@ -402,9 +408,16 @@ private final class ChatListViewSpaceState {
                                 
                                 let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: peer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(notificationsPeerId))
                                 
-                                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, calculation: filterPredicate.messageTagSummary)
+                                let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                                 
-                                if !filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false, isContact: postbox.contactsTable.isContact(peerId: notificationsPeerId), messageTagSummaryResult: messageTagSummaryResult) {
+                                var isUnread: Bool
+                                if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                    isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.effectiveUnreadCount ?? 0) > 0
+                                } else {
+                                    isUnread = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId)?.isUnread ?? false
+                                }
+                                
+                                if !filterPredicate.includes(peer: peer, groupId: groupId, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: notificationsPeerId), messageTagSummaryResult: messageTagSummaryResult) {
                                     continue inner
                                 }
                             } else {
@@ -496,13 +509,13 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedPeerNotificationSettings.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate {
+        if (!transaction.currentUpdatedPeerNotificationSettings.isEmpty || !transaction.updatedPeerThreadsSummaries.isEmpty), case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
-            let _ = self.orderedEntries.mutableScan { entry in
+            let _ = self.orderedEntries.mutableScan { entry -> MutableChatListEntry? in
                 let entryPeer: Peer
                 let entryNotificationsPeerId: PeerId
                 switch entry {
-                case let .MessageEntry(_, _, _, _, _, _, renderedPeer, _, _, _, _):
+                case let .MessageEntry(_, _, _, _, _, _, renderedPeer, _, _, _, _, _):
                     if let peer = renderedPeer.peer {
                         entryPeer = peer
                         entryNotificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
@@ -519,8 +532,15 @@ private final class ChatListViewSpaceState {
                 case .HoleEntry:
                     return nil
                 }
-                if let settingsChange = transaction.currentUpdatedPeerNotificationSettings[entryNotificationsPeerId] {
-                    let isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
+                
+                let settingsChange = transaction.currentUpdatedPeerNotificationSettings[entryNotificationsPeerId]
+                if settingsChange != nil || transaction.updatedPeerThreadsSummaries.contains(entryNotificationsPeerId) {
+                    var isUnread: Bool
+                    if postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer) {
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.effectiveUnreadCount ?? 0) > 0
+                    } else {
+                        isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
+                    }
                     
                     let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
                     if let current = globalNotificationSettings {
@@ -530,9 +550,9 @@ private final class ChatListViewSpaceState {
                         globalNotificationSettings = globalNotificationSettingsValue
                     }
                     
-                    let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: entryPeer, peerSettings: settingsChange.1)
+                    let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: entryPeer, peerSettings: settingsChange?.1 ?? postbox.peerNotificationSettingsTable.getEffective(entryNotificationsPeerId))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: entryPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: entryNotificationsPeerId), messageTagSummaryResult: messageTagSummaryResult)
                     if !isIncluded {
@@ -548,7 +568,8 @@ private final class ChatListViewSpaceState {
                     let _ = self.orderedEntries.remove(index: index)
                 }
             }
-            for (peerId, settingsChange) in transaction.currentUpdatedPeerNotificationSettings {
+            
+            for peerId in transaction.updatedPeerThreadsSummaries.union(transaction.currentUpdatedPeerNotificationSettings.keys) {
                 if let mainPeer = postbox.peerTable.get(peerId) {
                     var peers: [Peer] = [mainPeer]
                     for associatedId in postbox.reverseAssociatedPeerTable.get(peerId: mainPeer.id) {
@@ -558,7 +579,12 @@ private final class ChatListViewSpaceState {
                     }
                     assert(Set(peers.map { $0.id }).count == peers.count)
                     
-                    let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                    var isUnread: Bool
+                    if postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer) {
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0) > 0
+                    } else {
+                        isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                    }
                     
                     let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
                     if let current = globalNotificationSettings {
@@ -568,9 +594,9 @@ private final class ChatListViewSpaceState {
                         globalNotificationSettings = globalNotificationSettingsValue
                     }
                     
-                    let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: mainPeer, peerSettings: settingsChange.1)
+                    let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: mainPeer, peerSettings: transaction.currentUpdatedPeerNotificationSettings[mainPeer.id]?.1 ?? postbox.peerNotificationSettingsTable.getEffective(mainPeer.id))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: mainPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: peerId), messageTagSummaryResult: messageTagSummaryResult)
                     if isIncluded && self.orderedEntries.indicesForPeerId(mainPeer.id) == nil {
@@ -604,13 +630,13 @@ private final class ChatListViewSpaceState {
             
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
-                case let .MessageEntry(index, messages, readState, _, _, embeddedInterfaceState, renderedPeer, presence, tagSummaryInfo, hasFailedMessages, isContact):
+                case let .MessageEntry(index, messages, readState, _, _, embeddedInterfaceState, renderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailedMessages, isContact):
                     if let peer = renderedPeer.peer {
                         let notificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
                         if let (_, updated) = transaction.currentUpdatedPeerNotificationSettings[notificationsPeerId] {
                             let isRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettings, peer: peer, peerSettings: updated)
                             
-                            return .MessageEntry(index: index, messages: messages, readState: readState, notificationSettings: updated, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedInterfaceState, renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, hasFailedMessages: hasFailedMessages, isContact: isContact)
+                            return .MessageEntry(index: index, messages: messages, readState: readState, notificationSettings: updated, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedInterfaceState, renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, forumTopicData: forumTopicData, hasFailedMessages: hasFailedMessages, isContact: isContact)
                         } else {
                             return nil
                         }
@@ -628,7 +654,7 @@ private final class ChatListViewSpaceState {
         if !transaction.updatedFailedMessagePeerIds.isEmpty {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
-                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, renderedPeer, presence, tagSummaryInfo, _, isContact):
+                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, renderedPeer, presence, tagSummaryInfo, forumTopicData, _, isContact):
                     if transaction.updatedFailedMessagePeerIds.contains(index.messageIndex.id.peerId) {
                         return .MessageEntry(
                             index: index,
@@ -640,6 +666,7 @@ private final class ChatListViewSpaceState {
                             renderedPeer: renderedPeer,
                             presence: presence,
                             tagSummaryInfo: tagSummaryInfo,
+                            forumTopicData: forumTopicData,
                             hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId),
                             isContact: isContact
                         )
@@ -657,7 +684,7 @@ private final class ChatListViewSpaceState {
         if !transaction.currentUpdatedPeers.isEmpty {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
-                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, presence, tagSummaryInfo, hasFailedMessages, isContact):
+                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailedMessages, isContact):
                     var updatedMessages: [Message] = messages
                     var hasUpdatedMessages = false
                     for i in 0 ..< updatedMessages.count {
@@ -679,6 +706,7 @@ private final class ChatListViewSpaceState {
                             renderedPeer: renderedPeer ?? entryRenderedPeer,
                             presence: presence,
                             tagSummaryInfo: tagSummaryInfo,
+                            forumTopicData: forumTopicData,
                             hasFailedMessages: hasFailedMessages,
                             isContact: isContact)
                     } else {
@@ -695,7 +723,7 @@ private final class ChatListViewSpaceState {
         if !transaction.currentUpdatedPeerPresences.isEmpty {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
-                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, _, tagSummaryInfo, hasFailedMessages, isContact):
+                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, _, tagSummaryInfo, forumTopicData, hasFailedMessages, isContact):
                     var presencePeerId = entryRenderedPeer.peerId
                     if let peer = entryRenderedPeer.peers[entryRenderedPeer.peerId], let associatedPeerId = peer.associatedPeerId {
                         presencePeerId = associatedPeerId
@@ -711,6 +739,7 @@ private final class ChatListViewSpaceState {
                             renderedPeer: entryRenderedPeer,
                             presence: presence,
                             tagSummaryInfo: tagSummaryInfo,
+                            forumTopicData: forumTopicData,
                             hasFailedMessages: hasFailedMessages,
                             isContact: isContact
                         )
@@ -727,11 +756,11 @@ private final class ChatListViewSpaceState {
         
         if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty, case let .group(groupId, pinned, maybeFilterPredicate) = self.space, let filterPredicate = maybeFilterPredicate, let filterMessageTagSummary = filterPredicate.messageTagSummary {
             var removeEntryIndices: [MutableChatListEntryIndex] = []
-            let _ = self.orderedEntries.mutableScan { entry in
+            let _ = self.orderedEntries.mutableScan { entry -> MutableChatListEntry? in
                 let entryPeer: Peer
                 let entryNotificationsPeerId: PeerId
                 switch entry {
-                case let .MessageEntry(_, _, _, _, _, _, entryRenderedPeer, _, _, _, _):
+                case let .MessageEntry(_, _, _, _, _, _, entryRenderedPeer, _, _, _, _, _):
                     if let peer = entryRenderedPeer.peer {
                         entryPeer = peer
                         entryNotificationsPeerId = peer.notificationSettingsPeerId ?? peer.id
@@ -749,11 +778,16 @@ private final class ChatListViewSpaceState {
                     return nil
                 }
                 
-                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, namespace: filterMessageTagSummary.addCount.namespace)]
+                let updatedMessageSummary = transaction.currentUpdatedMessageTagSummaries[MessageHistoryTagsSummaryKey(tag: filterMessageTagSummary.addCount.tag, peerId: entryPeer.id, threadId: nil, namespace: filterMessageTagSummary.addCount.namespace)]
                 let updatedActionsSummary = transaction.currentUpdatedMessageActionsSummaries[PendingMessageActionsSummaryKey(type: filterMessageTagSummary.subtractCount.type, peerId: entryPeer.id, namespace: filterMessageTagSummary.subtractCount.namespace)]
                 
                 if updatedMessageSummary != nil || updatedActionsSummary != nil {
-                    let isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
+                    var isUnread: Bool
+                    if postbox.seedConfiguration.peerSummaryIsThreadBased(entryPeer) {
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: entryPeer.id)?.effectiveUnreadCount ?? 0) > 0
+                    } else {
+                        isUnread = postbox.readStateTable.getCombinedState(entryPeer.id)?.isUnread ?? false
+                    }
                     
                     let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
                     if let current = globalNotificationSettings {
@@ -765,7 +799,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: entryPeer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(entryPeer.id))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: entryPeer.id, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: entryPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: entryNotificationsPeerId), messageTagSummaryResult: messageTagSummaryResult)
                     if !isIncluded {
@@ -798,7 +832,12 @@ private final class ChatListViewSpaceState {
                     }
                     assert(Set(peers.map { $0.id }).count == peers.count)
                     
-                    let isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                    var isUnread: Bool
+                    if postbox.seedConfiguration.peerSummaryIsThreadBased(mainPeer) {
+                        isUnread = (postbox.peerThreadsSummaryTable.get(peerId: peerId)?.effectiveUnreadCount ?? 0) > 0
+                    } else {
+                        isUnread = postbox.readStateTable.getCombinedState(peerId)?.isUnread ?? false
+                    }
                     
                     let globalNotificationSettingsValue: PostboxGlobalNotificationSettings
                     if let current = globalNotificationSettings {
@@ -810,7 +849,7 @@ private final class ChatListViewSpaceState {
                     
                     let nowRemovedFromTotalUnreadCount = resolvedIsRemovedFromTotalUnreadCount(globalSettings: globalNotificationSettingsValue, peer: mainPeer, peerSettings: postbox.peerNotificationSettingsTable.getEffective(mainPeer.id))
                     
-                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, calculation: filterPredicate.messageTagSummary)
+                    let messageTagSummaryResult = resolveChatListMessageTagSummaryResultCalculation(postbox: postbox, peerId: peerId, threadId: nil, calculation: filterPredicate.messageTagSummary)
                     
                     let isIncluded = filterPredicate.includes(peer: mainPeer, groupId: groupId, isRemovedFromTotalUnreadCount: nowRemovedFromTotalUnreadCount, isUnread: isUnread, isContact: postbox.contactsTable.isContact(peerId: peerId), messageTagSummaryResult: messageTagSummaryResult)
                     if isIncluded && self.orderedEntries.indicesForPeerId(mainPeer.id) == nil {
@@ -839,17 +878,17 @@ private final class ChatListViewSpaceState {
             }
         }
         
-        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty {
+        if !transaction.currentUpdatedMessageTagSummaries.isEmpty || !transaction.currentUpdatedMessageActionsSummaries.isEmpty || !transaction.updatedPeerThreadsSummaries.isEmpty {
             if self.orderedEntries.mutableScan({ entry in
                 switch entry {
-                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, presence, tagSummaryInfo, hasFailedMessages, isContact):
+                case let .MessageEntry(index, messages, readState, notificationSettings, isRemovedFromTotalUnreadCount, embeddedInterfaceState, entryRenderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailedMessages, isContact):
                     var updatedChatListMessageTagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo] = tagSummaryInfo
                     var didUpdateSummaryInfo = false
                     
                     for (key, component) in self.summaryComponents.components {
                         var updatedTagSummaryCount: Int32?
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
                             if let summary = transaction.currentUpdatedMessageTagSummaries[key] {
                                 updatedTagSummaryCount = summary.count
                             }
@@ -872,17 +911,42 @@ private final class ChatListViewSpaceState {
                         }
                     }
                     
+                    var updatedReadState = readState
+                    if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                        let summary = postbox.peerThreadsSummaryTable.get(peerId: peer.id)
+                        
+                        var count: Int32 = 0
+                        var isMuted: Bool = false
+                        if let summary = summary {
+                            count = summary.totalUnreadCount
+                            if count > 0 {
+                                isMuted = !summary.hasUnmutedUnread
+                            }
+                        }
+                        
+                        updatedReadState = ChatListViewReadState(state: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))]), isMuted: isMuted)
+                    } else {
+                        updatedReadState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId).flatMap { state in
+                            return ChatListViewReadState(state: state, isMuted: false)
+                        }
+                    }
+                    
+                    if updatedReadState != readState {
+                        didUpdateSummaryInfo = true
+                    }
+                    
                     if didUpdateSummaryInfo {
                         return .MessageEntry(
                             index: index,
                             messages: messages,
-                            readState: readState,
+                            readState: updatedReadState,
                             notificationSettings: notificationSettings,
                             isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount,
                             embeddedInterfaceState: embeddedInterfaceState,
                             renderedPeer: entryRenderedPeer,
                             presence: presence,
                             tagSummaryInfo: updatedChatListMessageTagSummaryInfo,
+                            forumTopicData: forumTopicData,
                             hasFailedMessages: hasFailedMessages,
                             isContact: isContact
                         )
@@ -1018,7 +1082,7 @@ private extension MutableChatListEntry {
         switch self {
         case let .IntermediateMessageEntry(index, _):
             return index.messageIndex.id.peerId
-        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
+        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _, _):
             return index.messageIndex.id.peerId
         case .HoleEntry:
             return nil
@@ -1029,7 +1093,7 @@ private extension MutableChatListEntry {
         switch self {
         case let .IntermediateMessageEntry(index, _):
             return MutableChatListEntryIndex(index: index, isMessage: true)
-        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
+        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _, _):
             return MutableChatListEntryIndex(index: index, isMessage: true)
         case let .HoleEntry(hole):
             return MutableChatListEntryIndex(index: ChatListIndex(pinningIndex: nil, messageIndex: hole.index), isMessage: false)
@@ -1040,7 +1104,7 @@ private extension MutableChatListEntry {
         switch self {
         case let .IntermediateMessageEntry(index, _):
             return .peer(index.messageIndex.id.peerId)
-        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
+        case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _, _):
             return .peer(index.messageIndex.id.peerId)
         case let .HoleEntry(hole):
             return .hole(hole.index)
@@ -1424,7 +1488,7 @@ struct ChatListViewState {
                         var actionsSummaryCount: Int32?
                         
                         if let tagSummary = component.tagSummary {
-                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, namespace: tagSummary.namespace)
+                            let key = MessageHistoryTagsSummaryKey(tag: key.tag, peerId: index.messageIndex.id.peerId, threadId: nil, namespace: tagSummary.namespace)
                             if let summary = postbox.messageHistoryTagsSummaryTable.get(key) {
                                 tagSummaryCount = summary.count
                             }
@@ -1457,7 +1521,32 @@ struct ChatListViewState {
                         }
                     }
                     
-                    let updatedEntry: MutableChatListEntry = .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, hasFailedMessages: false, isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId))
+                    var forumTopicData: StoredMessageHistoryThreadInfo?
+                    if let message = renderedMessages.first, let threadId = message.threadId {
+                        forumTopicData = postbox.messageHistoryThreadIndexTable.get(peerId: message.id.peerId, threadId: threadId)
+                    }
+                    
+                    let readState: ChatListViewReadState?
+                    if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                        let summary = postbox.peerThreadsSummaryTable.get(peerId: peer.id)
+                        
+                        var count: Int32 = 0
+                        var isMuted: Bool = false
+                        if let summary = summary {
+                            count = summary.totalUnreadCount
+                            if count > 0 {
+                                isMuted = !summary.hasUnmutedUnread
+                            }
+                        }
+                        
+                        readState = ChatListViewReadState(state: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))]), isMuted: isMuted)
+                    } else {
+                        readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId).flatMap { state in
+                            return ChatListViewReadState(state: state, isMuted: false)
+                        }
+                    }
+                    
+                    let updatedEntry: MutableChatListEntry = .MessageEntry(index: index, messages: renderedMessages, readState: readState, notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: renderedPeer, presence: presence, tagSummaryInfo: tagSummaryInfo, forumTopicData: forumTopicData, hasFailedMessages: false, isContact: postbox.contactsTable.isContact(peerId: index.messageIndex.id.peerId))
                     if directionIndex == 0 {
                         self.stateBySpace[space]!.orderedEntries.setLowerOrAtAnchorAtArrayIndex(listIndex, to: updatedEntry)
                     } else {

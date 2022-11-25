@@ -18,8 +18,8 @@ internal:
   except:
     - tags
   script:
-    - bash buildbox/build-telegram.sh hockeyapp
-    - bash buildbox/deploy-telegram.sh hockeyapp
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="$TELEGRAM_PRIVATE_DATA_PATH/build-configurations/enterprise-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=enterprise --configuration=release_arm64
+    - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-internal.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: internal
   artifacts:
@@ -28,17 +28,35 @@ internal:
       - build/artifacts
     expire_in: 1 week
 
-experimental_i:
+appstore_development:
   tags:
     - ios_internal
+  stage: build
+  only:
+    - appstore-development
+  except:
+    - tags
+  script:
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="$TELEGRAM_PRIVATE_DATA_PATH/build-configurations/enterprise-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=enterprise --configuration=release_arm64
+    - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appstore-development.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
+  environment:
+    name: appstore-development
+  artifacts:
+    paths:
+      - build/artifacts/Telegram.DSYMs.zip
+    expire_in: 1 week
+
+experimental_i:
+  tags:
+    - ios_experimental
   stage: build
   only:
     - experimental-3
   except:
     - tags
   script:
-    - bash buildbox/build-telegram.sh appcenter-experimental
-    - bash buildbox/deploy-telegram.sh appcenter-experimental
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="$TELEGRAM_PRIVATE_DATA_PATH/build-configurations/enterprise-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=enterprise --configuration=release_arm64
+    - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-experimental.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: experimental
   artifacts:
@@ -55,8 +73,8 @@ experimental:
   except:
     - tags
   script:
-    - bash buildbox/build-telegram.sh appcenter-experimental-2
-    - bash buildbox/deploy-telegram.sh appcenter-experimental-2
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="$TELEGRAM_PRIVATE_DATA_PATH/build-configurations/enterprise-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=enterprise --configuration=release_arm64
+    - python3 -u build-system/Make/DeployToAppCenter.py --configuration="$TELEGRAM_PRIVATE_DATA_PATH/appcenter-configurations/appcenter-experimental2.json" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: experimental-2
   artifacts:
@@ -74,7 +92,7 @@ beta_testflight:
   except:
     - tags
   script:
-    - bash buildbox/build-telegram.sh appstore
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appstore-configuration.json" --gitCodesigningRepository="$TELEGRAM_GIT_CODESIGNING_REPOSITORY" --gitCodesigningType=appstore --configuration=release_arm64
   environment:
     name: testflight_llc
   artifacts:
@@ -92,7 +110,7 @@ deploy_beta_testflight:
   except:
     - tags
   script:
-    - bash buildbox/deploy-telegram.sh appstore
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-deploy-testflight --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa="build/artifacts/Telegram.ipa" --dsyms="build/artifacts/Telegram.DSYMs.zip"
   environment:
     name: testflight_llc
 
@@ -106,7 +124,10 @@ verifysanity_beta_testflight:
   except:
     - tags
   script:
-    - bash buildbox/verify-telegram.sh appstore cached
+    - rm -rf build/verify-input && mkdir -p build/verify-input && mv build/artifacts/Telegram.ipa build/verify-input/TelegramVerifySource.ipa
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --cacheHost="$TELEGRAM_BAZEL_CACHE_HOST" --configurationPath="build-system/appstore-configuration.json" --codesigningInformationPath=build-system/fake-codesigning --configuration=release_arm64
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-ipa-diff --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa1="build/artifacts/Telegram.ipa" --ipa2="build/verify-input/TelegramVerifySource.ipa"
+    - if [ $? -ne 0 ]; then echo "Verification failed"; mkdir -p build/verifysanity_artifacts; cp build/artifacts/Telegram.ipa build/verifysanity_artifacts/; exit 1; fi
   environment:
     name: testflight_llc
   artifacts:
@@ -125,7 +146,10 @@ verify_beta_testflight:
   except:
     - tags
   script:
-    - bash buildbox/verify-telegram.sh appstore full
+    - rm -rf build/verify-input && mkdir -p build/verify-input && mv build/artifacts/Telegram.ipa build/verify-input/TelegramVerifySource.ipa
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-build --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --configurationPath="build-system/appstore-configuration.json" --codesigningInformationPath=build-system/fake-codesigning --configuration=release_arm64
+    - PYTHONPATH="$PYTHONPATH:/darwin-containers" python3 -u build-system/Make/Make.py remote-ipa-diff --darwinContainersHost="$DARWIN_CONTAINERS_HOST" --ipa1="build/artifacts/Telegram.ipa" --ipa2="build/verify-input/TelegramVerifySource.ipa"
+    - if [ $? -ne 0 ]; then echo "Verification failed"; mkdir -p build/verify_artifacts; cp build/artifacts/Telegram.ipa build/verify_artifacts/; exit 1; fi
   environment:
     name: testflight_llc
   artifacts:

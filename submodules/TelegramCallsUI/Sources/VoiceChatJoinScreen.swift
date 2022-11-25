@@ -712,6 +712,6 @@ final class VoiceChatPreviewContentNode: ASDisplayNode, ShareContentContainerNod
         self.contentOffsetUpdated?(-size.height + nodeHeight - 64.0, transition)
     }
     
-    func updateSelectedPeers() {
+    func updateSelectedPeers(animated: Bool) {
     }
 }

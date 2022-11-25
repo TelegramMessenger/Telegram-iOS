@@ -2686,6 +2686,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.PinMessages" = "Pin Messages";
 "Channel.AdminLog.AddMembers" = "Add Members";
 "Channel.AdminLog.SendPolls" = "Send Polls";
+"Channel.AdminLog.ManageTopics" = "Manage Topics";
 
 "Channel.AdminLog.CanChangeInfo" = "Change Info";
 "Channel.AdminLog.CanSendMessages" = "Post Messages";
@@ -2693,6 +2694,7 @@ Unused sets are archived when you add more.";
 "Channel.AdminLog.CanBanUsers" = "Ban Users";
 "Channel.AdminLog.CanInviteUsers" = "Add Users";
 "Channel.AdminLog.CanPinMessages" = "Pin Messages";
+"Channel.AdminLog.CanManageTopics" = "Manage Topics";
 "Channel.AdminLog.CanAddAdmins" = "Add New Admins";
 "Channel.AdminLog.CanBeAnonymous" = "Remain Anonymous";
 "Channel.AdminLog.CanEditMessages" = "Edit Messages";
@@ -3982,6 +3984,7 @@ Unused sets are archived when you add more.";
 "GroupPermission.NoChangeInfo" = "no info";
 "GroupPermission.NoAddMembers" = "no add";
 "GroupPermission.NoPinMessages" = "no pin";
+"GroupPermission.NoManageTopics" = "no topics";
 
 "GroupPermission.Title" = "Exception";
 "GroupPermission.NewTitle" = "New Exception";
@@ -8089,13 +8092,43 @@ Sorry for the inconvenience.";
 "Group.Setup.LinkActive" = "active";
 "Group.Setup.LinkInactive" = "inactive";
 
+"Group.Setup.ActivateAlertTitle" = "Activate Link";
+"Group.Setup.ActivateAlertText" = "Do you want to show this link on the group info page?";
+"Group.Setup.ActivateAlertShow" = "Show";
+
+"Group.Setup.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
+
+"Group.Setup.DeactivateAlertTitle" = "Deactivate Link";
+"Group.Setup.DeactivateAlertText" = "Do you want to hide this link from the group info page?";
+"Group.Setup.DeactivateAlertHide" = "Hide";
+
 "Channel.Setup.PublicLink" = "PUBLIC LINK";
 "Channel.Setup.LinksOrder" = "LINKS ORDER";
 "Channel.Setup.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on the channel info page.";
 
+"Channel.Setup.ActivateAlertTitle" = "Activate Link";
+"Channel.Setup.ActivateAlertText" = "Do you want to show this link on the channel info page?";
+"Channel.Setup.ActivateAlertShow" = "Show";
+
+"Channel.Setup.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
+
+"Channel.Setup.DeactivateAlertTitle" = "Deactivate Link";
+"Channel.Setup.DeactivateAlertText" = "Do you want to hide this link from the channel info page?";
+"Channel.Setup.DeactivateAlertHide" = "Hide";
+
 "Username.Username" = "USERNAME";
 "Username.LinksOrder" = "USERNAMES ORDER";
 "Username.LinksOrderInfo" = "Drag and drop links to change the order in which they will be displayed on your info page.";
+
+"Username.ActivateAlertTitle" = "Activate Username";
+"Username.ActivateAlertText" = "Do you want to show this link on your info page?";
+"Username.ActivateAlertShow" = "Show";
+
+"Username.ActiveLimitReachedError" = "Sorry, you have too many active public links already. Please hide one of your active public links first.";
+
+"Username.DeactivateAlertTitle" = "Deactivate Username";
+"Username.DeactivateAlertText" = "Do you want to hide this link from your info page?";
+"Username.DeactivateAlertHide" = "Hide";
 
 "Profile.AdditionalUsernames" = "also %@";
 
@@ -8103,3 +8136,108 @@ Sorry for the inconvenience.";
 "EmojiSearch.SearchReactionsEmptyResult" = "No emoji found";
 "EmojiSearch.SearchStatusesPlaceholder" = "Search Statuses";
 "EmojiSearch.SearchStatusesEmptyResult" = "No emoji found";
+
+"ChatList.StartAction" = "Start";
+"ChatList.CloseAction" = "Close";
+
+"Channel.EditAdmin.PermissionManageTopics" = "Manage Topics";
+"Channel.EditAdmin.PermissionCreateTopics" = "Create Topics";
+
+"ChatList.Search.FilterTopics" = "Topics";
+"DialogList.SearchSectionTopics" = "Topics";
+
+"ChatListFolderSettings.SubscribeToMoveAll" = "Subscribe to **Telegram Premium** to move the \"All Chats\" folder.";
+"ChatListFolderSettings.SubscribeToMoveAllAction" = "More";
+
+"Channel.AdminLog.MessageChangedGroupUsernames" = "%@ changed group links:";
+"Channel.AdminLog.MessageChangedChannelUsernames" = "%@ changed channel links:";
+"Channel.AdminLog.MessagePreviousLinks" = "Previous links";
+
+"ShareMenu.SelectTopic" = "Select topic";
+
+"ChatList.Context.Select" = "Select";
+
+"ChatList.SelectedTopics_1" = "%@ Topic Selected";
+"ChatList.SelectedTopics_any" = "%@ Topics Selected";
+
+"ChatList.EmptyTopicsTitle" = "No topics here yet";
+"ChatList.EmptyTopicsCreate" = "Create New Topic";
+"ChatList.EmptyTopicsShowAsMessages" = "Show as Messages";
+
+"Message.AudioTranscription.SubscribeToPremium" = "Subscribe to **Telegram Premium** to convert voice to text.";
+"Message.AudioTranscription.SubscribeToPremiumAction" = "More";
+
+"PeerInfo.PrivateShareLinkInfo" = "This link will work only for group members.";
+
+"CreateTopic.CreateTitle" = "New Topic";
+"CreateTopic.EditTitle" = "Edit Topic";
+"CreateTopic.Create" = "Create";
+
+"CreateTopic.EnterTopicTitle" = "ENTER TOPIC TITLE";
+"CreateTopic.EnterTopicTitlePlaceholder" = "What do you want to discuss?";
+"CreateTopic.SelectTopicIcon" = "SELECT TOPIC ICON";
+
+"ChatList.Context.CloseTopic" = "Close";
+"ChatList.Context.ReopenTopic" = "Reopen";
+"Chat.ContextViewAsTopics" = "View as Topics";
+"Chat.ContextViewAsMessages" = "View as Messages";
+"Chat.CreateTopic" = "New Topic";
+
+"ChatList.DeleteTopicConfirmationText" = "This will delete the topic with all its messages";
+"ChatList.DeleteTopicConfirmationAction" = "Delete Topic";
+
+"Notification.ForumTopicCreated" = "Topic created";
+"Notification.ForumTopicClosed" = "Topic closed";
+"Notification.ForumTopicReopened" = "Topic reopened";
+"Notification.ForumTopicClosedAuthor" = "%1$@ closed topic";
+"Notification.ForumTopicReopenedAuthor" = "%1$@ reopened topic";
+"Notification.ForumTopicRenamed" = "Topic renamed to \"%1$@\"";
+"Notification.ForumTopicRenamedAuthor" = "%1$@ changed the topic title to \"%2$@\"";
+"Notification.ForumTopicIconChanged" = "Topic icon changed to %1$@";
+"Notification.ForumTopicIconChangedAuthor" = "%1$@ changed the topic icon to %2$@";
+"Notification.ForumTopicRenamedIconChangedAuthor" = "%1$@ changed the topic title and icon to %2$@ %3$@";
+"Notification.OverviewTopicCreated" = "%1$@ %2$@ was created";
+"Notification.OverviewTopicClosed" = "%1$@ closed %2$@ %3$@";
+"Notification.OverviewTopicReopened" = "%1$@ reopened %2$@ %3$@";
+
+"Chat.EmptyTopicPlaceholder.Title" = "Almost done!";
+"Chat.EmptyTopicPlaceholder.Text" = "Send the first message to\nstart this topic.";
+
+"Chat.Message.TopicAuthorBadge" = "Topic Author";
+
+"Chat.PanelRestartTopic" = "Restart Topic";
+"Chat.PanelTopicClosedText" = "The topic is closed by admin";
+"Chat.PanelForumModeReplyText" = "Swipe left on a message to reply";
+
+"PeerInfo.TopicHeaderLocation" = "in %1$@";
+"PeerInfo.OptionTopics" = "Topics";
+"PeerInfo.OptionTopicsText" = "The group chat will be divided into topics created by admins or users.";
+"PeerInfo.TopicsLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have topics enabled.";
+"PeerInfo.TopicsLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have topics enabled.";
+"PeerInfo.TopicsLimitedDiscussionGroups" = "Topics can’t be enabled in discussion groups at the moment.";
+
+"PeerInfo.TopicNotificationExceptions_1" = "There is [1 topic]() that is listed as exception.";
+"PeerInfo.TopicNotificationExceptions_any" = "There are [%d topics]() that are listed as exceptions.";
+
+"PeerInfo.NotificationMemberAdded" = "**%1$@** added to the group.";
+"PeerInfo.NotificationMultipleMembersAdded_1" = "**%d** member added to the group.";
+"PeerInfo.NotificationMultipleMembersAdded_any" = "**%d** members added to the group.";
+
+"Channel.AdminLog.TopicCreated" = "%1$@ created topic %2$@";
+"Channel.AdminLog.TopicDeleted" = "%1$@ deleted topic %2$@";
+"Channel.AdminLog.TopicPinned" = "%1$@ pinned topic %2$@";
+"Channel.AdminLog.TopicUnpinned" = "%1$@ unpinned topic %2$@";
+"Channel.AdminLog.TopicsEnabled" = "%1$@ enabled topics";
+"Channel.AdminLog.TopicsDisabled" = "%1$@ disabled topics";
+"Channel.AdminLog.TopicReopened" = "%1$@ reopened topic %2$@";
+"Channel.AdminLog.TopicClosed" = "%1$@ closed topic %2$@";
+"Channel.AdminLog.TopicRenamed" = "%1$@ renamed topic %2$@ to %3$@";
+"Channel.AdminLog.TopicRenamedWithIcon" = "%1$@ renamed topic %2$@ to %3$@ and changed icon to %4$@";
+"Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
+"Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
+"Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";
+
+"Attachment.Pasteboard" = "Clipboard";
+"Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
+
+"Undo.DeletedTopic" = "Topic Deleted";

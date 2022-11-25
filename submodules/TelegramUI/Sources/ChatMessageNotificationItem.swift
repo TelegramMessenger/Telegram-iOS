@@ -25,6 +25,7 @@ public final class ChatMessageNotificationItem: NotificationItem {
     let dateTimeFormat: PresentationDateTimeFormat
     let nameDisplayOrder: PresentationPersonNameOrder
     let messages: [Message]
+    let threadData: MessageHistoryThreadData?
     let tapAction: () -> Bool
     let expandAction: (@escaping () -> (ASDisplayNode?, () -> Void)) -> Void
     
@@ -32,12 +33,13 @@ public final class ChatMessageNotificationItem: NotificationItem {
         return messages.first?.id.peerId
     }
     
-    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
+    public init(context: AccountContext, strings: PresentationStrings, dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, messages: [Message], threadData: MessageHistoryThreadData?, tapAction: @escaping () -> Bool, expandAction: @escaping (() -> (ASDisplayNode?, () -> Void)) -> Void) {
         self.context = context
         self.strings = strings
         self.dateTimeFormat = dateTimeFormat
         self.nameDisplayOrder = nameDisplayOrder
         self.messages = messages
+        self.threadData = threadData
         self.tapAction = tapAction
         self.expandAction = expandAction
     }
@@ -82,9 +84,6 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     private var compact: Bool?
     private var validLayout: CGFloat?
     
-    private var animationCache: AnimationCache?
-    private var multiAnimationRenderer: MultiAnimationRenderer?
-    
     override init() {
         self.avatarNode = AvatarNode(font: avatarFont)
         
@@ -113,8 +112,6 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
     func setupItem(_ item: ChatMessageNotificationItem, compact: Bool) {
         self.item = item
         
-        self.animationCache = item.context.animationCache
-        
         self.compact = compact
         if compact {
             self.avatarNode.font = compactAvatarFont
@@ -131,10 +128,17 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                 if firstMessage.id.peerId.isReplies, let _ = firstMessage.sourceReference, let effectiveAuthor = firstMessage.forwardInfo?.author {
                     title = EnginePeer(effectiveAuthor).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                 } else if author.id != peer.id {
+                    let authorString: String
                     if author.id == item.context.account.peerId {
-                        title = presentationData.strings.DialogList_You + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        authorString = presentationData.strings.DialogList_You
                     } else {
-                        title = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder) + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                        authorString = EnginePeer(author).displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
+                    }
+                    
+                    if let threadData = item.threadData {
+                        title = "\(authorString) → \(threadData.info.title)"
+                    } else {
+                        title = authorString + "@" + peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
                     }
                 } else {
                     title = peer.displayTitle(strings: item.strings, displayOrder: item.nameDisplayOrder)
@@ -145,6 +149,10 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
                             }
                             break
                         }
+                    }
+                    
+                    if let titleValue = title, let threadData = item.threadData {
+                        title = "\(threadData.info.title) (\(titleValue))"
                     }
                 }
             } else {
@@ -399,12 +407,12 @@ final class ChatMessageNotificationItemNode: NotificationItemNode {
         let (textLayout, textApply) = makeTextLayout(TextNodeLayoutArguments(attributedString: self.textAttributedText, backgroundColor: nil, maximumNumberOfLines: 2, truncationType: .end, constrainedSize: CGSize(width: width - leftInset - rightInset, height: CGFloat.greatestFiniteMagnitude), alignment: .left, lineSpacing: 0.0, cutout: nil, insets: UIEdgeInsets()))
         let _ = titleApply()
         
-        if let item = self.item, let cache = self.animationCache, let renderer = self.multiAnimationRenderer {
+        if let item = self.item {
             let theme = item.context.sharedContext.currentPresentationData.with({ $0 }).theme
             let _ = textApply(TextNodeWithEntities.Arguments(
                 context: item.context,
-                cache: cache,
-                renderer: renderer,
+                cache: item.context.animationCache,
+                renderer: item.context.animationRenderer,
                 placeholderColor: theme.list.mediaPlaceholderColor,
                 attemptSynchronous: false
             ))

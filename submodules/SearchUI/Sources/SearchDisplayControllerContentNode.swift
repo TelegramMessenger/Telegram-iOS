@@ -12,6 +12,10 @@ open class SearchDisplayControllerContentNode: ASDisplayNode {
     public final var setQuery: ((NSAttributedString?, [SearchBarToken], String) -> Void)?
     public final var setPlaceholder: ((String) -> Void)?
     
+    open var animateBackgroundAppearance: Bool {
+        return true
+    }
+    
     open var hasDim: Bool {
         return false
     }

@@ -115,7 +115,7 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
             if let peer = parseTelegramGroupOrChannel(chat: chat) {
                 var participantCount: Int32? = nil
                 switch chat {
-                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, participantsCountValue):
+                    case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, participantsCountValue, _):
                         participantCount = participantsCountValue
                     default:
                         break
@@ -336,7 +336,7 @@ public func restoreCachedPhoneCallsPrivacyState(account: Account) {
         if let peer = parseTelegramGroupOrChannel(chat: chat) {
             var participantCount: Int32? = nil
             switch chat {
-            case let .channel(_, _, _, _, _, _, _, _, _, _, _, channelParticipantsCount):
+            case let .channel(_, _, _, _, _, _, _, _, _, _, _, _, channelParticipantsCount, _):
                     participantCount = channelParticipantsCount
                 default:
                     break

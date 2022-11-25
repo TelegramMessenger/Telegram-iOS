@@ -6,6 +6,8 @@ import SwiftSignalKit
 import Postbox
 import TelegramCore
 import TelegramUIPreferences
+import ComponentFlow
+import AudioTranscriptionButtonComponent
 
 class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
     let interactiveFileNode: ChatMessageInteractiveFileNode
@@ -47,7 +49,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         
         self.interactiveFileNode.requestUpdateLayout = { [weak self] _ in
             if let strongSelf = self, let item = strongSelf.item {
-                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id)
+                let _ = item.controllerInteraction.requestMessageUpdate(item.message.id, false)
             }
         }
         
@@ -77,7 +79,7 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
             self?.updateIsTextSelectionActive?(value)
         }
     }
-    
+        
     override func accessibilityActivate() -> Bool {
         if let item = self.item {
             let _ = item.controllerInteraction.openMessage(item.message, .default)
@@ -89,10 +91,10 @@ class ChatMessageFileBubbleContentNode: ChatMessageBubbleContentNode {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let interactiveFileLayout = self.interactiveFileNode.asyncLayout()
         
-        return { item, layoutConstants, preparePosition, selection, constrainedSize in
+        return { item, layoutConstants, preparePosition, selection, constrainedSize, _ in
             var selectedFile: TelegramMediaFile?
             for media in item.message.media {
                 if let telegramFile = media as? TelegramMediaFile {

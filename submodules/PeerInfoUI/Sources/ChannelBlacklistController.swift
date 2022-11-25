@@ -369,7 +369,7 @@ public func channelBlacklistController(context: AccountContext, updatedPresentat
                 actionSheet?.dismissAnimated()
                 if participant.peer is TelegramChannel {
                     if let navigationController = getNavigationControllerImpl?() {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: participant.peer.id)))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(participant.peer))))
                     }
                 } else if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: participant.peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                     pushControllerImpl?(infoController)

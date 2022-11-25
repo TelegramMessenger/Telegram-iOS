@@ -564,19 +564,24 @@ final class ChatQrCodeScreen: ViewController {
     static let themeCrossfadeDelay: Double = 0.05
     
     enum Subject {
-        case peer(Peer)
+        case peer(peer: Peer, threadId: Int64?)
         case messages([Message])
         
         var fileName: String {
             switch self {
-            case let .peer(peer):
+            case let .peer(peer, threadId):
+                var result: String
                 if let addressName = peer.addressName, !addressName.isEmpty {
-                    return "t_me-\(peer.addressName ?? "")"
+                    result = "t_me-\(peer.addressName ?? "")"
                 } else if let peer = peer as? TelegramUser {
-                    return "t_me-\(peer.phone ?? "")"
+                    result = "t_me-\(peer.phone ?? "")"
                 } else {
-                    return "t_me-\(Int32.random(in: 0 ..< Int32.max))"
+                    result = "t_me-\(Int32.random(in: 0 ..< Int32.max))"
                 }
+                if let threadId = threadId, threadId != 0 {
+                    result.append("-\(threadId)")
+                }
+                return result
             case let .messages(messages):
                 if let message = messages.first, let chatPeer = message.peers[message.id.peerId] as? TelegramChannel, message.id.namespace == Namespaces.Message.Cloud, let addressName = chatPeer.addressName, !addressName.isEmpty {
                     return "t_me-\(addressName)-\(message.id.id)"
@@ -800,8 +805,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.wrappingScrollNode.view.canCancelContentTouches = true
                 
         switch controller.subject {
-            case let .peer(peer):
-                self.contentNode = QrContentNode(context: context, peer: peer, isStatic: false)
+            case let .peer(peer, threadId):
+                self.contentNode = QrContentNode(context: context, peer: peer, threadId: threadId, isStatic: false)
             case let .messages(messages):
                 self.contentNode = MessageContentNode(context: context, messages: messages)
         }
@@ -994,7 +999,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let initiallySelectedEmoticon: Signal<String, NoError>
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
-        if case let .peer(peer) = controller.subject, peer.id != self.context.account.peerId {
+        if case let .peer(peer, _) = controller.subject, peer.id != self.context.account.peerId {
             let themeEmoticon = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peer.id))
             initiallySelectedEmoticon = combineLatest(themeEmoticon, sharedData)
             |> map { themeEmoticon, sharedData -> String in
@@ -1434,6 +1439,7 @@ private protocol ContentNode: ASDisplayNode {
 private class QrContentNode: ASDisplayNode, ContentNode {
     private let context: AccountContext
     private let peer: Peer
+    private let threadId: Int64?
     private let isStatic: Bool
     
     fileprivate let containerNode: ASDisplayNode
@@ -1463,9 +1469,10 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         return false
     }
     
-    init(context: AccountContext, peer: Peer, isStatic: Bool = false) {
+    init(context: AccountContext, peer: Peer, threadId: Int64?, isStatic: Bool = false) {
         self.context = context
         self.peer = peer
+        self.threadId = threadId
         self.isStatic = isStatic
         
         self.containerNode = ASDisplayNode()
@@ -1506,11 +1513,14 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.codeStaticIconNode = nil
         }
         
-        let codeText: String
+        var codeText: String
         if let addressName = peer.addressName, !addressName.isEmpty {
             codeText = "@\(peer.addressName ?? "")".uppercased()
         } else {
             codeText = peer.debugDisplayTitle.uppercased()
+        }
+        if let threadId = self.threadId, threadId != 0 {
+            codeText += "/\(threadId)"
         }
         
         self.codeTextNode = ImmediateTextNode()
@@ -1550,13 +1560,18 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             self.addSubnode(codeAnimatedIconNode)
         }
         
-        let codeLink: String
+        var codeLink: String
         if let addressName = peer.addressName, !addressName.isEmpty {
             codeLink = "https://t.me/\(peer.addressName ?? "")"
         } else if let peer = peer as? TelegramUser {
             codeLink = "https://t.me/+\(peer.phone ?? "")"
+        } else if let _ = peer as? TelegramChannel {
+            codeLink = "https://t.me/c/\(peer.id.id._internalGetInt64Value())"
         } else {
             codeLink = ""
+        }
+        if let threadId = threadId {
+            codeLink += "/\(threadId)"
         }
         
         let codeReadyPromise = ValuePromise<Bool>()
@@ -1591,7 +1606,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         let size = CGSize(width: 390.0, height: 844.0)
         let scale: CGFloat = 3.0
         
-        let copyNode = QrContentNode(context: self.context, peer: self.peer, isStatic: true)
+        let copyNode = QrContentNode(context: self.context, peer: self.peer, threadId: self.threadId, isStatic: true)
         
         func prepare(view: UIView, scale: CGFloat) {
             view.contentScaleFactor = scale

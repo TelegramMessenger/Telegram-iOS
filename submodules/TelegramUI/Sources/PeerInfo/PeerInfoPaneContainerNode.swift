@@ -386,6 +386,8 @@ private final class PeerInfoPendingPane {
         openAddMemberAction: @escaping () -> Void,
         requestPerformPeerMemberAction: @escaping (PeerInfoMember, PeerMembersListAction) -> Void,
         peerId: PeerId,
+        chatLocation: ChatLocation,
+        chatLocationContextHolder: Atomic<ChatLocationContextHolder?>,
         key: PeerInfoPaneKey,
         hasBecomeReady: @escaping (PeerInfoPaneKey) -> Void,
         parentController: ViewController?,
@@ -396,7 +398,7 @@ private final class PeerInfoPendingPane {
         let paneNode: PeerInfoPaneNode
         switch key {
         case .media:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .photoOrVideo, captureProtected: captureProtected)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .photoOrVideo, captureProtected: captureProtected)
             paneNode = visualPaneNode
             visualPaneNode.openCurrentDate = {
                 openMediaCalendar()
@@ -405,21 +407,19 @@ private final class PeerInfoPendingPane {
                 paneDidScroll()
             }
         case .files:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .files, captureProtected: captureProtected)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .files, captureProtected: captureProtected)
             paneNode = visualPaneNode
             //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .file)
         case .links:
-            paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .webPage)
+            paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: .webPage)
         case .voice:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .voiceAndVideoMessages, captureProtected: captureProtected)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .voiceAndVideoMessages, captureProtected: captureProtected)
             paneNode = visualPaneNode
-            //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .voiceOrInstantVideo)
         case .music:
-            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .music, captureProtected: captureProtected)
+            let visualPaneNode = PeerInfoVisualMediaPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .music, captureProtected: captureProtected)
             paneNode = visualPaneNode
-            //paneNode = PeerInfoListPaneNode(context: context, updatedPresentationData: updatedPresentationData, chatControllerInteraction: chatControllerInteraction, peerId: peerId, tagMask: .music)
         case .gifs:
-            let visualPaneNode = PeerInfoGifPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, contentType: .gifs)
+            let visualPaneNode = PeerInfoGifPaneNode(context: context, chatControllerInteraction: chatControllerInteraction, peerId: peerId, chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, contentType: .gifs)
             paneNode = visualPaneNode
         case .groupsInCommon:
             paneNode = PeerInfoGroupsInCommonPaneNode(context: context, peerId: peerId, chatControllerInteraction: chatControllerInteraction, openPeerContextAction: openPeerContextAction, groupsInCommonContext: data.groupsInCommon!)
@@ -452,6 +452,8 @@ private final class PeerInfoPendingPane {
 final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegate {
     private let context: AccountContext
     private let peerId: PeerId
+    private let chatLocation: ChatLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let isMediaOnly: Bool
     
     weak var parentController: ViewController?
@@ -509,14 +511,16 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
     private var currentAvailablePanes: [PeerInfoPaneKey]?
     private let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, isMediaOnly: Bool) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, isMediaOnly: Bool) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.peerId = peerId
+        self.chatLocation = chatLocation
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.isMediaOnly = isMediaOnly
         
         self.additionalBackgroundNode = ASDisplayNode()
-
+        
         self.separatorNode = ASDisplayNode()
         self.separatorNode.isLayerBacked = true
         
@@ -749,6 +753,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
         
         transition.updateAlpha(node: self.coveringBackgroundNode, alpha: expansionFraction)
         
+//        transition.updateAlpha(node: self.additionalBackgroundNode, alpha: 1.0 - expansionFraction)
+        
         self.backgroundColor = presentationData.theme.list.plainBackgroundColor
         self.coveringBackgroundNode.updateColor(color: presentationData.theme.rootController.navigationBar.opaqueBackgroundColor, transition: .immediate)
         self.separatorNode.backgroundColor = presentationData.theme.list.itemBlocksSeparatorColor
@@ -805,6 +811,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
                         self?.requestPerformPeerMemberAction?(member, action)
                     },
                     peerId: self.peerId,
+                    chatLocation: self.chatLocation,
+                    chatLocationContextHolder: self.chatLocationContextHolder,
                     key: key,
                     hasBecomeReady: { [weak self] key in
                         let apply: () -> Void = {
@@ -960,8 +968,8 @@ final class PeerInfoPaneContainerNode: ASDisplayNode, UIGestureRecognizerDelegat
 
         transition.updateFrame(node: self.separatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
         transition.updateFrame(node: self.coveringBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
-        self.coveringBackgroundNode.update(size: self.coveringBackgroundNode.bounds.size, transition: transition)
         transition.updateFrame(node: self.additionalBackgroundNode, frame: CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel - tabsOffset), size: CGSize(width: size.width, height: tabsHeight + UIScreenPixel)))
+        self.coveringBackgroundNode.update(size: self.coveringBackgroundNode.bounds.size, transition: transition)
 
         transition.updateFrame(node: self.tabsSeparatorNode, frame: CGRect(origin: CGPoint(x: 0.0, y: tabsHeight - tabsOffset), size: CGSize(width: size.width, height: UIScreenPixel)))
 

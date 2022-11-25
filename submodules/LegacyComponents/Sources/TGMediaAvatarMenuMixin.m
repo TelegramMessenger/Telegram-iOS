@@ -230,41 +230,6 @@
     return controller;
 }
 
-- (TGMenuSheetController *)_presentLegacyAvatarMenu
-{
-    NSMutableArray *actions = [[NSMutableArray alloc] init];
-    
-    if ([PGCamera cameraAvailable]) {
-        [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.TakePhoto") action:@"camera"]];
-    }
-    
-    [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.ChoosePhoto") action:@"choosePhoto"]];
-    
-    if (_hasDeleteButton)
-    {
-        [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"GroupInfo.SetGroupPhotoDelete") action:@"delete" type:LegacyComponentsActionSheetActionTypeDestructive]];
-    }
-    
-    [actions addObject:[[LegacyComponentsActionSheetAction alloc] initWithTitle:TGLocalized(@"Common.Cancel") action:@"cancel" type:LegacyComponentsActionSheetActionTypeCancel]];
-    
-    __weak TGMediaAvatarMenuMixin *weakSelf = self;
-    [_context presentActionSheet:actions view:_parentController.view sourceRect:self.sourceRect completion:^(LegacyComponentsActionSheetAction *actionData) {
-        __strong TGMediaAvatarMenuMixin *controller = weakSelf;
-        if (controller != nil) {
-            NSString *action = actionData.action;
-            if ([action isEqualToString:@"camera"])
-                [controller _displayCameraWithView:nil menuController:nil];
-            else if ([action isEqualToString:@"choosePhoto"])
-                [controller _displayMediaPicker];
-            else if ([action isEqualToString:@"delete"])
-                [controller _performDelete];
-            else if ([action isEqualToString:@"cancel"] && controller.didDismiss != nil)
-                controller.didDismiss();
-        }
-    }];
-    return nil;
-}
-
 - (void)_displayCameraWithView:(TGAttachmentCameraView *)cameraView menuController:(TGMenuSheetController *)menuController
 {
     [[[LegacyComponentsGlobals provider] accessChecker] checkCameraAuthorizationStatusForIntent:TGCameraAccessIntentDefault completion:^(BOOL allowed) {

@@ -132,8 +132,8 @@ private final class PhoneView: UIView {
         self.addSubview(self.borderView)
         self.addSubview(self.frontShimmerView)
         
-        self.backShimmerView.addSubview(self.backShimmerEffectView)
         self.backShimmerView.addSubview(self.backShimmerFadeView)
+        self.backShimmerView.addSubview(self.backShimmerEffectView)
         
         self.shimmerMaskView.addSubview(self.shimmerBorderView)
         self.shimmerMaskView.addSubview(self.shimmerStarView)

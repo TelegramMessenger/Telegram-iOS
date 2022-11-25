@@ -123,7 +123,7 @@ private func synchronizeMarkAllUnseen(transaction: Transaction, postbox: Postbox
     let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
     let limit: Int32 = 100
     let oneOperation: (Int32) -> Signal<Int32?, MTRpcError> = { maxId in
-        return network.request(Api.functions.messages.getUnreadMentions(peer: inputPeer, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
+        return network.request(Api.functions.messages.getUnreadMentions(flags: 0, peer: inputPeer, topMsgId: nil, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
         |> mapToSignal { result -> Signal<[MessageId], MTRpcError> in
             switch result {
                 case let .messages(messages, _, _):
@@ -284,7 +284,7 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
         return .complete()
     }
     
-    let signal = network.request(Api.functions.messages.readReactions(peer: inputPeer))
+    let signal = network.request(Api.functions.messages.readReactions(flags: 0, peer: inputPeer, topMsgId: nil))
     |> map(Optional.init)
     |> `catch` { _ -> Signal<Api.messages.AffectedHistory?, Bool> in
         return .fail(true)
@@ -308,90 +308,6 @@ private func synchronizeMarkAllUnseenReactions(transaction: Transaction, postbox
     |> `catch` { _ -> Signal<Void, NoError> in
         return .complete()
     }
-    
-    /*let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel)
-    let limit: Int32 = 100
-    let oneOperation: (Int32) -> Signal<Int32?, MTRpcError> = { maxId in
-        return network.request(Api.functions.messages.getUnreadReactions(peer: inputPeer, offsetId: maxId, addOffset: maxId == 0 ? 0 : -1, limit: limit, maxId: maxId == 0 ? 0 : (maxId + 1), minId: 1))
-        |> mapToSignal { result -> Signal<[MessageId], MTRpcError> in
-            switch result {
-                case let .messages(messages, _, _):
-                    return .single(messages.compactMap({ $0.id() }))
-                case let .channelMessages(_, _, _, _, messages, _, _):
-                    return .single(messages.compactMap({ $0.id() }))
-                case .messagesNotModified:
-                    return .single([])
-                case let .messagesSlice(_, _, _, _, messages, _, _):
-                    return .single(messages.compactMap({ $0.id() }))
-            }
-        }
-        |> mapToSignal { ids -> Signal<Int32?, MTRpcError> in
-            let filteredIds = ids.filter { $0.id <= operation.maxId }
-            if filteredIds.isEmpty {
-                return .single(ids.min()?.id)
-            }
-            if peerId.namespace == Namespaces.Peer.CloudChannel {
-                guard let inputChannel = inputChannel else {
-                    return .single(nil)
-                }
-                return network.request(Api.functions.channels.readMessageContents(channel: inputChannel, id: filteredIds.map { $0.id }))
-                |> map { result -> Int32? in
-                    if ids.count < limit {
-                        return nil
-                    } else {
-                        return ids.min()?.id
-                    }
-                }
-            } else {
-                return network.request(Api.functions.messages.readMessageContents(id: filteredIds.map { $0.id }))
-                |> map { result -> Int32? in
-                    switch result {
-                        case let .affectedMessages(pts, ptsCount):
-                            stateManager.addUpdateGroups([.updatePts(pts: pts, ptsCount: ptsCount)])
-                    }
-                    if ids.count < limit {
-                        return nil
-                    } else {
-                        return ids.min()?.id
-                    }
-                }
-            }
-        }
-    }
-    let currentMaxId = Atomic<Int32>(value: 0)
-    let loopOperations: Signal<Void, GetUnseenIdsError> = (
-        (
-            deferred {
-                return oneOperation(currentMaxId.with { $0 })
-            }
-            |> `catch` { error -> Signal<Int32?, GetUnseenIdsError> in
-                return .fail(.error(error))
-            }
-        )
-        |> mapToSignal { resultId -> Signal<Void, GetUnseenIdsError> in
-            if let resultId = resultId {
-                let previous = currentMaxId.swap(resultId)
-                if previous == resultId {
-                    return .fail(.done)
-                } else {
-                    return .complete()
-                }
-            } else {
-                return .fail(.done)
-            }
-        }
-        |> `catch` { error -> Signal<Void, GetUnseenIdsError> in
-            switch error {
-                case .done, .error:
-                    return .fail(error)
-            }
-        }
-        |> restart
-    )
-    return loopOperations
-    |> `catch` { _ -> Signal<Void, NoError> in
-        return .complete()
-    }*/
 }
 
 func markUnseenReactionMessage(transaction: Transaction, id: MessageId, addSynchronizeAction: Bool) {

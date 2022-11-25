@@ -174,7 +174,7 @@ public final class ShimmerEffectForegroundView: UIView {
     }
 }
 
-final class ShimmerEffectForegroundNode: ASDisplayNode {
+public final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var currentBackgroundColor: UIColor?
     private var currentForegroundColor: UIColor?
     private var currentHorizontal: Bool?
@@ -187,7 +187,7 @@ final class ShimmerEffectForegroundNode: ASDisplayNode {
     private var globalTimeOffset = true
     private var duration: Double?
     
-    override init() {
+    public override init() {
         self.imageNodeContainer = ASDisplayNode()
         self.imageNodeContainer.isLayerBacked = true
         
@@ -206,21 +206,21 @@ final class ShimmerEffectForegroundNode: ASDisplayNode {
         self.addSubnode(self.imageNodeContainer)
     }
     
-    override func didEnterHierarchy() {
+    public override func didEnterHierarchy() {
         super.didEnterHierarchy()
         
         self.isCurrentlyInHierarchy = true
         self.updateAnimation()
     }
     
-    override func didExitHierarchy() {
+    public override func didExitHierarchy() {
         super.didExitHierarchy()
         
         self.isCurrentlyInHierarchy = false
         self.updateAnimation()
     }
     
-    func update(backgroundColor: UIColor, foregroundColor: UIColor, horizontal: Bool, effectSize: CGFloat?, globalTimeOffset: Bool, duration: Double?) {
+    public func update(backgroundColor: UIColor, foregroundColor: UIColor, horizontal: Bool, effectSize: CGFloat?, globalTimeOffset: Bool, duration: Double?) {
         if let currentBackgroundColor = self.currentBackgroundColor, currentBackgroundColor.isEqual(backgroundColor), let currentForegroundColor = self.currentForegroundColor, currentForegroundColor.isEqual(foregroundColor), self.currentHorizontal == horizontal {
             return
         }
@@ -274,7 +274,7 @@ final class ShimmerEffectForegroundNode: ASDisplayNode {
         self.updateAnimation()
     }
     
-    func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         if let absoluteLocation = self.absoluteLocation, absoluteLocation.0 == rect && absoluteLocation.1 == containerSize {
             return
         }

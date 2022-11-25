@@ -270,15 +270,20 @@ public func chatListItemStrings(strings: PresentationStrings, nameDisplayOrder: 
                                     }
                                 }
                             default:
-                                hideAuthor = true
-                                if let (text, textSpoilers, customEmojiRangesValue) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                                switch action.action {
+                                case .topicCreated, .topicEdited:
+                                    hideAuthor = false
+                                default:
+                                    hideAuthor = true
+                                }
+                                if let (text, textSpoilers, customEmojiRangesValue) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true, forForumOverview: false) {
                                     messageText = text
                                     spoilers = textSpoilers
                                     customEmojiRanges = customEmojiRangesValue
                                 }
                         }
                     case _ as TelegramMediaExpiredContent:
-                        if let (text, _, _) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true) {
+                        if let (text, _, _) = plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: message, accountPeerId: accountPeerId, forChatList: true, forForumOverview: false) {
                             messageText = text
                         }
                     case let poll as TelegramMediaPoll:

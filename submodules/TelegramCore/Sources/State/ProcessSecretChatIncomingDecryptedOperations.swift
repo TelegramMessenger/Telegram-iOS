@@ -298,7 +298,7 @@ func processSecretChatIncomingDecryptedOperations(encryptionProvider: Encryption
                                         _internal_deleteMessages(transaction: transaction, mediaBox: mediaBox, ids: filteredMessageIds)
                                     }
                                 case .clearHistory:
-                                    _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, namespaces: .all)
+                                    _internal_clearHistory(transaction: transaction, mediaBox: mediaBox, peerId: peerId, threadId: nil, namespaces: .all)
                                 case let .markMessagesContentAsConsumed(globallyUniqueIds):
                                     var messageIds: [MessageId] = []
                                     for id in globallyUniqueIds {
@@ -784,10 +784,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                             parsedMedia.append(image)
                         }
@@ -810,7 +810,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -825,7 +825,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -843,7 +843,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             case let .photoSize(_, location, w, h, size):
                                 switch location {
                                     case let .fileLocation(dcId, volumeId, localId, secret):
-                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil))
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                     case .fileLocationUnavailable:
                                         break
                                 }
@@ -853,7 +853,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                                         case let .fileLocation(dcId, volumeId, localId, secret):
                                            let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: Int64(bytes.size), fileReference: nil)
                                            resources.append((resource, bytes.makeData()))
-                                           previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                           previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                         case .fileLocationUnavailable:
                                             break
                                     }
@@ -986,10 +986,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                             parsedMedia.append(image)
                         }
@@ -1013,7 +1013,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1044,7 +1044,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1062,7 +1062,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             case let .photoSize(_, location, w, h, size):
                                 switch location {
                                     case let .fileLocation(dcId, volumeId, localId, secret):
-                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil))
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                     case .fileLocationUnavailable:
                                         break
                                 }
@@ -1072,7 +1072,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                                         case let .fileLocation(dcId, volumeId, localId, secret):
                                             let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: Int64(bytes.size), fileReference: nil)
                                             resources.append((resource, bytes.makeData()))
-                                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                            previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                         case .fileLocationUnavailable:
                                             break
                                     }
@@ -1265,10 +1265,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                             parsedMedia.append(image)
                         }
@@ -1292,7 +1292,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1323,7 +1323,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1341,7 +1341,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         case let .photoSize(_, location, w, h, size):
                             switch location {
                             case let .fileLocation(dcId, volumeId, localId, secret):
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             case .fileLocationUnavailable:
                                 break
                             }
@@ -1351,7 +1351,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                                 case let .fileLocation(dcId, volumeId, localId, secret):
                                     let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: Int64(bytes.size), fileReference: nil)
                                     resources.append((resource, bytes.makeData()))
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 case .fileLocationUnavailable:
                                     break
                                 }
@@ -1466,10 +1466,10 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var representations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
-                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil))
+                            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             let image = TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.CloudSecretImage, id: file.id), representations: representations, immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])
                             parsedMedia.append(image)
                         }
@@ -1493,7 +1493,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: size), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1524,7 +1524,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                             var previewRepresentations: [TelegramMediaImageRepresentation] = []
                             if thumb.size != 0 {
                                 let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: thumbW, height: thumbH), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 resources.append((resource, thumb.makeData()))
                             }
                             let fileMedia = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.CloudSecretFile, id: file.id), partialReference: nil, resource: file.resource(key: SecretFileEncryptionKey(aesKey: key.makeData(), aesIv: iv.makeData()), decryptedSize: Int64(size)), previewRepresentations: previewRepresentations, videoThumbnails: [], immediateThumbnailData: nil, mimeType: mimeType, size: Int64(size), attributes: parsedAttributes)
@@ -1542,7 +1542,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                         case let .photoSize(_, location, w, h, size):
                             switch location {
                             case let .fileLocation(dcId, volumeId, localId, secret):
-                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil))
+                                previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: size == 0 ? nil : Int64(size), fileReference: nil), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                             case .fileLocationUnavailable:
                                 break
                             }
@@ -1552,7 +1552,7 @@ private func parseMessage(peerId: PeerId, authorId: PeerId, tagLocalIndex: Int32
                                 case let .fileLocation(dcId, volumeId, localId, secret):
                                     let resource = CloudFileMediaResource(datacenterId: Int(dcId), volumeId: volumeId, localId: localId, secret: secret, size: Int64(bytes.size), fileReference: nil)
                                     resources.append((resource, bytes.makeData()))
-                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil))
+                                    previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
                                 case .fileLocationUnavailable:
                                     break
                                 }

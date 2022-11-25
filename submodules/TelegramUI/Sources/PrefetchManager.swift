@@ -214,7 +214,7 @@ private final class PrefetchManagerInnerImpl {
                         context = PrefetchMediaContext()
                         self.contexts[id] = context
                         
-                        let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: HistoryPreloadIndex(index: nil, hasUnread: false, isMuted: false, isPriority: true), localOrder: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: order), timestamp: 0))
+                        let priority: FetchManagerPriority = .backgroundPrefetch(locationOrder: HistoryPreloadIndex(index: nil, threadId: nil, hasUnread: false, isMuted: false, isPriority: true), localOrder: MessageIndex(id: MessageId(peerId: PeerId(0), namespace: 0, id: order), timestamp: 0))
                         
                         if case .full = automaticDownload {
                             // MARK: Nicegram downloading feature

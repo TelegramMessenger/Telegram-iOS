@@ -27,6 +27,7 @@ swift_library(
         "//submodules/AvatarNode:AvatarNode",
         "//submodules/AccountContext:AccountContext",
         "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/AnimatedAvatarSetNode:AnimatedAvatarSetNode",
     ],
     visibility = [
         "//visibility:public",

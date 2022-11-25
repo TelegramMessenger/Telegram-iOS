@@ -281,7 +281,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
 
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peer in
+                            controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
 
                                 if let strongController = controller {
@@ -365,7 +365,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 actionSheet?.dismissAnimated()
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peer in
+                                controller.peerSelected = { [weak controller] peer, _ in
                                     let peerId = peer.id
                                     
                                     if let strongController = controller {
@@ -447,7 +447,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
 
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peer in
+                            controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
 
                                 if let strongController = controller {
@@ -531,7 +531,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
 
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peer in
+                            controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
 
                                 if let strongController = controller {
@@ -616,7 +616,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
 
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peer in
+                            controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
 
                                 if let strongController = controller {
@@ -694,7 +694,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                         return
                     }
                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                    controller.peerSelected = { [weak controller] peer in
+                    controller.peerSelected = { [weak controller] peer, _ in
                         let peerId = peer.id
                         
                         if let strongController = controller {
@@ -725,7 +725,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                                 actionSheet?.dismissAnimated()
                                 
                                 let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                                controller.peerSelected = { [weak controller] peer in
+                                controller.peerSelected = { [weak controller] peer, _ in
                                     let peerId = peer.id
                                     
                                     if let strongController = controller {
@@ -798,7 +798,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                             actionSheet?.dismissAnimated()
 
                             let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-                            controller.peerSelected = { [weak controller] peer in
+                            controller.peerSelected = { [weak controller] peer, _ in
                                 let peerId = peer.id
 
                                 if let strongController = controller {
@@ -1422,7 +1422,7 @@ public func triggerDebugSendLogsUI(context: AccountContext, additionalInfo: Stri
     let _ = (Logger.shared.collectLogs()
     |> deliverOnMainQueue).start(next: { logs in
         let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyWriteable, .excludeDisabled]))
-        controller.peerSelected = { [weak controller] peer in
+        controller.peerSelected = { [weak controller] peer, _ in
             let peerId = peer.id
 
             if let strongController = controller {

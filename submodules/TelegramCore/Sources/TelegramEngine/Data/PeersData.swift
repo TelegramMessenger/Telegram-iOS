@@ -258,6 +258,32 @@ public extension TelegramEngine.EngineData.Item {
                 return EnginePeer.NotificationSettings(notificationSettings)
             }
         }
+        
+        public struct ThreadNotificationSettings: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = EnginePeer.NotificationSettings
+
+            fileprivate var id: EnginePeer.Id
+            fileprivate var threadId: Int64
+
+            public init(id: EnginePeer.Id, threadId: Int64) {
+                self.id = id
+                self.threadId = threadId
+            }
+
+            var key: PostboxViewKey {
+                return .messageHistoryThreadInfo(peerId: self.id, threadId: self.threadId)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageHistoryThreadInfoView else {
+                    preconditionFailure()
+                }
+                guard let data = view.info?.data.get(MessageHistoryThreadData.self) else {
+                    return EnginePeer.NotificationSettings(TelegramPeerNotificationSettings.defaultSettings)
+                }
+                return EnginePeer.NotificationSettings(data.notificationSettings)
+            }
+        }
 
         public struct ParticipantCount: TelegramEngineDataItem, TelegramEngineMapKeyDataItem, PostboxViewDataItem {
             public typealias Result = Optional<Int>
@@ -876,6 +902,30 @@ public extension TelegramEngine.EngineData.Item {
                 } else {
                     return nil
                 }
+            }
+        }
+        
+        public struct ThreadData: TelegramEngineDataItem, PostboxViewDataItem {
+            public typealias Result = MessageHistoryThreadData?
+
+            fileprivate var id: EnginePeer.Id
+            fileprivate var threadId: Int64
+
+            public init(id: EnginePeer.Id, threadId: Int64) {
+                self.id = id
+                self.threadId = threadId
+            }
+
+            var key: PostboxViewKey {
+                return .messageHistoryThreadInfo(peerId: self.id, threadId: self.threadId)
+            }
+
+            func extract(view: PostboxView) -> Result {
+                guard let view = view as? MessageHistoryThreadInfoView else {
+                    preconditionFailure()
+                }
+                
+                return view.info?.data.get(MessageHistoryThreadData.self)
             }
         }
     }

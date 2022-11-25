@@ -3,13 +3,13 @@ import Foundation
 public enum UnreadMessageCountsItem: Equatable {
     case total(ValueBoxKey?)
     case totalInGroup(PeerGroupId)
-    case peer(PeerId)
+    case peer(id: PeerId, handleThreads: Bool)
 }
 
 private enum MutableUnreadMessageCountsItemEntry: Equatable {
     case total((ValueBoxKey, PreferencesEntry?)?, ChatListTotalUnreadState)
     case totalInGroup(PeerGroupId, ChatListTotalUnreadState)
-    case peer(PeerId, CombinedPeerReadState?)
+    case peer(PeerId, Bool, CombinedPeerReadState?)
 
     static func ==(lhs: MutableUnreadMessageCountsItemEntry, rhs: MutableUnreadMessageCountsItemEntry) -> Bool {
         switch lhs {
@@ -34,8 +34,8 @@ private enum MutableUnreadMessageCountsItemEntry: Equatable {
             } else {
                 return false
             }
-        case let .peer(peerId, readState):
-            if case .peer(peerId, readState) = rhs {
+        case let .peer(peerId, handleThreads, readState):
+            if case .peer(peerId, handleThreads, readState) = rhs {
                 return true
             } else {
                 return false
@@ -63,8 +63,16 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                 return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root))
             case let .totalInGroup(groupId):
                 return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
-            case let .peer(peerId):
-                return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+            case let .peer(peerId, handleThreads):
+                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    var count: Int32 = 0
+                    if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                        count = summary.effectiveUnreadCount
+                    }
+                    return .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
+                } else {
+                    return .peer(peerId, handleThreads, postbox.readStateTable.getCombinedState(peerId))
+                }
             }
         }
     }
@@ -104,10 +112,21 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                             updated = true
                         }
                     }
-                case let .peer(peerId, _):
-                    if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
-                        self.entries[i] = .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
-                        updated = true
+                case let .peer(peerId, handleThreads, _):
+                    if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                        if transaction.updatedPeerThreadsSummaries.contains(peerId) {
+                            var count: Int32 = 0
+                            if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                                count = summary.effectiveUnreadCount
+                            }
+                            self.entries[i] = .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
+                            updated = true
+                        }
+                    } else {
+                        if transaction.alteredInitialPeerCombinedReadStates[peerId] != nil {
+                            self.entries[i] = .peer(peerId, handleThreads, postbox.readStateTable.getCombinedState(peerId))
+                            updated = true
+                        }
                     }
                 }
             }
@@ -123,8 +142,16 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                 return .total(preferencesKey.flatMap({ ($0, postbox.preferencesTable.get(key: $0)) }), postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: .root))
             case let .totalInGroup(groupId):
                 return .totalInGroup(groupId, postbox.messageHistoryMetadataTable.getTotalUnreadState(groupId: groupId))
-            case let .peer(peerId):
-                return .peer(peerId, postbox.readStateTable.getCombinedState(peerId))
+            case let .peer(peerId, handleThreads):
+                if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                    var count: Int32 = 0
+                    if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                        count = summary.effectiveUnreadCount
+                    }
+                    return .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
+                } else {
+                    return .peer(peerId, handleThreads, postbox.readStateTable.getCombinedState(peerId))
+                }
             }
         }
         if self.entries != entries {
@@ -150,7 +177,7 @@ public final class UnreadMessageCountsView: PostboxView {
                 return .total(keyAndValue?.1, state)
             case let .totalInGroup(groupId, state):
                 return .totalInGroup(groupId, state)
-            case let .peer(peerId, count):
+            case let .peer(peerId, _, count):
                 return .peer(peerId, count)
             }
         }
@@ -174,7 +201,7 @@ public final class UnreadMessageCountsView: PostboxView {
             case .total, .totalInGroup:
                 break
             case let .peer(peerId, state):
-                if case .peer(peerId) = item {
+                if case .peer(peerId, _) = item {
                     return state?.count ?? 0
                 }
             }

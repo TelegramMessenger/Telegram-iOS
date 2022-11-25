@@ -34,7 +34,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
     private let getNavigationController: () -> NavigationController?
     private let present: (ViewController, Any?) -> Void
     private let pushController: (ViewController) -> Void
-    private let openPeer: (PeerId) -> Void
+    private let openPeer: (EnginePeer) -> Void
     
     private var webPage: TelegramMediaWebpage?
     private var initialAnchor: String?
@@ -92,7 +92,7 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
         return InstantPageStoredState(contentOffset: Double(self.scrollNode.view.contentOffset.y), details: details)
     }
     
-    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (PeerId) -> Void, navigateBack: @escaping () -> Void) {
+    init(controller: InstantPageController, context: AccountContext, settings: InstantPagePresentationSettings?, themeSettings: PresentationThemeSettings?, presentationTheme: PresentationTheme, strings: PresentationStrings,  dateTimeFormat: PresentationDateTimeFormat, nameDisplayOrder: PresentationPersonNameOrder, autoNightModeTriggered: Bool, statusBar: StatusBar, sourcePeerType: MediaAutoDownloadPeerType, getNavigationController: @escaping () -> NavigationController?, present: @escaping (ViewController, Any?) -> Void, pushController: @escaping (ViewController) -> Void, openPeer: @escaping (EnginePeer) -> Void, navigateBack: @escaping () -> Void) {
         self.controller = controller
         self.context = context
         self.presentationTheme = presentationTheme
@@ -1326,25 +1326,25 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
                         }
                     default:
                         strongSelf.loadProgress.set(1.0)
-                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peerId, navigation in
+                        strongSelf.context.sharedContext.openResolvedUrl(result, context: strongSelf.context, urlContext: .generic, navigationController: strongSelf.getNavigationController(), forceExternal: false, openPeer: { peer, navigation in
                             switch navigation {
                                 case let .chat(_, subject, peekData):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: subject, peekData: peekData))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: subject, peekData: peekData))
                                     }
                                 case let .withBotStartPayload(botStart):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), botStart: botStart, keepStack: .always))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), botStart: botStart, keepStack: .always))
                                     }
                                 case let .withAttachBot(attachBotStart):
                                     if let navigationController = strongSelf.getNavigationController() {
-                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), attachBotStart: attachBotStart))
+                                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), attachBotStart: attachBotStart))
                                     }
                                 case .info:
-                                    let _ = (strongSelf.context.account.postbox.loadedPeerWithId(peerId)
+                                    let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peer.id))
                                     |> deliverOnMainQueue).start(next: { peer in
-                                        if let strongSelf = self {
-                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
+                                        if let strongSelf = self, let peer = peer {
+                                            if let controller = strongSelf.context.sharedContext.makePeerInfoController(context: strongSelf.context, updatedPresentationData: nil, peer: peer._asPeer(), mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
                                                 strongSelf.getNavigationController()?.pushViewController(controller)
                                             }
                                         }
@@ -1403,8 +1403,8 @@ final class InstantPageControllerNode: ASDisplayNode, UIScrollViewDelegate {
             }, openUrl: { _ in }, openPeer: { _ in
             }, showAll: false)
             
-            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
-            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+            let peer = TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peer.id, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peer, text: "", attributes: [], media: [map], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
             
             let controller = LocationViewController(context: self.context, subject: message, params: controllerParams)
             self.pushController(controller)

@@ -290,7 +290,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
         }
         
         let isReplyThread: Bool
-        if case .replyThread = interfaceState.chatLocation {
+        if case let .replyThread(message) = interfaceState.chatLocation, !message.isForumPost {
             isReplyThread = true
         } else {
             isReplyThread = false
@@ -317,7 +317,7 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             messageUpdated = true
         }
         
-        if let message = interfaceState.pinnedMessage {
+        if let message = interfaceState.pinnedMessage, !message.message.isRestricted(platform: "ios", contentSettings: self.context.currentContentSettings.with { $0 }) {
             for attribute in message.message.attributes {
                 if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), attribute.rows.count == 1, attribute.rows[0].buttons.count == 1 {
                     actionTitle = attribute.rows[0].buttons[0].title
@@ -851,7 +851,12 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
                     case .setupPoll:
                         break
                     case let .openUserProfile(peerId):
-                        controllerInteraction.openPeer(peerId, .info, nil, false, nil)
+                        let _ = (self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                        |> deliverOnMainQueue).start(next: { peer in
+                            if let peer = peer {
+                                controllerInteraction.openPeer(peer, .info, nil, false)
+                            }
+                        })
                     case let .openWebView(url, simple):
                         controllerInteraction.openWebView(button.title, url, simple, false)
                     }

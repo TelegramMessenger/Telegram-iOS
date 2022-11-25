@@ -1000,19 +1000,26 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     return
                                 }
                                 
-                                if suggestSavedMessages, let navigationController = controllerInteraction.navigationController() {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
-                                        navigationController: navigationController,
-                                        chatController: nil,
-                                        context: context,
-                                        chatLocation: .peer(id: context.account.peerId),
-                                        subject: nil,
-                                        updateTextInputState: nil,
-                                        activateInput: .entityInput,
-                                        keepStack: .always,
-                                        completion: { _ in
-                                        })
-                                    )
+                                if suggestSavedMessages {
+                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                    |> deliverOnMainQueue).start(next: { peer in
+                                        guard let peer = peer, let navigationController = controllerInteraction.navigationController() else {
+                                            return
+                                        }
+                                        
+                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(
+                                            navigationController: navigationController,
+                                            chatController: nil,
+                                            context: context,
+                                            chatLocation: .peer(peer),
+                                            subject: nil,
+                                            updateTextInputState: nil,
+                                            activateInput: .entityInput,
+                                            keepStack: .always,
+                                            completion: { _ in
+                                            })
+                                        )
+                                    })
                                 } else {
                                     var replaceImpl: ((ViewController) -> Void)?
                                     let controller = PremiumDemoScreen(context: context, subject: .animatedEmoji, action: {
@@ -1783,7 +1790,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             }
             let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
             
-            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+            let message = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: PeerId(0), namespace: Namespaces.Message.Local, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: nil, text: "", attributes: [], media: [file.file.media], peers: SimpleDictionary(), associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
             
             let gallery = GalleryController(context: strongSelf.context, source: .standaloneMessage(message), streamSingleVideo: true, replaceRootController: { _, _ in
             }, baseNavigationController: nil)
@@ -1866,7 +1873,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         }
                         switch result {
                             case .generic:
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: nil, text: presentationData.strings.Gallery_GifSaved, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), nil)
                             case let .limitExceeded(limit, premiumLimit):
                                 let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
                                 let text: String
@@ -1875,7 +1882,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 } else {
                                     text = presentationData.strings.Premium_MaxSavedGifsText("\(premiumLimit)").string
                                 }
-                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text), elevatedLayout: false, animateInAsReplacement: false, action: { action in
+                                strongSelf.controllerInteraction?.presentController(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_gif", scale: 0.075, colors: [:], title: presentationData.strings.Premium_MaxSavedGifsTitle("\(limit)").string, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { action in
                                     guard let strongSelf = self else {
                                         return false
                                     }
@@ -2156,7 +2163,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             pendingUnpinnedAllMessages: false,
             activeGroupCallInfo: nil,
             hasActiveGroupCall: false,
-            importState: nil
+            importState: nil,
+            threadData: nil
         )
 
         let _ = inputNode.updateLayout(

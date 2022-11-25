@@ -342,10 +342,14 @@ public final class AccountContextImpl: AccountContext {
     public func chatLocationInput(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> ChatLocationInput {
         switch location {
         case let .peer(peerId):
-            return .peer(peerId: peerId)
+            return .peer(peerId: peerId, threadId: nil)
         case let .replyThread(data):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
-            return .thread(peerId: data.messageId.peerId, threadId: makeMessageThreadId(data.messageId), data: context.state)
+            if data.isForumPost {
+                return .peer(peerId: data.messageId.peerId, threadId: Int64(data.messageId.id))
+            } else {
+                let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+                return .thread(peerId: data.messageId.peerId, threadId: makeMessageThreadId(data.messageId), data: context.state)
+            }
         case let .feed(id):
             let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
             return .feed(id: id, data: context.state)
@@ -357,8 +361,20 @@ public final class AccountContextImpl: AccountContext {
         case .peer:
             return .single(nil)
         case let .replyThread(data):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
-            return context.maxReadOutgoingMessageId
+            if data.isForumPost, let peerId = location.peerId {
+                let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: data.messageId.peerId, threadId: Int64(data.messageId.id))
+                return self.account.postbox.combinedView(keys: [viewKey])
+                |> map { views -> MessageId? in
+                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.data.get(MessageHistoryThreadData.self) {
+                        return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: data.maxOutgoingReadId)
+                    } else {
+                        return nil
+                    }
+                }
+            } else {
+                let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+                return context.maxReadOutgoingMessageId
+            }
         case let .feed(id):
             let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
             return context.maxReadOutgoingMessageId
@@ -368,22 +384,34 @@ public final class AccountContextImpl: AccountContext {
     public func chatLocationUnreadCount(for location: ChatLocation, contextHolder: Atomic<ChatLocationContextHolder?>) -> Signal<Int, NoError> {
         switch location {
         case let .peer(peerId):
-            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(peerId), .total(nil)])
+            let unreadCountsKey: PostboxViewKey = .unreadCounts(items: [.peer(id: peerId, handleThreads: false), .total(nil)])
             return self.account.postbox.combinedView(keys: [unreadCountsKey])
             |> map { views in
                 var unreadCount: Int32 = 0
-
+                
                 if let view = views.views[unreadCountsKey] as? UnreadMessageCountsView {
-                    if let count = view.count(for: .peer(peerId)) {
+                    if let count = view.count(for: .peer(id: peerId, handleThreads: false)) {
                         unreadCount = count
                     }
                 }
-
+                
                 return Int(unreadCount)
             }
         case let .replyThread(data):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
-            return context.unreadCount
+            if data.isForumPost {
+                let viewKey: PostboxViewKey = .messageHistoryThreadInfo(peerId: data.messageId.peerId, threadId: Int64(data.messageId.id))
+                return self.account.postbox.combinedView(keys: [viewKey])
+                |> map { views -> Int in
+                    if let threadInfo = views.views[viewKey] as? MessageHistoryThreadInfoView, let data = threadInfo.info?.data.get(MessageHistoryThreadData.self) {
+                        return Int(data.incomingUnreadCount)
+                    } else {
+                        return 0
+                    }
+                }
+            } else {
+                let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
+                return context.unreadCount
+            }
         case let .feed(id):
             let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
             return context.unreadCount

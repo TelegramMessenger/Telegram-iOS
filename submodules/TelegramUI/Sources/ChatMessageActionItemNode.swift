@@ -20,8 +20,8 @@ import WallpaperBackgroundNode
 import InvisibleInkDustNode
 import TextNodeWithEntities
 
-private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId) -> NSAttributedString? {
-    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false)
+private func attributedServiceMessageString(theme: ChatPresentationThemeData, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, dateTimeFormat: PresentationDateTimeFormat, message: Message, accountPeerId: PeerId, forForumOverview: Bool) -> NSAttributedString? {
+    return universalServiceMessageString(presentationData: (theme.theme, theme.wallpaper), strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat, message: EngineMessage(message), accountPeerId: accountPeerId, forChatList: false, forForumOverview: forForumOverview)
 }
 
 class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
@@ -148,18 +148,23 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
         return mediaHidden
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeLabelLayout = TextNodeWithEntities.asyncLayout(self.labelNode)
 
         let cachedMaskBackgroundImage = self.cachedMaskBackgroundImage
         
-        return { item, layoutConstants, _, _, _ in
+        return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
             
             let backgroundImage = PresentationResourcesChat.chatActionPhotoBackgroundImage(item.presentationData.theme.theme, wallpaper: !item.presentationData.theme.wallpaper.isEmpty)
             
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId)
+                var forForumOverview = false
+                if item.chatLocation.threadId == nil {
+                    forForumOverview = true
+                }
+                
+                let attributedString = attributedServiceMessageString(theme: item.presentationData.theme, strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, message: item.message, accountPeerId: item.context.account.peerId, forForumOverview: forForumOverview)
             
                 var image: TelegramMediaImage?
                 for media in item.message.media {

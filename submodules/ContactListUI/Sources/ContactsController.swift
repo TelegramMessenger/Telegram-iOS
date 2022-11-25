@@ -323,7 +323,7 @@ public class ContactsController: ViewController {
                                 scrollToEndIfExists = true
                             }
                             
-                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peer.id), purposefulAction: { [weak self] in
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(EnginePeer(peer)), purposefulAction: { [weak self] in
                                 if fromSearch {
                                     self?.deactivateSearch(animated: false)
                                     self?.switchToChatsController?()
@@ -487,7 +487,7 @@ public class ContactsController: ViewController {
                             let _ = (strongSelf.context.account.postbox.loadedPeerWithId(strongSelf.context.account.peerId)
                             |> deliverOnMainQueue).start(next: { [weak self, weak controller] peer in
                                 if let strongSelf = self, let controller = controller {
-                                    controller.present(strongSelf.context.sharedContext.makeChatQrCodeScreen(context: strongSelf.context, peer: peer), in: .window(.root))
+                                    controller.present(strongSelf.context.sharedContext.makeChatQrCodeScreen(context: strongSelf.context, peer: peer, threadId: nil), in: .window(.root))
                                 }
                             })
                         }

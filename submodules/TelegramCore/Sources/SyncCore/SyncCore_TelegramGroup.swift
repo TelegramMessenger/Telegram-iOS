@@ -89,7 +89,7 @@ public final class TelegramGroup: Peer, Equatable {
     public let version: Int
     
     public var indexName: PeerIndexNameRepresentation {
-        return .title(title: self.title, addressName: nil)
+        return .title(title: self.title, addressNames: [])
     }
     
     public var associatedMediaIds: [MediaId]? { return nil }

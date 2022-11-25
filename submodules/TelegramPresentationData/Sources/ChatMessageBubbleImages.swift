@@ -84,6 +84,65 @@ public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloa
     return messageBubbleImage(maxCornerRadius: maxCornerRadius, minCornerRadius: minCornerRadius, incoming: incoming, fillColor: fillColor, strokeColor: strokeColor, neighbors: neighbors, shadow: bubbleColors.bubble.withWallpaper.shadow, wallpaper: wallpaper, knockout: knockoutValue, mask: mask, extendedEdges: extendedEdges, onlyOutline: onlyOutline, onlyShadow: onlyShadow, alwaysFillColor: alwaysFillColor)
 }
 
+public func messageBubbleArguments(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, neighbors: MessageBubbleImageNeighbors) -> (topLeftRadius: CGFloat, topRightRadius: CGFloat, bottomLeftRadius: CGFloat, bottomRightRadius: CGFloat, drawTail: Bool) {
+    var topLeftRadius: CGFloat
+    var topRightRadius: CGFloat
+    var bottomLeftRadius: CGFloat
+    var bottomRightRadius: CGFloat
+    var drawTail: Bool
+    
+    switch neighbors {
+    case .none:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .both:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .bottom:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = minCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = true
+    case .side:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = minCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case let .top(side):
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = side ? minCornerRadius : maxCornerRadius
+        bottomRightRadius = minCornerRadius
+        drawTail = false
+    case .extracted:
+        topLeftRadius = maxCornerRadius
+        topRightRadius = maxCornerRadius
+        bottomLeftRadius = maxCornerRadius
+        bottomRightRadius = maxCornerRadius
+        drawTail = false
+    }
+    
+    if incoming {
+        var tmp = topRightRadius
+        topRightRadius = topLeftRadius
+        topLeftRadius = tmp
+        
+        tmp = bottomRightRadius
+        bottomRightRadius = bottomLeftRadius
+        bottomLeftRadius = tmp
+    }
+    
+    return (topLeftRadius, topRightRadius, bottomLeftRadius, bottomRightRadius, drawTail)
+}
+
 public func messageBubbleImage(maxCornerRadius: CGFloat, minCornerRadius: CGFloat, incoming: Bool, fillColor: UIColor, strokeColor: UIColor, neighbors: MessageBubbleImageNeighbors, shadow: PresentationThemeBubbleShadow?, wallpaper: TelegramWallpaper, knockout knockoutValue: Bool, mask: Bool = false, extendedEdges: Bool = false, onlyOutline: Bool = false, onlyShadow: Bool = false, alwaysFillColor: Bool = false) -> UIImage {
     let topLeftRadius: CGFloat
     let topRightRadius: CGFloat

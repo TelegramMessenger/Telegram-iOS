@@ -406,7 +406,7 @@ public class ItemListAvatarAndNameInfoItemNode: ListViewItemNode, ItemListItemNo
                         if let phone = peer.phone, !phone.isEmpty {
                             statusText += formatPhoneNumber(phone)
                         }
-                        if let username = peer.username, !username.isEmpty {
+                        if let username = peer.addressName, !username.isEmpty {
                             if !statusText.isEmpty {
                                 statusText += "\n"
                             }

@@ -4,7 +4,8 @@ private let whitelistedHosts: Set<String> = Set([
     "t.me",
     "telegram.me",
     "telegra.ph",
-    "telesco.pe"
+    "telesco.pe",
+    "fragment.com"
 ])
 
 public func isConcealedUrlWhitelisted(_ url: URL) -> Bool {

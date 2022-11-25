@@ -782,8 +782,28 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             }
         }, forceOrientation: { orientation in
             let value = orientation.rawValue
-            UIDevice.current.setValue(value, forKey: "orientation")
-            UINavigationController.attemptRotationToDeviceOrientation()
+            if #available(iOSApplicationExtension 16.0, iOS 16.0, *) {
+                let windowScene = UIApplication.shared.connectedScenes.first as? UIWindowScene
+                var interfaceOrientations: UIInterfaceOrientationMask = []
+                switch orientation {
+                case .portrait:
+                    interfaceOrientations = .portrait
+                case .landscapeLeft:
+                    interfaceOrientations = .landscapeLeft
+                case .landscapeRight:
+                    interfaceOrientations = .landscapeRight
+                case .portraitUpsideDown:
+                    interfaceOrientations = .portraitUpsideDown
+                case .unknown:
+                    interfaceOrientations = .portrait
+                @unknown default:
+                    interfaceOrientations = .portrait
+                }
+                windowScene?.requestGeometryUpdate(.iOS(interfaceOrientations: interfaceOrientations))
+            } else {
+                UIDevice.current.setValue(value, forKey: "orientation")
+                UINavigationController.attemptRotationToDeviceOrientation()
+            }
         })
         // MARK: Nicegram DB Changes
         let hiddenAccountManager = HiddenAccountManagerImpl()
@@ -843,7 +863,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             let sharedContext = SharedAccountContextImpl(mainWindow: self.mainWindow, sharedContainerPath: legacyBasePath, basePath: rootPath, encryptionParameters: encryptionParameters, accountManager: accountManager, appLockContext: appLockContext, applicationBindings: applicationBindings, initialPresentationDataAndSettings: initialPresentationDataAndSettings, networkArguments: networkArguments, hasInAppPurchases: buildConfig.isAppStoreBuild && buildConfig.apiId == 1, rootPath: rootPath, legacyBasePath: legacyBasePath, apsNotificationToken: self.notificationTokenPromise.get() |> map(Optional.init), voipNotificationToken: self.voipTokenPromise.get() |> map(Optional.init), setNotificationCall: { call in
                 setPresentationCall?(call)
             }, navigateToChat: { accountId, peerId, messageId in
-                self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: nil, messageId: messageId)
             }, displayUpgradeProgress: { progress in
                 if let progress = progress {
                     if self.dataImportSplash == nil {
@@ -1532,7 +1552,12 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
     }
     
     func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+        Logger.shared.log("App \(self.episodeId)", "register for notifications: didRegisterForRemoteNotificationsWithDeviceToken (deviceToken: \(deviceToken))")
         self.notificationTokenPromise.set(.single(deviceToken))
+    }
+    
+    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+        Logger.shared.log("App \(self.episodeId)", "register for notifications: didFailToRegisterForRemoteNotificationsWithError (error: \(error))")
     }
     
     func application(_ application: UIApplication, didReceiveRemoteNotification userInfo: [AnyHashable : Any], fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void) {
@@ -1972,7 +1997,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                 if let contact = sendMessageIntent.recipients?.first, let handle = contact.customIdentifier, handle.hasPrefix("tg") {
                     let string = handle.suffix(from: handle.index(handle.startIndex, offsetBy: 2))
                     if let userId = Int64(string) {
-                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), activateInput: true)
+                        self.openChatWhenReady(accountId: nil, peerId: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId)), threadId: nil, activateInput: true)
                     }
                 }
             }
@@ -2013,7 +2038,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         if let primary = primary {
                             for context in contexts {
                                 if let context = context, context.account.id == primary {
-                                    self.openChatWhenReady(accountId: nil, peerId: peerId)
+                                    self.openChatWhenReady(accountId: nil, peerId: peerId, threadId: nil)
                                     return
                                 }
                             }
@@ -2021,7 +2046,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                         
                         for context in contexts {
                             if let context = context {
-                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId)
+                                self.openChatWhenReady(accountId: context.account.id, peerId: peerId, threadId: nil)
                                 return
                             }
                         }
@@ -2054,7 +2079,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                 case .camera:
                                     context.openRootCamera()
                                 case .savedMessages:
-                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId)
+                                    self.openChatWhenReady(accountId: nil, peerId: context.context.account.peerId, threadId: nil)
                                 case .account:
                                     context.switchAccount()
                             }
@@ -2117,7 +2142,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }))
     }
     
-    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, messageId: MessageId? = nil, activateInput: Bool = false) {
+    private func openChatWhenReady(accountId: AccountRecordId?, peerId: PeerId, threadId: Int64?, messageId: MessageId? = nil, activateInput: Bool = false) {
         let signal = self.sharedContextPromise.get()
         |> take(1)
         |> deliverOnMainQueue
@@ -2136,7 +2161,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         self.openChatWhenReadyDisposable.set((signal
         |> deliverOnMainQueue).start(next: { context in
-            context.openChatWithPeerId(peerId: peerId, messageId: messageId, activateInput: activateInput)
+            context.openChatWithPeerId(peerId: peerId, threadId: threadId, messageId: messageId, activateInput: activateInput)
         }))
     }
     
@@ -2185,7 +2210,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
             
             let _ = combineLatest(queue: .mainQueue(), accountIdFromNotification(response.notification, sharedContext: self.sharedContextPromise.get()), hiddenIdsAndPasscodeSettings, self.sharedContextPromise.get(), primaryAccount).start(next: { accountId, hiddenIdsAndPasscodeSettings, context, primary in
             if response.actionIdentifier == UNNotificationDefaultActionIdentifier {
-                if let peerId = peerIdFromNotification(response.notification) {
+                if let (peerId, threadId) = peerIdFromNotification(response.notification) {
                     var messageId: MessageId? = nil
                     if response.notification.request.content.categoryIdentifier == "watch" {
                         messageId = messageIdFromNotification(peerId: peerId, notification: response.notification)
@@ -2201,11 +2226,11 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                               VarSystemNGSettings.inDoubleBottom {
                         context.sharedContext.appLockContext.lock()
                     } else {
-                        self.openChatWhenReady(accountId: accountId, peerId: peerId, messageId: messageId)
+                        self.openChatWhenReady(accountId: accountId, peerId: peerId, threadId: threadId, messageId: messageId)
                     }
                 }
                 completionHandler()
-            } else if response.actionIdentifier == "reply", let peerId = peerIdFromNotification(response.notification), let accountId = accountId {
+            } else if response.actionIdentifier == "reply", let (peerId, _) = peerIdFromNotification(response.notification), let accountId = accountId {
                 guard let response = response as? UNTextInputNotificationResponse, !response.userText.isEmpty else {
                     completionHandler()
                     return
@@ -2353,6 +2378,7 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
                                     
                                     UNUserNotificationCenter.current().setNotificationCategories([unknownMessageCategory, replyMessageCategory, replyLegacyMessageCategory, replyLegacyMediaMessageCategory, replyMediaMessageCategory, legacyChannelMessageCategory, muteMessageCategory, muteMediaMessageCategory])
                                     
+                                    Logger.shared.log("App \(self.episodeId)", "register for notifications: invoke registerForRemoteNotifications")
                                     UIApplication.shared.registerForRemoteNotifications()
                                 }
                             }
@@ -2669,11 +2695,13 @@ private func accountIdFromNotification(_ notification: [AnyHashable : Any], shar
 
 
 @available(iOS 10.0, *)
-private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
+private func peerIdFromNotification(_ notification: UNNotification) -> (peerId: PeerId, threadId: Int64?)? {
+    let threadId = notification.request.content.userInfo["threadId"] as? Int64
+    
     if let peerId = notification.request.content.userInfo["peerId"] as? Int64 {
-        return PeerId(peerId)
+        return (PeerId(peerId), threadId)
     } else if let peerIdString = notification.request.content.userInfo["peerId"] as? String, let peerId = Int64(peerIdString) {
-        return PeerId(peerId)
+        return (PeerId(peerId), threadId)
     } else {
         let payload = notification.request.content.userInfo
         var peerId: PeerId?
@@ -2690,7 +2718,12 @@ private func peerIdFromNotification(_ notification: UNNotification) -> PeerId? {
             let fromIdValue = fromId as! NSString
             peerId = PeerId(namespace: Namespaces.Peer.SecretChat, id: PeerId.Id._internalFromInt64Value(Int64(fromIdValue as String) ?? 0))
         }
-        return peerId
+        
+        if let peerId = peerId {
+            return (peerId, threadId)
+        } else {
+            return nil
+        }
     }
 }
 
@@ -2774,7 +2807,7 @@ final class DoubleBottomFlowContext {
             if let (id, _) = transaction.getCurrent() {
                 setAccountRecordAccessChallengeData(transaction: transaction, id: id, accessChallengeData: data)
                 
-                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout(60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
+                updatePresentationPasscodeSettingsInternal(transaction: transaction, { $0.withUpdatedAutolockTimeout($0.autolockTimeout ?? 60).withUpdatedBiometricsDomainState(LocalAuth.evaluatedPolicyDomainState) })
                 
                 UserDefaults.standard.set(id.int64 ,forKey: "DoubleBottomId")
             }

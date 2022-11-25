@@ -174,7 +174,7 @@ func uploadCustomWallpaper(context: AccountContext, wallpaper: WallpaperGalleryE
             
             let apply: () -> Void = {
                 let settings = WallpaperSettings(blur: mode.contains(.blur), motion: mode.contains(.motion), colors: [], intensity: nil)
-                let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)], settings)
+                let wallpaper: TelegramWallpaper = .image([TelegramMediaImageRepresentation(dimensions: PixelDimensions(thumbnailDimensions), resource: thumbnailResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), TelegramMediaImageRepresentation(dimensions: PixelDimensions(croppedImage.size), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)], settings)
                 updateWallpaper(wallpaper)
                 DispatchQueue.main.async {
                     completion()

@@ -175,23 +175,26 @@ final class MentionChatInputContextPanelNode: ChatInputContextPanelNode {
                                         
                                         return (textInputState, inputMode)
                                     }
-                                    var addressNames = ""
+                                    let addressNames = NSMutableAttributedString()
                                     for entry in entries {
                                         switch entry.peer {
                                         case .user(let userInfo):
-                                            if let addressName = userInfo.addressName, userInfo.botInfo == nil {
-                                                if addressNames.isEmpty {
-                                                    addressNames += addressName + " "
-                                                } else {
-                                                    addressNames += "@" + addressName + " "
-                                                }
+                                            if let addressName = userInfo.addressName, !addressName.isEmpty {
+                                                addressNames.append(NSAttributedString(string: "@\(addressName) "))
+                                            } else if let peer = entry.peer, !peer.compactDisplayTitle.isEmpty {
+                                                let appendText = NSMutableAttributedString()
+                                                appendText.append(NSAttributedString(string: peer.compactDisplayTitle, attributes: [ChatTextInputAttributes.textMention: ChatTextInputTextMentionAttribute(peerId: peer.id)]))
+                                                appendText.append(NSAttributedString(string: " "))
+                                                
+                                                addressNames.append(appendText)
                                             }
                                         default:
                                             break
                                         }
                                     }
-                                    inputText.replaceCharacters(in: range, with: addressNames)
-                                    let selectionPosition = range.lowerBound + (addressNames as NSString).length
+                                    let updatedRange = NSRange(location: range.location - 1, length: range.length + 1)
+                                    inputText.replaceCharacters(in: updatedRange, with: addressNames)
+                                    let selectionPosition = range.lowerBound + addressNames.length
                                     return (ChatTextInputState(inputText: inputText, selectionRange: selectionPosition ..< selectionPosition), inputMode)
                                 }
                                 if let addressName = peer.addressName, !addressName.isEmpty {

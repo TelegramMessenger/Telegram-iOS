@@ -1255,7 +1255,8 @@ private final class SparseItemGridBindingImpl: SparseItemGridBinding, ListShimme
                 peers: SimpleDictionary<PeerId, Peer>(),
                 associatedMessages: SimpleDictionary<MessageId, Message>(),
                 associatedMessageIds: [],
-                associatedMedia: [:]
+                associatedMedia: [:],
+                associatedThreadInfo: nil
             )
             let messageItem = ListMessageItem(
                 presentationData: self.chatPresentationData,
@@ -1594,6 +1595,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     
     private let context: AccountContext
     private let peerId: PeerId
+    private let chatLocation: ChatLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let chatControllerInteraction: ChatControllerInteraction
     private(set) var contentType: ContentType
     private var contentTypePromise: ValuePromise<ContentType>
@@ -1657,9 +1660,11 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
     private var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     
-    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, contentType: ContentType, captureProtected: Bool) {
+    init(context: AccountContext, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, contentType: ContentType, captureProtected: Bool) {
         self.context = context
         self.peerId = peerId
+        self.chatLocation = chatLocation
+        self.chatLocationContextHolder = chatLocationContextHolder
         self.chatControllerInteraction = chatControllerInteraction
         self.contentType = contentType
         self.contentTypePromise = ValuePromise<ContentType>(contentType)
@@ -1719,12 +1724,21 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             directMediaImageCache: self.directMediaImageCache,
             captureProtected: captureProtected
         )
+        
+        var threadId: Int64?
+        if case let .replyThread(message) = chatLocation {
+            threadId = Int64(message.messageId.id)
+        }
 
-        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
-        switch contentType {
-        case .photoOrVideo, .photo, .video:
-            self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, tag: tagMaskForType(self.contentType))
-        default:
+        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
+        if threadId == nil {
+            switch contentType {
+            case .photoOrVideo, .photo, .video:
+                self.calendarSource = self.context.engine.messages.sparseMessageCalendar(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
+            default:
+                self.calendarSource = nil
+            }
+        } else {
             self.calendarSource = nil
         }
         
@@ -2018,7 +2032,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
             }
             
             return context.engine.data.subscribe(EngineDataMap(
-                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: $0) }
+                summaries.map { TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: $0) }
             ))
             |> map { summaries -> (ContentType, [MessageTags: Int32]) in
                 var result: [MessageTags: Int32] = [:]
@@ -2172,8 +2186,13 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.contentTypePromise.set(contentType)
 
         self.itemGrid.hideScrollingArea()
+        
+        var threadId: Int64?
+        if case let .replyThread(message) = chatLocation {
+            threadId = Int64(message.messageId.id)
+        }
 
-        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, tag: tagMaskForType(self.contentType))
+        self.listSource = self.context.engine.messages.sparseMessageList(peerId: self.peerId, threadId: threadId, tag: tagMaskForType(self.contentType))
         self.isRequestingView = false
         self.requestHistoryAroundVisiblePosition(synchronous: true, reloadAtTop: true)
     }
@@ -2435,7 +2454,8 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
                     peers: SimpleDictionary<PeerId, Peer>(),
                     associatedMessages: SimpleDictionary<MessageId, Message>(),
                     associatedMessageIds: [],
-                    associatedMedia: [:]
+                    associatedMedia: [:],
+                    associatedThreadInfo: nil
                 )
                 let messageItem = ListMessageItem(
                     presentationData: self.itemGridBinding.chatPresentationData,

@@ -19,6 +19,8 @@ import ChatPresentationInterfaceState
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext
     private let peerId: PeerId
+    private let chatLocation: ChatLocation
+    private let chatLocationContextHolder: Atomic<ChatLocationContextHolder?>
     private let chatControllerInteraction: ChatControllerInteraction
     
     weak var parentController: ViewController?
@@ -47,6 +49,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private var playlistPreloadDisposable: Disposable?
     
     private var playlistStateAndType: (SharedMediaPlaylistItem, SharedMediaPlaylistItem?, SharedMediaPlaylistItem?, MusicPlaybackSettingsOrder, MediaManagerPlayerType, Account)?
+    private var playlistLocation: SharedMediaPlaylistLocation?
     private var mediaAccessoryPanelContainer: PassthroughContainerNode
     private var mediaAccessoryPanel: (MediaNavigationAccessoryPanel, MediaManagerPlayerType)?
     private var dismissingPanel: ASDisplayNode?
@@ -61,16 +64,18 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         return 0.0
     }
     
-    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, tagMask: MessageTags) {
+    init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, chatControllerInteraction: ChatControllerInteraction, peerId: PeerId, chatLocation: ChatLocation, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>, tagMask: MessageTags) {
         self.context = context
         self.peerId = peerId
+        self.chatLocation = chatLocation
+        self.chatLocationContextHolder = chatLocationContextHolder
+        
         self.chatControllerInteraction = chatControllerInteraction
         
         self.selectedMessages = chatControllerInteraction.selectionState.flatMap { $0.selectedIds }
         self.selectedMessagesPromise.set(.single(self.selectedMessages))
         
-        let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
-        self.listNode = ChatHistoryListNode(context: context, updatedPresentationData: updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: .peer(id: peerId), chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, hintLinks: tagMask == .webPage, isGlobalSearch: false))
+        self.listNode = ChatHistoryListNode(context: context, updatedPresentationData: updatedPresentationData ?? (context.sharedContext.currentPresentationData.with({ $0 }), context.sharedContext.presentationData), chatLocation: chatLocation, chatLocationContextHolder: chatLocationContextHolder, tagMask: tagMask, subject: nil, controllerInteraction: chatControllerInteraction, selectedMessages: self.selectedMessagesPromise.get(), mode: .list(search: false, reversed: false, displayHeaders: .allButLast, hintLinks: tagMask == .webPage, isGlobalSearch: false))
         self.listNode.clipsToBounds = true
         self.listNode.defaultToSynchronousTransactionWhileScrolling = true
         self.listNode.scroller.bounces = false
@@ -131,8 +136,10 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     
                     if let playlistStateAndType = playlistStateAndType {
                         strongSelf.playlistStateAndType = (playlistStateAndType.1.item, playlistStateAndType.1.previousItem, playlistStateAndType.1.nextItem, playlistStateAndType.1.order, playlistStateAndType.2, playlistStateAndType.0)
+                        strongSelf.playlistLocation = playlistStateAndType.1.playlistLocation
                     } else {
                         strongSelf.playlistStateAndType = nil
+                        strongSelf.playlistLocation = nil
                     }
                     
                     if let (size, topInset, sideInset, bottomInset, visibleHeight, isScrollingLockedAtTop, expandProgress, presentationData) = strongSelf.currentParams {
@@ -143,7 +150,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
         }
         
         self.statusPromise.set(context.engine.data.subscribe(
-            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, tag: tagMask)
+            TelegramEngine.EngineData.Item.Messages.MessageCount(peerId: peerId, threadId: chatLocation.threadId, tag: tagMask)
         )
         |> map { count -> PeerInfoStatusData? in
             let count: Int = count ?? 0
@@ -330,7 +337,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                     guard let strongSelf = self, let _ = strongSelf.chatControllerInteraction.navigationController(), let (state, _, _, order, type, account) = strongSelf.playlistStateAndType else {
                         return
                     }
-                    if let id = state.id as? PeerMessagesMediaPlaylistItemId {
+                    if let id = state.id as? PeerMessagesMediaPlaylistItemId, let playlistLocation = strongSelf.playlistLocation as? PeerMessagesPlaylistLocation, case let .messages(chatLocation, _, _) = playlistLocation {
                         if type == .music {
                             let signal = strongSelf.context.sharedContext.messageFromPreloadedChatHistoryViewForLocation(id: id.messageId, location: ChatHistoryLocationInput(content: .InitialSearch(location: .id(id.messageId), count: 60, highlight: true), id: 0), context: strongSelf.context, chatLocation: .peer(id: id.messageId.peerId), subject: nil, chatLocationContextHolder: Atomic<ChatLocationContextHolder?>(value: nil), tagMask: MessageTags.music)
                             
@@ -369,7 +376,7 @@ final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
                                     } else {
                                         controllerContext = strongSelf.context.sharedContext.makeTempAccountContext(account: account)
                                     }
-                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, peerId: id.messageId.peerId, type: type, initialMessageId: id.messageId, initialOrder: order, playlistLocation: nil, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
+                                    let controller = strongSelf.context.sharedContext.makeOverlayAudioPlayerController(context: controllerContext, chatLocation: chatLocation, type: type, initialMessageId: id.messageId, initialOrder: order, playlistLocation: nil, parentNavigationController: strongSelf.chatControllerInteraction.navigationController())
                                     strongSelf.view.window?.endEditing(true)
                                     strongSelf.chatControllerInteraction.presentController(controller, nil)
                                 } else if index.1 {

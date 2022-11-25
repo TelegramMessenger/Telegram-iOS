@@ -350,7 +350,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     })
                 }
             } else {
-                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId)
+                let _ = (context.engine.messages.requestWebView(peerId: controller.peerId, botId: controller.botId, url: controller.url, payload: controller.payload, themeParams: generateWebAppThemeParams(presentationData.theme), fromMenu: controller.fromMenu, replyToMessageId: controller.replyToMessageId, threadId: controller.threadId)
                 |> deliverOnMainQueue).start(next: { [weak self] result in
                     guard let strongSelf = self else {
                         return
@@ -985,6 +985,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     private let isSimple: Bool
     private let keepAliveSignal: Signal<Never, KeepWebViewError>?
     private let replyToMessageId: MessageId?
+    private let threadId: Int64?
     
     private var presentationData: PresentationData
     fileprivate let updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
@@ -994,7 +995,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
     public var getNavigationController: () -> NavigationController? = { return nil }
     public var completion: () -> Void = {}
         
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, replyToMessageId: MessageId?, threadId: Int64?) {
         self.context = context
         self.peerId = params.peerId
         self.botId = params.botId
@@ -1007,6 +1008,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
         self.isSimple = params.isSimple
         self.keepAliveSignal = params.keepAliveSignal
         self.replyToMessageId = replyToMessageId
+        self.threadId = threadId
         
         self.updatedPresentationData = updatedPresentationData
         self.presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -1116,10 +1118,22 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }, action: { [weak self] c, _ in
                     c.dismiss(completion: nil)
                     
-                    if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
-                        strongSelf.dismiss()
-                        strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: strongSelf.botId)))
+                    guard let strongSelf = self else {
+                        return
                     }
+                    
+                    let _ = (context.engine.data.get(
+                        TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.botId)
+                    )
+                    |> deliverOnMainQueue).start(next: { botPeer in
+                        guard let botPeer = botPeer else {
+                            return
+                        }
+                        if let strongSelf = self, let navigationController = strongSelf.getNavigationController() {
+                            strongSelf.dismiss()
+                            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(botPeer)))
+                        }
+                    })
                 })))
             }
             
@@ -1273,13 +1287,13 @@ private final class WebAppContextReferenceContentSource: ContextReferenceContent
     }
 }
 
-public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
-    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, makeEntityInputView: {
+public func standaloneWebAppController(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, params: WebAppParameters, threadId: Int64?, openUrl: @escaping (String) -> Void, getInputContainerNode: @escaping () -> (CGFloat, ASDisplayNode, () -> AttachmentController.InputPanelTransition?)? = { return nil }, completion: @escaping () -> Void = {}, willDismiss: @escaping () -> Void = {}, didDismiss: @escaping () -> Void = {}, getNavigationController: @escaping () -> NavigationController? = { return nil }, getSourceRect: (() -> CGRect?)? = nil) -> ViewController {
+    let controller = AttachmentController(context: context, updatedPresentationData: updatedPresentationData, chatLocation: .peer(id: params.peerId), buttons: [.standalone], initialButton: .standalone, fromMenu: params.fromMenu, hasTextInput: false, makeEntityInputView: {
         return nil
     })
     controller.getInputContainerNode = getInputContainerNode
     controller.requestController = { _, present in
-        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil)
+        let webAppController = WebAppController(context: context, updatedPresentationData: updatedPresentationData, params: params, replyToMessageId: nil, threadId: threadId)
         webAppController.openUrl = openUrl
         webAppController.completion = completion
         webAppController.getNavigationController = getNavigationController

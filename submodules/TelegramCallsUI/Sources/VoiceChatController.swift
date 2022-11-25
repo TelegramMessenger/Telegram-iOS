@@ -1694,7 +1694,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                             let context = strongSelf.context
                             strongSelf.controller?.dismiss(completion: {
                                 Queue.mainQueue().after(0.3) {
-                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), keepStack: .always, purposefulAction: {}, peekData: nil))
                                 }
                             })
                         
@@ -2671,7 +2671,13 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                             let context = strongSelf.context
                                             strongSelf.controller?.dismiss(completion: {
                                                 Queue.mainQueue().justDispatch {
-                                                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: context.account.peerId), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: context.account.peerId))
+                                                    |> deliverOnMainQueue).start(next: { peer in
+                                                        guard let peer = peer else {
+                                                            return
+                                                        }
+                                                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
+                                                    })
                                                 }
                                             })
                                             
@@ -6245,7 +6251,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.call.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
             
             self.currentUpdatingAvatar = representation
             self.updateAvatarPromise.set(.single((representation, 0.0)))
@@ -6280,7 +6286,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
             
             self.currentUpdatingAvatar = representation
             self.updateAvatarPromise.set(.single((representation, 0.0)))

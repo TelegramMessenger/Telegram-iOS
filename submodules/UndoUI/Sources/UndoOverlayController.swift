@@ -41,7 +41,8 @@ public enum UndoOverlayContent {
     case inviteRequestSent(title: String, text: String)
     case image(image: UIImage, text: String)
     case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)
-    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String)
+    case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?)
+    case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)
 }
 
 public enum UndoOverlayAction {

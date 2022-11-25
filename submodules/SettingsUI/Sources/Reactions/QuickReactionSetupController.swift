@@ -283,7 +283,7 @@ public func quickReactionSetupController(
     
     let controller = ItemListController(context: context, state: signal)
     
-    controller.didScrollWithOffset = { [weak controller] offset, transition, _ in
+    controller.didScrollWithOffset = { [weak controller] offset, transition, _, _ in
         guard let controller = controller else {
             return
         }

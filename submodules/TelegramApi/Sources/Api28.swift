@@ -1,3 +1,55 @@
+public extension Api.updates {
+    enum State: TypeConstructorDescription {
+        case state(pts: Int32, qts: Int32, date: Int32, seq: Int32, unreadCount: Int32)
+    
+    public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
+    switch self {
+                case .state(let pts, let qts, let date, let seq, let unreadCount):
+                    if boxed {
+                        buffer.appendInt32(-1519637954)
+                    }
+                    serializeInt32(pts, buffer: buffer, boxed: false)
+                    serializeInt32(qts, buffer: buffer, boxed: false)
+                    serializeInt32(date, buffer: buffer, boxed: false)
+                    serializeInt32(seq, buffer: buffer, boxed: false)
+                    serializeInt32(unreadCount, buffer: buffer, boxed: false)
+                    break
+    }
+    }
+    
+    public func descriptionFields() -> (String, [(String, Any)]) {
+        switch self {
+                case .state(let pts, let qts, let date, let seq, let unreadCount):
+                return ("state", [("pts", String(describing: pts)), ("qts", String(describing: qts)), ("date", String(describing: date)), ("seq", String(describing: seq)), ("unreadCount", String(describing: unreadCount))])
+    }
+    }
+    
+        public static func parse_state(_ reader: BufferReader) -> State? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int32?
+            _3 = reader.readInt32()
+            var _4: Int32?
+            _4 = reader.readInt32()
+            var _5: Int32?
+            _5 = reader.readInt32()
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            let _c3 = _3 != nil
+            let _c4 = _4 != nil
+            let _c5 = _5 != nil
+            if _c1 && _c2 && _c3 && _c4 && _c5 {
+                return Api.updates.State.state(pts: _1!, qts: _2!, date: _3!, seq: _4!, unreadCount: _5!)
+            }
+            else {
+                return nil
+            }
+        }
+    
+    }
+}
 public extension Api.upload {
     enum CdnFile: TypeConstructorDescription {
         case cdnFile(bytes: Buffer)

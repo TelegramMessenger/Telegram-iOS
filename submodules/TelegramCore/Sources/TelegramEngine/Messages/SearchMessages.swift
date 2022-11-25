@@ -16,6 +16,7 @@ public enum SearchMessagesLocation: Equatable {
 private struct SearchMessagesPeerState: Equatable {
     let messages: [Message]
     let readStates: [PeerId: CombinedPeerReadState]
+    let threadInfo: [MessageId: MessageHistoryThreadData]
     let totalCount: Int32
     let completed: Bool
     let nextRate: Int32?
@@ -44,12 +45,14 @@ private struct SearchMessagesPeerState: Equatable {
 
 public struct SearchMessagesResult {
     public let messages: [Message]
+    public let threadInfo:[MessageId : MessageHistoryThreadData]
     public let readStates: [PeerId: CombinedPeerReadState]
     public let totalCount: Int32
     public let completed: Bool
     
-    public init(messages: [Message], readStates: [PeerId: CombinedPeerReadState], totalCount: Int32, completed: Bool) {
+    public init(messages: [Message], readStates: [PeerId: CombinedPeerReadState], threadInfo:[MessageId : MessageHistoryThreadData], totalCount: Int32, completed: Bool) {
         self.messages = messages
+        self.threadInfo = threadInfo
         self.readStates = readStates
         self.totalCount = totalCount
         self.completed = completed
@@ -113,12 +116,25 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
     
     var peerIdsSet: Set<PeerId> = Set()
     var readStates: [PeerId: CombinedPeerReadState] = [:]
+    var threadInfo:[MessageId : MessageHistoryThreadData] = [:]
     
     var renderedMessages: [Message] = []
     for message in messages {
         if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+            let peerId = renderedMessage.id.peerId
             renderedMessages.append(renderedMessage)
-            peerIdsSet.insert(message.id.peerId)
+            peerIdsSet.insert(peerId)
+            for attribute in renderedMessage.attributes {
+                if let attribute = attribute as? ReplyMessageAttribute {
+                    if let threadMessageId = attribute.threadMessageId {
+                        let threadId = makeMessageThreadId(threadMessageId)
+                        if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                            threadInfo[renderedMessage.id] = data
+                            break
+                        }
+                    }
+                }
+            }
         }
     }
     
@@ -153,9 +169,9 @@ private func mergedState(transaction: Transaction, state: SearchMessagesPeerStat
         mergedMessages.sort(by: { lhs, rhs in
             return lhs.index > rhs.index
         })
-        return SearchMessagesPeerState(messages: mergedMessages, readStates: readStates, totalCount: completed ? Int32(mergedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
+        return SearchMessagesPeerState(messages: mergedMessages, readStates: readStates, threadInfo: threadInfo, totalCount: completed ? Int32(mergedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
     } else {
-        return SearchMessagesPeerState(messages: renderedMessages, readStates: readStates, totalCount: completed ? Int32(renderedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
+        return SearchMessagesPeerState(messages: renderedMessages, readStates: readStates, threadInfo: threadInfo, totalCount: completed ? Int32(renderedMessages.count) : totalCount, completed: completed, nextRate: nextRate)
     }
 }
 
@@ -181,7 +197,15 @@ private func mergedResult(_ state: SearchMessagesState) -> SearchMessagesResult 
         }
     }
     
-    return SearchMessagesResult(messages: messages, readStates: readStates, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
+    var threadInfo: [MessageId: MessageHistoryThreadData] = [:]
+    for message in messages {
+        let data = state.main.threadInfo[message.id] ?? state.additional?.threadInfo[message.id]
+        if let data = data {
+            threadInfo[message.id] = data
+        }
+    }
+    
+    return SearchMessagesResult(messages: messages, readStates: readStates, threadInfo: threadInfo, totalCount: state.main.totalCount + (state.additional?.totalCount ?? 0), completed: state.main.completed && (state.additional?.completed ?? true))
 }
 
 func _internal_searchMessages(account: Account, location: SearchMessagesLocation, query: String, state: SearchMessagesState?, limit: Int32 = 100) -> Signal<(SearchMessagesResult, SearchMessagesState), NoError> {
@@ -191,11 +215,27 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
             if peerId.namespace == Namespaces.Peer.SecretChat {
                 return account.postbox.transaction { transaction -> (SearchMessagesResult, SearchMessagesState) in
                     var readStates: [PeerId: CombinedPeerReadState] = [:]
+                    var threadInfo: [MessageId: MessageHistoryThreadData] = [:]
                     if let readState = transaction.getCombinedPeerReadState(peerId) {
                         readStates[peerId] = readState
                     }
                     let result = transaction.searchMessages(peerId: peerId, query: query, tags: tags)
-                    return (SearchMessagesResult(messages: result, readStates: readStates, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil))
+                    
+                    for message in result {
+                        for attribute in message.attributes {
+                            if let attribute = attribute as? ReplyMessageAttribute {
+                                if let threadMessageId = attribute.threadMessageId {
+                                    let threadId = makeMessageThreadId(threadMessageId)
+                                    if let data = transaction.getMessageHistoryThreadInfo(peerId: peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                                        threadInfo[message.id] = data
+                                        break
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    return (SearchMessagesResult(messages: result, readStates: readStates, threadInfo: threadInfo, totalCount: Int32(result.count), completed: true), SearchMessagesState(main: SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: nil))
                 }
             }
             
@@ -366,6 +406,7 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                         let secretMessages = transaction.searchMessages(peerId: nil, query: query, tags: tags)
                         var filteredMessages: [Message] = []
                         var readStates: [PeerId: CombinedPeerReadState] = [:]
+                        var threadInfo:[MessageId : MessageHistoryThreadData] = [:]
                         for message in secretMessages {
                             var match = true
                             if let minDate = minDate, message.timestamp < minDate {
@@ -379,15 +420,26 @@ func _internal_searchMessages(account: Account, location: SearchMessagesLocation
                                 if let readState = transaction.getCombinedPeerReadState(message.id.peerId) {
                                     readStates[message.id.peerId] = readState
                                 }
+                                for attribute in message.attributes {
+                                    if let attribute = attribute as? ReplyMessageAttribute {
+                                        if let threadMessageId = attribute.threadMessageId {
+                                            let threadId = makeMessageThreadId(threadMessageId)
+                                            if let data = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                                                threadInfo[message.id] = data
+                                                break
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
-                        additional = SearchMessagesPeerState(messages: filteredMessages, readStates: readStates, totalCount: Int32(filteredMessages.count), completed: true, nextRate: nil)
+                        additional = SearchMessagesPeerState(messages: filteredMessages, readStates: readStates, threadInfo: threadInfo, totalCount: Int32(filteredMessages.count), completed: true, nextRate: nil)
                     default:
                         break
                 }
             }
             
-            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
+            let updatedState = SearchMessagesState(main: mergedState(transaction: transaction, state: state?.main, result: result) ?? SearchMessagesPeerState(messages: [], readStates: [:], threadInfo: [:], totalCount: 0, completed: true, nextRate: nil), additional: additional)
             return (mergedResult(updatedState), updatedState)
         }
     }

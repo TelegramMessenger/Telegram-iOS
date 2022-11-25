@@ -100,7 +100,7 @@ public final class TelegramRootController: NavigationController {
         // MARK: Nicegram (showTabNames)
         let tabBarController = TabBarControllerImpl(navigationBarPresentationData: NavigationBarPresentationData(presentationData: self.presentationData), theme: TabBarControllerTheme(rootControllerTheme: self.presentationData.theme), showTabNames: NGSettings.showTabNames)
         tabBarController.navigationPresentation = .master
-        let chatListController = self.context.sharedContext.makeChatListController(context: self.context, groupId: .root, controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
+        let chatListController = self.context.sharedContext.makeChatListController(context: self.context, location: .chatList(groupId: .root), controlsHistoryPreload: true, hideNetworkActivityStatus: false, previewing: false, enableDebugActions: !GlobalExperimentalSettings.isAppStoreBuild)
         if let sharedContext = self.context.sharedContext as? SharedAccountContextImpl {
             chatListController.tabBarItem.badgeValue = sharedContext.switchingData.chatListBadge
         }

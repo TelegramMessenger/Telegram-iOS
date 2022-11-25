@@ -615,10 +615,14 @@ public extension Api {
         case channelAdminLogEventActionChangeStickerSet(prevStickerset: Api.InputStickerSet, newStickerset: Api.InputStickerSet)
         case channelAdminLogEventActionChangeTitle(prevValue: String, newValue: String)
         case channelAdminLogEventActionChangeUsername(prevValue: String, newValue: String)
+        case channelAdminLogEventActionChangeUsernames(prevValue: [String], newValue: [String])
+        case channelAdminLogEventActionCreateTopic(topic: Api.ForumTopic)
         case channelAdminLogEventActionDefaultBannedRights(prevBannedRights: Api.ChatBannedRights, newBannedRights: Api.ChatBannedRights)
         case channelAdminLogEventActionDeleteMessage(message: Api.Message)
+        case channelAdminLogEventActionDeleteTopic(topic: Api.ForumTopic)
         case channelAdminLogEventActionDiscardGroupCall(call: Api.InputGroupCall)
         case channelAdminLogEventActionEditMessage(prevMessage: Api.Message, newMessage: Api.Message)
+        case channelAdminLogEventActionEditTopic(prevTopic: Api.ForumTopic, newTopic: Api.ForumTopic)
         case channelAdminLogEventActionExportedInviteDelete(invite: Api.ExportedChatInvite)
         case channelAdminLogEventActionExportedInviteEdit(prevInvite: Api.ExportedChatInvite, newInvite: Api.ExportedChatInvite)
         case channelAdminLogEventActionExportedInviteRevoke(invite: Api.ExportedChatInvite)
@@ -632,9 +636,11 @@ public extension Api {
         case channelAdminLogEventActionParticipantToggleBan(prevParticipant: Api.ChannelParticipant, newParticipant: Api.ChannelParticipant)
         case channelAdminLogEventActionParticipantUnmute(participant: Api.GroupCallParticipant)
         case channelAdminLogEventActionParticipantVolume(participant: Api.GroupCallParticipant)
+        case channelAdminLogEventActionPinTopic(flags: Int32, prevTopic: Api.ForumTopic?, newTopic: Api.ForumTopic?)
         case channelAdminLogEventActionSendMessage(message: Api.Message)
         case channelAdminLogEventActionStartGroupCall(call: Api.InputGroupCall)
         case channelAdminLogEventActionStopPoll(message: Api.Message)
+        case channelAdminLogEventActionToggleForum(newValue: Api.Bool)
         case channelAdminLogEventActionToggleGroupCallSetting(joinMuted: Api.Bool)
         case channelAdminLogEventActionToggleInvites(newValue: Api.Bool)
         case channelAdminLogEventActionToggleNoForwards(newValue: Api.Bool)
@@ -708,6 +714,27 @@ public extension Api {
                     serializeString(prevValue, buffer: buffer, boxed: false)
                     serializeString(newValue, buffer: buffer, boxed: false)
                     break
+                case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
+                    if boxed {
+                        buffer.appendInt32(-263212119)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(prevValue.count))
+                    for item in prevValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    buffer.appendInt32(481674261)
+                    buffer.appendInt32(Int32(newValue.count))
+                    for item in newValue {
+                        serializeString(item, buffer: buffer, boxed: false)
+                    }
+                    break
+                case .channelAdminLogEventActionCreateTopic(let topic):
+                    if boxed {
+                        buffer.appendInt32(1483767080)
+                    }
+                    topic.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
                     if boxed {
                         buffer.appendInt32(771095562)
@@ -721,6 +748,12 @@ public extension Api {
                     }
                     message.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionDeleteTopic(let topic):
+                    if boxed {
+                        buffer.appendInt32(-1374254839)
+                    }
+                    topic.serialize(buffer, true)
+                    break
                 case .channelAdminLogEventActionDiscardGroupCall(let call):
                     if boxed {
                         buffer.appendInt32(-610299584)
@@ -733,6 +766,13 @@ public extension Api {
                     }
                     prevMessage.serialize(buffer, true)
                     newMessage.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionEditTopic(let prevTopic, let newTopic):
+                    if boxed {
+                        buffer.appendInt32(-261103096)
+                    }
+                    prevTopic.serialize(buffer, true)
+                    newTopic.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionExportedInviteDelete(let invite):
                     if boxed {
@@ -816,6 +856,14 @@ public extension Api {
                     }
                     participant.serialize(buffer, true)
                     break
+                case .channelAdminLogEventActionPinTopic(let flags, let prevTopic, let newTopic):
+                    if boxed {
+                        buffer.appendInt32(1569535291)
+                    }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {prevTopic!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {newTopic!.serialize(buffer, true)}
+                    break
                 case .channelAdminLogEventActionSendMessage(let message):
                     if boxed {
                         buffer.appendInt32(663693416)
@@ -833,6 +881,12 @@ public extension Api {
                         buffer.appendInt32(-1895328189)
                     }
                     message.serialize(buffer, true)
+                    break
+                case .channelAdminLogEventActionToggleForum(let newValue):
+                    if boxed {
+                        buffer.appendInt32(46949251)
+                    }
+                    newValue.serialize(buffer, true)
                     break
                 case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
                     if boxed {
@@ -900,14 +954,22 @@ public extension Api {
                 return ("channelAdminLogEventActionChangeTitle", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
                 case .channelAdminLogEventActionChangeUsername(let prevValue, let newValue):
                 return ("channelAdminLogEventActionChangeUsername", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                case .channelAdminLogEventActionChangeUsernames(let prevValue, let newValue):
+                return ("channelAdminLogEventActionChangeUsernames", [("prevValue", String(describing: prevValue)), ("newValue", String(describing: newValue))])
+                case .channelAdminLogEventActionCreateTopic(let topic):
+                return ("channelAdminLogEventActionCreateTopic", [("topic", String(describing: topic))])
                 case .channelAdminLogEventActionDefaultBannedRights(let prevBannedRights, let newBannedRights):
                 return ("channelAdminLogEventActionDefaultBannedRights", [("prevBannedRights", String(describing: prevBannedRights)), ("newBannedRights", String(describing: newBannedRights))])
                 case .channelAdminLogEventActionDeleteMessage(let message):
                 return ("channelAdminLogEventActionDeleteMessage", [("message", String(describing: message))])
+                case .channelAdminLogEventActionDeleteTopic(let topic):
+                return ("channelAdminLogEventActionDeleteTopic", [("topic", String(describing: topic))])
                 case .channelAdminLogEventActionDiscardGroupCall(let call):
                 return ("channelAdminLogEventActionDiscardGroupCall", [("call", String(describing: call))])
                 case .channelAdminLogEventActionEditMessage(let prevMessage, let newMessage):
                 return ("channelAdminLogEventActionEditMessage", [("prevMessage", String(describing: prevMessage)), ("newMessage", String(describing: newMessage))])
+                case .channelAdminLogEventActionEditTopic(let prevTopic, let newTopic):
+                return ("channelAdminLogEventActionEditTopic", [("prevTopic", String(describing: prevTopic)), ("newTopic", String(describing: newTopic))])
                 case .channelAdminLogEventActionExportedInviteDelete(let invite):
                 return ("channelAdminLogEventActionExportedInviteDelete", [("invite", String(describing: invite))])
                 case .channelAdminLogEventActionExportedInviteEdit(let prevInvite, let newInvite):
@@ -934,12 +996,16 @@ public extension Api {
                 return ("channelAdminLogEventActionParticipantUnmute", [("participant", String(describing: participant))])
                 case .channelAdminLogEventActionParticipantVolume(let participant):
                 return ("channelAdminLogEventActionParticipantVolume", [("participant", String(describing: participant))])
+                case .channelAdminLogEventActionPinTopic(let flags, let prevTopic, let newTopic):
+                return ("channelAdminLogEventActionPinTopic", [("flags", String(describing: flags)), ("prevTopic", String(describing: prevTopic)), ("newTopic", String(describing: newTopic))])
                 case .channelAdminLogEventActionSendMessage(let message):
                 return ("channelAdminLogEventActionSendMessage", [("message", String(describing: message))])
                 case .channelAdminLogEventActionStartGroupCall(let call):
                 return ("channelAdminLogEventActionStartGroupCall", [("call", String(describing: call))])
                 case .channelAdminLogEventActionStopPoll(let message):
                 return ("channelAdminLogEventActionStopPoll", [("message", String(describing: message))])
+                case .channelAdminLogEventActionToggleForum(let newValue):
+                return ("channelAdminLogEventActionToggleForum", [("newValue", String(describing: newValue))])
                 case .channelAdminLogEventActionToggleGroupCallSetting(let joinMuted):
                 return ("channelAdminLogEventActionToggleGroupCallSetting", [("joinMuted", String(describing: joinMuted))])
                 case .channelAdminLogEventActionToggleInvites(let newValue):
@@ -1099,6 +1165,37 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_channelAdminLogEventActionChangeUsernames(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: [String]?
+            if let _ = reader.readInt32() {
+                _1 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            var _2: [String]?
+            if let _ = reader.readInt32() {
+                _2 = Api.parseVector(reader, elementSignature: -1255641564, elementType: String.self)
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionChangeUsernames(prevValue: _1!, newValue: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionCreateTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ForumTopic?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionCreateTopic(topic: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_channelAdminLogEventActionDefaultBannedRights(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.ChatBannedRights?
             if let signature = reader.readInt32() {
@@ -1130,6 +1227,19 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_channelAdminLogEventActionDeleteTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ForumTopic?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionDeleteTopic(topic: _1!)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_channelAdminLogEventActionDiscardGroupCall(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.InputGroupCall?
             if let signature = reader.readInt32() {
@@ -1156,6 +1266,24 @@ public extension Api {
             let _c2 = _2 != nil
             if _c1 && _c2 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditMessage(prevMessage: _1!, newMessage: _2!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionEditTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.ForumTopic?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            }
+            var _2: Api.ForumTopic?
+            if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            }
+            let _c1 = _1 != nil
+            let _c2 = _2 != nil
+            if _c1 && _c2 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionEditTopic(prevTopic: _1!, newTopic: _2!)
             }
             else {
                 return nil
@@ -1328,6 +1456,27 @@ public extension Api {
                 return nil
             }
         }
+        public static func parse_channelAdminLogEventActionPinTopic(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Int32?
+            _1 = reader.readInt32()
+            var _2: Api.ForumTopic?
+            if Int(_1!) & Int(1 << 0) != 0 {if let signature = reader.readInt32() {
+                _2 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            } }
+            var _3: Api.ForumTopic?
+            if Int(_1!) & Int(1 << 1) != 0 {if let signature = reader.readInt32() {
+                _3 = Api.parse(reader, signature: signature) as? Api.ForumTopic
+            } }
+            let _c1 = _1 != nil
+            let _c2 = (Int(_1!) & Int(1 << 0) == 0) || _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 1) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionPinTopic(flags: _1!, prevTopic: _2, newTopic: _3)
+            }
+            else {
+                return nil
+            }
+        }
         public static func parse_channelAdminLogEventActionSendMessage(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
             var _1: Api.Message?
             if let signature = reader.readInt32() {
@@ -1362,6 +1511,19 @@ public extension Api {
             let _c1 = _1 != nil
             if _c1 {
                 return Api.ChannelAdminLogEventAction.channelAdminLogEventActionStopPoll(message: _1!)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_channelAdminLogEventActionToggleForum(_ reader: BufferReader) -> ChannelAdminLogEventAction? {
+            var _1: Api.Bool?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Bool
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.ChannelAdminLogEventAction.channelAdminLogEventActionToggleForum(newValue: _1!)
             }
             else {
                 return nil

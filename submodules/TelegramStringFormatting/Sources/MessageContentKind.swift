@@ -318,7 +318,7 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
         }
     case .action:
         if let message = message, let strings = strings, let nameDisplayOrder = nameDisplayOrder, let accountPeerId = accountPeerId {
-            return .text(NSAttributedString(string: plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false)?.0 ?? ""))
+            return .text(NSAttributedString(string: plainServiceMessageString(strings: strings, nameDisplayOrder: nameDisplayOrder, dateTimeFormat: dateTimeFormat ?? PresentationDateTimeFormat(timeFormat: .military, dateFormat: .dayFirst, dateSeparator: ".", dateSuffix: "", requiresFullYear: false, decimalSeparator: ".", groupingSeparator: ""), message: message, accountPeerId: accountPeerId, forChatList: false, forForumOverview: false)?.0 ?? ""))
         } else {
             return nil
         }

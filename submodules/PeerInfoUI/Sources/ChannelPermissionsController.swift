@@ -300,7 +300,7 @@ private enum ChannelPermissionsEntry: ItemListNodeEntry {
                     case let .member(_, _, _, banInfo, _):
                         var exceptionsString = ""
                         if let banInfo = banInfo {
-                            for (rights, _) in allGroupPermissionList {
+                            for (rights, _) in internal_allPossibleGroupPermissionList {
                                 if !defaultBannedRights.contains(rights) && banInfo.rights.flags.contains(rights) {
                                     if !exceptionsString.isEmpty {
                                         exceptionsString.append(", ")
@@ -336,7 +336,7 @@ private struct ChannelPermissionsControllerState: Equatable {
     var modifiedSlowmodeTimeout: Int32?
 }
 
-func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags) -> String {
+func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatBannedRightsFlags, isForum: Bool) -> String {
     if right.contains(.banSendMessages) {
         return strings.Channel_BanUser_PermissionSendMessages
     } else if right.contains(.banSendMedia) {
@@ -353,6 +353,8 @@ func stringForGroupPermission(strings: PresentationStrings, right: TelegramChatB
         return strings.Channel_BanUser_PermissionAddMembers
     } else if right.contains(.banPinMessages) {
         return strings.Channel_EditAdmin_PermissionPinMessages
+    } else if right.contains(.banManageTopics) {
+        return strings.Channel_EditAdmin_PermissionCreateTopics
     } else {
         return ""
     }
@@ -375,12 +377,14 @@ func compactStringForGroupPermission(strings: PresentationStrings, right: Telegr
         return strings.GroupPermission_NoAddMembers
     } else if right.contains(.banPinMessages) {
         return strings.GroupPermission_NoPinMessages
+    } else if right.contains(.banManageTopics) {
+        return strings.GroupPermission_NoManageTopics
     } else {
         return ""
     }
 }
 
-public let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
+private let internal_allPossibleGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] = [
     (.banSendMessages, .banMembers),
     (.banSendMedia, .banMembers),
     (.banSendGifs, .banMembers),
@@ -388,8 +392,36 @@ public let allGroupPermissionList: [(TelegramChatBannedRightsFlags, TelegramChan
     (.banSendPolls, .banMembers),
     (.banAddMembers, .banMembers),
     (.banPinMessages, .pinMessages),
+    (.banManageTopics, .manageTopics),
     (.banChangeInfo, .changeInfo)
 ]
+
+public func allGroupPermissionList(peer: EnginePeer) -> [(TelegramChatBannedRightsFlags, TelegramChannelPermission)] {
+    if case let .channel(channel) = peer, channel.flags.contains(.isForum) {
+        return [
+            (.banSendMessages, .banMembers),
+            (.banSendMedia, .banMembers),
+            (.banSendGifs, .banMembers),
+            (.banEmbedLinks, .banMembers),
+            (.banSendPolls, .banMembers),
+            (.banAddMembers, .banMembers),
+            (.banPinMessages, .pinMessages),
+            (.banManageTopics, .manageTopics),
+            (.banChangeInfo, .changeInfo)
+        ]
+    } else {
+        return [
+            (.banSendMessages, .banMembers),
+            (.banSendMedia, .banMembers),
+            (.banSendGifs, .banMembers),
+            (.banEmbedLinks, .banMembers),
+            (.banSendPolls, .banMembers),
+            (.banAddMembers, .banMembers),
+            (.banPinMessages, .pinMessages),
+            (.banChangeInfo, .changeInfo)
+        ]
+    }
+}
 
 let publicGroupRestrictedPermissions: TelegramChatBannedRightsFlags = [
     .banPinMessages,
@@ -411,6 +443,8 @@ func groupPermissionDependencies(_ right: TelegramChatBannedRightsFlags) -> Tele
         return []
     } else if right.contains(.banPinMessages) {
         return []
+    } else if right.contains(.banManageTopics) {
+        return []
     } else {
         return []
     }
@@ -429,7 +463,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
-        for (rights, correspondingAdminRight) in allGroupPermissionList {
+        for (rights, correspondingAdminRight) in allGroupPermissionList(peer: .channel(channel)) {
             var enabled: Bool? = true
             if channel.addressName != nil && publicGroupRestrictedPermissions.contains(rights) {
                 enabled = false
@@ -442,7 +476,7 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
             if !channel.hasPermission(correspondingAdminRight) {
                 enabled = false
             }
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, enabled))
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: channel.flags.contains(.isForum)), !effectiveRightsFlags.contains(rights), rights, enabled))
             rightIndex += 1
         }
         
@@ -478,8 +512,8 @@ private func channelPermissionsControllerEntries(context: AccountContext, presen
         
         entries.append(.permissionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_SectionTitle))
         var rightIndex: Int = 0
-        for (rights, _) in allGroupPermissionList {
-            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights), !effectiveRightsFlags.contains(rights), rights, true))
+        for (rights, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
+            entries.append(.permission(presentationData.theme, rightIndex, stringForGroupPermission(strings: presentationData.strings, right: rights, isForum: false), !effectiveRightsFlags.contains(rights), rights, true))
             rightIndex += 1
         }
         
@@ -582,7 +616,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                         effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
                     } else {
                         effectiveRightsFlags.insert(rights)
-                        for (right, _) in allGroupPermissionList {
+                        for (right, _) in allGroupPermissionList(peer: .channel(channel)) {
                             if groupPermissionDependencies(right).contains(rights) {
                                 effectiveRightsFlags.insert(right)
                             }
@@ -612,7 +646,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
                         effectiveRightsFlags = effectiveRightsFlags.subtracting(groupPermissionDependencies(rights))
                     } else {
                         effectiveRightsFlags.insert(rights)
-                        for (right, _) in allGroupPermissionList {
+                        for (right, _) in allGroupPermissionList(peer: .legacyGroup(group)) {
                             if groupPermissionDependencies(right).contains(rights) {
                                 effectiveRightsFlags.insert(right)
                             }
@@ -714,7 +748,7 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
             guard let channel = view.peers[view.peerId] as? TelegramChannel else {
                 return
             }
-            for (listRight, permission) in allGroupPermissionList {
+            for (listRight, permission) in allGroupPermissionList(peer: .channel(channel)) {
                 if listRight == right {
                     let text: String
                     let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
@@ -929,9 +963,15 @@ public func channelPermissionsController(context: AccountContext, updatedPresent
         }
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
-        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
-        }
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+            }
+        })
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)

@@ -101,7 +101,7 @@ public func standaloneUploadedImage(account: Account, peerId: PeerId, text: Stri
                     |> mapToSignal { result -> Signal<StandaloneUploadMediaEvent, StandaloneUploadMediaError> in
                         switch result {
                             case let .encryptedFile(id, accessHash, size, dcId, _):
-                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: Int64(data.count), datacenterId: Int(dcId), key: key), progressiveSizes: [], immediateThumbnailData: nil)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
+                                return .single(.result(.media(.standalone(media: TelegramMediaImage(imageId: MediaId(namespace: Namespaces.Media.LocalImage, id: Int64.random(in: Int64.min ... Int64.max)), representations: [TelegramMediaImageRepresentation(dimensions: dimensions, resource: SecretFileMediaResource(fileId: id, accessHash: accessHash, containerSize: size, decryptedSize: Int64(data.count), datacenterId: Int(dcId), key: key), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)], immediateThumbnailData: nil, reference: nil, partialReference: nil, flags: [])))))
                             case .encryptedFileEmpty:
                                 return .fail(.generic)
                         }

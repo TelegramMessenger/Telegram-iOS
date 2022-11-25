@@ -205,8 +205,10 @@ public func quickRepliesController(context: AccountContext) -> ViewController {
                 if let firstItem = state.items.first,
                    firstItem.text.isEmpty {
                 } else {
-                    let reply = QuickReply(id: UUID().uuidString, telegramUserId: context.account.peerId.id._internalGetInt64Value(), text: "", createdAt: Date(), updatedAt: Date())
+                    let id = UUID().uuidString
+                    let reply = QuickReply(id: id, telegramUserId: context.account.peerId.id._internalGetInt64Value(), text: "", createdAt: Date(), updatedAt: Date())
                     state.items.insert(reply, at: 0)
+                    state.focusPresetId = id
                 }
                 return state
             }

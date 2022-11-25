@@ -1,19 +1,22 @@
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import AppBundle
 
 final class PeerInfoScreenSwitchItem: PeerInfoScreenItem {
     let id: AnyHashable
     let text: String
     let value: Bool
     let icon: UIImage?
+    let isLocked: Bool
     let toggled: ((Bool) -> Void)?
     
-    init(id: AnyHashable, text: String, value: Bool, icon: UIImage? = nil, toggled: ((Bool) -> Void)?) {
+    init(id: AnyHashable, text: String, value: Bool, icon: UIImage? = nil, isLocked: Bool = false, toggled: ((Bool) -> Void)?) {
         self.id = id
         self.text = text
         self.value = value
         self.icon = icon
+        self.isLocked = isLocked
         self.toggled = toggled
     }
     
@@ -28,7 +31,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
     private let iconNode: ASImageNode
     private let textNode: ImmediateTextNode
     private let switchNode: SwitchNode
+    private var lockedIconNode: ASImageNode?
     private let bottomSeparatorNode: ASDisplayNode
+    private var lockedButtonNode: HighlightableButtonNode?
     private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenSwitchItem?
@@ -91,12 +96,51 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         
         let firstTime = self.item == nil
         
+        var updateLockedIconImage = false
+        if item.isLocked {
+            let lockedIconNode: ASImageNode
+            if let current = self.lockedIconNode {
+                lockedIconNode = current
+            } else {
+                updateLockedIconImage = true
+                lockedIconNode = ASImageNode()
+                self.lockedIconNode = lockedIconNode
+                self.insertSubnode(lockedIconNode, aboveSubnode: self.switchNode)
+            }
+            
+        } else if let lockedIconNode = self.lockedIconNode {
+            self.lockedIconNode = nil
+            lockedIconNode.removeFromSupernode()
+        }
+        
+        if item.isLocked {
+            self.switchNode.isUserInteractionEnabled = false
+            if self.lockedButtonNode == nil {
+                let lockedButtonNode = HighlightableButtonNode()
+                self.lockedButtonNode = lockedButtonNode
+                self.insertSubnode(lockedButtonNode, aboveSubnode: self.switchNode)
+                lockedButtonNode.addTarget(self, action: #selector(self.lockedButtonPressed), forControlEvents: .touchUpInside)
+            }
+        } else {
+            if let lockedButtonNode = self.lockedButtonNode {
+                self.lockedButtonNode = nil
+                lockedButtonNode.removeFromSupernode()
+            }
+            self.switchNode.isUserInteractionEnabled = true
+        }
+        
         if self.theme !== presentationData.theme {
             self.theme = presentationData.theme
             
             self.switchNode.frameColor = presentationData.theme.list.itemSwitchColors.frameColor
             self.switchNode.contentColor = presentationData.theme.list.itemSwitchColors.contentColor
             self.switchNode.handleColor = presentationData.theme.list.itemSwitchColors.handleColor
+            
+            updateLockedIconImage = true
+        }
+        
+        if updateLockedIconImage, let lockedIconNode = self.lockedIconNode, let image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: presentationData.theme.list.itemSecondaryTextColor) {
+            lockedIconNode.image = image
         }
         
         self.item = item
@@ -143,9 +187,16 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
             }
             let switchSize = switchView.bounds.size
             
-            self.switchNode.frame = CGRect(origin: CGPoint(x: width - switchSize.width - 15.0 - safeInsets.right, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
+            let switchFrame = CGRect(origin: CGPoint(x: width - switchSize.width - 15.0 - safeInsets.right, y: floor((height - switchSize.height) / 2.0)), size: switchSize)
+            self.switchNode.frame = switchFrame
             if switchView.isOn != item.value {
                 switchView.setOn(item.value, animated: !firstTime)
+            }
+            
+            self.lockedButtonNode?.frame = switchFrame
+            
+            if let lockedIconNode = self.lockedIconNode, let icon = lockedIconNode.image {
+                lockedIconNode.frame = CGRect(origin: CGPoint(x: switchFrame.minX + 10.0 + UIScreenPixel, y: switchFrame.minY + 9.0), size: icon.size)
             }
         }
         
@@ -167,5 +218,9 @@ private final class PeerInfoScreenSwitchItemNode: PeerInfoScreenItemNode {
         self.activateArea.frame = CGRect(origin: CGPoint(x: safeInsets.left, y: 0.0), size: CGSize(width: width - safeInsets.left - safeInsets.right, height: height))
         
         return height
+    }
+    
+    @objc private func lockedButtonPressed() {
+        self.item?.toggled?(self.switchNode.isOn)
     }
 }

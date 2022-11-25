@@ -1,6 +1,6 @@
 import Postbox
 
-public final class EngineChatList {
+public final class EngineChatList: Equatable {
     public enum Group {
         case root
         case archive
@@ -17,7 +17,7 @@ public final class EngineChatList {
         case earlier(than: EngineChatList.Item.Index?)
     }
     
-    public struct Draft {
+    public struct Draft: Equatable {
         public var text: String
         public var entities: [MessageTextEntity]
         
@@ -26,46 +26,178 @@ public final class EngineChatList {
             self.entities = entities
         }
     }
+    
+    public struct ForumTopicData: Equatable {
+        public var title: String
+        public let iconFileId: Int64?
+        public let iconColor: Int32
+        public var maxOutgoingReadMessageId: EngineMessage.Id
+        
+        public init(title: String, iconFileId: Int64?, iconColor: Int32, maxOutgoingReadMessageId: EngineMessage.Id) {
+            self.title = title
+            self.iconFileId = iconFileId
+            self.iconColor = iconColor
+            self.maxOutgoingReadMessageId = maxOutgoingReadMessageId
+        }
+    }
 
-    public final class Item {
-        public typealias Index = ChatListIndex
+    public final class Item: Equatable {
+        public enum Id: Hashable {
+            case chatList(EnginePeer.Id)
+            case forum(Int64)
+        }
+        
+        public enum PinnedIndex: Equatable, Comparable {
+            case none
+            case index(Int)
+            
+            public static func <(lhs: PinnedIndex, rhs: PinnedIndex) -> Bool {
+                switch lhs {
+                case .none:
+                    switch rhs {
+                    case .none:
+                        return false
+                    case .index:
+                        return false
+                    }
+                case let .index(lhsValue):
+                    switch rhs {
+                    case .none:
+                        return true
+                    case let .index(rhsValue):
+                        return lhsValue >= rhsValue
+                    }
+                }
+            }
+        }
+        
+        public enum Index: Equatable, Comparable {
+            public typealias ChatList = ChatListIndex
+            
+            case chatList(ChatListIndex)
+            case forum(pinnedIndex: PinnedIndex, timestamp: Int32, threadId: Int64, namespace: EngineMessage.Id.Namespace, id: EngineMessage.Id.Id)
+            
+            public static func <(lhs: Index, rhs: Index) -> Bool {
+                switch lhs {
+                case let .chatList(lhsIndex):
+                    if case let .chatList(rhsIndex) = rhs {
+                        return lhsIndex < rhsIndex
+                    } else {
+                        return true
+                    }
+                case let .forum(lhsPinnedIndex, lhsTimestamp, lhsThreadId, lhsNamespace, lhsId):
+                    if case let .forum(rhsPinnedIndex, rhsTimestamp, rhsThreadId, rhsNamespace, rhsId) = rhs {
+                        if lhsPinnedIndex != rhsPinnedIndex {
+                            return lhsPinnedIndex < rhsPinnedIndex
+                        }
+                        if lhsTimestamp != rhsTimestamp {
+                            return lhsTimestamp < rhsTimestamp
+                        }
+                        if lhsThreadId != rhsThreadId {
+                            return lhsThreadId < rhsThreadId
+                        }
+                        if lhsNamespace != rhsNamespace {
+                            return lhsNamespace < rhsNamespace
+                        }
+                        return lhsId < rhsId
+                    } else {
+                        return false
+                    }
+                }
+            }
+        }
 
+        public let id: Id
         public let index: Index
         public let messages: [EngineMessage]
         public let readCounters: EnginePeerReadCounters?
         public let isMuted: Bool
         public let draft: Draft?
+        public let threadData: MessageHistoryThreadData?
         public let renderedPeer: EngineRenderedPeer
         public let presence: EnginePeer.Presence?
         public let hasUnseenMentions: Bool
         public let hasUnseenReactions: Bool
+        public let forumTopicData: ForumTopicData?
         public let hasFailed: Bool
         public let isContact: Bool
 
         public init(
+            id: Id,
             index: Index,
             messages: [EngineMessage],
             readCounters: EnginePeerReadCounters?,
             isMuted: Bool,
             draft: Draft?,
+            threadData: MessageHistoryThreadData?,
             renderedPeer: EngineRenderedPeer,
             presence: EnginePeer.Presence?,
             hasUnseenMentions: Bool,
             hasUnseenReactions: Bool,
+            forumTopicData: ForumTopicData?,
             hasFailed: Bool,
             isContact: Bool
         ) {
+            self.id = id
             self.index = index
             self.messages = messages
             self.readCounters = readCounters
             self.isMuted = isMuted
             self.draft = draft
+            self.threadData = threadData
             self.renderedPeer = renderedPeer
             self.presence = presence
             self.hasUnseenMentions = hasUnseenMentions
             self.hasUnseenReactions = hasUnseenReactions
+            self.forumTopicData = forumTopicData
             self.hasFailed = hasFailed
             self.isContact = isContact
+        }
+        
+        public static func ==(lhs: Item, rhs: Item) -> Bool {
+            if lhs.id != rhs.id {
+                return false
+            }
+            if lhs.index != rhs.index {
+                return false
+            }
+            if lhs.messages != rhs.messages {
+                return false
+            }
+            if lhs.readCounters != rhs.readCounters {
+                return false
+            }
+            if lhs.isMuted != rhs.isMuted {
+                return false
+            }
+            if lhs.draft != rhs.draft {
+                return false
+            }
+            if lhs.threadData != rhs.threadData {
+                return false
+            }
+            if lhs.renderedPeer != rhs.renderedPeer {
+                return false
+            }
+            if lhs.presence != rhs.presence {
+                return false
+            }
+            if lhs.hasUnseenMentions != rhs.hasUnseenMentions {
+                return false
+            }
+            if lhs.hasUnseenReactions != rhs.hasUnseenReactions {
+                return false
+            }
+            if lhs.forumTopicData != rhs.forumTopicData {
+                return false
+            }
+            if lhs.hasFailed != rhs.hasFailed {
+                return false
+            }
+            if lhs.isContact != rhs.isContact {
+                return false
+            }
+            return true
         }
     }
 
@@ -127,9 +259,9 @@ public final class EngineChatList {
         }
     }
 
-    public final class AdditionalItem {
-        public final class PromoInfo {
-            public enum Content {
+    public final class AdditionalItem: Equatable {
+        public final class PromoInfo: Equatable {
+            public enum Content: Equatable {
                 case proxy
                 case psa(type: String, message: String?)
             }
@@ -138,6 +270,14 @@ public final class EngineChatList {
 
             public init(content: Content) {
                 self.content = content
+            }
+            
+            public static func ==(lhs: PromoInfo, rhs: PromoInfo) -> Bool {
+                if lhs.content != rhs.content {
+                    return false
+                }
+                
+                return true
             }
         }
 
@@ -148,6 +288,17 @@ public final class EngineChatList {
             self.item = item
             self.promoInfo = promoInfo
         }
+        
+        public static func ==(lhs: AdditionalItem, rhs: AdditionalItem) -> Bool {
+            if lhs.item != rhs.item {
+                return false
+            }
+            if lhs.promoInfo != rhs.promoInfo {
+                return false
+            }
+            
+            return true
+        }
     }
 
     public let items: [Item]
@@ -157,7 +308,7 @@ public final class EngineChatList {
     public let hasLater: Bool
     public let isLoading: Bool
 
-    init(
+    public init(
         items: [Item],
         groupItems: [GroupItem],
         additionalItems: [AdditionalItem],
@@ -171,6 +322,29 @@ public final class EngineChatList {
         self.hasEarlier = hasEarlier
         self.hasLater = hasLater
         self.isLoading = isLoading
+    }
+    
+    public static func ==(lhs: EngineChatList, rhs: EngineChatList) -> Bool {
+        if lhs.items != rhs.items {
+            return false
+        }
+        if lhs.groupItems != rhs.groupItems {
+            return false
+        }
+        if lhs.additionalItems != rhs.additionalItems {
+            return false
+        }
+        if lhs.hasEarlier != rhs.hasEarlier {
+            return false
+        }
+        if lhs.hasLater != rhs.hasLater {
+            return false
+        }
+        if lhs.isLoading != rhs.isLoading {
+            return false
+        }
+        
+        return true
     }
 }
 
@@ -199,17 +373,23 @@ public extension EngineChatList.RelativePosition {
     init(_ position: ChatListRelativePosition) {
         switch position {
         case let .earlier(than):
-            self = .earlier(than: than)
+            self = .earlier(than: than.flatMap(EngineChatList.Item.Index.chatList))
         case let .later(than):
-            self = .later(than: than)
+            self = .later(than: than.flatMap(EngineChatList.Item.Index.chatList))
         }
     }
 
-    func _asPosition() -> ChatListRelativePosition {
+    func _asPosition() -> ChatListRelativePosition? {
         switch self {
         case let .earlier(than):
+            guard case let .chatList(than) = than else {
+                return nil
+            }
             return .earlier(than: than)
         case let .later(than):
+            guard case let .chatList(than) = than else {
+                return nil
+            }
             return .later(than: than)
         }
     }
@@ -218,7 +398,7 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, hasFailed, isContact):
             var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -244,16 +424,26 @@ extension EngineChatList.Item {
                 hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
             }
             
+            var forumTopicDataValue: EngineChatList.ForumTopicData?
+            if let forumTopicData = forumTopicData?.data.get(MessageHistoryThreadData.self) {
+                forumTopicDataValue = EngineChatList.ForumTopicData(title: forumTopicData.info.title, iconFileId: forumTopicData.info.icon, iconColor: forumTopicData.info.iconColor, maxOutgoingReadMessageId: MessageId(peerId: index.messageIndex.id.peerId, namespace: Namespaces.Message.Cloud, id: forumTopicData.maxOutgoingReadId))
+            }
+            
+            let readCounters = readState.flatMap(EnginePeerReadCounters.init)
+
             self.init(
-                index: index,
+                id: .chatList(index.messageIndex.id.peerId),
+                index: .chatList(index),
                 messages: messages.map(EngineMessage.init),
-                readCounters: readState.flatMap(EnginePeerReadCounters.init),
+                readCounters: readCounters,
                 isMuted: isRemovedFromTotalUnreadCount,
                 draft: draft,
+                threadData: nil,
                 renderedPeer: EngineRenderedPeer(renderedPeer),
                 presence: presence.flatMap(EnginePeer.Presence.init),
                 hasUnseenMentions: hasUnseenMentions,
                 hasUnseenReactions: hasUnseenReactions,
+                forumTopicData: forumTopicDataValue,
                 hasFailed: hasFailed,
                 isContact: isContact
             )

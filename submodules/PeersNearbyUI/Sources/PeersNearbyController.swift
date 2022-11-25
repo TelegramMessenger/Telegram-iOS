@@ -615,7 +615,7 @@ public func peersNearbyController(context: AccountContext) -> ViewController {
     }
     navigateToChatImpl = { [weak controller] peer in
         if let navigationController = controller?.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peer.id), keepStack: .always, purposefulAction: {}, peekData: nil))
+            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always, purposefulAction: {}, peekData: nil))
         }
     }
     pushControllerImpl = { [weak controller] c in

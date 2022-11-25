@@ -27,10 +27,10 @@ final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContent
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
+    override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, CGSize?, CGFloat, (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let contentNodeLayout = self.contentNode.asyncLayout()
         
-        return { item, layoutConstants, preparePosition, _, constrainedSize in
+        return { item, layoutConstants, preparePosition, _, constrainedSize, _ in
             var messageEntities: [MessageTextEntity]?
             
             for attribute in item.message.attributes {
@@ -40,7 +40,7 @@ final class ChatMessageEventLogPreviousLinkContentNode: ChatMessageBubbleContent
                 }
             }
             
-            let title: String = item.presentationData.strings.Channel_AdminLog_MessagePreviousLink
+            let title: String = item.message.text.contains("\n") ? item.presentationData.strings.Channel_AdminLog_MessagePreviousLinks : item.presentationData.strings.Channel_AdminLog_MessagePreviousLink
             let text: String = item.message.text
             let mediaAndFlags: (Media, ChatMessageAttachedContentNodeMediaFlags)? = nil
             

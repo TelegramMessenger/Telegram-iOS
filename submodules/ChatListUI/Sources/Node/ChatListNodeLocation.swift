@@ -4,11 +4,12 @@ import TelegramCore
 import SwiftSignalKit
 import Display
 import TelegramUIPreferences
+import AccountContext
 
 enum ChatListNodeLocation: Equatable {
     case initial(count: Int, filter: ChatListFilter?)
-    case navigation(index: ChatListIndex, filter: ChatListFilter?)
-    case scroll(index: ChatListIndex, sourceIndex: ChatListIndex, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
+    case navigation(index: EngineChatList.Item.Index, filter: ChatListFilter?)
+    case scroll(index: EngineChatList.Item.Index, sourceIndex: EngineChatList.Item.Index, scrollPosition: ListViewScrollPosition, animated: Bool, filter: ChatListFilter?)
     
     var filter: ChatListFilter? {
         switch self {
@@ -23,7 +24,7 @@ enum ChatListNodeLocation: Equatable {
 }
 
 struct ChatListNodeViewUpdate {
-    let view: ChatListView
+    let list: EngineChatList
     let type: ViewUpdateType
     let scrollPosition: ChatListNodeViewScrollPosition?
 }
@@ -109,25 +110,30 @@ public func chatListFilterPredicate(filter: ChatListFilterData) -> ChatListFilte
     })
 }
 
-func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
-    let filterPredicate: ChatListFilterPredicate?
-    if let filter = location.filter, case let .filter(_, _, _, data) = filter {
-        filterPredicate = chatListFilterPredicate(filter: data)
-    } else {
-        filterPredicate = nil
-    }
-    
-    switch location {
+func chatListViewForLocation(chatListLocation: ChatListControllerLocation, location: ChatListNodeLocation, account: Account) -> Signal<ChatListNodeViewUpdate, NoError> {
+    switch chatListLocation {
+    case let .chatList(groupId):
+        let filterPredicate: ChatListFilterPredicate?
+        if let filter = location.filter, case let .filter(_, _, _, data) = filter {
+            filterPredicate = chatListFilterPredicate(filter: data)
+        } else {
+            filterPredicate = nil
+        }
+        
+        switch location {
         case let .initial(count, _):
             let signal: Signal<(ChatListView, ViewUpdateType), NoError>
-            signal = account.viewTracker.tailChatListView(groupId: groupId, filterPredicate: filterPredicate, count: count)
+            signal = account.viewTracker.tailChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, count: count)
             return signal
             |> map { view, updateType -> ChatListNodeViewUpdate in
-                return ChatListNodeViewUpdate(view: view, type: updateType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: updateType, scrollPosition: nil)
             }
         case let .navigation(index, _):
+            guard case let .chatList(index) = index else {
+                return .never()
+            }
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 if first {
@@ -136,13 +142,17 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(view: view, type: genericType, scrollPosition: nil)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: nil)
             }
         case let .scroll(index, sourceIndex, scrollPosition, animated, _):
-            let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > index ? .Down : .Up
+            guard case let .chatList(index) = index else {
+                return .never()
+            }
+            
+            let directionHint: ListViewScrollToItemDirectionHint = sourceIndex > .chatList(index) ? .Down : .Up
             let chatScrollPosition: ChatListNodeViewScrollPosition = .index(index: index, position: scrollPosition, directionHint: directionHint, animated: animated)
             var first = true
-            return account.viewTracker.aroundChatListView(groupId: groupId, filterPredicate: filterPredicate, index: index, count: 80)
+            return account.viewTracker.aroundChatListView(groupId: groupId._asGroup(), filterPredicate: filterPredicate, index: index, count: 80)
             |> map { view, updateType -> ChatListNodeViewUpdate in
                 let genericType: ViewUpdateType
                 let scrollPosition: ChatListNodeViewScrollPosition? = first ? chatScrollPosition : nil
@@ -152,7 +162,133 @@ func chatListViewForLocation(groupId: PeerGroupId, location: ChatListNodeLocatio
                 } else {
                     genericType = updateType
                 }
-                return ChatListNodeViewUpdate(view: view, type: genericType, scrollPosition: scrollPosition)
+                return ChatListNodeViewUpdate(list: EngineChatList(view), type: genericType, scrollPosition: scrollPosition)
             }
+        }
+    case let .forum(peerId):
+        let viewKey: PostboxViewKey = .messageHistoryThreadIndex(
+            id: peerId,
+            summaryComponents: ChatListEntrySummaryComponents(
+                components: [
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenPersonalMessage,
+                        actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    ),
+                    ChatListEntryMessageTagSummaryKey(
+                        tag: .unseenReaction,
+                        actionType: PendingMessageActionType.readReaction
+                    ): ChatListEntrySummaryComponents.Component(
+                        tagSummary: ChatListEntryMessageTagSummaryComponent(namespace: Namespaces.Message.Cloud),
+                        actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent(namespace: Namespaces.Message.Cloud)
+                    )
+                ]
+            )
+        )
+        var isFirst = false
+        return account.postbox.combinedView(keys: [viewKey])
+        |> map { views -> ChatListNodeViewUpdate in
+            guard let view = views.views[viewKey] as? MessageHistoryThreadIndexView else {
+                preconditionFailure()
+            }
+            
+            var items: [EngineChatList.Item] = []
+            for item in view.items {
+                guard let peer = view.peer else {
+                    continue
+                }
+                guard let data = item.info.get(MessageHistoryThreadData.self) else {
+                    continue
+                }
+                
+                let defaultPeerNotificationSettings: TelegramPeerNotificationSettings = (view.peerNotificationSettings as? TelegramPeerNotificationSettings) ?? .defaultSettings
+                
+                var hasUnseenMentions = false
+                
+                var isMuted = false
+                switch data.notificationSettings.muteState {
+                case .muted:
+                    isMuted = true
+                case .unmuted:
+                    isMuted = false
+                case .default:
+                    if case .default = data.notificationSettings.muteState {
+                        if case .muted = defaultPeerNotificationSettings.muteState {
+                            isMuted = true
+                        }
+                    }
+                }
+                
+                if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                    tag: .unseenPersonalMessage,
+                    actionType: PendingMessageActionType.consumeUnseenPersonalMessage
+                )] {
+                    hasUnseenMentions = (info.tagSummaryCount ?? 0) > (info.actionsSummaryCount ?? 0)
+                }
+                
+                var hasUnseenReactions = false
+                if let info = item.tagSummaryInfo[ChatListEntryMessageTagSummaryKey(
+                    tag: .unseenReaction,
+                    actionType: PendingMessageActionType.readReaction
+                )] {
+                    hasUnseenReactions = (info.tagSummaryCount ?? 0) != 0// > (info.actionsSummaryCount ?? 0)
+                }
+                
+                let pinnedIndex: EngineChatList.Item.PinnedIndex
+                if let index = item.pinnedIndex {
+                    pinnedIndex = .index(index)
+                } else {
+                    pinnedIndex = .none
+                }
+                
+                let readCounters = EnginePeerReadCounters(state: CombinedPeerReadState(states: [(Namespaces.Message.Cloud, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: data.maxOutgoingReadId, maxKnownId: 1, count: data.incomingUnreadCount, markedUnread: false))]), isMuted: false)
+                
+                var draft: EngineChatList.Draft?
+                if let embeddedState = item.embeddedInterfaceState, let _ = embeddedState.overrideChatTimestamp {
+                    if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
+                        if let text = opaqueState.synchronizeableInputState?.text {
+                            draft = EngineChatList.Draft(text: text, entities: opaqueState.synchronizeableInputState?.entities ?? [])
+                        }
+                    }
+                }
+                
+                items.append(EngineChatList.Item(
+                    id: .forum(item.id),
+                    index: .forum(pinnedIndex: pinnedIndex, timestamp: item.index.timestamp, threadId: item.id, namespace: item.index.id.namespace, id: item.index.id.id),
+                    messages: item.topMessage.flatMap { [EngineMessage($0)] } ?? [],
+                    readCounters: readCounters,
+                    isMuted: isMuted,
+                    draft: draft,
+                    threadData: data,
+                    renderedPeer: EngineRenderedPeer(peer: EnginePeer(peer)),
+                    presence: nil,
+                    hasUnseenMentions: hasUnseenMentions,
+                    hasUnseenReactions: hasUnseenReactions,
+                    forumTopicData: nil,
+                    hasFailed: false,
+                    isContact: false
+                ))
+            }
+            
+            let list = EngineChatList(
+                items: items.reversed(),
+                groupItems: [],
+                additionalItems: [],
+                hasEarlier: false,
+                hasLater: false,
+                isLoading: view.isLoading
+            )
+            
+            let type: ViewUpdateType
+            if isFirst {
+                type = .Initial
+            } else {
+                type = .Generic
+            }
+            isFirst = false
+            return ChatListNodeViewUpdate(list: list, type: type, scrollPosition: nil)
+        }
     }
 }

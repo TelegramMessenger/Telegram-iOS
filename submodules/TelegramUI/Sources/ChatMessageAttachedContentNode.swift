@@ -338,7 +338,10 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
             }
             var viewCount: Int?
             var dateReplies = 0
-            let dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+            var dateReactionsAndPeers = mergedMessageReactionsAndPeers(accountPeer: associatedData.accountPeer, message: message)
+            if message.isRestricted(platform: "ios", contentSettings: context.currentContentSettings.with { $0 }) {
+                dateReactionsAndPeers = ([], [])
+            }
             for attribute in message.attributes {
                 if let attribute = attribute as? EditedMessageAttribute {
                     edited = !attribute.isHidden
@@ -531,7 +534,7 @@ final class ChatMessageAttachedContentNode: ASDisplayNode {
                     } else if file.isInstantVideo {
                         let displaySize = CGSize(width: 212.0, height: 212.0)
                         let automaticDownload = shouldDownloadMediaAutomatically(settings: automaticDownloadSettings, peerType: associatedData.automaticDownloadPeerType, networkType: associatedData.automaticDownloadNetworkType, authorPeerId: message.author?.id, contactsPeerIds: associatedData.contactsPeerIds, media: file)
-                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(context: context, controllerInteraction: controllerInteraction, message: message, topMessage: message, read: messageRead, chatLocation: chatLocation, presentationData: presentationData, associatedData: associatedData, attributes: attributes, isItemPinned: message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, displaySize, displaySize, 0.0, .bubble, automaticDownload)
+                        let (videoLayout, apply) = contentInstantVideoLayout(ChatMessageBubbleContentItem(context: context, controllerInteraction: controllerInteraction, message: message, topMessage: message, read: messageRead, chatLocation: chatLocation, presentationData: presentationData, associatedData: associatedData, attributes: attributes, isItemPinned: message.tags.contains(.pinned) && !isReplyThread, isItemEdited: false), constrainedSize.width - horizontalInsets.left - horizontalInsets.right, displaySize, displaySize, 0.0, .bubble, automaticDownload, 0.0)
                         initialWidth = videoLayout.contentSize.width + videoLayout.overflowLeft + videoLayout.overflowRight
                         contentInstantVideoSizeAndApply = (videoLayout, apply)
                     } else if file.isVideo {

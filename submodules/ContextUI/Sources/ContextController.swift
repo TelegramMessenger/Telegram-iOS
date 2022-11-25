@@ -1606,7 +1606,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                     let isInitialLayout = self.actionsContainerNode.frame.size.width.isZero
                     let previousContainerFrame = self.view.convert(self.contentContainerNode.frame, from: self.scrollNode.view)
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, presentation: .inline, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1708,7 +1708,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedActionsBottomInset = 0.0
                     }
                     
-                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: constrainedActionsHeight, transition: actionsContainerTransition)
+                    let realActionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, presentation: .inline, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: constrainedActionsHeight, transition: actionsContainerTransition)
                     let adjustedActionsSize = realActionsSize
 
                     self.actionsContainerNode.updateSize(containerSize: realActionsSize, contentSize: realActionsSize)
@@ -1867,7 +1867,7 @@ private final class ContextControllerNode: ViewControllerTracingNode, UIScrollVi
                         constrainedWidth = floor(layout.size.width / 2.0)
                     }
                     
-                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
+                    let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, presentation: .inline, constrainedWidth: constrainedWidth - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: actionsContainerTransition)
                     let contentScale = (constrainedWidth - actionsSideInset * 2.0) / constrainedWidth
                     var contentUnscaledSize: CGSize
                     if case .compact = layout.metrics.widthClass {
@@ -2357,7 +2357,8 @@ public final class ContextController: ViewController, StandalonePresentableContr
         case textSelection
         case messageViewsPrivacy
         case messageCopyProtection(isChannel: Bool)
-        case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?,  file: TelegramMediaFile?, action: (() -> Void)?)
+        case animatedEmoji(text: String?, arguments: TextNodeWithEntities.Arguments?, file: TelegramMediaFile?, action: (() -> Void)?)
+        case notificationTopicExceptions(text: String, action: (() -> Void)?)
         
         public static func ==(lhs: Tip, rhs: Tip) -> Bool {
             switch lhs {
@@ -2387,6 +2388,12 @@ public final class ContextController: ViewController, StandalonePresentableContr
                     if file?.fileId != rhsFile?.fileId {
                         return false
                     }
+                    return true
+                } else {
+                    return false
+                }
+            case let .notificationTopicExceptions(text, _):
+                if case .notificationTopicExceptions(text, _) = rhs {
                     return true
                 } else {
                     return false

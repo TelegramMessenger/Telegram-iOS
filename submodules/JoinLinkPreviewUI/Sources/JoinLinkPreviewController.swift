@@ -22,14 +22,14 @@ public final class JoinLinkPreviewController: ViewController {
     private let link: String
     private var isRequest = false
     private var isGroup = false
-    private let navigateToPeer: (EnginePeer.Id, ChatPeekTimeout?) -> Void
+    private let navigateToPeer: (EnginePeer, ChatPeekTimeout?) -> Void
     private let parentNavigationController: NavigationController?
     private var resolvedState: ExternalJoiningChatState?
     private var presentationData: PresentationData
     
     private let disposable = MetaDisposable()
     
-    public init(context: AccountContext, link: String, navigateToPeer: @escaping (EnginePeer.Id, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
+    public init(context: AccountContext, link: String, navigateToPeer: @escaping (EnginePeer, ChatPeekTimeout?) -> Void, parentNavigationController: NavigationController?, resolvedState: ExternalJoiningChatState? = nil) {
         self.context = context
         self.link = link
         self.navigateToPeer = navigateToPeer
@@ -87,11 +87,11 @@ public final class JoinLinkPreviewController: ViewController {
                             let data = JoinLinkPreviewData(isGroup: invite.participants != nil, isJoined: false)
                             strongSelf.controllerNode.setInvitePeer(image: invite.photoRepresentation, title: invite.title, memberCount: invite.participantsCount, members: invite.participants?.map({ $0 }) ?? [], data: data)
                         }
-                    case let .alreadyJoined(peerId):
-                        strongSelf.navigateToPeer(peerId, nil)
+                    case let .alreadyJoined(peer):
+                        strongSelf.navigateToPeer(peer, nil)
                         strongSelf.dismiss()
-                    case let .peek(peerId, deadline):
-                        strongSelf.navigateToPeer(peerId, ChatPeekTimeout(deadline: deadline, linkData: strongSelf.link))
+                    case let .peek(peer, deadline):
+                        strongSelf.navigateToPeer(peer, ChatPeekTimeout(deadline: deadline, linkData: strongSelf.link))
                         strongSelf.dismiss()
                     case .invalidHash:
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
@@ -139,13 +139,13 @@ public final class JoinLinkPreviewController: ViewController {
     }
     
     private func join() {
-        self.disposable.set((self.context.engine.peers.joinChatInteractively(with: self.link) |> deliverOnMainQueue).start(next: { [weak self] peerId in
+        self.disposable.set((self.context.engine.peers.joinChatInteractively(with: self.link) |> deliverOnMainQueue).start(next: { [weak self] peer in
             if let strongSelf = self {
                 if strongSelf.isRequest {
                     strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .inviteRequestSent(title: strongSelf.presentationData.strings.MemberRequests_RequestToJoinSent, text: strongSelf.isGroup ? strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionGroup : strongSelf.presentationData.strings.MemberRequests_RequestToJoinSentDescriptionChannel ), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return false }), in: .window(.root))
                 } else {
-                    if let peerId = peerId {
-                        strongSelf.navigateToPeer(peerId, nil)
+                    if let peer = peer {
+                        strongSelf.navigateToPeer(peer, nil)
                     }
                 }
                 strongSelf.dismiss()

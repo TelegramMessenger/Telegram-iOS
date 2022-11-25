@@ -5,6 +5,8 @@ import Postbox
 public enum TelegramChannelPermission {
     case sendMessages
     case pinMessages
+    case manageTopics
+    case createTopics
     case inviteMembers
     case editAllMessages
     case deleteAllMessages
@@ -66,6 +68,37 @@ public extension TelegramChannel {
                     }
                     return true
                 }
+            case .manageTopics:
+                if self.flags.contains(.isCreator) {
+                    return true
+                }
+                if self.adminRights == nil {
+                    return false
+                }
+                if let adminRights = self.adminRights, adminRights.rights.contains(.canManageTopics) {
+                    return true
+                }
+                if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banManageTopics) {
+                    return false
+                }
+                if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banManageTopics) {
+                    return false
+                }
+                return true
+            case .createTopics:
+                if self.flags.contains(.isCreator) {
+                    return true
+                }
+                if let adminRights = self.adminRights, adminRights.rights.contains(.canManageTopics) {
+                    return true
+                }
+                if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banManageTopics) {
+                    return false
+                }
+                if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banManageTopics) {
+                    return false
+                }
+                return true
             case .inviteMembers:
                 if case .broadcast = self.info {
                     if let adminRights = self.adminRights {

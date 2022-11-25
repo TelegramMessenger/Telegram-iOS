@@ -19,7 +19,7 @@ final class ChatListInputActivitiesNode: ASDisplayNode {
         self.addSubnode(self.activityNode)
     }
     
-    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
+    func asyncLayout() -> (CGSize, ChatListPresentationData, UIColor, EnginePeer.Id?, [(EnginePeer, PeerInputActivity)]) -> (CGSize, () -> Void) {
         return { [weak self] boundingSize, presentationData, color, peerId, activities in
             let strings = presentationData.strings
             

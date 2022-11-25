@@ -91,7 +91,9 @@ final class NotificationItemContainerNode: ASDisplayNode {
             var contentInsets = UIEdgeInsets(top: inset, left: inset + layout.safeInsets.left, bottom: inset, right: inset + layout.safeInsets.right)
             
             if let statusBarHeight = layout.statusBarHeight, statusBarHeight >= 39.0 {
-                if statusBarHeight >= 44.0 {
+                if layout.deviceMetrics.hasDynamicIsland {
+                    contentInsets.top = statusBarHeight
+                } else if statusBarHeight >= 44.0 {
                     contentInsets.top += 34.0
                 } else {
                     contentInsets.top += 29.0

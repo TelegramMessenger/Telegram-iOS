@@ -75,6 +75,12 @@ public struct PresentationResourcesChat {
         })
     }
     
+    public static func chatPanelLockIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatPanelLockIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Accessory Panels/TextLockIcon"), color: theme.rootController.navigationBar.controlColor)
+        })
+    }
+    
     public static func chatTitleMuteIcon(_ theme: PresentationTheme) -> UIImage? {
         return theme.image(PresentationResourceKey.chatTitleMuteIcon.rawValue, { theme in
             return generateImage(CGSize(width: 9.0, height: 9.0), rotatedContext: { size, context in

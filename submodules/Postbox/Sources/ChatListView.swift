@@ -10,7 +10,7 @@ public struct ChatListEntryMessageTagSummaryKey: Hashable {
     }
 }
 
-public struct ChatListEntryMessageTagSummaryComponent {
+public struct ChatListEntryMessageTagSummaryComponent: Equatable {
     public let namespace: MessageId.Namespace
     
     public init(namespace: MessageId.Namespace) {
@@ -18,7 +18,7 @@ public struct ChatListEntryMessageTagSummaryComponent {
     }
 }
 
-public struct ChatListEntryPendingMessageActionsSummaryComponent {
+public struct ChatListEntryPendingMessageActionsSummaryComponent: Equatable {
     public let namespace: MessageId.Namespace
     
     public init(namespace: MessageId.Namespace) {
@@ -26,8 +26,8 @@ public struct ChatListEntryPendingMessageActionsSummaryComponent {
     }
 }
 
-public struct ChatListEntrySummaryComponents {
-    public struct Component {
+public struct ChatListEntrySummaryComponents: Equatable {
+    public struct Component: Equatable {
         public let tagSummary: ChatListEntryMessageTagSummaryComponent?
         public let actionsSummary: ChatListEntryPendingMessageActionsSummaryComponent?
         
@@ -101,12 +101,12 @@ public struct ChatListGroupReferenceEntry: Equatable {
 }
 
 public enum ChatListEntry: Comparable {
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], hasFailed: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: ChatListViewReadState?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, summaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: StoredMessageHistoryThreadInfo?, hasFailed: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     public var index: ChatListIndex {
         switch self {
-            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -115,9 +115,9 @@ public enum ChatListEntry: Comparable {
 
     public static func ==(lhs: ChatListEntry, rhs: ChatListEntry) -> Bool {
         switch lhs {
-            case let .MessageEntry(lhsIndex, lhsMessages, lhsReadState, lhsIsRemovedFromTotalUnreadCount, lhsEmbeddedState, lhsPeer, lhsPresence, lhsInfo, lhsHasFailed, lhsIsContact):
+            case let .MessageEntry(lhsIndex, lhsMessages, lhsReadState, lhsIsRemovedFromTotalUnreadCount, lhsEmbeddedState, lhsPeer, lhsPresence, lhsInfo, lhsForumTopicData, lhsHasFailed, lhsIsContact):
                 switch rhs {
-                    case let .MessageEntry(rhsIndex, rhsMessages, rhsReadState, rhsIsRemovedFromTotalUnreadCount, rhsEmbeddedState, rhsPeer, rhsPresence, rhsInfo, rhsHasFailed, rhsIsContact):
+                    case let .MessageEntry(rhsIndex, rhsMessages, rhsReadState, rhsIsRemovedFromTotalUnreadCount, rhsEmbeddedState, rhsPeer, rhsPresence, rhsInfo, rhsForumTopicData, rhsHasFailed, rhsIsContact):
                         if lhsIndex != rhsIndex {
                             return false
                         }
@@ -155,6 +155,9 @@ public enum ChatListEntry: Comparable {
                         if lhsInfo != rhsInfo {
                             return false
                         }
+                        if lhsForumTopicData != rhsForumTopicData {
+                            return false
+                        }
                         if lhsHasFailed != rhsHasFailed {
                             return false
                         }
@@ -179,26 +182,9 @@ public enum ChatListEntry: Comparable {
     }
 }
 
-/*private func processedChatListEntry(_ entry: MutableChatListEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) -> MutableChatListEntry {
-    switch entry {
-        case let .IntermediateMessageEntry(index, messageIndex):
-            var updatedMessage = message
-            if let message = message, let cachedData = cachedDataTable.get(message.id.peerId), let associatedHistoryMessageId = cachedData.associatedHistoryMessageId, message.id.id == 1 {
-                if let messageIndex = messageHistoryTable.messageHistoryIndexTable.earlierEntries(id: associatedHistoryMessageId, count: 1).first {
-                    if let associatedMessage = messageHistoryTable.getMessage(messageIndex) {
-                        updatedMessage = associatedMessage
-                    }
-                }
-            }
-            return .IntermediateMessageEntry(index, updatedMessage, readState, embeddedState)
-        default:
-            return entry
-    }
-}*/
-
 enum MutableChatListEntry: Equatable {
     case IntermediateMessageEntry(index: ChatListIndex, messageIndex: MessageIndex?)
-    case MessageEntry(index: ChatListIndex, messages: [Message], readState: CombinedPeerReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], hasFailedMessages: Bool, isContact: Bool)
+    case MessageEntry(index: ChatListIndex, messages: [Message], readState: ChatListViewReadState?, notificationSettings: PeerNotificationSettings?, isRemovedFromTotalUnreadCount: Bool, embeddedInterfaceState: StoredPeerChatInterfaceState?, renderedPeer: RenderedPeer, presence: PeerPresence?, tagSummaryInfo: [ChatListEntryMessageTagSummaryKey: ChatListMessageTagSummaryInfo], forumTopicData: StoredMessageHistoryThreadInfo?, hasFailedMessages: Bool, isContact: Bool)
     case HoleEntry(ChatListHole)
     
     init(_ intermediateEntry: ChatListIntermediateEntry, cachedDataTable: CachedPeerDataTable, readStateTable: MessageHistoryReadStateTable, messageHistoryTable: MessageHistoryTable) {
@@ -214,7 +200,7 @@ enum MutableChatListEntry: Equatable {
         switch self {
             case let .IntermediateMessageEntry(index, _):
                 return index
-            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _):
+            case let .MessageEntry(index, _, _, _, _, _, _, _, _, _, _, _):
                 return index
             case let .HoleEntry(hole):
                 return ChatListIndex(pinningIndex: nil, messageIndex: hole.index)
@@ -389,6 +375,16 @@ func renderAssociatedMediaForPeers(postbox: PostboxImpl, peers: [PeerId: Peer]) 
     return result
 }
 
+public struct ChatListViewReadState: Equatable {
+    public var state: CombinedPeerReadState
+    public var isMuted: Bool
+    
+    public init(state: CombinedPeerReadState, isMuted: Bool) {
+        self.state = state
+        self.isMuted = isMuted
+    }
+}
+
 final class MutableChatListView {
     let groupId: PeerGroupId
     let filterPredicate: ChatListFilterPredicate?
@@ -503,11 +499,19 @@ final class MutableChatListView {
                             }
                             
                             let renderedPeer = RenderedPeer(peerId: peer.id, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers))
-                            let isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                            
+                            let isUnread: Bool
+                            if postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                let hasUnmutedUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
+                                isUnread = hasUnmutedUnread
+                            } else {
+                                isUnread = postbox.readStateTable.getCombinedState(peer.id)?.isUnread ?? false
+                            }
+                            
                             renderedPeers.append(ChatListGroupReferencePeer(peer: renderedPeer, isUnread: isUnread))
                             
                             if foundIndices.count == 1 && message == nil {
-                                message = postbox.messageHistoryTable.getMessage(messageIndex).flatMap({ postbox.messageHistoryTable.renderMessage($0, peerTable: postbox.peerTable) })
+                                message = postbox.messageHistoryTable.getMessage(messageIndex).flatMap({ postbox.messageHistoryTable.renderMessage($0, peerTable: postbox.peerTable, threadIndexTable: postbox.messageHistoryThreadIndexTable) })
                             }
                         }
                     }
@@ -573,7 +577,14 @@ final class MutableChatListView {
                     for i in 0 ..< self.groupEntries.count {
                         for j in 0 ..< groupEntries[i].renderedPeers.count {
                             if transaction.alteredInitialPeerCombinedReadStates[groupEntries[i].renderedPeers[j].peer.peerId] != nil {
-                                let isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
+                                
+                                let isUnread: Bool
+                                if let peer = groupEntries[i].renderedPeers[j].peer.peer, postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                                    isUnread = postbox.peerThreadsSummaryTable.get(peerId: peer.id)?.hasUnmutedUnread ?? false
+                                } else {
+                                    isUnread = postbox.readStateTable.getCombinedState(groupEntries[i].renderedPeers[j].peer.peerId)?.isUnread ?? false
+                                }
+                                
                                 if isUnread != groupEntries[i].renderedPeers[j].isUnread {
                                     var renderedPeers = self.groupEntries[i].renderedPeers
                                     renderedPeers[j] = ChatListGroupReferencePeer(peer: groupEntries[i].renderedPeers[j].peer, isUnread: isUnread)
@@ -655,7 +666,30 @@ final class MutableChatListView {
                 }
             }
             
-            return .MessageEntry(index: index, messages: renderedMessages, readState: postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId), notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers)), presence: presence, tagSummaryInfo: [:], hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
+            var forumTopicData: StoredMessageHistoryThreadInfo?
+            if let message = renderedMessages.first, let threadId = message.threadId {
+                forumTopicData = postbox.messageHistoryThreadIndexTable.get(peerId: message.id.peerId, threadId: threadId)
+            }
+            
+            let readState: ChatListViewReadState?
+            if let peer = postbox.peerTable.get(index.messageIndex.id.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                let summary = postbox.peerThreadsSummaryTable.get(peerId: index.messageIndex.id.peerId)
+                var count: Int32 = 0
+                var isMuted: Bool = false
+                if let summary = summary {
+                    count = summary.totalUnreadCount
+                    if count > 0 {
+                        isMuted = !summary.hasUnmutedUnread
+                    }
+                }
+                readState = ChatListViewReadState(state: CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 0, maxOutgoingReadId: 0, maxKnownId: 0, count: count, markedUnread: false))]), isMuted: isMuted)
+            } else {
+                readState = postbox.readStateTable.getCombinedState(index.messageIndex.id.peerId).flatMap { state -> ChatListViewReadState in
+                    return ChatListViewReadState(state: state, isMuted: false)
+                }
+            }
+            
+            return .MessageEntry(index: index, messages: renderedMessages, readState: readState, notificationSettings: notificationSettings, isRemovedFromTotalUnreadCount: false, embeddedInterfaceState: postbox.peerChatInterfaceStateTable.get(index.messageIndex.id.peerId), renderedPeer: RenderedPeer(peerId: index.messageIndex.id.peerId, peers: peers, associatedMedia: renderAssociatedMediaForPeers(postbox: postbox, peers: peers)), presence: presence, tagSummaryInfo: [:], forumTopicData: forumTopicData, hasFailedMessages: postbox.messageHistoryFailedTable.contains(peerId: index.messageIndex.id.peerId), isContact: isContact)
         default:
             return nil
         }
@@ -684,8 +718,8 @@ public final class ChatListView {
         var entries: [ChatListEntry] = []
         for entry in mutableView.sampledState.entries {
             switch entry {
-            case let .MessageEntry(index, messages, combinedReadState, _, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
-                entries.append(.MessageEntry(index: index, messages: messages, readState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, hasFailed: hasFailed, isContact: isContact))
+            case let .MessageEntry(index, messages, combinedReadState, _, isRemovedFromTotalUnreadCount, embeddedState, peer, peerPresence, summaryInfo, forumTopicData, hasFailed, isContact):
+                entries.append(.MessageEntry(index: index, messages: messages, readState: combinedReadState, isRemovedFromTotalUnreadCount: isRemovedFromTotalUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, forumTopicData: forumTopicData, hasFailed: hasFailed, isContact: isContact))
             case let .HoleEntry(hole):
                 entries.append(.HoleEntry(hole))
             case .IntermediateMessageEntry:
@@ -702,9 +736,9 @@ public final class ChatListView {
         var additionalItemEntries: [ChatListAdditionalItemEntry] = []
         for entry in mutableView.additionalItemEntries {
             switch entry.entry {
-            case let .MessageEntry(index, messages, combinedReadState, _, isExcludedFromUnreadCount, embeddedState, peer, peerPresence, summaryInfo, hasFailed, isContact):
+            case let .MessageEntry(index, messages, combinedReadState, _, isExcludedFromUnreadCount, embeddedState, peer, peerPresence, summaryInfo, forumTopicData, hasFailed, isContact):
                 additionalItemEntries.append(ChatListAdditionalItemEntry(
-                    entry: .MessageEntry(index: index, messages: messages, readState: combinedReadState, isRemovedFromTotalUnreadCount: isExcludedFromUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, hasFailed: hasFailed, isContact: isContact),
+                    entry: .MessageEntry(index: index, messages: messages, readState: combinedReadState, isRemovedFromTotalUnreadCount: isExcludedFromUnreadCount, embeddedInterfaceState: embeddedState, renderedPeer: peer, presence: peerPresence, summaryInfo: summaryInfo, forumTopicData: forumTopicData, hasFailed: hasFailed, isContact: isContact),
                     info: entry.info
                 ))
             case .HoleEntry:

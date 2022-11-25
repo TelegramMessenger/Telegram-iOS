@@ -15,7 +15,7 @@ import AccountContext
 import ChatMessageBackground
 
 private class MediaPickerSelectedItemNode: ASDisplayNode {
-    let asset: TGMediaAsset
+    let asset: TGMediaEditableItem
     private let interaction: MediaPickerInteraction?
     
     private let imageNode: ImageNode
@@ -53,7 +53,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
     private var videoDuration: Double?
     
-    init(asset: TGMediaAsset, interaction: MediaPickerInteraction?) {
+    init(asset: TGMediaEditableItem, interaction: MediaPickerInteraction?) {
         self.imageNode = ImageNode()
         self.imageNode.contentMode = .scaleAspectFill
         self.imageNode.clipsToBounds = true
@@ -91,7 +91,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
                     if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
                         duration = adjustments.trimEndValue - adjustments.trimStartValue
                     } else {
-                        duration = asset.videoDuration
+                        duration = asset.originalDuration ?? 0.0
                     }
                     strongSelf.videoDuration = duration
                     
@@ -114,6 +114,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     }
     
     @objc private func tap() {
+        guard let asset = self.asset as? TGMediaSelectableItem else {
+            return
+        }
         self.interaction?.openSelectedMedia(asset, self.imageNode.image)
     }
     
@@ -142,14 +145,33 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         if let adjustments = self.interaction?.editingState.adjustments(for: self.asset), adjustments.cropApplied(forAvatar: false) {
             dimensions = adjustments.cropRect.size
         } else {
-            dimensions = self.asset.dimensions
+            dimensions = self.asset.originalSize ?? CGSize()
         }
         
         let scale = min(2.0, UIScreenScale)
         let scaledDimensions = dimensions.aspectFilled(CGSize(width: 320.0, height: 320.0))
         let targetSize = CGSize(width: scaledDimensions.width * scale, height: scaledDimensions.height * scale)
         
-        let originalSignal = assetImage(asset: self.asset.backingAsset, targetSize: targetSize, exact: false)
+        let originalSignal: Signal<UIImage?, NoError>
+        if let asset = self.asset as? TGMediaAsset {
+            originalSignal = assetImage(asset: asset.backingAsset, targetSize: targetSize, exact: false)
+        } else {
+            let asset = self.asset
+            originalSignal = Signal<UIImage?, NoError> { subscriber in
+                let disposable = asset.screenImageSignal?(0.0).start(next: { next in
+                    if let next = next as? UIImage {
+                        subscriber.putNext(next)
+                    }
+                }, error: { _ in
+                }, completed: {
+                    subscriber.putCompletion()
+                })
+                
+                return ActionDisposable {
+                    disposable?.dispose()
+                }
+            }
+        }
         let imageSignal: Signal<UIImage?, NoError> = editedSignal
         |> mapToSignal { result in
             if let result = result {
@@ -166,8 +188,8 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         if self.checkNode == nil, let _ = self.interaction?.selectionState, let theme = self.theme {
             let checkNode = InteractiveCheckNode(theme: CheckNodeTheme(theme: theme, style: .overlay))
             checkNode.valueChanged = { [weak self] value in
-                if let strongSelf = self, let interaction = strongSelf.interaction {
-                    interaction.toggleSelection(strongSelf.asset, value, true)
+                if let strongSelf = self, let interaction = strongSelf.interaction, let selectableItem = strongSelf.asset as? TGMediaSelectableItem {
+                    interaction.toggleSelection(selectableItem, value, true)
                 }
             }
             self.addSubnode(checkNode)
@@ -178,9 +200,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             }
         }
         
-        if let interaction = self.interaction, let selectionState = interaction.selectionState, let identifier = self.asset.uniqueIdentifier {
-            let selected = selectionState.isIdentifierSelected(identifier)
-            let index = selectionState.index(of: self.asset)
+        if let interaction = self.interaction, let selectionState = interaction.selectionState, let selectableItem = self.asset as? TGMediaSelectableItem {
+            let selected = selectionState.isIdentifierSelected(selectableItem.uniqueIdentifier)
+            let index = selectionState.index(of: selectableItem)
             if index != NSNotFound {
                 self.checkNode?.content = .counter(Int(index))
             }
@@ -379,6 +401,7 @@ private class MessageBackgroundNode: ASDisplayNode {
 
 final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
     private let context: AccountContext
+    private let persistentItems: Bool
     
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
     private let scrollNode: ASScrollNode
@@ -398,8 +421,10 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
     private var didSetReady = false
     private var ready = Promise<Bool>()
     
-    init(context: AccountContext) {
+    init(context: AccountContext, persistentItems: Bool) {
         self.context = context
+        self.persistentItems = persistentItems
+        
         self.wallpaperBackgroundNode = createWallpaperBackgroundNode(context: context, forChatDisplay: true, useSharedAnimationPhase: false, useExperimentalImplementation: context.sharedContext.immediateExperimentalUISettings.experimentalBackground)
         self.wallpaperBackgroundNode.backgroundColor = .black
         self.scrollNode = ASScrollNode()
@@ -421,7 +446,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         self.scrollNode.view.panGestureRecognizer.cancelsTouchesInView = true
         self.scrollNode.view.showsVerticalScrollIndicator = false
         
-        self.view.addGestureRecognizer(ReorderingGestureRecognizer(shouldBegin: { [weak self] point in
+        self.view.addGestureRecognizer(ReorderingGestureRecognizer(animateOnTouch: !self.persistentItems, shouldBegin: { [weak self] point in
             if let strongSelf = self, !strongSelf.scrollNode.view.isDragging && strongSelf.itemNodes.count > 1 {
                 let point = strongSelf.view.convert(point, to: strongSelf.scrollNode.view)
                 for (_, itemNode) in strongSelf.itemNodes {
@@ -611,8 +636,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
                     }
                 }
                 
-                if let targetNode = targetNode, let targetIndex = self.interaction?.selectionState?.index(of: targetNode.asset) {
-                    self.interaction?.selectionState?.move(itemNode.asset, to: targetIndex)
+                if let targetNode = targetNode, let sourceItem = itemNode.asset as? TGMediaSelectableItem, let targetItem = targetNode.asset as? TGMediaSelectableItem, let targetIndex = self.interaction?.selectionState?.index(of: targetItem) {
+                    self.interaction?.selectionState?.move(sourceItem, to: targetIndex)
                 }
                 reorderNode.animateCompletion(completion: { [weak reorderNode] in
                     reorderNode?.removeFromSupernode()
@@ -647,7 +672,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         
         var validIds: [String] = []
         for item in items {
-            guard let asset = item as? TGMediaAsset, let identifier = asset.uniqueIdentifier else {
+            guard let asset = item as? TGMediaEditableItem, let identifier = asset.uniqueIdentifier else {
                 continue
             }
             
@@ -671,7 +696,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             if let adjustments = self.interaction?.editingState.adjustments(for: asset), adjustments.cropApplied(forAvatar: false) {
                 itemSizes.append(adjustments.cropRect.size)
             } else {
-                itemSizes.append(asset.dimensions)
+                itemSizes.append(asset.originalSize ?? CGSize())
             }
         }
         
@@ -728,14 +753,14 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         
         let peerId = PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1))
         var peers = SimpleDictionary<PeerId, Peer>()
-        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
         
         let previewText = groupLayouts.count > 1 ? presentationData.strings.Attachment_MessagesPreview : presentationData.strings.Attachment_MessagePreview
         
-        let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: previewText, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+        let previewMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: previewText, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         let previewItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [previewMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
         
-        let dragMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:])
+        let dragMessage = Message(stableId: 0, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 0), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 0, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [TelegramMediaAction(action: .customText(text: presentationData.strings.Attachment_DragToReorder, entities: []))], peers: peers, associatedMessages: SimpleDictionary(), associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         let dragItem = self.context.sharedContext.makeChatMessagePreviewItem(context: context, messages: [dragMessage], theme: theme, strings: presentationData.strings, wallpaper: wallpaper, fontSize: presentationData.chatFontSize, chatBubbleCorners: bubbleCorners, dateTimeFormat: presentationData.dateTimeFormat, nameOrder: presentationData.nameDisplayOrder, forcedResourceStatus: nil, tapMessage: nil, clickThroughMessage: nil, backgroundNode: self.wallpaperBackgroundNode, availableReactions: nil, isCentered: true)
         
         let headerItems: [ListViewItem] = [previewItem, dragItem]
@@ -981,9 +1006,12 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
     private var initialLocation: CGPoint?
     private var longPressTimer: SwiftSignalKit.Timer?
     
+    var animateOnTouch = true
+    
     private var itemNode: MediaPickerSelectedItemNode?
     
-    public init(shouldBegin: @escaping (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, itemNode: MediaPickerSelectedItemNode?), willBegin: @escaping (CGPoint) -> Void, began: @escaping (MediaPickerSelectedItemNode) -> Void, ended: @escaping (CGPoint?) -> Void, moved: @escaping (CGPoint) -> Void) {
+    public init(animateOnTouch: Bool, shouldBegin: @escaping (CGPoint) -> (allowed: Bool, requiresLongPress: Bool, itemNode: MediaPickerSelectedItemNode?), willBegin: @escaping (CGPoint) -> Void, began: @escaping (MediaPickerSelectedItemNode) -> Void, ended: @escaping (CGPoint?) -> Void, moved: @escaping (CGPoint) -> Void) {
+        self.animateOnTouch = animateOnTouch
         self.shouldBegin = shouldBegin
         self.willBegin = willBegin
         self.began = began
@@ -1048,7 +1076,7 @@ private class ReorderingGestureRecognizer: UIGestureRecognizer {
             if let location = touches.first?.location(in: self.view) {
                 let (allowed, requiresLongPress, itemNode) = self.shouldBegin(location)
                 if allowed {
-                    if let itemNode = itemNode {
+                    if let itemNode = itemNode, self.animateOnTouch {
                         itemNode.layer.animateScale(from: 1.0, to: 0.98, duration: 0.2, delay: 0.1)
                     }
                     self.itemNode = itemNode

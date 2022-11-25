@@ -486,9 +486,16 @@ public func groupStickerPackSetupController(context: AccountContext, updatedPres
         presentControllerImpl?(StickerPackScreen(context: context, updatedPresentationData: updatedPresentationData, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller?.navigationController as? NavigationController), nil)
     }
     navigateToChatControllerImpl = { [weak controller] peerId in
-        if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
-            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId)))
-        }
+        let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+        |> deliverOnMainQueue).start(next: { peer in
+            guard let peer = peer else {
+                return
+            }
+            
+            if let controller = controller, let navigationController = controller.navigationController as? NavigationController {
+                context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer)))
+            }
+        })
     }
     dismissImpl = { [weak controller] in
         dismissInputImpl?()

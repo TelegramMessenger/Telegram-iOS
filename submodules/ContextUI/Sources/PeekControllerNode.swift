@@ -172,7 +172,7 @@ final class PeekControllerNode: ViewControllerTracingNode {
         }
         
         let actionsSideInset: CGFloat = layout.safeInsets.left + 11.0
-        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: .immediate)
+        let actionsSize = self.actionsContainerNode.updateLayout(widthClass: layout.metrics.widthClass, presentation: .inline, constrainedWidth: layout.size.width - actionsSideInset * 2.0, constrainedHeight: layout.size.height, transition: .immediate)
         
         let containerFrame: CGRect
         let actionsFrame: CGRect

@@ -472,9 +472,16 @@ public final class InviteLinkViewController: ViewController {
             self.isOpaque = false
         
             self.interaction = InviteLinkViewInteraction(context: context, openPeer: { [weak self] peerId in
-                if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
-                    context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), keepStack: .always))
-                }
+                let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: peerId))
+                |> deliverOnMainQueue).start(next: { peer in
+                    guard let peer = peer else {
+                        return
+                    }
+                    
+                    if let strongSelf = self, let navigationController = strongSelf.controller?.navigationController as? NavigationController {
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), keepStack: .always))
+                    }
+                })
             }, copyLink: { [weak self] invite in
                 UIPasteboard.general.string = invite.link
                 
@@ -690,7 +697,7 @@ public final class InviteLinkViewController: ViewController {
                         if requestsState.importers.isEmpty && requestsState.isLoadingMore {
                             count = min(4, state.count)
                             loading = true
-                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
+                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
                             for i in 0 ..< count {
                                 entries.append(.request(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                             }
@@ -724,7 +731,7 @@ public final class InviteLinkViewController: ViewController {
                         if state.importers.isEmpty && state.isLoadingMore {
                             count = min(4, state.count)
                             loading = true
-                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
+                            let fakeUser = TelegramUser(id: EnginePeer.Id(namespace: .max, id: EnginePeer.Id.Id._internalFromInt64Value(0)), accessHash: nil, firstName: "", lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
                             for i in 0 ..< count {
                                 entries.append(.importer(Int32(i), presentationData.theme, presentationData.dateTimeFormat, EnginePeer.user(fakeUser), 0, true))
                             }

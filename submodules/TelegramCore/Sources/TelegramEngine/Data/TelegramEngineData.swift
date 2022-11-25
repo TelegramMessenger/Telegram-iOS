@@ -115,14 +115,14 @@ public final class EngineDataOptional<Item: TelegramEngineDataItem>: TelegramEng
     }
 
     func _extract(views: [PostboxViewKey: PostboxView]) -> Any {
-        var result: [Item.Result] = []
+        var result: Item.Result?
 
         if let item = self.item {
             let itemResult = (item as! AnyPostboxViewDataItem)._extract(views: views)
-            result.append(itemResult as! Item.Result)
+            result = (itemResult as! Item.Result)
         }
 
-        return result
+        return result as Any
     }
 }
 

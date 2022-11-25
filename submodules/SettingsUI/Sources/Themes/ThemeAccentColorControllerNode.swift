@@ -473,7 +473,7 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     for representation in file.file.previewRepresentations {
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: .wallpaper(wallpaper: .slug(file.slug), resource: representation.resource)))
                     }
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)))
                 } else if backgroundColors.count >= 2 {
                     wallpaper = .gradient(TelegramWallpaper.Gradient(id: nil, colors: backgroundColors.map { $0.rgb }, settings: WallpaperSettings(rotation: state.rotation)))
                 } else {
@@ -838,8 +838,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
     private func updateChatsLayout(layout: ContainerViewLayout, topInset: CGFloat, transition: ContainedViewLayoutTransition) {
         var items: [ChatListItem] = []
         
-        let interaction = ChatListNodeInteraction(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {}, peerSelected: { _, _, _ in }, disabledPeerSelected: { _ in }, togglePeerSelected: { _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
-        }, messageSelected: { _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, deletePeer: { _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, hidePsa: { _ in
+        let interaction = ChatListNodeInteraction(context: self.context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, activateSearch: {}, peerSelected: { _, _, _, _ in }, disabledPeerSelected: { _, _ in }, togglePeerSelected: { _, _ in }, togglePeersSelection: { _, _ in }, additionalCategorySelected: { _ in
+        }, messageSelected: { _, _, _, _ in}, groupSelected: { _ in }, addContact: { _ in }, setPeerIdWithRevealedOptions: { _, _ in }, setItemPinned: { _, _ in }, setPeerMuted: { _, _ in }, setPeerThreadMuted: { _, _, _ in }, deletePeer: { _, _ in }, deletePeerThread: { _, _ in }, setPeerThreadStopped: { _, _, _ in }, setPeerThreadPinned: { _, _, _ in }, updatePeerGrouping: { _, _ in }, togglePeerMarkedUnread: { _, _ in}, toggleArchivedFolderHiddenByDefault: {}, toggleThreadsSelection: { _, _ in }, hidePsa: { _ in
         }, activateChatPreview: { _, _, gesture, _ in
             gesture?.cancel()
         }, present: { _ in
@@ -859,9 +859,9 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             return ChatListItem(
                 presentationData: chatListPresentationData,
                 context: self.context,
-                peerGroupId: .root,
+                chatListLocation: .chatList(groupId: .root),
                 filterData: nil,
-                index: ChatListIndex(pinningIndex: isPinned ? 0 : nil, messageIndex: MessageIndex(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 0), timestamp: timestamp)),
+                index: .chatList(ChatListIndex(pinningIndex: isPinned ? 0 : nil, messageIndex: MessageIndex(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 0), timestamp: timestamp))),
                 content: .peer(
                     messages: [
                         EngineMessage(
@@ -885,10 +885,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                             peers: [:],
                             associatedMessages: [:],
                             associatedMessageIds: [],
-                            associatedMedia: [:]
+                            associatedMedia: [:],
+                            associatedThreadInfo: nil
                         )
                     ],
                     peer: EngineRenderedPeer(peer: peer),
+                    threadInfo: nil,
                     combinedReadState: EnginePeerReadCounters(incomingReadId: 1000, outgoingReadId: 1000, count: unreadCount, markedUnread: false),
                     isRemovedFromTotalUnreadCount: false,
                     presence: presenceTimestamp.flatMap { presenceTimestamp in
@@ -901,7 +903,8 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
                     promoInfo: nil,
                     ignoreUnreadBadge: false,
                     displayAsMessage: false,
-                    hasFailedMessages: false
+                    hasFailedMessages: false,
+                    forumTopicData: nil
                 ),
                 editing: false,
                 hasActiveRevealControls: false,
@@ -913,12 +916,12 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
             )
         }
 
-        let selfPeer: EnginePeer = .user(TelegramUser(id: self.context.account.peerId, accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil))
-        let peer1: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil))
-        let peer2: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_2_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil))
-        let peer3: EnginePeer = .channel(TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(3)), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil))
-        let peer3Author: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_AuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil))
-        let peer4: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil))
+        let selfPeer: EnginePeer = .user(TelegramUser(id: self.context.account.peerId, accessHash: nil, firstName: nil, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+        let peer1: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(1)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_1_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+        let peer2: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(2)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_2_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+        let peer3: EnginePeer = .channel(TelegramChannel(id: PeerId(namespace: Namespaces.Peer.CloudChannel, id: PeerId.Id._internalFromInt64Value(3)), accessHash: nil, title: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_Name, username: nil, photo: [], creationDate: 0, version: 0, participationStatus: .member, info: .group(.init(flags: [])), flags: [], restrictionInfo: nil, adminRights: nil, bannedRights: nil, defaultBannedRights: nil, usernames: []))
+        let peer3Author: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_3_AuthorName, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
+        let peer4: EnginePeer = .user(TelegramUser(id: PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(4)), accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_ChatList_4_Name, lastName: nil, username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: []))
 
         let timestamp = self.referenceTimestamp
 
@@ -1006,25 +1009,25 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let otherPeerId = self.context.account.peerId
         var peers = SimpleDictionary<PeerId, Peer>()
         var messages = SimpleDictionary<MessageId, Message>()
-        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
-        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil)
+        peers[peerId] = TelegramUser(id: peerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
+        peers[otherPeerId] = TelegramUser(id: otherPeerId, accessHash: nil, firstName: self.presentationData.strings.Appearance_ThemePreview_Chat_2_ReplyName, lastName: "", username: nil, phone: nil, photo: [], botInfo: nil, restrictionInfo: nil, flags: [], emojiStatus: nil, usernames: [])
         
         var sampleMessages: [Message] = []
         
-        let message1 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_4_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message1 = Message(stableId: 1, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 1), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66000, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_4_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message1)
         
-        let message2 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_5_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message2 = Message(stableId: 2, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 2), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66001, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_5_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message2)
         
-        let message3 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66002, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_6_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message3 = Message(stableId: 3, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 3), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66002, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_6_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message3)
         
-        let message4 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message4 = Message(stableId: 4, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 4), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66003, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_7_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         messages[message4.id] = message4
         sampleMessages.append(message4)
         
-        let message5 = Message(stableId: 5, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 5), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66004, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [ReplyMessageAttribute(messageId: message4.id, threadMessageId: nil)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message5 = Message(stableId: 5, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 5), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66004, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_1_Text, attributes: [ReplyMessageAttribute(messageId: message4.id, threadMessageId: nil)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         messages[message5.id] = message5
         sampleMessages.append(message5)
         
@@ -1032,13 +1035,13 @@ final class ThemeAccentColorControllerNode: ASDisplayNode, UIScrollViewDelegate 
         let voiceAttributes: [TelegramMediaFileAttribute] = [.Audio(isVoice: true, duration: 23, title: nil, performer: nil, waveform: Data(base64Encoded: waveformBase64)!)]
         let voiceMedia = TelegramMediaFile(fileId: MediaId(namespace: 0, id: 0), partialReference: nil, resource: LocalFileMediaResource(fileId: 0), previewRepresentations: [], videoThumbnails: [], immediateThumbnailData: nil, mimeType: "audio/ogg", size: 0, attributes: voiceAttributes)
         
-        let message6 = Message(stableId: 6, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 6), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66005, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message6 = Message(stableId: 6, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 6), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66005, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: "", attributes: [], media: [voiceMedia], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message6)
         
-        let message7 = Message(stableId: 7, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 7), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66006, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: message5.id, threadMessageId: nil)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message7 = Message(stableId: 7, stableVersion: 0, id: MessageId(peerId: peerId, namespace: 0, id: 7), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66006, flags: [.Incoming], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[peerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_2_Text, attributes: [ReplyMessageAttribute(messageId: message5.id, threadMessageId: nil)], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message7)
         
-        let message8 = Message(stableId: 8, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 8), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66007, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:])
+        let message8 = Message(stableId: 8, stableVersion: 0, id: MessageId(peerId: otherPeerId, namespace: 0, id: 8), globallyUniqueId: nil, groupingKey: nil, groupInfo: nil, threadId: nil, timestamp: 66007, flags: [], tags: [], globalTags: [], localTags: [], forwardInfo: nil, author: peers[otherPeerId], text: self.presentationData.strings.Appearance_ThemePreview_Chat_3_Text, attributes: [], media: [], peers: peers, associatedMessages: messages, associatedMessageIds: [], associatedMedia: [:], associatedThreadInfo: nil)
         sampleMessages.append(message8)
         
         items = sampleMessages.reversed().map { message in

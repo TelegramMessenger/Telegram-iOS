@@ -101,7 +101,6 @@ jobs:
       BAZEL_USER_ROOT: /private/var/tmp/_bazel_telegram
       BUILD_WORKING_DIR: /Users/telegram/build-working-dir
       BUNDLE_ID: app.nicegram
-      DISABLE_PARALLEL_SWIFTMODULE_GENERATION: 1
       KEYCHAIN_NAME: ${{ secrets.KEYCHAIN_NAME }}
       KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       MATCH_PASSWORD: ${{ secrets.SIGN_REPO_DECRYPT_PASSWORD }}

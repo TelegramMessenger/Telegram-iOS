@@ -22,16 +22,19 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
         controller.present(controllerToPresent, in: .window(.root))
     }
     
-    let openResolvedPeerImpl: (PeerId?, ChatControllerInteractionNavigateToPeer) -> Void = { [weak controller] peerId, navigation in
-        context.sharedContext.openResolvedUrl(.peer(peerId, navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), forceExternal: false, openPeer: { (peerId, navigation) in
+    let openResolvedPeerImpl: (EnginePeer?, ChatControllerInteractionNavigateToPeer) -> Void = { [weak controller] peer, navigation in
+        guard let peer = peer else {
+            return
+        }
+        context.sharedContext.openResolvedUrl(.peer(peer._asPeer(), navigation), context: context, urlContext: .generic, navigationController: (controller?.navigationController as? NavigationController), forceExternal: false, openPeer: { (peer, navigation) in
             switch navigation {
                 case let .chat(_, subject, peekData):
                     if let navigationController = controller?.navigationController as? NavigationController {
-                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: subject, keepStack: .always, peekData: peekData))
+                        context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: subject, keepStack: .always, peekData: peekData))
                     }
                 case .info:
                     let peerSignal: Signal<Peer?, NoError>
-                    peerSignal = context.account.postbox.loadedPeerWithId(peerId) |> map(Optional.init)
+                    peerSignal = context.account.postbox.loadedPeerWithId(peer.id) |> map(Optional.init)
                     navigateDisposable.set((peerSignal |> take(1) |> deliverOnMainQueue).start(next: { peer in
                         if let controller = controller, let peer = peer {
                             if let infoController = context.sharedContext.makePeerInfoController(context: context, updatedPresentationData: nil, peer: peer, mode: .generic, avatarInitiallyExpanded: false, fromChat: false, requestsContext: nil) {
@@ -55,11 +58,11 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                 switch result {
                     case let .externalUrl(url):
                         context.sharedContext.applicationBindings.openUrl(url)
-                    case let .peer(peerId, navigation):
-                        openResolvedPeerImpl(peerId, navigation)
-                    case let .channelMessage(peerId, messageId, timecode):
+                    case let .peer(peer, navigation):
+                        openResolvedPeerImpl(peer.flatMap(EnginePeer.init), navigation)
+                    case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = controller.navigationController as? NavigationController {
-                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(id: peerId), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
                         }
                     case let .replyThreadMessage(replyThreadMessage, messageId):
                         if let navigationController = controller.navigationController as? NavigationController {
@@ -67,14 +70,18 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                                 controller?.present(c, in: .window(.root), with: a)
                             }, messageId: replyThreadMessage.messageId, isChannelPost: replyThreadMessage.isChannelPost, atMessage: messageId, displayModalProgress: true).start()
                         }
+                    case let .replyThread(messageId):
+                        if let navigationController = controller.navigationController as? NavigationController {
+                            let _ = context.sharedContext.navigateToForumThread(context: context, peerId: messageId.peerId, threadId: Int64(messageId.id), messageId: nil, navigationController: navigationController, activateInput: nil, keepStack: .always).start()
+                        }
                     case let .stickerPack(name, _):
                         let packReference: StickerPackReference = .name(name)
                         controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .instantView(webpage, anchor):
                         (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
                     case let .join(link):
-                        controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peerId, peekData in
-                            openResolvedPeerImpl(peerId, .chat(textInputState: nil, subject: nil, peekData: peekData))
+                        controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
+                            openResolvedPeerImpl(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))
                         }, parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     default:
                         break
@@ -85,7 +92,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
     
     let openPeerMentionImpl: (String) -> Void = { mention in
         navigateDisposable.set((context.engine.peers.resolvePeerByName(name: mention, ageLimit: 10) |> take(1) |> deliverOnMainQueue).start(next: { peer in
-            openResolvedPeerImpl(peer?.id, .default)
+            openResolvedPeerImpl(peer, .default)
         }))
     }
     

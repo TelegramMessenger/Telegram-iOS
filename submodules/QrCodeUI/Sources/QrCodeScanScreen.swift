@@ -692,11 +692,11 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
         guard let navigationController = self.controller?.navigationController as? NavigationController else {
             return false
         }
-        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peerId, navigation in
+        self.context.sharedContext.openResolvedUrl(result, context: self.context, urlContext: .generic, navigationController: navigationController, forceExternal: false, openPeer: { [weak self] peer, navigation in
             guard let strongSelf = self else {
                 return
             }
-            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(id: peerId), subject: nil, keepStack: .always, peekData: nil, completion: { [weak navigationController] _ in
+            strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), subject: nil, keepStack: .always, peekData: nil, completion: { [weak navigationController] _ in
                 if let navigationController = navigationController {
                     var viewControllers = navigationController.viewControllers
                     viewControllers = viewControllers.filter { controller in

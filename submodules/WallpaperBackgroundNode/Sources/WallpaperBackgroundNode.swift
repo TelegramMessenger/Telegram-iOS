@@ -41,8 +41,11 @@ public enum WallpaperBubbleType {
 
 public protocol WallpaperBubbleBackgroundNode: ASDisplayNode {
     var frame: CGRect { get set }
-
+    
+    var implicitContentUpdate: Bool { get set }
+    
     func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition)
+    func update(rect: CGRect, within containerSize: CGSize, delay: Double, transition: ContainedViewLayoutTransition)
     func update(rect: CGRect, within containerSize: CGSize, transition: CombinedTransition)
     func update(rect: CGRect, within containerSize: CGSize, animator: ControlledTransitionAnimator)
     func offset(value: CGPoint, animationCurve: ContainedViewLayoutTransitionCurve, duration: Double)
@@ -56,6 +59,7 @@ public protocol WallpaperBackgroundNode: ASDisplayNode {
     func update(wallpaper: TelegramWallpaper)
     func _internalUpdateIsSettingUpWallpaper()
     func updateLayout(size: CGSize, transition: ContainedViewLayoutTransition)
+    func updateIsLooping(_ isLooping: Bool)
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool)
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners)
     func hasBubbleBackground(for type: WallpaperBubbleType) -> Bool
@@ -292,6 +296,8 @@ private final class EffectImageLayer: SimpleLayer, GradientBackgroundPatternOver
 
 final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode {
     final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        var implicitContentUpdate: Bool = true
+        
         private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 
@@ -305,12 +311,14 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         override var frame: CGRect {
             didSet {
                 if oldValue.size != self.bounds.size {
-                    self.contentNode.frame = self.bounds
-                    if let cleanWallpaperNode = self.cleanWallpaperNode {
-                        cleanWallpaperNode.frame = self.bounds
-                    }
-                    if let gradientWallpaperNode = self.gradientWallpaperNode {
-                        gradientWallpaperNode.frame = self.bounds
+                    if self.implicitContentUpdate  {
+                        self.contentNode.frame = self.bounds
+                        if let cleanWallpaperNode = self.cleanWallpaperNode {
+                            cleanWallpaperNode.frame = self.bounds
+                        }
+                        if let gradientWallpaperNode = self.gradientWallpaperNode {
+                            gradientWallpaperNode.frame = self.bounds
+                        }
                     }
                 }
             }
@@ -467,25 +475,29 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.update(rect: rect, within: containerSize)
             }
         }
-
+        
         func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+            self.update(rect: rect, within: containerSize, delay: 0.0, transition: transition)
+        }
+
+        func update(rect: CGRect, within containerSize: CGSize, delay: Double = 0.0, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
 
-            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds)
-            transition.animateView {
+            transition.updateFrame(layer: self.contentNode.layer, frame: self.bounds, delay: delay)
+            transition.animateView(delay: delay) {
                 self.contentNode.layer.contentsRect = shiftedContentsRect
             }
             if let cleanWallpaperNode = self.cleanWallpaperNode {
-                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds)
-                transition.animateView {
+                transition.updateFrame(layer: cleanWallpaperNode.layer, frame: self.bounds, delay: delay)
+                transition.animateView(delay: delay) {
                     cleanWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
             if let gradientWallpaperNode = self.gradientWallpaperNode {
-                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds)
-                transition.animateView {
+                transition.updateFrame(layer: gradientWallpaperNode.layer, frame: self.bounds, delay: delay)
+                transition.animateView(delay: delay) {
                     gradientWallpaperNode.layer.contentsRect = shiftedContentsRect
                 }
             }
@@ -734,6 +746,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
             gradientAngle = file.settings.rotation ?? 0
         }
 
+        var scheduleLoopingEvent = false
         if gradientColors.count >= 3 {
             let mappedColors = gradientColors.map { color -> UIColor in
                 return UIColor(rgb: color)
@@ -743,6 +756,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                 self.gradientBackgroundNode = gradientBackgroundNode
                 self.insertSubnode(gradientBackgroundNode, aboveSubnode: self.contentNode)
                 gradientBackgroundNode.setPatternOverlay(layer: self.patternImageLayer)
+                
+                if self.isLooping {
+                    scheduleLoopingEvent = true
+                }
             }
             self.gradientBackgroundNode?.updateColors(colors: mappedColors)
 
@@ -822,6 +839,10 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         if let size = self.validLayout {
             self.updateLayout(size: size, transition: .immediate)
             self.updateBubbles()
+            
+            if scheduleLoopingEvent {
+                self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
+            }
         }
     }
 
@@ -928,7 +949,7 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
                         convertedRepresentations.append(ImageRepresentationWithReference(representation: representation, reference: reference(for: EngineMediaResource(representation.resource), media: EngineMedia(file.file))))
                     }
                     let dimensions = file.file.dimensions ?? PixelDimensions(width: 2000, height: 4000)
-                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
+                    convertedRepresentations.append(ImageRepresentationWithReference(representation: .init(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false), reference: reference(for: EngineMediaResource(file.file.resource), media: EngineMedia(file.file))))
 
                     let signal = patternWallpaperImage(account: self.context.account, accountManager: self.context.sharedContext.accountManager, representations: convertedRepresentations, mode: .screen, autoFetchFullSize: true)
                     self.patternImageDisposable.set((signal
@@ -1083,11 +1104,34 @@ final class WallpaperBackgroundNodeImpl: ASDisplayNode, WallpaperBackgroundNode 
         }
     }
 
+    private var isAnimating = false
+    private var isLooping = false
+    
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
-        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
+        guard !(self.isLooping && self.isAnimating) else {
+            return
+        }
+        self.isAnimating = true
+        self.gradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
+            if let strongSelf = self {
+                strongSelf.isAnimating = false
+                if strongSelf.isLooping && strongSelf.validLayout != nil {
+                    strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
+                }
+            }
+        })
         self.outgoingBubbleGradientBackgroundNode?.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: {})
     }
 
+    func updateIsLooping(_ isLooping: Bool) {
+        let wasLooping = self.isLooping
+        self.isLooping = isLooping
+        
+        if isLooping && !wasLooping {
+            self.animateEvent(transition: .animated(duration: 0.7, curve: .linear), extendAnimation: false)
+        }
+    }
+    
     func updateBubbleTheme(bubbleTheme: PresentationTheme, bubbleCorners: PresentationChatBubbleCorners) {
         if self.bubbleTheme !== bubbleTheme || self.bubbleCorners != bubbleCorners {
             self.bubbleTheme = bubbleTheme
@@ -1204,6 +1248,8 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
     }
 
     final class BubbleBackgroundNodeImpl: ASDisplayNode, WallpaperBubbleBackgroundNode {
+        var implicitContentUpdate = true
+        
         private let bubbleType: WallpaperBubbleType
         private let contentNode: ASImageNode
 
@@ -1380,6 +1426,10 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         }
 
         func update(rect: CGRect, within containerSize: CGSize, transition: ContainedViewLayoutTransition = .immediate) {
+            self.update(rect: rect, within: containerSize, delay: 0.0, transition: transition)
+        }
+        
+        func update(rect: CGRect, within containerSize: CGSize, delay: Double, transition: ContainedViewLayoutTransition = .immediate) {
             self.currentLayout = (rect, containerSize)
 
             let shiftedContentsRect = CGRect(origin: CGPoint(x: rect.minX / containerSize.width, y: rect.minY / containerSize.height), size: CGSize(width: rect.width / containerSize.width, height: rect.height / containerSize.height))
@@ -1751,7 +1801,7 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
                 gradientSpec = WallpaperGradiendComponentView.Spec(colors: file.settings.colors)
             }
             if let dimensions = file.file.dimensions {
-                let representation = TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: file.file.immediateThumbnailData)
+                let representation = TelegramMediaImageRepresentation(dimensions: dimensions, resource: file.file.resource, progressiveSizes: [], immediateThumbnailData: file.file.immediateThumbnailData, hasVideo: false)
                 imageSpec = WallpaperImageComponentView.Spec.image(representation: representation, isPattern: file.isPattern, intensity: CGFloat(file.settings.intensity ?? 100) / 100.0)
             }
         }
@@ -1908,8 +1958,12 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
         }
     }
 
+    private var isLooping = false
     func animateEvent(transition: ContainedViewLayoutTransition, extendAnimation: Bool) {
         if let gradient = self.gradient {
+            guard !(self.isLooping && self.isAnimating) else {
+                return
+            }
             self.isAnimating = true
             self.componentsUpdated()
             gradient.gradientBackground.animateEvent(transition: transition, extendAnimation: extendAnimation, backwards: false, completion: { [weak self] in
@@ -1917,10 +1971,23 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
                     return
                 }
                 strongSelf.isAnimating = false
-                strongSelf.componentsUpdated()
+                if strongSelf.isLooping {
+                    strongSelf.animateEvent(transition: transition, extendAnimation: extendAnimation)
+                } else {
+                    strongSelf.componentsUpdated()
+                }
             })
         } else {
             self.isAnimating = false
+        }
+    }
+    
+    func updateIsLooping(_ isLooping: Bool) {
+        let wasLooping = self.isLooping
+        self.isLooping = isLooping
+        
+        if isLooping && !wasLooping {
+            self.animateEvent(transition: .animated(duration: 0.4, curve: .linear), extendAnimation: false)
         }
     }
 
