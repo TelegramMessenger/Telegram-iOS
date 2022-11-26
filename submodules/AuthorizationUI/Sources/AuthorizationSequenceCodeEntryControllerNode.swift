@@ -272,6 +272,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
         self.layoutArguments = (layout, navigationBarHeight)
         
+        let maximumWidth: CGFloat = min(430.0, layout.size.width)
+        let inset: CGFloat = 24.0
+        
         var insets = layout.insets(options: [])
         insets.top = layout.statusBarHeight ?? 20.0
                 
@@ -314,14 +317,14 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
         
-        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
-        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
-        let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
+        let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
         
-        let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
-        let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
+        let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
+        let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
         
         let codeLength: Int
         var codePrefix: String = ""
@@ -362,7 +365,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             ),
             prefix: codePrefix,
             count: codeLength,
-            width: layout.size.width - 28.0,
+            width: maximumWidth - 28.0,
             compact: layout.size.width <= 320.0
         )
         

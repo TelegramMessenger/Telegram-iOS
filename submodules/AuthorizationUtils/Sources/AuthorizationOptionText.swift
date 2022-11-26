@@ -42,7 +42,7 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
 
         return mutableString
     case .fragment:
-        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText, attributes: attributes, textAlignment: .center)
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     }
 }
 
