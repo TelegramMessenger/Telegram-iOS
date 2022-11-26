@@ -267,7 +267,7 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 timingFunction: CAMediaTimingFunctionName.easeInEaseOut.rawValue,
                 removeOnCompletion: false
             ) { [weak self, weak prevTextInputPanelNode] finished in
-                if finished, prevTextInputPanelNode?.supernode === self {
+                if prevTextInputPanelNode?.supernode === self {
                     prevTextInputPanelNode?.removeFromSupernode()
                 }
             }
