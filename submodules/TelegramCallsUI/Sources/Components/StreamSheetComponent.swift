@@ -50,7 +50,9 @@ final class StreamSheetComponent: CombinedComponent {
         if lhs.sheetHeight != rhs.sheetHeight {
             return false
         }
-        
+        if !lhs.backgroundColor.isEqual(rhs.backgroundColor) {
+            return false
+        }
         return true
     }
 //
@@ -251,7 +253,29 @@ final class ViewerCountComponent: Component {
 
 final class SheetBackgroundComponent: Component {
     private let color: UIColor
-    private let backgroundView = UIView()
+    
+    class View: UIView {
+        private let backgroundView = UIView()
+        
+        func update(availableSize: CGSize, color: UIColor) {
+            if backgroundView.superview == nil {
+                self.addSubview(backgroundView)
+            }
+            // To fix release animation
+            let extraBottom: CGFloat = 500
+            backgroundView.frame = .init(origin: .zero, size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+            backgroundView.backgroundColor = color// .withAlphaComponent(0.4)
+            backgroundView.isUserInteractionEnabled = false
+            backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
+            backgroundView.layer.cornerRadius = 16
+            backgroundView.clipsToBounds = true
+            backgroundView.layer.masksToBounds = true
+        }
+    }
+    
+    func makeView() -> View {
+        View()
+    }
     
     static func ==(lhs: SheetBackgroundComponent, rhs: SheetBackgroundComponent) -> Bool {
         if !lhs.color.isEqual(rhs.color) {
@@ -270,17 +294,8 @@ final class SheetBackgroundComponent: Component {
         self.color = color
     }
     
-    public func update(view: UIView, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        if backgroundView.superview == nil {
-            view.addSubview(backgroundView)
-        }
-        backgroundView.frame = .init(origin: .zero, size: availableSize)
-        backgroundView.backgroundColor = self.color// .withAlphaComponent(0.4)
-        backgroundView.isUserInteractionEnabled = false
-        backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-        backgroundView.layer.cornerRadius = 16
-        backgroundView.clipsToBounds = true
-        backgroundView.layer.masksToBounds = true
+    public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
+        view.update(availableSize: availableSize, color: color)
         return availableSize
     }
 }

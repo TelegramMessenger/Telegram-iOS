@@ -68,6 +68,10 @@ final class _MediaStreamVideoComponent: Component {
             return false
         }
         
+        if lhs.isFullscreen != rhs.isFullscreen {
+            return false
+        }
+        
         return true
     }
     

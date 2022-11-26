@@ -786,7 +786,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             }
             
             let background = background.update(
-                component: Rectangle(color: .black.withAlphaComponent(0.12)),
+                component: Rectangle(color: .black.withAlphaComponent(0.0)),
                 availableSize: context.availableSize,
                 transition: context.transition
             )
@@ -809,7 +809,15 @@ public final class _MediaStreamComponent: CombinedComponent {
                 state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
-            let isFullscreen = state.isFullscreen
+            var isFullscreen = state.isFullscreen
+            let isLandscape = context.availableSize.width > context.availableSize.height
+            if let videoSize = context.state.videoSize {
+                if videoSize.width > videoSize.height && isLandscape && !isFullscreen {
+                    state.isFullscreen = true
+                    isFullscreen = true
+                }
+            }
+            
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -1118,7 +1126,6 @@ public final class _MediaStreamComponent: CombinedComponent {
 //                transition: context.transition
 //            )
             
-            let isLandscape = context.availableSize.width > context.availableSize.height
             if context.state.storedIsLandscape != isLandscape {
                 context.state.storedIsLandscape = isLandscape
                 if isLandscape {
@@ -1160,7 +1167,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 // TODO: disable button instead of hiding
                 rightItem: state.hasVideo ? AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
-                        name: isLandscape ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
+                        name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
                         tintColor: .white
                     )),
                     action: {
@@ -1220,7 +1227,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 })
             )
             let videoHeight: CGFloat = context.availableSize.width / 16 * 9
-            let sheetHeight: CGFloat = (50 + 70 + 20 + 80 + videoHeight)
+            let sheetHeight: CGFloat = isFullscreen ? context.availableSize.height : (50 + 70 + 20 + 80 + videoHeight)
             let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset < 30
             
             let sheet = sheet.update(
