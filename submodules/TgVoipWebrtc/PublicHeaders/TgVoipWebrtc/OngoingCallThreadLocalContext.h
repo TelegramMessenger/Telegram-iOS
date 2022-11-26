@@ -11,6 +11,16 @@
 #define UIView NSView
 #endif
 
+@interface SharedCallAudioDevice : NSObject
+
+- (instancetype _Nonnull)init;
+
++ (void)setupAudioSession;
+
+- (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
+@end
+
 @interface OngoingCallConnectionDescriptionWebrtc : NSObject
 
 @property (nonatomic, readonly) uint8_t reflectorId;
@@ -223,7 +233,7 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
                        sendSignalingData:(void (^ _Nonnull)(NSData * _Nonnull))sendSignalingData videoCapturer:(OngoingCallThreadLocalContextVideoCapturer * _Nullable)videoCapturer
                      preferredVideoCodec:(NSString * _Nullable)preferredVideoCodec
                       audioInputDeviceId:(NSString * _Nonnull)audioInputDeviceId
-            useManualAudioSessionControl:(bool)useManualAudioSessionControl;
+                             audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
 

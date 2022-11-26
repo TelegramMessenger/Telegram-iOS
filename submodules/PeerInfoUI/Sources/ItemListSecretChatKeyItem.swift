@@ -138,10 +138,10 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
         return { item, params, neighbors in
             let rightInset: CGFloat
             switch item.disclosureStyle {
-                case .none:
-                    rightInset = 16.0 + params.rightInset
-                case .arrow:
-                    rightInset = 34.0 + params.rightInset
+            case .none:
+                rightInset = 16.0 + params.rightInset
+            case .arrow, .optionArrows:
+                rightInset = 34.0 + params.rightInset
             }
             
             var updateArrowImage: UIImage?
@@ -279,7 +279,7 @@ class ItemListSecretChatKeyItemNode: ListViewItemNode {
                     switch item.disclosureStyle {
                     case .none:
                         strongSelf.arrowNode.isHidden = true
-                    case .arrow:
+                    case .arrow, .optionArrows:
                         strongSelf.arrowNode.isHidden = false
                     }
                     

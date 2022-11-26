@@ -659,10 +659,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 hasTimer = true
             }
             
-            var hasSchedule = true
-            if controller.chatLocation?.threadId != nil {
-                hasSchedule = false
-            }
+            let hasSchedule = true
             
             self.openingMedia = true
             

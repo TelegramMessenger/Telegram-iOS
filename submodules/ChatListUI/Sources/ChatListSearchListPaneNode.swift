@@ -157,9 +157,9 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                 } else if case let .user(user) = primaryPeer {
                     let servicePeer = isServicePeer(primaryPeer._asPeer())
                     if user.flags.contains(.isSupport) && !servicePeer {
-                        status = .custom(string: strings.Bot_GenericSupportStatus, multiline: false)
+                        status = .custom(string: strings.Bot_GenericSupportStatus, multiline: false, isActive: false, icon: nil)
                     } else if let _ = user.botInfo {
-                        status = .custom(string: strings.Bot_GenericBotStatus, multiline: false)
+                        status = .custom(string: strings.Bot_GenericBotStatus, multiline: false, isActive: false, icon: nil)
                     } else if user.id != context.account.peerId && !servicePeer {
                         let presence = peer.presence ?? TelegramUserPresence(status: .none, lastActivity: 0)
                         status = .presence(EnginePeer.Presence(presence), timeFormat)
@@ -167,19 +167,19 @@ private enum ChatListRecentEntry: Comparable, Identifiable {
                         status = .none
                     }
                 } else if case let .legacyGroup(group) = primaryPeer {
-                    status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(group.participantCount)), multiline: false)
+                    status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(group.participantCount)), multiline: false, isActive: false, icon: nil)
                 } else if case let .channel(channel) = primaryPeer {
                     if case .group = channel.info {
                         if let count = peer.subpeerSummary?.count {
-                            status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(count)), multiline: false)
+                            status = .custom(string: strings.GroupInfo_ParticipantCount(Int32(count)), multiline: false, isActive: false, icon: nil)
                         } else {
-                            status = .custom(string: strings.Group_Status, multiline: false)
+                            status = .custom(string: strings.Group_Status, multiline: false, isActive: false, icon: nil)
                         }
                     } else {
                         if let count = peer.subpeerSummary?.count {
-                            status = .custom(string: strings.Conversation_StatusSubscribers(Int32(count)), multiline: false)
+                            status = .custom(string: strings.Conversation_StatusSubscribers(Int32(count)), multiline: false, isActive: false, icon: nil)
                         } else {
-                            status = .custom(string: strings.Channel_Status, multiline: false)
+                            status = .custom(string: strings.Channel_Status, multiline: false, isActive: false, icon: nil)
                         }
                     }
                 } else {
@@ -925,7 +925,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     private let presentationDataPromise = Promise<ChatListPresentationData>()
     private var searchStateValue = ChatListSearchListPaneNodeState()
     private let searchStatePromise = ValuePromise<ChatListSearchListPaneNodeState>()
-    private let searchContextValue = Atomic<ChatListSearchMessagesContext?>(value: nil)
+    private let searchContextsValue = Atomic<[Int: ChatListSearchMessagesContext]>(value: [:])
     var searchCurrentMessages: [EngineMessage]?
     var currentEntries: [ChatListSearchEntry]?
     
@@ -1081,11 +1081,11 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.addSubnode(self.shimmerNode)
         self.addSubnode(self.mediaAccessoryPanelContainer)
         
-        let searchContext = Promise<ChatListSearchMessagesContext?>(nil)
-        let searchContextValue = self.searchContextValue
-        let updateSearchContext: ((ChatListSearchMessagesContext?) -> (ChatListSearchMessagesContext?, Bool)) -> Void = { f in
+        let searchContexts = Promise<[Int: ChatListSearchMessagesContext]>([:])
+        let searchContextsValue = self.searchContextsValue
+        let updateSearchContexts: (([Int: ChatListSearchMessagesContext]) -> ([Int: ChatListSearchMessagesContext], Bool)) -> Void = { f in
             var shouldUpdate = false
-            let updated = searchContextValue.modify { current in
+            let updated = searchContextsValue.modify { current in
                 let (u, s) = f(current)
                 shouldUpdate = s
                 if s {
@@ -1095,7 +1095,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
             }
             if shouldUpdate {
-                searchContext.set(.single(updated))
+                searchContexts.set(.single(updated))
             }
         }
         
@@ -1419,32 +1419,32 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             } else {
                 foundRemotePeers = .single(([], [], false))
             }
-            let searchLocation: SearchMessagesLocation
+            let searchLocations: [SearchMessagesLocation]
             if let options = options {
                 if case let .forum(peerId) = location {
-                    searchLocation = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.date?.0, maxDate: options.date?.1)
+                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.date?.0, maxDate: options.date?.1), .general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                 } else if let (peerId, _, _) = options.peer {
-                    searchLocation = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.date?.0, maxDate: options.date?.1)
+                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: options.date?.0, maxDate: options.date?.1)]
                 } else {
                     if case let .chatList(groupId) = location, case .archive = groupId {
-                        searchLocation = .group(groupId: groupId._asGroup(), tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)
+                        searchLocations = [.group(groupId: groupId._asGroup(), tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                     } else {
-                        searchLocation = .general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)
+                        searchLocations = [.general(tags: tagMask, minDate: options.date?.0, maxDate: options.date?.1)]
                     }
                 }
             } else {
                 if case let .forum(peerId) = location {
-                    searchLocation = .peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: nil, maxDate: nil)
+                    searchLocations = [.peer(peerId: peerId, fromId: nil, tags: tagMask, topMsgId: nil, minDate: nil, maxDate: nil), .general(tags: tagMask, minDate: nil, maxDate: nil)]
                 } else if case let .chatList(groupId) = location, case .archive = groupId {
-                    searchLocation = .group(groupId: groupId._asGroup(), tags: tagMask, minDate: nil, maxDate: nil)
+                    searchLocations = [.group(groupId: groupId._asGroup(), tags: tagMask, minDate: nil, maxDate: nil)]
                 } else {
-                    searchLocation = .general(tags: tagMask, minDate: nil, maxDate: nil)
+                    searchLocations = [.general(tags: tagMask, minDate: nil, maxDate: nil)]
                 }
             }
             
             let finalQuery = query ?? ""
-            updateSearchContext { _ in
-                return (nil, true)
+            updateSearchContexts { _ in
+                return ([:], true)
             }
             let foundRemoteMessages: Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError>
             if peersFilter.contains(.doNotSearchMessages) {
@@ -1454,23 +1454,28 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     addAppLogEvent(postbox: context.account.postbox, type: "search_global_query")
                 }
                 
-                let searchSignal = context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: nil, limit: 50)
-                |> map { result, updatedState -> ChatListSearchMessagesResult in
+                let searchSignals: [Signal<(SearchMessagesResult, SearchMessagesState), NoError>] = searchLocations.map { searchLocation in
+                    return context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: nil, limit: 50)
+                }
+                
+                let searchSignal = combineLatest(searchSignals)
+                |> map { results -> ChatListSearchMessagesResult in
+                    let (result, updatedState) = results[0]
                     return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                 }
                 
-                let loadMore = searchContext.get()
-                |> mapToSignal { searchContext -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError> in
-                    if let searchContext = searchContext, searchContext.result.hasMore {
+                let loadMore = searchContexts.get()
+                |> mapToSignal { searchContexts -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError> in
+                    if let searchContext = searchContexts[0], searchContext.result.hasMore {
                         if let _ = searchContext.loadMoreIndex {
-                            return context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: searchContext.result.state, limit: 80)
+                            return context.engine.messages.searchMessages(location: searchLocations[0], query: finalQuery, state: searchContext.result.state, limit: 80)
                             |> map { result, updatedState -> ChatListSearchMessagesResult in
                                 return ChatListSearchMessagesResult(query: finalQuery, messages: result.messages.map({ EngineMessage($0) }).sorted(by: { $0.index > $1.index }), readStates: result.readStates.mapValues { EnginePeerReadCounters(state: $0, isMuted: false) }, threadInfo: result.threadInfo, hasMore: !result.completed, totalCount: result.totalCount, state: updatedState)
                             }
                             |> mapToSignal { foundMessages -> Signal<(([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool), NoError> in
-                                updateSearchContext { previous in
+                                updateSearchContexts { previous in
                                     let updated = ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil)
-                                    return (updated, true)
+                                    return ([0: updated], true)
                                 }
                                 return .complete()
                             }
@@ -1486,8 +1491,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 |> then(
                     searchSignal
                     |> map { foundMessages -> (([EngineMessage], [EnginePeer.Id: EnginePeerReadCounters], [EngineMessage.Id: MessageHistoryThreadData], Int32), Bool) in
-                        updateSearchContext { _ in
-                            return (ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil), true)
+                        updateSearchContexts { _ in
+                            return ([0: ChatListSearchMessagesContext(result: foundMessages, loadMoreIndex: nil)], true)
                         }
                         return ((foundMessages.messages, foundMessages.readStates, foundMessages.threadInfo, foundMessages.totalCount), false)
                     }
@@ -1510,7 +1515,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             })
             
             let foundThreads: Signal<[EngineChatList.Item], NoError>
-            if case .forum = location {
+            if case .forum = location, (key == .topics || key == .chats) {
                 foundThreads = chatListViewForLocation(chatListLocation: location, location: .initial(count: 1000, filter: nil), account: context.account)
                 |> map { view -> [EngineChatList.Item] in
                     var filteredItems: [EngineChatList.Item] = []
@@ -1773,7 +1778,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             }
         }
         
-        let foundMessages = searchContext.get() |> map { searchContext -> ([EngineMessage], Int32, Bool) in
+        let foundMessages = searchContexts.get() |> map { searchContexts -> ([EngineMessage], Int32, Bool) in
+            let searchContext = searchContexts[0]
             if let result = searchContext?.result {
                 return (result.messages, result.totalCount, result.hasMore)
             } else {
@@ -1782,17 +1788,17 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         }
         
         let loadMore = {
-            updateSearchContext { previous in
-                guard let previous = previous else {
-                    return (nil, false)
+            updateSearchContexts { previousMap in
+                guard let previous = previousMap[0] else {
+                    return ([:], false)
                 }
                 if previous.loadMoreIndex != nil {
-                    return (previous, false)
+                    return ([0: previous], false)
                 }
                 guard let last = previous.result.messages.last else {
-                    return (previous, false)
+                    return ([0: previous], false)
                 }
-                return (ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index), true)
+                return ([0: ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index)], true)
             }
         }
         
@@ -3302,7 +3308,7 @@ private final class ChatListSearchShimmerNode: ASDisplayNode {
                         if let itemNode = itemNodes[sampleIndex] as? ChatListItemNode {
                             if !isInlineMode {
                                 if !itemNode.avatarNode.isHidden {
-                                    context.fillEllipse(in: itemNode.avatarNode.frame.offsetBy(dx: 0.0, dy: currentY))
+                                    context.fillEllipse(in: itemNode.avatarNode.view.convert(itemNode.avatarNode.bounds, to: itemNode.view).offsetBy(dx: 0.0, dy: currentY))
                                 }
                             }
                             

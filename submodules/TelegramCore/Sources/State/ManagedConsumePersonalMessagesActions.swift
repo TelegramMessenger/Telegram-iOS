@@ -93,7 +93,7 @@ func managedConsumePersonalMessagesActions(postbox: Postbox, network: Network, s
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
         let actionsKey = PostboxViewKey.pendingMessageActions(type: .consumeUnseenPersonalMessage)
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenPersonalMessage, namespace: Namespaces.Message.Cloud)
         let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
@@ -156,7 +156,7 @@ func managedReadReactionActions(postbox: Postbox, network: Network, stateManager
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
         let actionsKey = PostboxViewKey.pendingMessageActions(type: .readReaction)
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: nil, threadId: nil, tagMask: .unseenReaction, namespace: Namespaces.Message.Cloud)
         let disposable = postbox.combinedView(keys: [actionsKey, invalidateKey]).start(next: { view in
             var entries: [PendingMessageActionsEntry] = []
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
@@ -435,11 +435,11 @@ private func synchronizeUnseenReactionsTag(postbox: Postbox, network: Network, e
     } |> switchToLatest
 }
 
-func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager) -> Signal<Void, NoError> {
+func managedSynchronizeMessageHistoryTagSummaries(postbox: Postbox, network: Network, stateManager: AccountStateManager, peerId: PeerId, threadId: Int64) -> Signal<Void, NoError> {
     return Signal { _ in
         let helper = Atomic<ManagedConsumePersonalMessagesActionsHelper>(value: ManagedConsumePersonalMessagesActionsHelper())
         
-        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(tagMask: MessageTags(rawValue: 0), namespace: Namespaces.Message.Cloud)
+        let invalidateKey = PostboxViewKey.invalidatedMessageHistoryTagSummaries(peerId: peerId, threadId: threadId, tagMask: MessageTags(rawValue: 0), namespace: Namespaces.Message.Cloud)
         let disposable = postbox.combinedView(keys: [invalidateKey]).start(next: { view in
             var invalidateEntries = Set<InvalidatedMessageHistoryTagsSummaryEntry>()
             if let v = view.views[invalidateKey] as? InvalidatedMessageHistoryTagSummariesView {
@@ -480,7 +480,7 @@ private func synchronizeMessageHistoryTagSummary(postbox: Postbox, network: Netw
         guard let threadId = entry.key.threadId else {
             return .complete()
         }
-        if let peer = transaction.getPeer(entry.key.peerId), let inputPeer = apiInputPeer(peer) {
+        if let peer = transaction.getPeer(entry.key.peerId) as? TelegramChannel, peer.flags.contains(.isForum), let inputPeer = apiInputPeer(peer) {
             return network.request(Api.functions.messages.getReplies(peer: inputPeer, msgId: Int32(clamping: threadId), offsetId: 0, offsetDate: 0, addOffset: 0, limit: 1, maxId: 0, minId: 0, hash: 0))
             |> map(Optional.init)
             |> `catch` { _ -> Signal<Api.messages.Messages?, NoError> in

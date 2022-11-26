@@ -8318,6 +8318,8 @@ Sorry for the inconvenience.";
 "Stickers.EmojiPackInfoText" = "This message contains **%@** emoji.";
 "PeerInfo.TopicIconInfoText" = "This topic's icon is from **%@**.";
 
+"AutoremoveSetup.AdditionalGlobalSettingsInfo" = "You can also set your default [self-destruct timer]() for all chats in Settings.";
+
 "Login.EnterCodeFragmentTitle" = "Enter Code";
 "Login.EnterCodeFragmentText" = "Check the Anonymous Numbers section on **Fragment** to get the code.";
 "Login.OpenFragment" = "Open Fragment";

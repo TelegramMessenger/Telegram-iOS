@@ -126,6 +126,7 @@ public final class EngineChatList: Equatable {
         public let topForumTopicItems: [EngineChatList.ForumTopicData]
         public let hasFailed: Bool
         public let isContact: Bool
+        public let autoremoveTimeout: Int32?
 
         public init(
             id: Id,
@@ -142,7 +143,8 @@ public final class EngineChatList: Equatable {
             forumTopicData: ForumTopicData?,
             topForumTopicItems: [EngineChatList.ForumTopicData],
             hasFailed: Bool,
-            isContact: Bool
+            isContact: Bool,
+            autoremoveTimeout: Int32?
         ) {
             self.id = id
             self.index = index
@@ -159,6 +161,7 @@ public final class EngineChatList: Equatable {
             self.topForumTopicItems = topForumTopicItems
             self.hasFailed = hasFailed
             self.isContact = isContact
+            self.autoremoveTimeout = autoremoveTimeout
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -205,6 +208,9 @@ public final class EngineChatList: Equatable {
                 return false
             }
             if lhs.isContact != rhs.isContact {
+                return false
+            }
+            if lhs.autoremoveTimeout != rhs.autoremoveTimeout {
                 return false
             }
             return true
@@ -408,7 +414,7 @@ public extension EngineChatList.RelativePosition {
 extension EngineChatList.Item {
     convenience init?(_ entry: ChatListEntry) {
         switch entry {
-        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, topForumTopics, hasFailed, isContact):
+        case let .MessageEntry(index, messages, readState, isRemovedFromTotalUnreadCount, embeddedState, renderedPeer, presence, tagSummaryInfo, forumTopicData, topForumTopics, hasFailed, isContact, autoremoveTimeout):
             var draft: EngineChatList.Draft?
             if let embeddedState = embeddedState, let _ = embeddedState.overrideChatTimestamp {
                 if let opaqueState = _internal_decodeStoredChatInterfaceState(state: embeddedState) {
@@ -470,7 +476,8 @@ extension EngineChatList.Item {
                 forumTopicData: forumTopicDataValue,
                 topForumTopicItems: topForumTopicItems,
                 hasFailed: hasFailed,
-                isContact: isContact
+                isContact: isContact,
+                autoremoveTimeout: autoremoveTimeout
             )
         case .HoleEntry:
             return nil

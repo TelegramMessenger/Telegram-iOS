@@ -179,6 +179,8 @@ public enum WallpaperUrlParameter {
 public enum ResolvedUrlSettingsSection {
     case theme
     case devices
+    case autoremoveMessages
+    case twoStepAuth
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
@@ -371,6 +373,17 @@ public enum ChatLocation: Equatable {
     case peer(id: PeerId)
     case replyThread(message: ChatReplyThreadMessage)
     case feed(id: Int32)
+}
+
+public extension ChatLocation {
+    var normalized: ChatLocation {
+        switch self {
+        case .peer, .feed:
+            return self
+        case let .replyThread(message):
+            return .replyThread(message: message.normalized)
+        }
+    }
 }
 
 public enum ChatControllerActivateInput {

@@ -1315,7 +1315,8 @@ private func threadList(context: AccountContext, peerId: EnginePeer.Id) -> Signa
                 forumTopicData: nil,
                 topForumTopicItems: [],
                 hasFailed: false,
-                isContact: false
+                isContact: false,
+                autoremoveTimeout: nil
             ))
         }
         

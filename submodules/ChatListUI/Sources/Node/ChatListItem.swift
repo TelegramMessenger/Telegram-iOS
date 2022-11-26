@@ -1142,7 +1142,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             strongSelf.contextContainer.additionalActivationProgressLayer = nil
-            if item.interaction.inlineNavigationLocation != nil {
+            if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
+                if case let .peer(peerId) = inlineNavigationLocation.location {
+                    if case let .chatList(index) = item.index, index.messageIndex.id.peerId == peerId {
+                        return false
+                    }
+                }
                 strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.avatarContainerNode
             } else if let value = strongSelf.hitTest(location, with: nil), value === strongSelf.compoundTextButtonNode?.view {
                 strongSelf.contextContainer.targetNodeForActivationProgress = strongSelf.compoundTextButtonNode
@@ -1313,9 +1318,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     reallyHighlighted = true
                 }
             }
-            if item.interaction.inlineNavigationLocation != nil {
-                reallyHighlighted = false
-            }
         }
         return reallyHighlighted
     }
@@ -1403,7 +1405,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let textFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 15.0 / 17.0))
             let dateFont = Font.regular(floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0))
             let badgeFont = Font.with(size: floor(item.presentationData.fontSize.itemListBaseFontSize * 14.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
-            let avatarBadgeFont = Font.with(size: 16.0, design: .regular, weight: .regular, traits: [.monospacedNumbers])
+            let avatarBadgeFont = Font.with(size: floor(item.presentationData.fontSize.itemListBaseFontSize * 16.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
             
             let account = item.context.account
             var messages: [EngineMessage]
@@ -1579,7 +1581,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             
             let badgeDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 20.0 / 17.0)
-            let avatarBadgeDiameter: CGFloat = 22.0
+            let avatarBadgeDiameter: CGFloat = floor(floor(item.presentationData.fontSize.itemListBaseFontSize * 22.0 / 17.0))
             
             let currentAvatarBadgeCleanBackgroundImage: UIImage? = PresentationResourcesChatList.badgeBackgroundBorder(item.presentationData.theme, diameter: avatarBadgeDiameter + 4.0)
             
@@ -2354,7 +2356,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             itemHeight += titleSpacing
             itemHeight += authorSpacing
                         
-            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + 8.0), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
+            let rawContentRect = CGRect(origin: CGPoint(x: 2.0, y: layoutOffset + floor(item.presentationData.fontSize.itemListBaseFontSize * 8.0 / 17.0)), size: CGSize(width: rawContentWidth, height: itemHeight - 12.0 - 9.0))
             
             let insets = ChatListItemNode.insets(first: first, last: last, firstWithHeader: firstWithHeader)
             var heightOffset: CGFloat = 0.0
@@ -2407,7 +2409,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var mainContentAlpha: CGFloat = 1.0
                     
                     if case .chatList = item.chatListLocation {
-                        mainContentFrame = CGRect(origin: CGPoint(x: params.leftInset + 72.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
+                        mainContentFrame = CGRect(origin: CGPoint(x: leftInset - 2.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
                         mainContentBoundsOffset = mainContentFrame.origin.x
                         
                         if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
@@ -2497,7 +2499,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var avatarScaleOffset: CGFloat = 0.0
                     var avatarScale: CGFloat = 1.0
                     if let inlineNavigationLocation = item.interaction.inlineNavigationLocation {
-                        let targetAvatarScale: CGFloat = 54.0 / avatarFrame.width
+                        let targetAvatarScale: CGFloat = floor(item.presentationData.fontSize.itemListBaseFontSize * 54.0 / 17.0) / avatarFrame.width
                         avatarScale = targetAvatarScale * inlineNavigationLocation.progress + 1.0 * (1.0 - inlineNavigationLocation.progress)
                         
                         let targetAvatarScaleOffset: CGFloat = -(avatarFrame.width - avatarFrame.width * avatarScale) * 0.5
@@ -2863,7 +2865,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             finalBottomRect
                         ], color: theme.pinnedItemBackgroundColor.mixedWith(theme.unreadBadgeInactiveBackgroundColor, alpha: 0.1))
                         
-                        compoundTextButtonNode.frame = compoundHighlightingNode.frame
+                        transition.updateFrame(node: compoundTextButtonNode, frame: compoundHighlightingNode.frame)
                         
                         if let textArrowImage = textArrowImage {
                             let textArrowNode: ASImageNode
@@ -3043,9 +3045,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let titlePosition = strongSelf.titleNode.position
                         transition.animatePosition(node: strongSelf.titleNode, from: CGPoint(x: titlePosition.x - contentDelta.x, y: titlePosition.y - contentDelta.y))
                         
-                        transition.animatePositionAdditive(node: strongSelf.textNode.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
-                        if let dustNode = strongSelf.dustNode {
-                            transition.animatePositionAdditive(node: dustNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                        if strongSelf.textNode.textNode.supernode === strongSelf.mainContentContainerNode {
+                            transition.animatePositionAdditive(node: strongSelf.textNode.textNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                            if let dustNode = strongSelf.dustNode {
+                                transition.animatePositionAdditive(node: dustNode, offset: CGPoint(x: -contentDelta.x, y: -contentDelta.y))
+                            }
                         }
                         
                         let authorPosition = strongSelf.authorNode.position

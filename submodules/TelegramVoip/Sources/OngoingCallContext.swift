@@ -751,6 +751,8 @@ public final class OngoingCallContext {
     
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     
+    private let audioDevice: SharedCallAudioDevice?
+    
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
         #if os(iOS) && DEBUG && false
         if "".isEmpty {
@@ -779,6 +781,14 @@ public final class OngoingCallContext {
         self.callSessionManager = callSessionManager
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
+        
+        let audioDevice: SharedCallAudioDevice?
+        if !"".isEmpty {
+            audioDevice = SharedCallAudioDevice()
+        } else {
+            audioDevice = nil
+        }
+        self.audioDevice = audioDevice
         
         let _ = try? FileManager.default.createDirectory(atPath: callLogsPath(account: account), withIntermediateDirectories: true, attributes: nil)
         
@@ -900,7 +910,7 @@ public final class OngoingCallContext {
                                 callSessionManager.sendSignalingData(internalId: internalId, data: data)
                             }
                         }
-                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "", useManualAudioSessionControl: true)
+                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "", audioDevice: audioDevice)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in

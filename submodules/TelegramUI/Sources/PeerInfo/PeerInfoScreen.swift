@@ -4436,19 +4436,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     currentAutoremoveTimeout = secretChat.messageAutoremoveTimeout
                     canSetupAutoremoveTimeout = false
                 } else if let group = chatPeer as? TelegramGroup {
-                    if case .creator = group.role {
+                    if !group.hasBannedPermission(.banChangeInfo) {
                         canSetupAutoremoveTimeout = true
-                    } else if case let .admin(rights, _) = group.role {
-                        if rights.rights.contains(.canDeleteMessages) {
-                            canSetupAutoremoveTimeout = true
-                        }
                     }
                 } else if let user = chatPeer as? TelegramUser {
                     if user.id != strongSelf.context.account.peerId && user.botInfo == nil {
                         canSetupAutoremoveTimeout = true
                     }
                 } else if let channel = chatPeer as? TelegramChannel {
-                    if channel.hasPermission(.deleteAllMessages) {
+                    if channel.hasPermission(.changeInfo) {
                         canSetupAutoremoveTimeout = true
                     }
                 }
@@ -4660,8 +4656,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.separator)
                             
-                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo + "\n\n" + strongSelf.presentationData.strings.AutoremoveSetup_AdditionalGlobalSettingsInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
                                 return nil
+                            }, textLinkAction: { [weak c] in
+                                c?.dismiss(completion: nil)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.controller?.view.endEditing(true)
+                                }, contentContext: nil)
                             }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
@@ -4804,9 +4812,27 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.separator)
                             
-                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
-                                return nil
-                            }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                            if case .group = channel.info {
+                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo + "\n\n" + strongSelf.presentationData.strings.AutoremoveSetup_AdditionalGlobalSettingsInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
+                                    return nil
+                                }, textLinkAction: { [weak c] in
+                                    c?.dismiss(completion: nil)
+                                    
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                        guard let self else {
+                                            return
+                                        }
+                                        self.controller?.view.endEditing(true)
+                                    }, contentContext: nil)
+                                }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                            } else {
+                                subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
+                                    return nil
+                                }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
+                            }
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
                         })))
@@ -4920,8 +4946,20 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             
                             subItems.append(.separator)
                             
-                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo, textLayout: .multiline, textFont: .small, icon: { _ in
+                            subItems.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.PeerInfo_AutoDeleteInfo + "\n\n" + strongSelf.presentationData.strings.AutoremoveSetup_AdditionalGlobalSettingsInfo, textLayout: .multiline, textFont: .small, parseMarkdown: true, icon: { _ in
                                 return nil
+                            }, textLinkAction: { [weak c] in
+                                c?.dismiss(completion: nil)
+                                
+                                guard let self else {
+                                    return
+                                }
+                                self.context.sharedContext.openResolvedUrl(.settings(.autoremoveMessages), context: self.context, urlContext: .generic, navigationController: self.controller?.navigationController as? NavigationController, forceExternal: false, openPeer: { _, _ in }, sendFile: nil, sendSticker: nil, requestMessageActionUrlAuth: nil, joinVoiceChat: nil, present: { _, _ in }, dismissInput: { [weak self] in
+                                    guard let self else {
+                                        return
+                                    }
+                                    self.controller?.view.endEditing(true)
+                                }, contentContext: nil)
                             }, action: nil as ((ContextControllerProtocol, @escaping (ContextMenuActionResult) -> Void) -> Void)?)))
                             
                             c.pushItems(items: .single(ContextController.Items(content: .list(subItems))))
@@ -6986,11 +7024,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             threadId = Int64(message.messageId.id)
         }
         
-        var temporary = false
-        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false {
-            temporary = true
-        }
-        controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary)), in: .window(.root))
+//        var temporary = false
+//        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false {
+//            temporary = true
+//        }
+        controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer: peer, threadId: threadId, temporary: false)), in: .window(.root))
     }
     
     fileprivate func openSettings(section: PeerInfoSettingsSection) {

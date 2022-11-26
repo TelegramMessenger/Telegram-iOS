@@ -80,7 +80,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case groupMigratedToChannel(channelId: PeerId)
     case historyCleared
     case historyScreenshot
-    case messageAutoremoveTimeoutUpdated(Int32)
+    case messageAutoremoveTimeoutUpdated(period: Int32, autoSettingSource: PeerId?)
     case gameScore(gameId: Int64, score: Int32)
     case phoneCall(callId: Int64, discardReason: PhoneCallDiscardReason?, duration: Int32?, isVideo: Bool)
     case paymentSent(currency: String, totalAmount: Int64, invoiceSlug: String?, isRecurringInit: Bool, isRecurringUsed: Bool)
@@ -125,7 +125,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
         case 11:
             self = .historyScreenshot
         case 12:
-            self = .messageAutoremoveTimeoutUpdated(decoder.decodeInt32ForKey("t", orElse: 0))
+            self = .messageAutoremoveTimeoutUpdated(period: decoder.decodeInt32ForKey("t", orElse: 0), autoSettingSource: decoder.decodeOptionalInt64ForKey("src").flatMap(PeerId.init))
         case 13:
             self = .gameScore(gameId: decoder.decodeInt64ForKey("i", orElse: 0), score: decoder.decodeInt32ForKey("s", orElse: 0))
         case 14:
@@ -218,9 +218,14 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             encoder.encodeInt32(10, forKey: "_rawValue")
         case .historyScreenshot:
             encoder.encodeInt32(11, forKey: "_rawValue")
-        case let .messageAutoremoveTimeoutUpdated(timeout):
+        case let .messageAutoremoveTimeoutUpdated(timeout, autoSettingSource):
             encoder.encodeInt32(12, forKey: "_rawValue")
             encoder.encodeInt32(timeout, forKey: "t")
+            if let autoSettingSource = autoSettingSource {
+                encoder.encodeInt64(autoSettingSource.toInt64(), forKey: "src")
+            } else {
+                encoder.encodeNil(forKey: "src")
+            }
         case let .gameScore(gameId, score):
             encoder.encodeInt32(13, forKey: "_rawValue")
             encoder.encodeInt64(gameId, forKey: "i")

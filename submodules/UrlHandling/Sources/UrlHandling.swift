@@ -678,12 +678,27 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                                     }
                                 }
                             } else {
-                                return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(messageId.id))
-                                |> map { info -> ResolvedUrl? in
-                                    if let _ = info {
-                                        return .replyThread(messageId: messageId)
+                                return context.engine.messages.getMessagesLoadIfNecessary([messageId], strategy: .cloud(skipLocal: false))
+                                |> take(1)
+                                |> mapToSignal { messages -> Signal<ResolvedUrl?, NoError> in
+                                    if let threadId = messages.first?.threadId {
+                                        return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: threadId)
+                                        |> map { info -> ResolvedUrl? in
+                                            if let _ = info {
+                                                return .replyThreadMessage(replyThreadMessage: ChatReplyThreadMessage(messageId: MessageId(peerId: channel.id, namespace: Namespaces.Message.Cloud, id: Int32(clamping: threadId)), channelMessageId: nil, isChannelPost: false, isForumPost: true, maxMessage: nil, maxReadIncomingMessageId: nil, maxReadOutgoingMessageId: nil, unreadCount: 0, initialFilledHoles: IndexSet(), initialAnchor: .automatic, isNotAvailable: false), messageId: messageId)
+                                            } else {
+                                                return .peer(peer?._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                            }
+                                        }
                                     } else {
-                                        return .peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                        return context.engine.peers.fetchForumChannelTopic(id: channel.id, threadId: Int64(messageId.id))
+                                        |> map { info -> ResolvedUrl? in
+                                            if let _ = info {
+                                                return .replyThread(messageId: messageId)
+                                            } else {
+                                                return .peer(foundPeer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil))
+                                            }
+                                        }
                                     }
                                 }
                             }

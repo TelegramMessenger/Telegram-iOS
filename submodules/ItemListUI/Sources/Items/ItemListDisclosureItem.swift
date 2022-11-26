@@ -13,6 +13,7 @@ public enum ItemListDisclosureItemTitleColor {
 
 public enum ItemListDisclosureStyle {
     case arrow
+    case optionArrows
     case none
 }
 
@@ -116,7 +117,7 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
     
     let iconNode: ASImageNode
     let titleNode: TextNode
-    let labelNode: TextNode
+    public let labelNode: TextNode
     let arrowNode: ASImageNode
     let labelBadgeNode: ASImageNode
     let labelImageNode: ASImageNode
@@ -198,6 +199,17 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
         }
     }
     
+    public func updateHasContextMenu(hasContextMenu: Bool) {
+        let transition: ContainedViewLayoutTransition
+        if hasContextMenu {
+            transition = .immediate
+        } else {
+            transition = .animated(duration: 0.3, curve: .easeInOut)
+        }
+        transition.updateAlpha(node: self.labelNode, alpha: hasContextMenu ? 0.5 : 1.0)
+        transition.updateAlpha(node: self.arrowNode, alpha: hasContextMenu ? 0.5 : 1.0)
+    }
+    
     public func asyncLayout() -> (_ item: ItemListDisclosureItem, _ params: ListViewItemLayoutParams, _ insets: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeLabelLayout = TextNode.asyncLayout(self.labelNode)
@@ -212,6 +224,8 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             case .none:
                 rightInset = 16.0 + params.rightInset
             case .arrow:
+                rightInset = 34.0 + params.rightInset
+            case .optionArrows:
                 rightInset = 34.0 + params.rightInset
             }
             
@@ -245,7 +259,12 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
             let badgeDiameter: CGFloat = 20.0
             if currentItem?.presentationData.theme !== item.presentationData.theme {
                 updatedTheme = item.presentationData.theme
-                updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                switch item.disclosureStyle {
+                case .none, .arrow:
+                    updateArrowImage = PresentationResourcesItemList.disclosureArrowImage(item.presentationData.theme)
+                case .optionArrows:
+                    updateArrowImage = PresentationResourcesItemList.disclosureOptionArrowsImage(item.presentationData.theme)
+                }
                 if let badgeColor = badgeColor {
                     updatedLabelBadgeImage = generateStretchableFilledCircleImage(diameter: badgeDiameter, color: badgeColor)
                 }
@@ -512,14 +531,21 @@ public class ItemListDisclosureItemNode: ListViewItemNode, ItemListItemNode {
                     }
                     
                     if let arrowImage = strongSelf.arrowNode.image {
-                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 7.0 - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
+                        let arrowRightOffset: CGFloat
+                        switch item.disclosureStyle {
+                        case .optionArrows:
+                            arrowRightOffset = 18.0
+                        case .none, .arrow:
+                            arrowRightOffset = 7.0
+                        }
+                        strongSelf.arrowNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - arrowRightOffset - arrowImage.size.width, y: floorToScreenPixels((height - arrowImage.size.height) / 2.0)), size: arrowImage.size)
                     }
                     
                     switch item.disclosureStyle {
-                        case .none:
-                            strongSelf.arrowNode.isHidden = true
-                        case .arrow:
-                            strongSelf.arrowNode.isHidden = false
+                    case .none:
+                        strongSelf.arrowNode.isHidden = true
+                    case .arrow, .optionArrows:
+                        strongSelf.arrowNode.isHidden = false
                     }
                     
                     strongSelf.highlightedBackgroundNode.frame = CGRect(origin: CGPoint(x: 0.0, y: -UIScreenPixel), size: CGSize(width: params.width, height: height + UIScreenPixel))

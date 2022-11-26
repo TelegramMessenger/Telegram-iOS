@@ -2211,7 +2211,7 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                     
                     for dialog in dialogs {
                         switch dialog {
-                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId, _):
+                            case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, notifySettings, pts, _, folderId, ttlPeriod):
                                 let peerId = peer.peerId
                                 
                                 updatedState.setNeedsHoleFromPreviousState(peerId: peerId, namespace: Namespaces.Message.Cloud, validateChannelPts: pts)
@@ -2251,6 +2251,8 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                                 if !isExcludedFromChatList {
                                     updatedState.updatePeerChatInclusion(peerId: peerId, groupId: PeerGroupId(rawValue: folderId ?? 0), changedGroup: false)
                                 }
+                            
+                                updatedState.updateAutoremoveTimeout(peer: peer, value: ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
                                 
                                 let notificationSettings = TelegramPeerNotificationSettings(apiSettings: notifySettings)
                                 updatedState.updateNotificationSettings(.peer(peerId: peer.peerId, threadId: nil), notificationSettings: notificationSettings)
@@ -2452,8 +2454,9 @@ private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Net
                         let apiNotificationSettings: Api.PeerNotifySettings
                         let apiMarkedUnread: Bool
                         let groupId: PeerGroupId
+                        let apiTtlPeriod: Int32?
                         switch dialog {
-                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, peerNotificationSettings, pts, _, folderId, _):
+                            case let .dialog(flags, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, peerNotificationSettings, pts, _, folderId, ttlPeriod):
                                 apiPeer = peer
                                 apiTopMessage = topMessage
                                 apiReadInboxMaxId = readInboxMaxId
@@ -2465,6 +2468,7 @@ private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Net
                                 apiNotificationSettings = peerNotificationSettings
                                 apiChannelPts = pts
                                 groupId = PeerGroupId(rawValue: folderId ?? 0)
+                                apiTtlPeriod = ttlPeriod
                             case .dialogFolder:
                                 assertionFailure()
                                 continue loop
@@ -2490,6 +2494,8 @@ private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Net
                         notificationSettings[peerId] = TelegramPeerNotificationSettings(apiSettings: apiNotificationSettings)
                         
                         updatedState.updatePeerChatInclusion(peerId: peerId, groupId: groupId, changedGroup: false)
+                        
+                        updatedState.updateAutoremoveTimeout(peer: apiPeer, value: apiTtlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
                         
                         resetForumTopics.insert(peerId)
                     }
@@ -2747,12 +2753,12 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 
                 apiTimeout = timeout
                 
-                var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32)?
+                var parameters: (peer: Api.Peer, pts: Int32, topMessage: Int32, readInboxMaxId: Int32, readOutboxMaxId: Int32, unreadCount: Int32, unreadMentionsCount: Int32, unreadReactionsCount: Int32, ttlPeriod: Int32?)?
                 
                 switch dialog {
-                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, _, pts, _, _, _):
+                case let .dialog(_, peer, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, _, pts, _, _, ttlPeriod):
                     if let pts = pts {
-                        parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount)
+                        parameters = (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, ttlPeriod)
                     }
                 case .dialogFolder:
                     break
@@ -2760,9 +2766,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 
                 var resetForumTopics = Set<PeerId>()
                 
-                if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount) = parameters {
+                if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, ttlPeriod) = parameters {
                     updatedState.updateChannelState(peer.peerId, pts: pts)
                     updatedState.updateChannelInvalidationPts(peer.peerId, invalidationPts: pts)
+                    
+                    updatedState.updateAutoremoveTimeout(peer: peer, value: ttlPeriod.flatMap(CachedPeerAutoremoveTimeout.Value.init(peerValue:)))
                     
                     updatedState.mergeChats(chats)
                     updatedState.mergeUsers(users)
