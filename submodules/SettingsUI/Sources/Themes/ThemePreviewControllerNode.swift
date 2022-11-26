@@ -385,7 +385,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 chatListLocation: .chatList(groupId: .root),
                 filterData: nil,
                 index: .chatList(ChatListIndex(pinningIndex: isPinned ? 0 : nil, messageIndex: MessageIndex(id: MessageId(peerId: peer.id, namespace: Namespaces.Message.Cloud, id: 0), timestamp: timestamp))),
-                content: .peer(
+                content: .peer(ChatListItemContent.PeerData(
                     messages: [
                         EngineMessage(
                             stableId: 0,
@@ -428,8 +428,9 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                     displayAsMessage: false,
                     hasFailedMessages: false,
                     forumTopicData: nil,
-                    topForumTopicItems: []
-                ),
+                    topForumTopicItems: [],
+                    autoremoveTimeout: nil
+                )),
                 editing: false,
                 hasActiveRevealControls: false,
                 selected: false,

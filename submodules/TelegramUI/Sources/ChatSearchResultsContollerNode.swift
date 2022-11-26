@@ -85,7 +85,7 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                     chatListLocation: .chatList(groupId: .root),
                     filterData: nil,
                     index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index)),
-                    content: .peer(
+                    content: .peer(ChatListItemContent.PeerData(
                         messages: [EngineMessage(message)],
                         peer: EngineRenderedPeer(peer),
                         threadInfo: nil,
@@ -101,8 +101,9 @@ private enum ChatListSearchEntry: Comparable, Identifiable {
                         displayAsMessage: true,
                         hasFailedMessages: false,
                         forumTopicData: nil,
-                        topForumTopicItems: []
-                    ),
+                        topForumTopicItems: [],
+                        autoremoveTimeout: nil
+                    )),
                     editing: false,
                     hasActiveRevealControls: false,
                     selected: false,
@@ -247,9 +248,9 @@ class ChatSearchResultsControllerNode: ViewControllerTracingNode, UIScrollViewDe
                 return
             }
             switch item.content {
-            case let .peer(messages, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                if let message = messages.first {
-                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peer.peerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), botStart: nil, mode: .standard(previewing: true))
+            case let .peer(peerData):
+                if let message = peerData.messages.first {
+                    let chatController = strongSelf.context.sharedContext.makeChatController(context: strongSelf.context, chatLocation: .peer(id: peerData.peer.peerId), subject: .message(id: .id(message.id), highlight: true, timecode: nil), botStart: nil, mode: .standard(previewing: true))
                     chatController.canReadHistory.set(false)
                     let contextController = ContextController(account: strongSelf.context.account, presentationData: strongSelf.presentationData, source: .controller(ContextControllerContentSourceImpl(controller: chatController, sourceNode: node)), items: .single(ContextController.Items(content: .list([]))), gesture: gesture)
                     presentInGlobalOverlay(contextController)

@@ -336,7 +336,7 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 }
             case .channelMigratedFromGroup, .groupMigratedToChannel:
                 attributedString = NSAttributedString(string: "", font: titleFont, textColor: primaryTextColor)
-            case let .messageAutoremoveTimeoutUpdated(timeout, _):
+            case let .messageAutoremoveTimeoutUpdated(timeout, autoSourcePeerId):
                 let authorString: String
                 if let author = messageMainPeer(message) {
                     authorString = author.compactDisplayTitle
@@ -349,37 +349,41 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 if timeout > 0 {
                     let timeValue = timeIntervalString(strings: strings, value: timeout, preferLowerValue: false)
                     
-                    let string: String
-                    if let _ = messagePeer as? TelegramUser {
-                        if message.author?.id == accountPeerId {
-                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string
+                    if let user = messagePeer as? TelegramUser {
+                        if let autoSourcePeerId = autoSourcePeerId {
+                            if autoSourcePeerId == accountPeerId {
+                                attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetUserGlobalYou(timeValue).string, font: titleFont, textColor: primaryTextColor)
+                            } else {
+                                attributedString = addAttributesToStringWithRanges(strings.Conversation_AutoremoveTimerSetUserGlobal(authorString, timeValue)._tuple, body: bodyAttributes, argumentAttributes: peerMentionsAttributes(primaryTextColor: primaryTextColor, peerIds: [(0, user.id)]))
+                            }
+                        } else if message.author?.id == accountPeerId {
+                            attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string, font: titleFont, textColor: primaryTextColor)
                         } else {
-                            string = strings.Conversation_AutoremoveTimerSetUser(authorString, timeValue).string
+                            attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetUser(authorString, timeValue).string, font: titleFont, textColor: primaryTextColor)
                         }
                     } else if let _ = messagePeer as? TelegramGroup {
                         if message.author?.id == accountPeerId {
-                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string
+                            attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string, font: titleFont, textColor: primaryTextColor)
                         } else {
-                            string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
+                            attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetGroup(timeValue).string, font: titleFont, textColor: primaryTextColor)
                         }
                     } else if let channel = messagePeer as? TelegramChannel {
                         if message.author?.id == accountPeerId {
-                            string = strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string
+                            attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetUserYou(timeValue).string, font: titleFont, textColor: primaryTextColor)
                         } else {
                             if case .group = channel.info {
-                                string = strings.Conversation_AutoremoveTimerSetGroup(timeValue).string
+                                attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetGroup(timeValue).string, font: titleFont, textColor: primaryTextColor)
                             } else {
-                                string = strings.Conversation_AutoremoveTimerSetChannel(timeValue).string
+                                attributedString = NSAttributedString(string: strings.Conversation_AutoremoveTimerSetChannel(timeValue).string, font: titleFont, textColor: primaryTextColor)
                             }
                         }
                     } else {
                         if message.author?.id == accountPeerId {
-                            string = strings.Notification_MessageLifetimeChangedOutgoing(timeValue).string
+                            attributedString = NSAttributedString(string: strings.Notification_MessageLifetimeChangedOutgoing(timeValue).string, font: titleFont, textColor: primaryTextColor)
                         } else {
-                            string = strings.Notification_MessageLifetimeChanged(authorString, timeValue).string
+                            attributedString = NSAttributedString(string: strings.Notification_MessageLifetimeChanged(authorString, timeValue).string, font: titleFont, textColor: primaryTextColor)
                         }
                     }
-                    attributedString = NSAttributedString(string: string, font: titleFont, textColor: primaryTextColor)
                 } else {
                     let string: String
                     if let _ = messagePeer as? TelegramUser {

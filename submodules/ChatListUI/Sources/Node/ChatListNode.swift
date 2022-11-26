@@ -345,7 +345,7 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                             chatListLocation: location,
                             filterData: filterData,
                             index: index,
-                            content: .peer(
+                            content: .peer(ChatListItemContent.PeerData(
                                 messages: peerEntry.messages,
                                 peer: peer,
                                 threadInfo: threadInfo,
@@ -361,8 +361,9 @@ private func mappedInsertEntries(context: AccountContext, nodeInteraction: ChatL
                                 displayAsMessage: false,
                                 hasFailedMessages: hasFailedMessages,
                                 forumTopicData: forumTopicData,
-                                topForumTopicItems: topForumTopicItems
-                            ),
+                                topForumTopicItems: topForumTopicItems,
+                                autoremoveTimeout: peerEntry.autoremoveTimeout
+                            )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
@@ -601,7 +602,7 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                             chatListLocation: location,
                             filterData: filterData,
                             index: index,
-                            content: .peer(
+                            content: .peer(ChatListItemContent.PeerData(
                                 messages: peerEntry.messages,
                                 peer: peer,
                                 threadInfo: threadInfo,
@@ -617,8 +618,9 @@ private func mappedUpdateEntries(context: AccountContext, nodeInteraction: ChatL
                                 displayAsMessage: false,
                                 hasFailedMessages: hasFailedMessages,
                                 forumTopicData: forumTopicData,
-                                topForumTopicItems: topForumTopicItems
-                            ),
+                                topForumTopicItems: topForumTopicItems,
+                                autoremoveTimeout: peerEntry.autoremoveTimeout
+                            )),
                             editing: editing,
                             hasActiveRevealControls: hasActiveRevealControls,
                             selected: selected,
@@ -2084,7 +2086,7 @@ public final class ChatListNode: ListView {
                 var isHiddenItemVisible = false
                 strongSelf.forEachItemNode({ itemNode in
                     if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
-                        if case let .peer(_, _, threadInfo, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let threadInfo {
+                        if case let .peer(peerData) = item.content, let threadInfo = peerData.threadInfo {
                             if threadInfo.isHidden {
                                 isHiddenItemVisible = true
                             }
@@ -2368,8 +2370,8 @@ public final class ChatListNode: ListView {
                     for item in transition.insertItems {
                         if let item = item.item as? ChatListItem {
                             switch item.content {
-                            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                                insertedPeerIds.append(peer.peerId)
+                            case let .peer(peerData):
+                                insertedPeerIds.append(peerData.peer.peerId)
                             case .groupReference:
                                 break
                             }
@@ -2754,8 +2756,8 @@ public final class ChatListNode: ListView {
             if resultPeer == nil, let itemNode = itemNode as? ListViewItemNode, itemNode.frame.contains(point) {
                 if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
                     switch item.content {
-                        case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                            resultPeer = peer.peer
+                        case let .peer(peerData):
+                            resultPeer = peerData.peer.peer
                         default:
                             break
                     }
@@ -2771,8 +2773,8 @@ public final class ChatListNode: ListView {
             if resultThreadId == nil, let itemNode = itemNode as? ListViewItemNode, itemNode.frame.contains(point) {
                 if let itemNode = itemNode as? ChatListItemNode, let item = itemNode.item {
                     switch item.content {
-                        case let .peer(_, _, threadInfo, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                            resultThreadId = threadInfo?.id
+                        case let .peer(peerData):
+                            resultThreadId = peerData.threadInfo?.id
                         default:
                             break
                     }

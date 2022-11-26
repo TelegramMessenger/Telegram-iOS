@@ -267,7 +267,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
             presentControllerImpl?(standardTextAlertController(
                 theme: AlertControllerTheme(presentationData: presentationData),
                 title: "Self-Destruct Timer",
-                text: "Are you sure you want all messages in new chats started by you to be automatically deleted for everyone \(valueText) after they have been sent?",
+                text: "Are you sure you want all messages in your new private chats and in new groups you create to be automatically deleted for everyone \(valueText) after they have been sent?",
                 actions: [
                     TextAlertAction(type: .defaultAction, title: "Enable Auto-Deletion", action: {
                         apply(timeout)

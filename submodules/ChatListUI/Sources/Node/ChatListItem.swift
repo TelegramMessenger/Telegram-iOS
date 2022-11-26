@@ -64,16 +64,74 @@ public enum ChatListItemContent {
             return true
         }
     }
+    
+    public struct PeerData {
+        public var messages: [EngineMessage]
+        public var peer: EngineRenderedPeer
+        public var threadInfo: ThreadInfo?
+        public var combinedReadState: EnginePeerReadCounters?
+        public var isRemovedFromTotalUnreadCount: Bool
+        public var presence: EnginePeer.Presence?
+        public var hasUnseenMentions: Bool
+        public var hasUnseenReactions: Bool
+        public var draftState: DraftState?
+        public var inputActivities: [(EnginePeer, PeerInputActivity)]?
+        public var promoInfo: ChatListNodeEntryPromoInfo?
+        public var ignoreUnreadBadge: Bool
+        public var displayAsMessage: Bool
+        public var hasFailedMessages: Bool
+        public var forumTopicData: EngineChatList.ForumTopicData?
+        public var topForumTopicItems: [EngineChatList.ForumTopicData]
+        public var autoremoveTimeout: Int32?
+        
+        public init(
+            messages: [EngineMessage],
+            peer: EngineRenderedPeer,
+            threadInfo: ThreadInfo?,
+            combinedReadState: EnginePeerReadCounters?,
+            isRemovedFromTotalUnreadCount: Bool,
+            presence: EnginePeer.Presence?,
+            hasUnseenMentions: Bool,
+            hasUnseenReactions: Bool,
+            draftState: DraftState?,
+            inputActivities: [(EnginePeer, PeerInputActivity)]?,
+            promoInfo: ChatListNodeEntryPromoInfo?,
+            ignoreUnreadBadge: Bool,
+            displayAsMessage: Bool,
+            hasFailedMessages: Bool,
+            forumTopicData: EngineChatList.ForumTopicData?,
+            topForumTopicItems: [EngineChatList.ForumTopicData],
+            autoremoveTimeout: Int32?
+        ) {
+            self.messages = messages
+            self.peer = peer
+            self.threadInfo = threadInfo
+            self.combinedReadState = combinedReadState
+            self.isRemovedFromTotalUnreadCount = isRemovedFromTotalUnreadCount
+            self.presence =  presence
+            self.hasUnseenMentions = hasUnseenMentions
+            self.hasUnseenReactions =  hasUnseenReactions
+            self.draftState = draftState
+            self.inputActivities = inputActivities
+            self.promoInfo = promoInfo
+            self.ignoreUnreadBadge = ignoreUnreadBadge
+            self.displayAsMessage = displayAsMessage
+            self.hasFailedMessages = hasFailedMessages
+            self.forumTopicData = forumTopicData
+            self.topForumTopicItems = topForumTopicItems
+            self.autoremoveTimeout = autoremoveTimeout
+        }
+    }
 
-    case peer(messages: [EngineMessage], peer: EngineRenderedPeer, threadInfo: ThreadInfo?, combinedReadState: EnginePeerReadCounters?, isRemovedFromTotalUnreadCount: Bool, presence: EnginePeer.Presence?, hasUnseenMentions: Bool, hasUnseenReactions: Bool, draftState: DraftState?, inputActivities: [(EnginePeer, PeerInputActivity)]?, promoInfo: ChatListNodeEntryPromoInfo?, ignoreUnreadBadge: Bool, displayAsMessage: Bool, hasFailedMessages: Bool, forumTopicData: EngineChatList.ForumTopicData?, topForumTopicItems: [EngineChatList.ForumTopicData])
+    case peer(PeerData)
     case groupReference(groupId: EngineChatList.Group, peers: [EngineChatList.GroupItem.Item], message: EngineMessage?, unreadCount: Int, hiddenByDefault: Bool)
     
     public var chatLocation: ChatLocation? {
         switch self {
-            case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                return .peer(id: peer.peerId)
-            case .groupReference:
-                return nil
+        case let .peer(peerData):
+            return .peer(id: peerData.peer.peerId)
+        case .groupReference:
+            return nil
         }
     }
 }
@@ -178,23 +236,23 @@ public class ChatListItem: ListViewItem, ChatListSearchItemNeighbour {
     
     public func selected(listView: ListView) {
         switch self.content {
-            case let .peer(messages, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _):
-                if let message = messages.last, let peer = peer.peer {
-                    var threadId: Int64?
-                    if case let .forum(_, _, threadIdValue, _, _) = self.index {
-                        threadId = threadIdValue
-                    }
-                    if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
-                        threadId = message.threadId
-                    }
-                    self.interaction.messageSelected(peer, threadId, message, promoInfo)
-                } else if let peer = peer.peer {
-                    self.interaction.peerSelected(peer, nil, nil, promoInfo)
-                } else if let peer = peer.peers[peer.peerId] {
-                    self.interaction.peerSelected(peer, nil, nil, promoInfo)
+        case let .peer(peerData):
+            if let message = peerData.messages.last, let peer = peerData.peer.peer {
+                var threadId: Int64?
+                if case let .forum(_, _, threadIdValue, _, _) = self.index {
+                    threadId = threadIdValue
                 }
-            case let .groupReference(groupId, _, _, _, _):
-                self.interaction.groupSelected(groupId)
+                if threadId == nil, self.interaction.searchTextHighightState != nil, case let .channel(channel) = peerData.peer.peer, channel.flags.contains(.isForum) {
+                    threadId = message.threadId
+                }
+                self.interaction.messageSelected(peer, threadId, message, peerData.promoInfo)
+            } else if let peer = peerData.peer.peer {
+                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo)
+            } else if let peer = peerData.peer.peers[peerData.peer.peerId] {
+                self.interaction.peerSelected(peer, nil, nil, peerData.promoInfo)
+            }
+        case let .groupReference(groupId, _, _, _, _):
+            self.interaction.groupSelected(groupId)
         }
     }
         
@@ -837,6 +895,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     var avatarBadgeNode: ChatListBadgeNode?
     var avatarBadgeBackground: ASImageNode?
     let onlineNode: PeerOnlineMarkerNode
+    var avatarTimerBadge: AvatarBadgeView?
     let pinnedIconNode: ASImageNode
     var secretIconNode: ASImageNode?
     var credibilityIconView: ComponentHostView<Empty>?
@@ -905,8 +964,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(Int32(allCount)))"
                     }
                     return result
-                case let .peer(_, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _, _, _):
-                    guard let chatMainPeer = peer.chatMainPeer else {
+                case let .peer(peerData):
+                    guard let chatMainPeer = peerData.peer.chatMainPeer else {
                         return nil
                     }
                     var result = ""
@@ -915,7 +974,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         result += chatMainPeer.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)
                     }
-                    if let combinedReadState = combinedReadState, combinedReadState.count > 0 {
+                    if let combinedReadState = peerData.combinedReadState, combinedReadState.count > 0 {
                         result += "\n\(item.presentationData.strings.VoiceOver_Chat_UnreadMessages(combinedReadState.count))"
                     }
                     return result
@@ -965,19 +1024,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     } else {
                         return item.presentationData.strings.VoiceOver_ChatList_MessageEmpty
                     }
-                case let .peer(messages, peer, _, combinedReadState, _, _, _, _, _, _, _, _, _, _, _, _):
-                    if let message = messages.last {
+                case let .peer(peerData):
+                    if let message = peerData.messages.last {
                         var result = ""
                         if message.flags.contains(.Incoming) {
                             result += item.presentationData.strings.VoiceOver_ChatList_Message
                         } else {
                             result += item.presentationData.strings.VoiceOver_ChatList_OutgoingMessage
                         }
-                        let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: messages, chatPeer: peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
+                        let (_, initialHideAuthor, messageText, _, _) = chatListItemStrings(strings: item.presentationData.strings, nameDisplayOrder: item.presentationData.nameDisplayOrder, dateTimeFormat: item.presentationData.dateTimeFormat, contentSettings: item.context.currentContentSettings.with { $0 }, messages: peerData.messages, chatPeer: peerData.peer, accountPeerId: item.context.account.peerId, isPeerGroup: false)
                         if message.flags.contains(.Incoming), !initialHideAuthor, let author = message.author, case .user = author {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageFrom(author.displayTitle(strings: item.presentationData.strings, displayOrder: item.presentationData.nameDisplayOrder)).string)"
                         }
-                        if !message.flags.contains(.Incoming), let combinedReadState = combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
+                        if !message.flags.contains(.Incoming), let combinedReadState = peerData.combinedReadState, combinedReadState.isOutgoingMessageIndexRead(message.index) {
                             result += "\n\(item.presentationData.strings.VoiceOver_ChatList_MessageRead)"
                         }
                         result += "\n\(messageText)"
@@ -1165,7 +1224,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             }
             var threadId: Int64?
             if let value = strongSelf.hitTest(location, with: nil), value === strongSelf.compoundTextButtonNode?.view {
-                if case let .peer(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, topForumTopicItems) = item.content, let topicItem = topForumTopicItems.first {
+                if case let .peer(peerData) = item.content, let topicItem = peerData.topForumTopicItems.first {
                     threadId = topicItem.id
                 }
             }
@@ -1193,14 +1252,14 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         var displayAsMessage = false
         var enablePreview = true
         switch item.content {
-            case let .peer(messages, peerValue, _, _, _, _, _, _, _, _, _, _, displayAsMessageValue, _, _, _):
-                displayAsMessage = displayAsMessageValue
-                if displayAsMessage, case let .user(author) = messages.last?.author {
+            case let .peer(peerData):
+                displayAsMessage = peerData.displayAsMessage
+                if displayAsMessage, case let .user(author) = peerData.messages.last?.author {
                     peer = .user(author)
                 } else {
-                    peer = peerValue.chatMainPeer
+                    peer = peerData.peer.chatMainPeer
                 }
-                if peerValue.peerId.namespace == Namespaces.Peer.SecretChat {
+                if peerData.peer.peerId.namespace == Namespaces.Peer.SecretChat {
                     enablePreview = false
                 }
             case let .groupReference(_, _, _, _, hiddenByDefault):
@@ -1371,8 +1430,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item = self.item, item.editing else {
             return
         }
-        if case let .peer(_, peer, _, _, _, _, _, _, _, _, promoInfo, _, _, _, _, _) = item.content {
-            if promoInfo == nil, let mainPeer = peer.peer {
+        if case let .peer(peerData) = item.content {
+            if peerData.promoInfo == nil, let mainPeer = peerData.peer.peer {
                 switch item.index {
                 case let .forum(_, _, threadIdValue, _, _):
                     item.interaction.toggleThreadsSelection([threadIdValue], !item.selected)
@@ -1429,12 +1488,30 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var threadInfo: ChatListItemContent.ThreadInfo?
             var forumTopicData: EngineChatList.ForumTopicData?
             var topForumTopicItems: [EngineChatList.ForumTopicData] = []
-            topForumTopicItems.removeAll()
+            var autoremoveTimeout: Int32?
             
             var groupHiddenByDefault = false
             
             switch item.content {
-                case let .peer(messagesValue, peerValue, threadInfoValue, combinedReadStateValue, isRemovedFromTotalUnreadCountValue, peerPresenceValue, hasUnseenMentionsValue, hasUnseenReactionsValue, draftStateValue, inputActivitiesValue, promoInfoValue, ignoreUnreadBadge, displayAsMessageValue, _, forumTopicDataValue, topForumTopicItemsValue):
+                case let .peer(peerData):
+                    let messagesValue = peerData.messages
+                    let peerValue = peerData.peer
+                    let threadInfoValue = peerData.threadInfo
+                    let combinedReadStateValue = peerData.combinedReadState
+                    let isRemovedFromTotalUnreadCountValue = peerData.isRemovedFromTotalUnreadCount
+                    let peerPresenceValue = peerData.presence
+                    let hasUnseenMentionsValue = peerData.hasUnseenMentions
+                    let hasUnseenReactionsValue = peerData.hasUnseenReactions
+                    let draftStateValue = peerData.draftState
+                    let inputActivitiesValue = peerData.inputActivities
+                    let promoInfoValue = peerData.promoInfo
+                    let ignoreUnreadBadge = peerData.ignoreUnreadBadge
+                    let displayAsMessageValue = peerData.displayAsMessage
+                    let forumTopicDataValue = peerData.forumTopicData
+                    let topForumTopicItemsValue = peerData.topForumTopicItems
+                
+                    autoremoveTimeout = peerData.autoremoveTimeout
+                
                     messages = messagesValue
                     contentPeer = .chat(peerValue)
                     combinedReadState = combinedReadStateValue
@@ -1582,6 +1659,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             
             let badgeDiameter = floor(item.presentationData.fontSize.baseDisplaySize * 20.0 / 17.0)
             let avatarBadgeDiameter: CGFloat = floor(floor(item.presentationData.fontSize.itemListBaseFontSize * 22.0 / 17.0))
+            let avatarTimerBadgeDiameter: CGFloat = floor(floor(item.presentationData.fontSize.itemListBaseFontSize * 24.0 / 17.0))
             
             let currentAvatarBadgeCleanBackgroundImage: UIImage? = PresentationResourcesChatList.badgeBackgroundBorder(item.presentationData.theme, diameter: avatarBadgeDiameter + 4.0)
             
@@ -1905,8 +1983,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             switch item.content {
             case let .groupReference(_, _, message, _, _):
                 topIndex = message?.index
-            case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                topIndex = messages.first?.index
+            case let .peer(peerData):
+                topIndex = peerData.messages.first?.index
             }
             if let topIndex {
                 var t = Int(topIndex.timestamp)
@@ -2073,8 +2151,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             if !isPeerGroup && !isAccountPeer && threadInfo == nil {
                 if displayAsMessage {
                     switch item.content {
-                    case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
-                        if let peer = messages.last?.author {
+                    case let .peer(peerData):
+                        if let peer = peerData.messages.last?.author {
                             if case let .user(user) = peer, let emojiStatus = user.emojiStatus, !premiumConfiguration.isPremiumDisabled {
                                 currentCredibilityIconContent = .animation(content: .customEmoji(fileId: emojiStatus.fileId), size: CGSize(width: 32.0, height: 32.0), placeholderColor: item.presentationData.theme.list.mediaPlaceholderColor, themeColor: item.presentationData.theme.list.itemAccentColor, loopMode: .count(2))
                             } else if peer.isScam {
@@ -2258,7 +2336,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             var peerRevealOptions: [ItemListRevealOption]
             var peerLeftRevealOptions: [ItemListRevealOption]
             switch item.content {
-                case let .peer(_, renderedPeer, _, _, _, presence, _, _, _, _, _, _, displayAsMessage, _, _, _):
+                case let .peer(peerData):
+                    let renderedPeer = peerData.peer
+                    let presence = peerData.presence
+                    let displayAsMessage = peerData.displayAsMessage
+                
                     if !displayAsMessage {
                         if case let .user(peer) = renderedPeer.chatMainPeer, let presence = presence, !isServicePeer(peer) && !peer.flags.contains(.isSupport) && peer.id != item.context.account.peerId {
                             let updatedPresence = EnginePeer.Presence(status: presence.status, lastActivity: 0)
@@ -2676,6 +2758,37 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         onlineIcon = PresentationResourcesChatList.recentStatusOnlineIcon(item.presentationData.theme, state: .regular, voiceChat: onlineIsVoiceChat)
                     }
                     strongSelf.onlineNode.setImage(onlineIcon, color: item.presentationData.theme.list.itemCheckColors.foregroundColor, transition: .immediate)
+                    
+                    let autoremoveTimeoutFraction: CGFloat
+                    if online {
+                        autoremoveTimeoutFraction = 0.0
+                    } else {
+                        autoremoveTimeoutFraction = 1.0 - onlineInlineNavigationFraction
+                    }
+                    
+                    if let autoremoveTimeout = autoremoveTimeout {
+                        let avatarTimerBadge: AvatarBadgeView
+                        var avatarTimerTransition = transition
+                        if let current = strongSelf.avatarTimerBadge {
+                            avatarTimerBadge = current
+                        } else {
+                            avatarTimerTransition = .immediate
+                            avatarTimerBadge = AvatarBadgeView(frame: CGRect())
+                            strongSelf.avatarTimerBadge = avatarTimerBadge
+                            strongSelf.avatarNode.badgeView = avatarTimerBadge
+                            strongSelf.contextContainer.view.addSubview(avatarTimerBadge)
+                        }
+                        let avatarBadgeSize = CGSize(width: avatarTimerBadgeDiameter, height: avatarTimerBadgeDiameter)
+                        avatarTimerBadge.update(size: avatarBadgeSize, text: shortTimeIntervalString(strings: item.presentationData.strings, value: autoremoveTimeout))
+                        let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - avatarBadgeSize.width, y: avatarFrame.maxY - avatarBadgeSize.height), size: avatarBadgeSize)
+                        avatarTimerTransition.updatePosition(layer: avatarTimerBadge.layer, position: avatarBadgeFrame.center)
+                        avatarTimerTransition.updateBounds(layer: avatarTimerBadge.layer, bounds: CGRect(origin: CGPoint(), size: avatarBadgeFrame.size))
+                        avatarTimerTransition.updateTransformScale(layer: avatarTimerBadge.layer, scale: autoremoveTimeoutFraction * 1.0 + (1.0 - autoremoveTimeoutFraction) * 0.001)
+                    } else if let avatarTimerBadge = strongSelf.avatarTimerBadge {
+                        strongSelf.avatarTimerBadge = nil
+                        strongSelf.avatarNode.badgeView = nil
+                        avatarTimerBadge.removeFromSuperview()
+                    }
                                   
                     let _ = measureApply()
                     let _ = dateApply()
@@ -3194,10 +3307,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
         guard let item else {
             return
         }
-        guard case let .peer(_, _, _, _, _, _, _, _, _, _, _, _, _, _, _, topForumTopicItems) = item.content else {
+        guard case let .peer(peerData) = item.content else {
             return
         }
-        guard let topicItem = topForumTopicItems.first else {
+        guard let topicItem = peerData.topForumTopicItems.first else {
             return
         }
         guard case let .chatList(index) = item.index else {
@@ -3522,7 +3635,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 close = false
             case RevealOptionKey.delete.rawValue:
                 var joined = false
-                if case let .peer(messages, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content, let message = messages.first {
+                if case let .peer(peerData) = item.content, let message = peerData.messages.first {
                     for media in message.media {
                         if let action = media as? TelegramMediaAction, action.action == .peerJoined {
                             joined = true
@@ -3558,8 +3671,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.toggleArchivedFolderHiddenByDefault()
                 close = false
             case RevealOptionKey.hidePsa.rawValue:
-                if let item = self.item, case let .peer(_, peer, _, _, _, _, _, _, _, _, _, _, _, _, _, _) = item.content {
-                    item.interaction.hidePsa(peer.peerId)
+                if let item = self.item, case let .peer(peerData) = item.content {
+                    item.interaction.hidePsa(peerData.peer.peerId)
                 }
                 close = false
                 self.skipFadeout = true

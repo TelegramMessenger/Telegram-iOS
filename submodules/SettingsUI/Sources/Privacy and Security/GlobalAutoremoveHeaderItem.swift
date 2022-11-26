@@ -76,7 +76,7 @@ class GlobalAutoremoveHeaderItemNode: ListViewItemNode {
     func asyncLayout() -> (_ item: GlobalAutoremoveHeaderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
         return { item, params, neighbors in
             //let leftInset: CGFloat = 32.0 + params.leftInset
-            let topInset: CGFloat = 92.0
+            let topInset: CGFloat = 110.0
             
             let contentSize = CGSize(width: params.width, height: topInset)
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
@@ -86,12 +86,12 @@ class GlobalAutoremoveHeaderItemNode: ListViewItemNode {
             return (layout, { [weak self] in
                 if let strongSelf = self {
                     if strongSelf.item == nil {
-                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "GlobalAutoRemove"), width: 192, height: 192, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+                        strongSelf.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: "GlobalAutoRemove"), width: 220, height: 220, playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         strongSelf.animationNode.visibility = true
                     }
                     strongSelf.item = item
                                         
-                    let iconSize = CGSize(width: 96.0, height: 96.0)
+                    let iconSize = CGSize(width: 110.0, height: 110.0)
                     strongSelf.animationNode.frame = CGRect(origin: CGPoint(x: floor((layout.size.width - iconSize.width) / 2.0), y: -10.0), size: iconSize)
                     strongSelf.animationNode.updateLayout(size: iconSize)
                 }

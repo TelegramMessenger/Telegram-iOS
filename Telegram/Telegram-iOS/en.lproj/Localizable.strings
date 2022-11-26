@@ -6249,6 +6249,10 @@ Sorry for the inconvenience.";
 
 "Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %1$@";
 "Conversation.AutoremoveTimerSetUser" = "%1$@ set messages to automatically delete after %2$@";
+
+"Conversation.AutoremoveTimerSetUserGlobalYou" = "You set a self-destruct timer for all chats.\nAll new messages in this chat will be automatically deleted after %1$@ they're sent.";
+"Conversation.AutoremoveTimerSetUserGlobal" = "%1$@ set a self-destruct timer for all chats.\nAll new messages in this chat will be automatically deleted after %2$@ they're sent.";
+
 "Conversation.AutoremoveTimerRemovedUserYou" = "You disabled the auto-delete timer";
 "Conversation.AutoremoveTimerRemovedUser" = "%1$@ disabled the auto-delete timer";
 "Conversation.AutoremoveTimerSetGroup" = "A group admin set messages to automatically delete after %1$@";
