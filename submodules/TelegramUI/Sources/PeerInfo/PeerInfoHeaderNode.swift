@@ -2666,7 +2666,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             title = title.replacingOccurrences(of: "\u{1160}", with: "").replacingOccurrences(of: "\u{3164}", with: "")
             if title.isEmpty {
                 if let peer = peer as? TelegramUser, let phone = peer.phone {
-                    title = formatPhoneNumber(phone)
+                    title = formatPhoneNumber(context: self.context, number: phone)
                 } else if let addressName = peer.addressName {
                     title = "@\(addressName)"
                 } else {
@@ -2677,7 +2677,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             titleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
             smallTitleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: .white)
             if self.isSettings, let user = peer as? TelegramUser {
-                var subtitle = formatPhoneNumber(user.phone ?? "")
+                var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
                 
                 if let mainUsername = user.addressName, !mainUsername.isEmpty {
                     subtitle = "\(subtitle) • @\(mainUsername)"

@@ -159,17 +159,18 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
             }
             
             if channel.flags.contains(.isForum) && isMember {
+                var canManage = false
+                if channel.flags.contains(.isCreator) {
+                    canManage = true
+                } else if channel.hasPermission(.manageTopics) {
+                    canManage = true
+                }
+                
                 if let threadData = chatPresentationInterfaceState.threadData {
                     if threadData.isClosed {
-                        var canManage = false
-                        if channel.flags.contains(.isCreator) {
-                            canManage = true
-                        } else if channel.hasPermission(.manageTopics) {
-                            canManage = true
-                        } else if threadData.isOwnedByMe {
+                        if threadData.isOwnedByMe {
                             canManage = true
                         }
-                        
                         if !canManage {
                             if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
                                 return (currentPanel, nil)
@@ -179,6 +180,17 @@ func inputPanelForChatPresentationIntefaceState(_ chatPresentationInterfaceState
                                 panel.interfaceInteraction = interfaceInteraction
                                 return (panel, nil)
                             }
+                        }
+                    }
+                } else if let isGeneralThreadClosed = chatPresentationInterfaceState.isGeneralThreadClosed, isGeneralThreadClosed {
+                    if !canManage {
+                        if let currentPanel = (currentPanel as? ChatRestrictedInputPanelNode) ?? (currentSecondaryPanel as? ChatRestrictedInputPanelNode) {
+                            return (currentPanel, nil)
+                        } else {
+                            let panel = ChatRestrictedInputPanelNode()
+                            panel.context = context
+                            panel.interfaceInteraction = interfaceInteraction
+                            return (panel, nil)
                         }
                     }
                 }

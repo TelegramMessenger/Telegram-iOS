@@ -167,7 +167,7 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                 
         self.backgroundColor = filter.contains(.excludeRecent) ? nil : self.presentationData.theme.chatList.backgroundColor
         
-        self.addSubnode(self.dimNode)
+//        self.addSubnode(self.dimNode)
         self.addSubnode(self.paneContainerNode)
                 
         let interaction = ChatListSearchInteraction(openPeer: { peer, chatPeer, threadId, value in

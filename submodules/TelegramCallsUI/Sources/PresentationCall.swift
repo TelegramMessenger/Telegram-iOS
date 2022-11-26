@@ -617,7 +617,7 @@ public final class PresentationCallImpl: PresentationCall {
                         self.reportedIncomingCall = true
                         var phoneNumber: String?
                         if let peer = self.peer as? TelegramUser, let phone = peer.phone {
-                            phoneNumber = formatPhoneNumber(phone)
+                            phoneNumber = formatPhoneNumber(context: self.context, number: phone)
                         }
                         self.callKitIntegration?.reportIncomingCall(
                             uuid: self.internalId,

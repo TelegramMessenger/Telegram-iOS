@@ -2,7 +2,7 @@ import Foundation
 import TelegramCore
 import TelegramPresentationData
 import TelegramUIPreferences
-import PhoneNumberFormat
+//import PhoneNumberFormat
 
 public extension EnginePeer {
     var compactDisplayTitle: String {
@@ -12,8 +12,8 @@ public extension EnginePeer {
                 return firstName
             } else if let lastName = user.lastName, !lastName.isEmpty {
                 return lastName
-            } else if let phone = user.phone {
-                return formatPhoneNumber("+\(phone)")
+            } else if let _ = user.phone {
+                return ""// formatPhoneNumber("+\(phone)")
             } else {
                 return ""
             }
@@ -45,8 +45,8 @@ public extension EnginePeer {
                 }
             } else if let lastName = user.lastName, !lastName.isEmpty {
                 return lastName
-            } else if let phone = user.phone {
-                return formatPhoneNumber("+\(phone)")
+            } else if let _ = user.phone {
+                return ""//formatPhoneNumber("+\(phone)")
             } else {
                 return strings.User_DeletedAccount
             }

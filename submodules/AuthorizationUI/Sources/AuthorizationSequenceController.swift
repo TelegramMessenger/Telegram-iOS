@@ -513,6 +513,11 @@ public final class AuthorizationSequenceController: NavigationController, MFMail
                 authorizationController.performRequests()
             }
         }
+        controller.openFragment = { [weak self] url in
+            if let strongSelf = self {
+                strongSelf.sharedContext.applicationBindings.openUrl(url)
+            }
+        }
         controller.updateData(number: formatPhoneNumber(number), email: email, codeType: type, nextType: nextType, timeout: timeout, termsOfService: termsOfService)
         return controller
     }

@@ -1018,7 +1018,7 @@ public extension Api {
         case messageActionSecureValuesSent(types: [Api.SecureValueType])
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
-        case messageActionSetMessagesTTL(period: Int32)
+        case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
         case messageActionWebViewDataSent(text: String)
@@ -1250,11 +1250,13 @@ public extension Api {
                     }
                     serializeString(emoticon, buffer: buffer, boxed: false)
                     break
-                case .messageActionSetMessagesTTL(let period):
+                case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                     if boxed {
-                        buffer.appendInt32(-1441072131)
+                        buffer.appendInt32(1007897979)
                     }
+                    serializeInt32(flags, buffer: buffer, boxed: false)
                     serializeInt32(period, buffer: buffer, boxed: false)
+                    if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                     if boxed {
@@ -1353,8 +1355,8 @@ public extension Api {
                 return ("messageActionSecureValuesSentMe", [("values", String(describing: values)), ("credentials", String(describing: credentials))])
                 case .messageActionSetChatTheme(let emoticon):
                 return ("messageActionSetChatTheme", [("emoticon", String(describing: emoticon))])
-                case .messageActionSetMessagesTTL(let period):
-                return ("messageActionSetMessagesTTL", [("period", String(describing: period))])
+                case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
+                return ("messageActionSetMessagesTTL", [("flags", String(describing: flags)), ("period", String(describing: period)), ("autoSettingFrom", String(describing: autoSettingFrom))])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                 return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId))])
                 case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
@@ -1745,9 +1747,15 @@ public extension Api {
         public static func parse_messageActionSetMessagesTTL(_ reader: BufferReader) -> MessageAction? {
             var _1: Int32?
             _1 = reader.readInt32()
+            var _2: Int32?
+            _2 = reader.readInt32()
+            var _3: Int64?
+            if Int(_1!) & Int(1 << 0) != 0 {_3 = reader.readInt64() }
             let _c1 = _1 != nil
-            if _c1 {
-                return Api.MessageAction.messageActionSetMessagesTTL(period: _1!)
+            let _c2 = _2 != nil
+            let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
+            if _c1 && _c2 && _c3 {
+                return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
             }
             else {
                 return nil

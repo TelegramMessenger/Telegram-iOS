@@ -801,39 +801,6 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     }
                 case "web_app_request_phone":
                     break
-//                    let _ = (self.context.account.postbox.loadedPeerWithId(self.context.account.peerId)
-//                    |> deliverOnMainQueue).start(next: { [weak self] accountPeer in
-//                        guard let strongSelf = self else {
-//                            return
-//                        }
-//                        guard let user = accountPeer as? TelegramUser, let phoneNumber = user.phone else {
-//                            return
-//                        }
-//
-//                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
-//                        var items: [ActionSheetItem] = []
-//                        items.append(ActionSheetTextItem(title: strongSelf.presentationData.strings.WebApp_ShareMyPhoneNumberConfirmation(formatPhoneNumber(phoneNumber), strongSelf.controller?.botName ?? "").string, parseMarkdown: true))
-//                        items.append(ActionSheetButtonItem(title: strongSelf.presentationData.strings.WebApp_ShareMyPhoneNumber, action: { [weak actionSheet] in
-//                            actionSheet?.dismissAnimated()
-//                            guard let strongSelf = self else {
-//                                return
-//                            }
-//
-//                            strongSelf.sendPhoneRequestedEvent(phone: phoneNumber)
-//                        }))
-//
-//                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-//                            ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-//                                actionSheet?.dismissAnimated()
-//                                guard let strongSelf = self else {
-//                                    return
-//                                }
-//
-//                                strongSelf.sendPhoneRequestedEvent(phone: nil)
-//                            })
-//                        ])])
-//                        strongSelf.controller?.present(actionSheet, in: .window(.root))
-//                    })
                 default:
                     break
             }

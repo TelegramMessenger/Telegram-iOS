@@ -2854,6 +2854,21 @@ public extension Api.functions.contacts {
                 }
 }
 public extension Api.functions.contacts {
+                static func exportContactToken() -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.ExportedContactToken>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-127582169)
+                    
+                    return (FunctionDescription(name: "contacts.exportContactToken", parameters: []), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.ExportedContactToken? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.ExportedContactToken?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.ExportedContactToken
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.contacts {
                 static func getBlocked(offset: Int32, limit: Int32) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.contacts.Blocked>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-176409329)
@@ -2959,6 +2974,21 @@ public extension Api.functions.contacts {
                         var result: Api.contacts.TopPeers?
                         if let signature = reader.readInt32() {
                             result = Api.parse(reader, signature: signature) as? Api.contacts.TopPeers
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.contacts {
+                static func importContactToken(token: String) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.User>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(318789512)
+                    serializeString(token, buffer: buffer, boxed: false)
+                    return (FunctionDescription(name: "contacts.importContactToken", parameters: [("token", String(describing: token))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.User? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.User?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.User
                         }
                         return result
                     })

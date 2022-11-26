@@ -1822,6 +1822,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 },
                 deviceMetrics: deviceMetrics,
                 hiddenInputHeight: hiddenInputHeight,
+                inputHeight: inputHeight,
                 displayBottomPanel: true,
                 isExpanded: isExpanded && !self.isEmojiSearchActive
             )),
@@ -2342,7 +2343,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             activeGroupCallInfo: nil,
             hasActiveGroupCall: false,
             importState: nil,
-            threadData: nil
+            threadData: nil,
+            isGeneralThreadClosed: nil
         )
 
         let _ = inputNode.updateLayout(

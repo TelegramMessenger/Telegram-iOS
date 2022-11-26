@@ -93,12 +93,11 @@ private enum ConfirmPhoneNumberCodeEntry: ItemListNodeEntry {
                 }, action: {
                     arguments.next()
                 })
-            case let .codeInfo(_, strings, phoneNumber, nextOptionText):
-                let formattedNumber = formatPhoneNumber(phoneNumber)
-                let stringAndRanges = strings.CancelResetAccount_TextSMS(formattedNumber)
+            case let .codeInfo(_, strings, formattedPhoneNumber, nextOptionText):
+                let stringAndRanges = strings.CancelResetAccount_TextSMS(formattedPhoneNumber)
                 var result = ""
                 result += stringAndRanges.string
-                if let range = result.range(of: formattedNumber) {
+                if let range = result.range(of: formattedPhoneNumber) {
                     result.insert("*", at: range.upperBound)
                     result.insert("*", at: range.upperBound)
                     result.insert("*", at: range.lowerBound)
@@ -122,7 +121,7 @@ private struct ConfirmPhoneNumberCodeControllerState: Equatable {
     }
 }
 
-private func confirmPhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ConfirmPhoneNumberCodeControllerState, phoneNumber: String, codeData: CancelAccountResetData, timeout: Int32?, strings: PresentationStrings, theme: PresentationTheme) -> [ConfirmPhoneNumberCodeEntry] {
+private func confirmPhoneNumberCodeControllerEntries(presentationData: PresentationData, state: ConfirmPhoneNumberCodeControllerState, formattedPhoneNumber: String, codeData: CancelAccountResetData, timeout: Int32?, strings: PresentationStrings, theme: PresentationTheme) -> [ConfirmPhoneNumberCodeEntry] {
     var entries: [ConfirmPhoneNumberCodeEntry] = []
     
     entries.append(.codeEntry(presentationData.theme, presentationData.strings, presentationData.strings.ChangePhoneNumberCode_CodePlaceholder, state.codeText))
@@ -130,7 +129,7 @@ private func confirmPhoneNumberCodeControllerEntries(presentationData: Presentat
     if let nextType = codeData.nextType {
         text += authorizationNextOptionText(currentType: codeData.type, nextType: nextType, timeout: timeout, strings: presentationData.strings, primaryColor: .black, accentColor: .black).0.string
     }
-    entries.append(.codeInfo(presentationData.theme, presentationData.strings, phoneNumber, text))
+    entries.append(.codeInfo(presentationData.theme, presentationData.strings, formattedPhoneNumber, text))
     
     return entries
 }
@@ -268,7 +267,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
                     return state
                 }
                 let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(phoneNumber)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
+                presentControllerImpl?(textAlertController(context: context, title: nil, text: presentationData.strings.CancelResetAccount_Success(formatPhoneNumber(context: context, number: phoneNumber)).string, actions: [TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})]), nil)
                 dismissImpl?()
             }))
         }
@@ -311,7 +310,7 @@ public func confirmPhoneNumberCodeController(context: AccountContext, phoneNumbe
         }
         
         let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(presentationData.strings.CancelResetAccount_Title), leftNavigationButton: leftNavigationButton, rightNavigationButton: rightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: false)
-        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: confirmPhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, phoneNumber: phoneNumber, codeData: data, timeout: timeout, strings: presentationData.strings, theme: presentationData.theme), style: .blocks, focusItemTag: ConfirmPhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
+        let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: confirmPhoneNumberCodeControllerEntries(presentationData: presentationData, state: state, formattedPhoneNumber: formatPhoneNumber(context: context, number: phoneNumber), codeData: data, timeout: timeout, strings: presentationData.strings, theme: presentationData.theme), style: .blocks, focusItemTag: ConfirmPhoneNumberCodeTag.input, emptyStateItem: nil, animateChanges: false)
         
         return (controllerState, (listState, arguments))
     }

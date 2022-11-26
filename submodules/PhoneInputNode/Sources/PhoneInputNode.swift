@@ -76,21 +76,6 @@ private func cleanSuffix(_ text: String) -> String {
     return result
 }
 
-extension String {
-    func applyPatternOnNumbers(pattern: String, replacementCharacter: Character) -> String {
-        let pattern = pattern.replacingOccurrences( of: "[0-9]", with: "X", options: .regularExpression)
-        var pureNumber = self.replacingOccurrences( of: "[^0-9]", with: "", options: .regularExpression)
-        for index in 0 ..< pattern.count {
-            guard index < pureNumber.count else { return pureNumber }
-            let stringIndex = pattern.index(pattern.startIndex, offsetBy: index)
-            let patternCharacter = pattern[stringIndex]
-            guard patternCharacter != replacementCharacter else { continue }
-            pureNumber.insert(patternCharacter, at: stringIndex)
-        }
-        return pureNumber
-    }
-}
-
 public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
     public let countryCodeField: TextFieldNode
     public let numberField: TextFieldNode
@@ -304,7 +289,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         if let mask = self.mask {
-            numberText = numberText.applyPatternOnNumbers(pattern: mask.string, replacementCharacter: "X")
+            numberText = formatPhoneNumberToMask(numberText, mask: mask.string)
         }
         
         var focusOnNumber = false

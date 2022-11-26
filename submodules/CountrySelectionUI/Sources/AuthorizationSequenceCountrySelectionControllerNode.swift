@@ -210,6 +210,9 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         self.needsSubtitle = strings.baseLanguageCode != "en"
         
         self.tableView = UITableView(frame: CGRect(), style: .plain)
+        if #available(iOS 15.0, *) {
+            self.tableView.sectionHeaderTopPadding = 0.0
+        }
         self.searchTableView = UITableView(frame: CGRect(), style: .plain)
         self.searchTableView.isHidden = true
         
@@ -322,8 +325,8 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
     }
     
     func tableView(_ tableView: UITableView, willDisplayHeaderView view: UIView, forSection section: Int) {
-        (view as? UITableViewHeaderFooterView)?.tintColor = self.theme.list.plainBackgroundColor
-        (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.list.itemPrimaryTextColor
+        (view as? UITableViewHeaderFooterView)?.tintColor = self.theme.chatList.sectionHeaderFillColor
+        (view as? UITableViewHeaderFooterView)?.textLabel?.textColor = self.theme.chatList.sectionHeaderTextColor
     }
     
     func sectionIndexTitles(for tableView: UITableView) -> [String]? {
@@ -353,30 +356,32 @@ final class AuthorizationSequenceCountrySelectionControllerNode: ASDisplayNode, 
         } else {
             cell = UITableViewCell(style: self.needsSubtitle ? .subtitle : .default, reuseIdentifier: "CountryCell")
             let label = UILabel()
-            label.font = Font.medium(17.0)
+            label.font = Font.regular(17.0)
             cell.accessoryView = label
             cell.selectedBackgroundView = UIView()
         }
         
-        let countryName: String
+        var countryName: String
         let originalCountryName: String
         let code: String
         if tableView === self.tableView {
             countryName = self.sections[indexPath.section].1[indexPath.row].0.1
+            countryName = "\(emojiFlagForISOCountryCode(self.sections[indexPath.section].1[indexPath.row].1)) \(countryName)"
             originalCountryName = self.sections[indexPath.section].1[indexPath.row].0.0
             code = "+\(self.sections[indexPath.section].1[indexPath.row].2)"
         } else {
             countryName = self.searchResults[indexPath.row].0.1
+            countryName = "\(emojiFlagForISOCountryCode(self.searchResults[indexPath.row].1)) \(countryName)"
             originalCountryName = self.searchResults[indexPath.row].0.0
             code = "+\(self.searchResults[indexPath.row].2)"
         }
-        
+                
         cell.textLabel?.text = countryName
         cell.detailTextLabel?.text = originalCountryName
         if self.displayCodes, let label = cell.accessoryView as? UILabel {
             label.text = code
             label.sizeToFit()
-            label.textColor = self.theme.list.itemPrimaryTextColor
+            label.textColor = self.theme.list.itemSecondaryTextColor
         }
         cell.textLabel?.textColor = self.theme.list.itemPrimaryTextColor
         cell.detailTextLabel?.textColor = self.theme.list.itemPrimaryTextColor

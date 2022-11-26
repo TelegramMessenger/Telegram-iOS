@@ -8317,3 +8317,14 @@ Sorry for the inconvenience.";
 
 "Stickers.EmojiPackInfoText" = "This message contains **%@** emoji.";
 "PeerInfo.TopicIconInfoText" = "This topic's icon is from **%@**.";
+
+"Login.EnterCodeFragmentTitle" = "Enter Code";
+"Login.EnterCodeFragmentText" = "Check the Anonymous Numbers section on **Fragment** to get the code.";
+"Login.OpenFragment" = "Open Fragment";
+
+"Login.AnonymousNumbers" = "Anonymous Numbers";
+
+"Conversation.CantPhoneCallAnonymousNumberError" = "You can't call this phone number.";
+
+"UserInfo.AnonymousNumberLabel" = "anonymous number";
+"UserInfo.AnonymousNumberInfo" = "This number is not tied to a SIM card and was acquired on [Fragment]().";

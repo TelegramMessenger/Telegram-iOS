@@ -125,7 +125,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
             }
             if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
                 let flagString = emojiFlagForISOCountryCode(country.id)
-                let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.strings) ?? country.name
+                var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.strings) ?? country.name
+                if country.id == "FT" {
+                    localizedName = strongSelf.strings.Login_AnonymousNumbers
+                }
                 strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                 strongSelf.hasCountry = true
                 
@@ -164,7 +167,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                 if processNumberChange(strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name)
-                    let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
+                    var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
+                    if name == "FT" {
+                        localizedName = strongSelf.strings.Login_AnonymousNumbers
+                    }
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                     strongSelf.hasCountry = true
                     
@@ -173,7 +179,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     }
                 } else if let code = Int(code), let (countryId, countryName) = countryCodeToIdAndName[code] {
                     let flagString = emojiFlagForISOCountryCode(countryId)
-                    let localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
+                    var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(countryId, strings: strongSelf.strings) ?? countryName
+                    if countryId == "FT" {
+                        localizedName = strongSelf.strings.Login_AnonymousNumbers
+                    }
                     strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
                     strongSelf.hasCountry = true
                     

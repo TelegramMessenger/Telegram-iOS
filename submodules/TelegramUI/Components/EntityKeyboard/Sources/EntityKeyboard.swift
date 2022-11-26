@@ -106,6 +106,7 @@ public final class EntityKeyboardComponent: Component {
     public let makeSearchContainerNode: (EntitySearchContentType) -> EntitySearchContainerNode?
     public let deviceMetrics: DeviceMetrics
     public let hiddenInputHeight: CGFloat
+    public let inputHeight: CGFloat
     public let displayBottomPanel: Bool
     public let isExpanded: Bool
     
@@ -131,6 +132,7 @@ public final class EntityKeyboardComponent: Component {
         makeSearchContainerNode: @escaping (EntitySearchContentType) -> EntitySearchContainerNode?,
         deviceMetrics: DeviceMetrics,
         hiddenInputHeight: CGFloat,
+        inputHeight: CGFloat,
         displayBottomPanel: Bool,
         isExpanded: Bool
     ) {
@@ -155,6 +157,7 @@ public final class EntityKeyboardComponent: Component {
         self.makeSearchContainerNode = makeSearchContainerNode
         self.deviceMetrics = deviceMetrics
         self.hiddenInputHeight = hiddenInputHeight
+        self.inputHeight = inputHeight
         self.displayBottomPanel = displayBottomPanel
         self.isExpanded = isExpanded
     }
@@ -200,6 +203,9 @@ public final class EntityKeyboardComponent: Component {
             return false
         }
         if lhs.hiddenInputHeight != rhs.hiddenInputHeight {
+            return false
+        }
+        if lhs.inputHeight != rhs.inputHeight {
             return false
         }
         if lhs.displayBottomPanel != rhs.displayBottomPanel {
@@ -682,7 +688,8 @@ public final class EntityKeyboardComponent: Component {
                         EntitySearchContentEnvironment(
                             context: component.emojiContent.context,
                             theme: component.theme,
-                            deviceMetrics: component.deviceMetrics
+                            deviceMetrics: component.deviceMetrics,
+                            inputHeight: component.inputHeight
                         )
                     },
                     containerSize: availableSize

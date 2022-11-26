@@ -11,6 +11,8 @@ swift_library(
     ],
     deps = [
         "//submodules/libphonenumber:libphonenumber",
+        "//submodules/AccountContext:AccountContext",
+        "//submodules/TelegramCore:TelegramCore",
     ],
     visibility = [
         "//visibility:public",

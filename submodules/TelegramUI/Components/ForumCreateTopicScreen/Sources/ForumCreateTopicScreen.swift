@@ -155,7 +155,7 @@ private final class TitleFieldComponent: Component {
         return true
     }
     
-    final class View: UIView {
+    final class View: UIView, UITextFieldDelegate {
         private let iconButton: HighlightTrackingButton
         private let iconView: ComponentView<Empty>
         private let placeholderView: ComponentView<Empty>
@@ -169,9 +169,10 @@ private final class TitleFieldComponent: Component {
             self.iconView = ComponentView<Empty>()
             self.placeholderView = ComponentView<Empty>()
             self.textField = TextFieldNodeView(frame: .zero)
-            
+
             super.init(frame: frame)
-            
+
+            self.textField.delegate = self
             self.textField.addTarget(self, action: #selector(self.textChanged(_:)), for: .editingChanged)
             
             self.addSubview(self.textField)
@@ -400,6 +401,7 @@ private final class TopicIconSelectionComponent: Component {
                     makeSearchContainerNode: { _ in return nil },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
+                    inputHeight: 0.0,
                     displayBottomPanel: false,
                     isExpanded: true
                 )),

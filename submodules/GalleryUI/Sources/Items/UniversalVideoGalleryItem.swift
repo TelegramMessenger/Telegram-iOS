@@ -783,6 +783,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     private let hasExpandedCaptionPromise = Promise<Bool>()
     private var hideControlsDisposable: Disposable?
     
+    private var scrubbing = false
+    
     var playbackCompleted: (() -> Void)?
     
     private var customUnembedWhenPortrait: ((OverlayMediaItemNode) -> Bool)?
@@ -1062,21 +1064,28 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 strongSelf.isInteractingPromise.set(timecode != nil)
                 
-                if let videoFramePreview = strongSelf.videoFramePreview {
-                    if let timecode = timecode {
-                        if !strongSelf.scrubbingFrames {
-                            strongSelf.scrubbingFrames = true
-                            strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
-                            |> map(Optional.init))
-                        }
-                        videoFramePreview.generateFrame(at: timecode)
-                    } else {
-                        strongSelf.isInteractingPromise.set(false)
-                        strongSelf.scrubbingFrame.set(.single(nil))
-                        videoFramePreview.cancelPendingFrames()
-                        strongSelf.scrubbingFrames = false
-                    }
+                if let timecode = timecode {
+                    strongSelf.videoNode?.pause()
+                    strongSelf.videoNode?.seek(timecode)
+                } else {
+                    strongSelf.videoNode?.play()
                 }
+                
+//                if let videoFramePreview = strongSelf.videoFramePreview {
+//                    if let timecode = timecode {
+//                        if !strongSelf.scrubbingFrames {
+//                            strongSelf.scrubbingFrames = true
+//                            strongSelf.scrubbingFrame.set(videoFramePreview.generatedFrames
+//                            |> map(Optional.init))
+//                        }
+//                        videoFramePreview.generateFrame(at: timecode)
+//                    } else {
+//                        strongSelf.isInteractingPromise.set(false)
+//                        strongSelf.scrubbingFrame.set(.single(nil))
+//                        videoFramePreview.cancelPendingFrames()
+//                        strongSelf.scrubbingFrames = false
+//                    }
+//                }
             }
             self.footerContentNode.scrubberView = scrubberView
             

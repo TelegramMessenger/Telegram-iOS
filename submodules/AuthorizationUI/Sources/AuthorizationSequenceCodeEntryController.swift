@@ -19,6 +19,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     public var loginWithCode: ((String) -> Void)?
     public var signInWithApple: (() -> Void)?
+    public var openFragment: ((String) -> Void)?
     
     var reset: (() -> Void)?
     var requestNextOption: (() -> Void)?
@@ -91,6 +92,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         
         self.controllerNode.signInWithApple = { [weak self] in
             self?.signInWithApple?()
+        }
+        
+        self.controllerNode.openFragment = { [weak self] url in
+            self?.openFragment?(url)
         }
         
         self.controllerNode.requestNextOption = { [weak self] in
@@ -193,6 +198,8 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             case let .missedCall(_, length):
                 minimalCodeLength = Int(length)
             case let .email(_, length, _, _, _):
+                minimalCodeLength = Int(length)
+            case let .fragment(_, length):
                 minimalCodeLength = Int(length)
             case .flashCall, .emailSetupRequired:
                 break

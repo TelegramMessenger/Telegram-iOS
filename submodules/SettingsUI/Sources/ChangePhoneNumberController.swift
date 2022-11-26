@@ -145,7 +145,7 @@ public final class ChangePhoneNumberController: ViewController, MFMailComposeVie
                             text = presentationData.strings.Login_InvalidPhoneError
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneNumberOccupied:
-                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(phoneNumber)).string
+                            text = presentationData.strings.ChangePhone_ErrorOccupied(formatPhoneNumber(context: strongSelf.context, number: phoneNumber)).string
                             actions.append(TextAlertAction(type: .defaultAction, title: strongSelf.presentationData.strings.Common_OK, action: {}))
                         case .phoneBanned:
                             text = presentationData.strings.Login_PhoneBannedError
@@ -154,7 +154,7 @@ public final class ChangePhoneNumberController: ViewController, MFMailComposeVie
                                 guard let strongSelf = self else {
                                     return
                                 }
-                                let formattedNumber = formatPhoneNumber(number)
+                                let formattedNumber = formatPhoneNumber(context: strongSelf.context, number: number)
                                 let appVersion = (Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String) ?? "unknown"
                                 let systemVersion = UIDevice.current.systemVersion
                                 let locale = Locale.current.identifier

@@ -72,7 +72,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
                 PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
             }))
         }
-    case let .messageActionSetMessagesTTL(period):
+    case let .messageActionSetMessagesTTL(period, _, _):
         return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period))
     case let .messageActionGroupCallScheduled(call, scheduleDate):
         switch call {

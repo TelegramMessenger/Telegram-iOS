@@ -184,6 +184,7 @@ public final class EmojiStatusSelectionComponent: Component {
                     makeSearchContainerNode: { _ in return nil },
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
+                    inputHeight: 0.0,
                     displayBottomPanel: false,
                     isExpanded: false
                 )),

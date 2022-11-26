@@ -21,6 +21,7 @@ import FetchManagerImpl
 import InAppPurchaseManager
 import AnimationCache
 import MultiAnimationRenderer
+import AppBundle
 
 private final class DeviceSpecificContactImportContext {
     let disposable = MetaDisposable()
@@ -147,12 +148,19 @@ public final class AccountContextImpl: AccountContext {
         return self._appConfiguration.get()
     }
     
+    public var currentCountriesConfiguration: Atomic<CountriesConfiguration>
+    private let _countriesConfiguration = Promise<CountriesConfiguration>()
+    public var countriesConfiguration: Signal<CountriesConfiguration, NoError> {
+        return self._countriesConfiguration.get()
+    }
+    
     public var watchManager: WatchManager?
     
     private var storedPassword: (String, CFAbsoluteTime, SwiftSignalKit.Timer)?
     private var limitsConfigurationDisposable: Disposable?
     private var contentSettingsDisposable: Disposable?
     private var appConfigurationDisposable: Disposable?
+    private var countriesConfigurationDisposable: Disposable?
     
     private let deviceSpecificContactImportContexts: QueueLocalObject<DeviceSpecificContactImportContexts>
     private var managedAppSpecificContactsDisposable: Disposable?
@@ -241,11 +249,18 @@ public final class AccountContextImpl: AccountContext {
         let updatedAppConfiguration = getAppConfiguration(postbox: account.postbox)
         self.currentAppConfiguration = Atomic(value: appConfiguration)
         self._appConfiguration.set(.single(appConfiguration) |> then(updatedAppConfiguration))
-        
+                
         let currentAppConfiguration = self.currentAppConfiguration
         self.appConfigurationDisposable = (self._appConfiguration.get()
         |> deliverOnMainQueue).start(next: { value in
             let _ = currentAppConfiguration.swap(value)
+        })
+        
+        self.currentCountriesConfiguration = Atomic(value: CountriesConfiguration(countries: loadCountryCodes()))
+        let currentCountriesConfiguration = self.currentCountriesConfiguration
+        self.countriesConfigurationDisposable = (self.engine.localization.getCountriesList(accountManager: sharedContext.accountManager, langCode: nil)
+        |> deliverOnMainQueue).start(next: { value in
+            let _ = currentCountriesConfiguration.swap(CountriesConfiguration(countries: value))
         })
         
         let queue = Queue()
@@ -314,6 +329,7 @@ public final class AccountContextImpl: AccountContext {
         self.managedAppSpecificContactsDisposable?.dispose()
         self.contentSettingsDisposable?.dispose()
         self.appConfigurationDisposable?.dispose()
+        self.countriesConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.animatedEmojiStickersDisposable?.dispose()
     }
@@ -628,4 +644,64 @@ func getAppConfiguration(postbox: Postbox) -> Signal<AppConfiguration, NoError> 
         return appConfiguration
     }
     |> distinctUntilChanged
+}
+
+private func loadCountryCodes() -> [Country] {
+    guard let filePath = getAppBundle().path(forResource: "PhoneCountries", ofType: "txt") else {
+        return []
+    }
+    guard let stringData = try? Data(contentsOf: URL(fileURLWithPath: filePath)) else {
+        return []
+    }
+    guard let data = String(data: stringData, encoding: .utf8) else {
+        return []
+    }
+    
+    let delimiter = ";"
+    let endOfLine = "\n"
+    
+    var result: [Country] = []
+//    var countriesByPrefix: [String: (Country, Country.CountryCode)] = [:]
+    
+    var currentLocation = data.startIndex
+    
+    let locale = Locale(identifier: "en-US")
+    
+    while true {
+        guard let codeRange = data.range(of: delimiter, options: [], range: currentLocation ..< data.endIndex) else {
+            break
+        }
+        
+        let countryCode = String(data[currentLocation ..< codeRange.lowerBound])
+        
+        guard let idRange = data.range(of: delimiter, options: [], range: codeRange.upperBound ..< data.endIndex) else {
+            break
+        }
+        
+        let countryId = String(data[codeRange.upperBound ..< idRange.lowerBound])
+        
+        guard let patternRange = data.range(of: delimiter, options: [], range: idRange.upperBound ..< data.endIndex) else {
+            break
+        }
+        
+        let pattern = String(data[idRange.upperBound ..< patternRange.lowerBound])
+        
+        let maybeNameRange = data.range(of: endOfLine, options: [], range: patternRange.upperBound ..< data.endIndex)
+        
+        let countryName = locale.localizedString(forIdentifier: countryId) ?? ""
+        if let _ = Int(countryCode) {
+            let code = Country.CountryCode(code: countryCode, prefixes: [], patterns: !pattern.isEmpty ? [pattern] : [])
+            let country = Country(id: countryId, name: countryName, localizedName: nil, countryCodes: [code], hidden: false)
+            result.append(country)
+//            countriesByPrefix["\(code.code)"] = (country, code)
+        }
+        
+        if let maybeNameRange = maybeNameRange {
+            currentLocation = maybeNameRange.upperBound
+        } else {
+            break
+        }
+    }
+        
+    return result
 }
