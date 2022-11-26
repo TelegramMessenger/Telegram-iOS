@@ -17,13 +17,16 @@ final class StreamSheetComponent: CombinedComponent {
     let sheetHeight: CGFloat
     let topOffset: CGFloat
     let backgroundColor: UIColor
+    
+    let bottomPadding: CGFloat
     init(
 //        color: UIColor,
         topComponent: AnyComponent<Empty>,
         bottomButtonsRow: AnyComponent<Empty>,
         topOffset: CGFloat,
         sheetHeight: CGFloat,
-        backgroundColor: UIColor
+        backgroundColor: UIColor,
+        bottomPadding: CGFloat
     ) {
 //        self.leftItem = leftItem
         self.topComponent = topComponent
@@ -32,6 +35,7 @@ final class StreamSheetComponent: CombinedComponent {
         self.topOffset = topOffset
         self.sheetHeight = sheetHeight
         self.backgroundColor = backgroundColor
+        self.bottomPadding = bottomPadding
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
@@ -51,6 +55,9 @@ final class StreamSheetComponent: CombinedComponent {
             return false
         }
         if !lhs.backgroundColor.isEqual(rhs.backgroundColor) {
+            return false
+        }
+        if lhs.bottomPadding != rhs.bottomPadding {
             return false
         }
         return true
@@ -174,9 +181,9 @@ final class StreamSheetComponent: CombinedComponent {
             
             if let bottomButtonsRow = bottomButtonsRow {
                 context.add(bottomButtonsRow
-                    .position(CGPoint(x: bottomButtonsRow.size.width / 2, y: context.component.sheetHeight - 50 / 2 - 16 + topOffset))
+                    .position(CGPoint(x: bottomButtonsRow.size.width / 2, y: context.component.sheetHeight - 50 / 2 + topOffset - context.component.bottomPadding))
                 )
-                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: context.component.sheetHeight - 50 - 16 + topOffset, width: bottomButtonsRow.size.width, height: bottomButtonsRow.size.height))
+                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: context.component.sheetHeight - 50 + topOffset - context.component.bottomPadding, width: bottomButtonsRow.size.width, height: bottomButtonsRow.size.height))
             }
             /*if let leftItem = leftItem {
                 print(leftItem)
@@ -257,14 +264,20 @@ final class SheetBackgroundComponent: Component {
     class View: UIView {
         private let backgroundView = UIView()
         
-        func update(availableSize: CGSize, color: UIColor) {
+        func update(availableSize: CGSize, color: UIColor, transition: Transition) {
             if backgroundView.superview == nil {
                 self.addSubview(backgroundView)
             }
             // To fix release animation
             let extraBottom: CGFloat = 500
             backgroundView.frame = .init(origin: .zero, size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
-            backgroundView.backgroundColor = color// .withAlphaComponent(0.4)
+            if backgroundView.backgroundColor != color {
+                UIView.animate(withDuration: 0.4) { [self] in
+                    backgroundView.backgroundColor = color
+                }
+            } else {
+                backgroundView.backgroundColor = color
+            }
             backgroundView.isUserInteractionEnabled = false
             backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
             backgroundView.layer.cornerRadius = 16
@@ -295,7 +308,7 @@ final class SheetBackgroundComponent: Component {
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        view.update(availableSize: availableSize, color: color)
+        view.update(availableSize: availableSize, color: color, transition: transition)
         return availableSize
     }
 }

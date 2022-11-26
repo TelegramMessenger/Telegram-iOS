@@ -7,6 +7,8 @@ import AVKit
 import MultilineTextComponent
 import Display
 
+import TelegramCore
+
 typealias MediaStreamVideoComponent = _MediaStreamVideoComponent
 
 final class _MediaStreamVideoComponent: Component {
@@ -94,6 +96,8 @@ final class _MediaStreamVideoComponent: Component {
         private var videoBlurView: VideoRenderingView?
         private var videoView: VideoRenderingView?
         private var activityIndicatorView: ComponentHostView<Empty>?
+        private var loadingView: ComponentHostView<Empty>?
+        
         private var videoPlaceholderView: UIView?
         private var noSignalView: ComponentHostView<Empty>?
         
@@ -140,8 +144,20 @@ final class _MediaStreamVideoComponent: Component {
         }
         let maskGradientLayer = CAGradientLayer()
         private var wasVisible = true
+        
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
+            /*let groupPeer = component.call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.call.peerId))
+            let _ = groupPeer.start(next: { peer in
+                switch peer {
+                case let .channel(channel):
+                    let photo = channel.photo
+                    photo[0].resource.
+                    print(photo)
+                default: break
+                }
+                let tileShimmer = VoiceChatTileShimmeringNode(account: component.call.account, peer: peer!._asPeer())
+            })*/
             
             if component.hasVideo, self.videoView == nil {
 //                self.addSubview(sheetBackdropView)
@@ -172,6 +188,7 @@ final class _MediaStreamVideoComponent: Component {
                             }
 //                            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
                                 final class PlaybackDelegateImpl: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
+                                    var onTransitionFinished: (() -> Void)?
                                     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
                                         
                                     }
@@ -185,6 +202,7 @@ final class _MediaStreamVideoComponent: Component {
                                     }
 
                                     func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+                                        onTransitionFinished?()
                                         print("pip finished")
                                     }
 
@@ -196,21 +214,29 @@ final class _MediaStreamVideoComponent: Component {
                                         return false
                                     }
                                 }
-                            let pictureInPictureController: AVPictureInPictureController
+                            let pictureInPictureController: AVPictureInPictureController?
                             if #available(iOS 15.0, *) {
-                                pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: PlaybackDelegateImpl()))
+                                pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: {
+                                    let delegate = PlaybackDelegateImpl()
+                                    delegate.onTransitionFinished = { [weak self] in
+                                        if self?.videoView?.alpha == 0 {
+                                            self?.videoView?.alpha = 1
+                                        }
+                                    }
+                                    return delegate
+                                }()))
                             } else {
                                 // TODO: support PiP for iOS < 15.0
                                 // sampleBufferVideoView.sampleBufferLayer
-                                pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))!
+                                pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))
                             }
                                 
-                                pictureInPictureController.delegate = self
+                                pictureInPictureController?.delegate = self
                             if #available(iOS 14.2, *) {
-                                pictureInPictureController.canStartPictureInPictureAutomaticallyFromInline = true
+                                pictureInPictureController?.canStartPictureInPictureAutomaticallyFromInline = true
                             }
                             if #available(iOS 14.0, *) {
-                                pictureInPictureController.requiresLinearPlayback = true
+                                pictureInPictureController?.requiresLinearPlayback = true
                             }
                                 
                                 self.pictureInPictureController = pictureInPictureController
@@ -235,9 +261,6 @@ final class _MediaStreamVideoComponent: Component {
                             strongSelf.noSignalTimeout = false
                             strongSelf.noSignalView?.removeFromSuperview()
                             strongSelf.noSignalView = nil
-                            
-                            //strongSelf.translatesAutoresizingMaskIntoConstraints = false
-                            //strongSelf.maximumZoomScale = 4.0
                             
                             state?.updated(transition: .immediate)
                         }
