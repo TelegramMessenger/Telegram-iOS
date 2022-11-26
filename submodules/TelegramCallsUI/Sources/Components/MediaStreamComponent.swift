@@ -106,10 +106,12 @@ final class NavigationBackButtonComponent: Component {
 final class StreamTitleComponent: Component {
     let text: String
     let isRecording: Bool
+    let isActive: Bool
     
-    init(text: String, isRecording: Bool) {
+    init(text: String, isRecording: Bool, isActive: Bool) {
         self.text = text
         self.isRecording = isRecording
+        self.isActive = isActive
     }
     
     static func ==(lhs: StreamTitleComponent, rhs: StreamTitleComponent) -> Bool {
@@ -119,12 +121,66 @@ final class StreamTitleComponent: Component {
         if lhs.isRecording != rhs.isRecording {
             return false
         }
+        if lhs.isActive != rhs.isActive {
+            return false
+        }
         return false
+    }
+    
+    final class LiveIndicatorView: UIView {
+        private let label = UILabel()
+        private let stalledAnimatedGradient = CAGradientLayer()
+        private var wasLive = false
+        
+        override init(frame: CGRect = .zero) {
+            super.init(frame: frame)
+            
+            addSubview(label)
+            label.text = "LIVE"
+            label.font = .systemFont(ofSize: 10, weight: .medium)
+            label.textAlignment = .center
+            layer.addSublayer(stalledAnimatedGradient)
+            self.clipsToBounds = true
+            toggle(isLive: false)
+        }
+        
+        required init?(coder: NSCoder) {
+            fatalError("init(coder:) has not been implemented")
+        }
+        
+        override func layoutSubviews() {
+            super.layoutSubviews()
+            
+            label.frame = bounds
+            stalledAnimatedGradient.frame = bounds
+            self.layer.cornerRadius = min(bounds.width, bounds.height) / 2
+        }
+        
+        func toggle(isLive: Bool) {
+            // TODO: get actual colors
+            if isLive {
+                if !wasLive {
+                    // TODO: animate
+                }
+                self.backgroundColor = .systemPink
+                stalledAnimatedGradient.opacity = 0
+                stalledAnimatedGradient.removeAllAnimations()
+            } else {
+                if wasLive {
+                    // TODO: animate
+                }
+                self.backgroundColor = .gray
+                stalledAnimatedGradient.opacity = 1
+//                stalledAnimatedGradient.add(<#T##anim: CAAnimation##CAAnimation#>, forKey: <#T##String?#>)
+            }
+            wasLive = isLive
+        }
     }
     
     public final class View: UIView {
         private let textView: ComponentHostView<Empty>
         private var indicatorView: UIImageView?
+        let liveIndicatorView = LiveIndicatorView()
         
         private let trackingLayer: HierarchyTrackingLayer
         
@@ -136,6 +192,7 @@ final class StreamTitleComponent: Component {
             super.init(frame: frame)
             
             self.addSubview(self.textView)
+            self.addSubview(self.liveIndicatorView)
             
             self.trackingLayer.didEnterHierarchy = { [weak self] in
                 guard let strongSelf = self else {
@@ -190,14 +247,16 @@ final class StreamTitleComponent: Component {
                     indicatorView.removeFromSuperview()
                 }
             }
-            
+            liveIndicatorView.toggle(isLive: component.isActive)
             let sideInset: CGFloat = 20.0
             let size = CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height)
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
             self.textView.frame = textFrame
             
+            liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0) + 1.0), size: .init(width: 40, height: 18))
+            
             if let indicatorView = self.indicatorView, let image = indicatorView.image {
-                indicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floorToScreenPixels((size.height - image.size.height) / 2.0) + 1.0), size: image.size)
+                indicatorView.frame = CGRect(origin: CGPoint(x: liveIndicatorView.frame.maxX + 6.0, y: floorToScreenPixels((size.height - image.size.height) / 2.0) + 1.0), size: image.size)
             }
             
             return size
@@ -227,7 +286,7 @@ private final class NavigationBarComponent: CombinedComponent {
         rightItems: [AnyComponentWithIdentity<Empty>],
         centerItem: AnyComponent<Empty>?
     ) {
-        self.topInset = topInset
+        self.topInset = 0 // topInset
         self.sideInset = sideInset
         self.leftItem = leftItem
         self.rightItems = rightItems
@@ -255,7 +314,6 @@ private final class NavigationBarComponent: CombinedComponent {
     }
     
     static var body: Body {
-        let background = Child(Rectangle.self)
         let leftItem = Child(environment: Empty.self)
         let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
         let centerItem = Child(environment: Empty.self)
@@ -266,8 +324,6 @@ private final class NavigationBarComponent: CombinedComponent {
             
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: context.component.topInset + contentHeight)
-            
-            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
@@ -301,10 +357,6 @@ private final class NavigationBarComponent: CombinedComponent {
             if let centerItem = centerItem {
                 availableWidth -= centerItem.size.width
             }
-            
-            context.add(background
-                .position(CGPoint(x: size.width / 2.0, y: size.height / 2.0))
-            )
             
             var centerLeftInset = sideInset
             if let leftItem = leftItem {
@@ -450,7 +502,7 @@ private final class ToolbarComponent: CombinedComponent {
             let contentHeight: CGFloat = 44.0
             let size = CGSize(width: context.availableSize.width, height: contentHeight + context.component.bottomInset)
             
-            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0.5)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
+            let background = background.update(component: Rectangle(color: UIColor(white: 0.0, alpha: 0)), availableSize: CGSize(width: size.width, height: size.height), transition: context.transition)
             
             let leftItem = context.component.leftItem.flatMap { leftItemComponent in
                 return leftItem.update(
@@ -550,8 +602,10 @@ public final class _MediaStreamComponent: CombinedComponent {
         
         private(set) var displayUI: Bool = true
         var dismissOffset: CGFloat = 0.0
-        
+        // TODO: remove (replaced by isFullscreen)
         var storedIsLandscape: Bool?
+        var isFullscreen: Bool = false
+        var videoSize: CGSize?
         
         private(set) var canManageCall: Bool = false
         let isPictureInPictureSupported: Bool
@@ -569,8 +623,9 @@ public final class _MediaStreamComponent: CombinedComponent {
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
         
-        // MARK: - Added
         var videoHiddenForPip = false
+        /// To update videoHiddenForPip
+        var onExpandedFromPictureInPicture: ((State) -> Void)?
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
@@ -711,8 +766,8 @@ public final class _MediaStreamComponent: CombinedComponent {
     public static var body: Body {
         let background = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
-        let navigationBar = Child(NavigationBarComponent.self)
-        let toolbar = Child(ToolbarComponent.self)
+//        let navigationBar = Child(NavigationBarComponent.self)
+//        let toolbar = Child(ToolbarComponent.self)
         
         let sheet = Child(StreamSheetComponent.self)
         
@@ -721,6 +776,8 @@ public final class _MediaStreamComponent: CombinedComponent {
         let moreButtonTag = GenericComponentViewTag()
         let moreAnimationTag = GenericComponentViewTag()
         
+        var debugUpdate = true
+        var lastVideoPos: CGFloat = 0
         return { context in
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             if environment.isVisible {
@@ -737,7 +794,10 @@ public final class _MediaStreamComponent: CombinedComponent {
             let call = context.component.call
             let state = context.state
             let controller = environment.controller
-            
+            //?
+            if environment.isVisible {
+                state.videoHiddenForPip = false
+            }
             context.state.deactivatePictureInPictureIfVisible.connect {
                 guard let controller = controller() else {
                     return
@@ -749,7 +809,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
-            
+            let isFullscreen = state.isFullscreen
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -757,6 +817,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                     isVisible: environment.isVisible && context.state.isVisibleInHierarchy,
                     isAdmin: context.state.canManageCall,
                     peerTitle: context.state.peerTitle,
+                    // TODO: find out how to get image
+                    peerImage: nil,
+                    isFullscreen: isFullscreen,
                     activatePictureInPicture: activatePictureInPicture,
                     deactivatePictureInPicture: deactivatePictureInPicture,
                     bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in
@@ -771,28 +834,19 @@ public final class _MediaStreamComponent: CombinedComponent {
                     },
                     pictureInPictureClosed: { [weak call] in
                         let _ = call?.leave(terminateIfPossible: false)
+                    },
+                    onVideoSizeRetrieved: { [weak state] size in
+                        state?.videoSize = size
                     }
                 ),
                 availableSize: context.availableSize,
                 transition: context.transition
-            )
+            )// .opacity(state.videoHiddenForPip ? 0 : 1)
             
-            let sheet = sheet.update(
-                component: StreamSheetComponent(
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
-                        action: { [weak call] in
-                            let _ = call?.leave(terminateIfPossible: false)
-                        })
-                    )
-                ),
-                availableSize: context.availableSize,
-                transition: context.transition
-            )
-            
+//            let height = context.availableSize.height
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
-            let contextView = context.view
-            if /*true || context.state.isPictureInPictureSupported,*/ context.state.hasVideo {
+//            let contextView = context.view
+            if context.state.isPictureInPictureSupported, context.state.hasVideo {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
                     content: AnyComponent(BundleIconComponent(
                         name: "Media Gallery/PictureInPictureButton",
@@ -804,22 +858,17 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 return
                             }
                             state.videoHiddenForPip = true
-                            UIView.animate(withDuration: 5, animations: {
-                                contextView.alpha = 0
-                            }, completion: { _ in
-                                state.videoHiddenForPip = true
-                                state.updateDismissOffset(value: 2000, interactive: false)
-                                controller.dismiss(closing: false, manual: true)
-                                contextView.alpha = 1
-                            })
+                            
+                            controller.dismiss(closing: false, manual: true)
                         })
                     }
                 ).minSize(CGSize(width: 44.0, height: 44.0)))))
             }
-            
+            var topLeftButton: AnyComponent<Empty>?
             if context.state.canManageCall {
                 let whiteColor = UIColor(white: 1.0, alpha: 1.0)
-                navigationRightItems.append(AnyComponentWithIdentity(id: "more", component: AnyComponent(Button(
+                /*navigationRightItems.append(*/ topLeftButton = //AnyComponentWithIdentity(id: "more", component:
+                AnyComponent(Button(
                     content: AnyComponent(ZStack([
                         AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
                             strokeColor: .white,
@@ -1048,25 +1097,26 @@ public final class _MediaStreamComponent: CombinedComponent {
                         }*/
                         controller.presentInGlobalOverlay(contextController)
                     }
-                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))))
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(moreButtonTag))//)//)
             }
-            
-            let navigationBar = navigationBar.update(
-                component: NavigationBarComponent(
-                    topInset: environment.statusBarHeight,
-                    sideInset: environment.safeInsets.left,
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
-                        action: { [weak call] in
-                            let _ = call?.leave(terminateIfPossible: false)
-                        })
-                    ),
-                    rightItems: navigationRightItems,
-                    centerItem: AnyComponent(StreamTitleComponent(text: environment.strings.VoiceChatChannel_Title, isRecording: state.recordingStartTimestamp != nil))
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
-                transition: context.transition
+            let navigationComponent = NavigationBarComponent(
+                topInset: environment.statusBarHeight,
+                sideInset: environment.safeInsets.left,
+                leftItem: topLeftButton/*AnyComponent(Button(
+                    content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
+                    action: { [weak call] in
+                        let _ = call?.leave(terminateIfPossible: false)
+                    })
+                )*/,
+                rightItems: navigationRightItems,
+                centerItem: AnyComponent(StreamTitleComponent(text: state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isActive: call.hasVideo))
             )
+            
+//            let navigationBar = navigationBar.update(
+//                component: navigationComponent,
+//                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
+//                transition: context.transition
+//            )
             
             let isLandscape = context.availableSize.width > context.availableSize.height
             if context.state.storedIsLandscape != isLandscape {
@@ -1092,40 +1142,49 @@ public final class _MediaStreamComponent: CombinedComponent {
                 ))
             }
             
-            let toolbar = toolbar.update(
-                component: ToolbarComponent(
-                    bottomInset: environment.safeInsets.bottom,
-                    sideInset: environment.safeInsets.left,
-                    leftItem: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: "Chat/Input/Accessory Panels/MessageSelectionForward",
-                            tintColor: .white
-                        )),
-                        action: {
-                            guard let controller = controller() as? MediaStreamComponentController else {
-                                return
-                            }
-                            controller.presentShare()
+            let toolbar = ToolbarComponent(
+                bottomInset: environment.safeInsets.bottom,
+                sideInset: environment.safeInsets.left,
+                leftItem: AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: "Chat/Input/Accessory Panels/MessageSelectionForward",
+                        tintColor: .white
+                    )),
+                    action: {
+                        guard let controller = controller() as? MediaStreamComponentController else {
+                            return
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0))),
-                    rightItem: AnyComponent(Button(
-                        content: AnyComponent(BundleIconComponent(
-                            name: isLandscape ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
-                            tintColor: .white
-                        )),
-                        action: {
-                            if let controller = controller() as? MediaStreamComponentController {
-                                controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
+                        controller.presentShare()
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0))),
+                // TODO: disable button instead of hiding
+                rightItem: state.hasVideo ? AnyComponent(Button(
+                    content: AnyComponent(BundleIconComponent(
+                        name: isLandscape ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
+                        tintColor: .white
+                    )),
+                    action: {
+                        if let controller = controller() as? MediaStreamComponentController {
+                            guard let size = state.videoSize else { return }
+                            state.isFullscreen.toggle()
+                            if state.isFullscreen {
+                                if size.width > size.height {
+                                    controller.updateOrientation(orientation: .landscapeRight)
+                                } else {
+                                    controller.updateOrientation(orientation: .portrait)
+                                    // TODO: Update to portrait when open from landscape(?)
+                                }
+                            } else {
+                                // TODO: Check and respect current device orientation
+                                controller.updateOrientation(orientation: .portrait)
                             }
+//                            controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0))),
-                    centerItem: infoItem
-                ),
-                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
-                transition: context.transition
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0))) : nil,
+                centerItem: infoItem
             )
             
-            let height = context.availableSize.height
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                 .gesture(.tap { [weak state] in
@@ -1145,41 +1204,82 @@ public final class _MediaStreamComponent: CombinedComponent {
                         state.updateDismissOffset(value: offset.y, interactive: true)
                     case let .ended(velocity):
                         // TODO: Dismiss sheet depending on velocity
-                        if abs(velocity.y) > 200.0 {
-                            activatePictureInPicture.invoke(Action { [weak state] in
+                        if velocity.y > 200.0 {
+                            let _ = call.leave(terminateIfPossible: false)
+                            /*activatePictureInPicture.invoke(Action { [weak state] in
                                 guard let state = state, let controller = controller() as? MediaStreamComponentController else {
                                     return
                                 }
                                 state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
                                 controller.dismiss(closing: false, manual: true)
-                            })
+                            })*/
                         } else {
                             state.updateDismissOffset(value: 0.0, interactive: false)
                         }
                     }
                 })
             )
+            let videoHeight: CGFloat = context.availableSize.width / 16 * 9
+            let sheetHeight: CGFloat = (50 + 70 + 20 + 80 + videoHeight)
+            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset < 30
             
-            let sheetHeight: CGFloat = 300
+            let sheet = sheet.update(
+                component: StreamSheetComponent(
+                    topComponent: AnyComponent(navigationComponent),
+                    bottomButtonsRow: AnyComponent(toolbar),
+                    topOffset: context.availableSize.height - sheetHeight + context.state.dismissOffset,
+                    sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
+                    backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor)
+                ),
+                availableSize: context.availableSize,
+                transition: context.transition
+            )
+            // TODO: calculate (although not necessary currently)
             let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + context.state.dismissOffset
-            // TODO: work with sheet here
-            context.add(sheet
-                .position(.init(x: context.availableSize.width / 2.0, y: sheetOffset))
-            )
+            let sheetPosition = sheetOffset + sheetHeight / 2
+            // Sheet underneath the video when in sheet
+            if !isFullscreen {
+                // TODO: work with sheet here
+                context.add(sheet
+                    .position(.init(x: context.availableSize.width / 2.0, y: /*isFullscreen ?*/ context.availableSize.height / 2)) //: sheetPosition))
+                )
+            }
             print("DismissOffset: \(context.state.dismissOffset)")
+            // Only modal// context.state.videoSize?.height ?? 160
+            var videoPos: CGFloat = 0
+            if 2 < 10 {
+                if debugUpdate {
+                    videoPos = videoHeight - videoHeight / 2 * 2 + sheetPosition - sheetPosition
+                    debugUpdate = false
+                } else {
+                    videoPos = lastVideoPos
+                }
+                if isFullscreen {
+                    videoPos = context.availableSize.height / 2
+                } else {
+                    videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50
+                }
+                lastVideoPos = videoPos
+            }
             context.add(video
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0 + context.state.dismissOffset))
+                .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos)/*sheetPosition + videoHeight / 2 + 50 - context.availableSize.height / 2*/)// context.availableSize.height / 2.0 + context.state.dismissOffset))
             )
             
-            context.add(navigationBar
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
-                .opacity(context.state.displayUI ? 1.0 : 0.0)
-            )
+            if isFullscreen {
+                context.add(sheet
+                    .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
+                )
+            }
             
-            context.add(toolbar
-                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
-                .opacity(context.state.displayUI ? 1.0 : 0.0)
-            )
+//            context.add(navigationBar
+//                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
+//                .opacity(context.state.displayUI ? 1.0 : 0.0)
+//            )
+            
+//            context.add(toolbar
+//                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
+//                .opacity(context.state.displayUI ? 1.0 : 0.0)
+//            )
             
             return context.availableSize
         }
@@ -1231,26 +1331,31 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
             view.expandFromPictureInPicture()
         }
         
-        if let validLayout = self.validLayout {
+        if let _ = self.validLayout {
             self.view.clipsToBounds = true
-            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
+//            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
             if #available(iOS 13.0, *) {
                 self.view.layer.cornerCurve = .continuous
             }
             
-            self.view.layer.animatePosition(from: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { [weak self] _ in
-                self?.view.layer.cornerRadius = 0.0
+            self.view.layer.animatePosition(from: CGPoint(x: self.view.frame.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in // [weak self] _ in
+//                self?.view.layer.cornerRadius = 0.0
             })
-            self.view.layer.animateScale(from: 0.001, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+//            self.view.layer.animateScale(from: 0.001, to: 1.0, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         }
         
         self.view.layer.allowsGroupOpacity = true
-        self.view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
+        self.view.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.2, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 return
             }
             strongSelf.view.layer.allowsGroupOpacity = false
         })
+        self.backgroundDimView.layer.animateAlpha(from: 0, to: 1, duration: 0.3)
+        if backgroundDimView.superview == nil {
+            guard let superview = view.superview else { return }
+            superview.insertSubview(backgroundDimView, belowSubview: view)
+        }
         // self.view.backgroundColor = .cyan
     }
     
@@ -1267,13 +1372,32 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
         }
     }
     
+    override public func viewDidLoad() {
+        super.viewDidLoad()
+//        view.insertSubview(backgroundDimView, at: 0)
+        // TODO: replace with actual color
+        backgroundDimView.backgroundColor = .black.withAlphaComponent(0.3)
+        self.view.clipsToBounds = false
+    }
+    
+    override public func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+    }
+    
+    override public func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        backgroundDimView.frame = .init(x: 0, y: -view.bounds.height * 3, width: view.bounds.width, height: view.bounds.height * 4)
+    }
+    
     public func dismiss(closing: Bool, manual: Bool) {
         self.dismiss(completion: nil)
     }
     
+    let backgroundDimView = UIView()
+    
     override public func dismiss(completion: (() -> Void)? = nil) {
         self.view.layer.allowsGroupOpacity = true
-        self.view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
+        self.view.layer.animateAlpha(from: 1.0, to: 1.0, duration: 0.25, removeOnCompletion: false, completion: { [weak self] _ in
             guard let strongSelf = self else {
                 completion?()
                 return
@@ -1281,18 +1405,18 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
             strongSelf.view.layer.allowsGroupOpacity = false
             strongSelf.dismissImpl(completion: completion)
         })
-        
-        if let validLayout = self.validLayout {
-            self.view.clipsToBounds = true
-            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
-            if #available(iOS 13.0, *) {
-                self.view.layer.cornerCurve = .continuous
-            }
+        self.backgroundDimView.layer.animateAlpha(from: 1.0, to: 0, duration: 0.3, removeOnCompletion: false)
+        // if let validLayout = self.validLayout {
+          //  self.view.clipsToBounds = true
+            // self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
+            // if #available(iOS 13.0, *) {
+            //     self.view.layer.cornerCurve = .continuous
+            // }
             
-            self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.frame.width * 0.9, y: 117.0), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
-            })
-            self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        }
+        self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+             })
+            // self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
+        // }
     }
     
     private func dismissImpl(completion: (() -> Void)? = nil) {

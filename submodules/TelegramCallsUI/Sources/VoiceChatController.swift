@@ -36,12 +36,12 @@ import DeviceAccess
 let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
 let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
-private let smallButtonSize = CGSize(width: 36.0, height: 36.0)
-private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
-private let topPanelHeight: CGFloat = 63.0
+let smallButtonSize = CGSize(width: 36.0, height: 36.0)
+let sideButtonSize = CGSize(width: 56.0, height: 56.0)
+let topPanelHeight: CGFloat = 63.0
 let bottomAreaHeight: CGFloat = 206.0
-private let fullscreenBottomAreaHeight: CGFloat = 80.0
-private let bottomGradientHeight: CGFloat = 70.0
+let fullscreenBottomAreaHeight: CGFloat = 80.0
+let bottomGradientHeight: CGFloat = 70.0
 
 func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
