@@ -509,7 +509,7 @@ typedef enum {
     _pageControl.frame = CGRectMake(0, pageControlY, self.view.bounds.size.width, 7);
     _glkView.frame = CGRectChangedOriginY(_glkView.frame, glViewY - statusBarHeight);
     
-    CGFloat startButtonWidth = self.view.bounds.size.width - 48.0f;
+    CGFloat startButtonWidth = MIN(430.0 - 48.0, self.view.bounds.size.width - 48.0f);
     UIView *startButton = self.createStartButton(startButtonWidth);
     if (startButton.superview == nil) {
         [self.view addSubview:startButton];

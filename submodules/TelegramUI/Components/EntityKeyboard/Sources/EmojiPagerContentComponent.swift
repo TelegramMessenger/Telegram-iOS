@@ -1682,6 +1682,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
                 let textFieldFrame = CGRect(origin: CGPoint(x: textComponentView.frame.minX, y: backgroundFrame.minY), size: CGSize(width: backgroundFrame.maxX - textComponentView.frame.minX, height: backgroundFrame.height))
                 
                 let textField = EmojiSearchTextField(frame: textFieldFrame)
+                textField.autocorrectionType = .no
                 self.textField = textField
                 self.insertSubview(textField, belowSubview: self.clearIconView)
                 textField.delegate = self
@@ -1725,6 +1726,11 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     }
     
     public func textFieldDidEndEditing(_ textField: UITextField) {
+    }
+    
+    public func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        textField.endEditing(true)
+        return false
     }
     
     @objc private func textFieldChanged(_ textField: UITextField) {

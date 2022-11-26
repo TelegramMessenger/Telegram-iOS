@@ -41,6 +41,8 @@ public func authorizationCurrentOptionText(_ type: SentAuthorizationCodeType, ph
         }
 
         return mutableString
+    case .fragment:
+        return parseMarkdownIntoAttributedString(strings.Login_EnterCodeFragmentText(phoneNumber).string, attributes: attributes, textAlignment: .center)
     }
 }
 
@@ -68,6 +70,13 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
             } else {
                 return (NSAttributedString(string: String(format: strings.ChangePhoneNumberCode_CallTimer(String(format: "%d:%.2d", minutes, seconds)).string, minutes, seconds), font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
             }
+        case .fragment:
+            if timeout <= 0 {
+                return (NSAttributedString(string: strings.Login_CodeSentSms, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+            } else {
+                let timeString = NSString(format: "%d:%.02d", Int(minutes), Int(seconds))
+                return (NSAttributedString(string: strings.Login_WillSendSms(timeString as String).string, font: Font.regular(16.0), textColor: primaryColor, paragraphAlignment: .center), false)
+            }
         }
     } else {
         switch currentType {
@@ -79,6 +88,8 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
                 return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .flashCall, .missedCall:
                 return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .fragment:
+                return (NSAttributedString(string: "Send code via fragment", font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
                 return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             }
@@ -90,6 +101,8 @@ public func authorizationNextOptionText(currentType: SentAuthorizationCodeType, 
                 return (NSAttributedString(string: strings.Login_SendCodeViaCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .flashCall, .missedCall:
                 return (NSAttributedString(string: strings.Login_SendCodeViaFlashCall, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
+            case .fragment:
+                return (NSAttributedString(string: "Send code via fragment", font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             case .none:
                 return (NSAttributedString(string: strings.Login_HaveNotReceivedCodeInternal, font: Font.regular(16.0), textColor: accentColor, paragraphAlignment: .center), true)
             }

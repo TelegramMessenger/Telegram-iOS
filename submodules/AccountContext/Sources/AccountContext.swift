@@ -892,6 +892,7 @@ public protocol AccountContext: AnyObject {
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
+    var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }

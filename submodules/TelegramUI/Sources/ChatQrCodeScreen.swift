@@ -564,12 +564,12 @@ final class ChatQrCodeScreen: ViewController {
     static let themeCrossfadeDelay: Double = 0.05
     
     enum Subject {
-        case peer(peer: Peer, threadId: Int64?)
+        case peer(peer: Peer, threadId: Int64?, temporary: Bool)
         case messages([Message])
         
         var fileName: String {
             switch self {
-            case let .peer(peer, threadId):
+            case let .peer(peer, threadId, _):
                 var result: String
                 if let addressName = peer.addressName, !addressName.isEmpty {
                     result = "t_me-\(peer.addressName ?? "")"
@@ -805,8 +805,8 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         self.wrappingScrollNode.view.canCancelContentTouches = true
                 
         switch controller.subject {
-            case let .peer(peer, threadId):
-                self.contentNode = QrContentNode(context: context, peer: peer, threadId: threadId, isStatic: false)
+            case let .peer(peer, threadId, temporary):
+                self.contentNode = QrContentNode(context: context, peer: peer, threadId: threadId, isStatic: false, temporary: temporary)
             case let .messages(messages):
                 self.contentNode = MessageContentNode(context: context, messages: messages)
         }
@@ -999,7 +999,7 @@ private class ChatQrCodeScreenNode: ViewControllerTracingNode, UIScrollViewDeleg
         let initiallySelectedEmoticon: Signal<String, NoError>
         let sharedData = self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.presentationThemeSettings])
         |> take(1)
-        if case let .peer(peer, _) = controller.subject, peer.id != self.context.account.peerId {
+        if case let .peer(peer, _, _) = controller.subject, peer.id != self.context.account.peerId {
             let themeEmoticon = self.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.ThemeEmoticon(id: peer.id))
             initiallySelectedEmoticon = combineLatest(themeEmoticon, sharedData)
             |> map { themeEmoticon, sharedData -> String in
@@ -1441,6 +1441,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
     private let peer: Peer
     private let threadId: Int64?
     private let isStatic: Bool
+    private let temporary: Bool
     
     fileprivate let containerNode: ASDisplayNode
     fileprivate let wallpaperBackgroundNode: WallpaperBackgroundNode
@@ -1469,11 +1470,17 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         return false
     }
     
-    init(context: AccountContext, peer: Peer, threadId: Int64?, isStatic: Bool = false) {
+    private var timer: SwiftSignalKit.Timer?
+    private var setupTimestamp: Double
+    
+    init(context: AccountContext, peer: Peer, threadId: Int64?, isStatic: Bool = false, temporary: Bool) {
         self.context = context
         self.peer = peer
         self.threadId = threadId
         self.isStatic = isStatic
+        self.temporary = temporary
+        
+        self.setupTimestamp = CACurrentMediaTime()
         
         self.containerNode = ASDisplayNode()
         
@@ -1514,18 +1521,22 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         }
         
         var codeText: String
-        if let addressName = peer.addressName, !addressName.isEmpty {
-            codeText = "@\(peer.addressName ?? "")".uppercased()
+        if temporary {
+            codeText = "5:00"
         } else {
-            codeText = peer.debugDisplayTitle.uppercased()
-        }
-        if let threadId = self.threadId, threadId != 0 {
-            codeText += "/\(threadId)"
+            if let addressName = peer.addressName, !addressName.isEmpty {
+                codeText = "@\(peer.addressName ?? "")".uppercased()
+            } else {
+                codeText = peer.debugDisplayTitle.uppercased()
+            }
+            if let threadId = self.threadId, threadId != 0 {
+                codeText += "/\(threadId)"
+            }
         }
         
         self.codeTextNode = ImmediateTextNode()
         self.codeTextNode.displaysAsynchronously = false
-        self.codeTextNode.attributedText = NSAttributedString(string: codeText, font: Font.with(size: 23.0, design: .round, weight: .bold, traits: []), textColor: .black)
+        self.codeTextNode.attributedText = NSAttributedString(string: codeText, font: Font.with(size: 23.0, design: .round, weight: .bold, traits: [.monospacedNumbers]), textColor: .black)
         self.codeTextNode.truncationMode = .byCharWrapping
         self.codeTextNode.maximumNumberOfLines = 2
         self.codeTextNode.textAlignment = .center
@@ -1590,12 +1601,34 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         |> map { codeReady, wallpaperReady in
             return codeReady && wallpaperReady
         })
+        
+        if temporary {
+            self.timer = Timer(timeout: 0.5, repeat: true, completion: { [weak self] in
+                self?.tick()
+            }, queue: Queue.mainQueue())
+            self.timer?.start()
+        }
+    }
+    
+    deinit {
+        self.timer?.invalidate()
     }
     
     override func didLoad() {
         super.didLoad()
         
         self.codeForegroundNode.view.mask = self.codeMaskNode.view
+    }
+    
+    private func tick() {
+        let timeout: Double = 5.0 * 60.0
+        let currentTime = CACurrentMediaTime()
+        let elapsed = max(0.0, timeout - (currentTime - self.setupTimestamp))
+        
+        self.codeTextNode.attributedText = NSAttributedString(string: stringForDuration(Int32(elapsed)), font: Font.with(size: 23.0, design: .round, weight: .bold, traits: [.monospacedNumbers]), textColor: .black)
+        if let (size, topInset, bottomInset) = self.validLayout {
+            self.updateLayout(size: size, topInset: topInset, bottomInset: bottomInset, transition: .immediate)
+        }
     }
     
     func generateImage(completion: @escaping (UIImage?) -> Void) {
@@ -1606,7 +1639,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
         let size = CGSize(width: 390.0, height: 844.0)
         let scale: CGFloat = 3.0
         
-        let copyNode = QrContentNode(context: self.context, peer: self.peer, threadId: self.threadId, isStatic: true)
+        let copyNode = QrContentNode(context: self.context, peer: self.peer, threadId: self.threadId, isStatic: true, temporary: false)
         
         func prepare(view: UIView, scale: CGFloat) {
             view.contentScaleFactor = scale
@@ -1708,7 +1741,7 @@ private class QrContentNode: ASDisplayNode, ContentNode {
             }
         }
         
-        self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: []), textColor: .black)
+        self.codeTextNode.attributedText = NSAttributedString(string: self.codeTextNode.attributedText?.string ?? "", font: Font.with(size: fontSize, design: .round, weight: .bold, traits: [.monospacedNumbers]), textColor: .black)
         
         let codeBackgroundWidth = min(300.0, size.width - codeInset * 2.0)
         let codeBackgroundHeight = floor(codeBackgroundWidth * 1.1)

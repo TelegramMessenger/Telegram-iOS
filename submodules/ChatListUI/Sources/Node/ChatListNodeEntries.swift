@@ -480,7 +480,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             autoremoveTimeout: entry.autoremoveTimeout,
             forumTopicData: entry.forumTopicData,
             topForumTopicItems: entry.topForumTopicItems,
-            revealed: threadId == 1 && state.hiddenItemShouldBeTemporaryRevealed
+            revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
         )))
     }
     if !view.hasLater {
@@ -576,7 +576,6 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     default:
                         break
                     }
-                    
                     result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
                         index: .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: pinningIndex, messageIndex: index.messageIndex)),
                         presentationData: state.presentationData,
@@ -599,7 +598,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: item.item.autoremoveTimeout,
                         forumTopicData: item.item.forumTopicData,
                         topForumTopicItems: item.item.topForumTopicItems,
-                        revealed:  threadId == 1 && state.hiddenItemShouldBeTemporaryRevealed
+                        revealed:  threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
                     )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1

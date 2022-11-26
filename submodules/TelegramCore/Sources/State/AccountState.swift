@@ -34,8 +34,8 @@ extension SentAuthorizationCodeType {
                 self = .email(emailPattern: emailPattern, length: length, nextPhoneLoginDate: nextPhoneLoginDate, appleSignInAllowed: (flags & (1 << 0)) != 0, setup: false)
             case let .sentCodeTypeSetUpEmailRequired(flags):
                 self = .emailSetupRequired(appleSignInAllowed: (flags & (1 << 0)) != 0)
-            case let .sentCodeTypeFragmentSms(_, length):
-                self = .sms(length: length)
+            case let .sentCodeTypeFragmentSms(url, length):
+                self = .fragment(url: url, length: length)
         }
     }
 }
@@ -52,7 +52,7 @@ extension AuthorizationCodeNextType {
             case .codeTypeMissedCall:
                 self = .missedCall
             case .codeTypeFragmentSms:
-                self = .sms
+                self = .fragment
         }
     }
 }

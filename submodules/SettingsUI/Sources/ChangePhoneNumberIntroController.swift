@@ -101,7 +101,7 @@ public final class ChangePhoneNumberIntroController: ViewController {
         
         self.statusBar.statusBarStyle = self.presentationData.theme.rootController.statusBarStyle.style
         
-        let formattedPhone = formatPhoneNumber(phoneNumber)
+        let formattedPhone = formatPhoneNumber(context: context, number: phoneNumber)
         self.title = formattedPhone
         self.navigationItem.backBarButtonItem = UIBarButtonItem(title: presentationData.strings.Common_Back, style: .plain, target: nil, action: nil)
         //self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(self.cancelPressed))

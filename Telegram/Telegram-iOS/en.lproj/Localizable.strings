@@ -8323,3 +8323,15 @@ Sorry for the inconvenience.";
 "PeerInfo.TopicIconInfoText" = "This topic's icon is from **%@**.";
 
 "AutoremoveSetup.AdditionalGlobalSettingsInfo" = "You can also set your default [self-destruct timer]() for all chats in Settings.";
+
+"Login.EnterCodeFragmentTitle" = "Enter Code";
+"Login.EnterCodeFragmentText" = "Get the code for **%@** in the Anonymous Numbers section on **Fragment**.";
+
+"Login.OpenFragment" = "Open Fragment";
+
+"Login.AnonymousNumbers" = "Anonymous Numbers";
+
+"Conversation.CantPhoneCallAnonymousNumberError" = "You can't call this phone number.";
+
+"UserInfo.AnonymousNumberLabel" = "anonymous number";
+"UserInfo.AnonymousNumberInfo" = "This number is not tied to a SIM card and was acquired on [Fragment]().";
