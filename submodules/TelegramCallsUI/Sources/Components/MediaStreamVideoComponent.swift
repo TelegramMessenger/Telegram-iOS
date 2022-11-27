@@ -6,6 +6,7 @@ import AccountContext
 import AVKit
 import MultilineTextComponent
 import Display
+import ShimmerEffect
 
 import TelegramCore
 
@@ -103,7 +104,7 @@ final class _MediaStreamVideoComponent: Component {
         
         private var videoPlaceholderView: UIView?
         private var noSignalView: ComponentHostView<Empty>?
-        private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        private let loadingBlurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
         private let shimmerOverlayView = CALayer()
         private var pictureInPictureController: AVPictureInPictureController?
         
@@ -122,7 +123,6 @@ final class _MediaStreamVideoComponent: Component {
             self.blurTintView.backgroundColor = UIColor(white: 0.0, alpha: 0.55)
             super.init(frame: frame)
             
-//            self.backgroundColor = UIColor.green.withAlphaComponent(0.4)
             self.isUserInteractionEnabled = false
             self.clipsToBounds = true
             
@@ -148,43 +148,65 @@ final class _MediaStreamVideoComponent: Component {
         }
         let maskGradientLayer = CAGradientLayer()
         private var wasVisible = true
+        let shimmer = StandaloneShimmerEffect()
+        let borderShimmer = StandaloneShimmerEffect()
+        let shimmerOverlayLayer = CALayer()
+        let shimmerBorderLayer = CALayer()
         
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
-            /*let groupPeer = component.call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: component.call.peerId))
-            let _ = groupPeer.start(next: { peer in
-                switch peer {
-                case let .channel(channel):
-                    let photo = channel.photo
-                    photo[0].resource.
-                    print(photo)
-                default: break
+            if component.videoLoading {
+                if loadingBlurView.superview == nil {
+                    addSubview(loadingBlurView)
                 }
-                let tileShimmer = VoiceChatTileShimmeringNode(account: component.call.account, peer: peer!._asPeer())
-            })*/
+                if shimmerOverlayLayer.superlayer == nil {
+                    loadingBlurView.layer.addSublayer(shimmerOverlayLayer)
+                    loadingBlurView.layer.addSublayer(shimmerBorderLayer)
+                }
+                loadingBlurView.clipsToBounds = true
+                shimmer.layer = shimmerOverlayLayer
+                shimmerOverlayView.compositingFilter = "softLightBlendMode"
+                shimmer.testUpdate(background: .clear, foreground: .white.withAlphaComponent(0.4))
+                loadingBlurView.layer.cornerRadius = 10
+                shimmerOverlayLayer.opacity = 0.6
+                
+                shimmerBorderLayer.cornerRadius = 10
+                shimmerBorderLayer.masksToBounds = true
+                shimmerBorderLayer.compositingFilter = "softLightBlendMode"
+                shimmerBorderLayer.borderWidth = 2
+                shimmerBorderLayer.borderColor = UIColor.white.cgColor
+                
+                let borderMask = CALayer()
+                shimmerBorderLayer.mask = borderMask
+                borderShimmer.layer = borderMask
+                borderShimmer.testUpdate(background: .clear, foreground: .white)
+            } else {
+                loadingBlurView.removeFromSuperview()
+            }
             
             if component.hasVideo, self.videoView == nil {
-//                self.addSubview(sheetBackdropView)
-//                self.addSubview(sheetView)
-                
                 if let input = component.call.video(endpointId: "unified") {
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
                         self.insertSubview(videoBlurView, belowSubview: self.blurTintView)
+                        videoBlurView.alpha = 0
+                        UIView.animate(withDuration: 0.3) {
+                            videoBlurView.alpha = 1
+                        }
                         
                         self.maskGradientLayer.type = .radial
                         self.maskGradientLayer.colors = [UIColor(rgb: 0x000000, alpha: 0.5).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
                         self.maskGradientLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
                         self.maskGradientLayer.endPoint = CGPoint(x: 1.0, y: 1.0)
-//                        self.maskGradientLayer.transform = CATransform3DMakeScale(0.3, 0.3, 1.0)
-//                        self.maskGradientLayer.isHidden = true
-                        
                     }
 
-                    
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
                         self.addSubview(videoView)
+                        videoView.alpha = 0
+                        UIView.animate(withDuration: 0.3) {
+                            videoView.alpha = 1
+                        }
                         if let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
@@ -345,10 +367,20 @@ final class _MediaStreamVideoComponent: Component {
                         videoBlurView.layer.mask = nil
                     }
                     
-                    self.maskGradientLayer.frame = videoBlurView.bounds// CGRect(x: videoBlurView.bounds.midX, y: videoBlurView.bounds.midY, width: videoBlurView.bounds.width, height: videoBlurView.bounds.height)
+                    self.maskGradientLayer.frame = videoBlurView.bounds
                 }
             }
             
+            let videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
+            loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
+            loadingBlurView.layer.cornerRadius = 10
+            
+            shimmerOverlayLayer.frame = loadingBlurView.bounds
+            shimmerBorderLayer.frame = loadingBlurView.bounds
+            shimmerBorderLayer.mask?.frame = loadingBlurView.bounds
+            if component.isFullscreen {
+                loadingBlurView.removeFromSuperview()
+            }
             if !self.hadVideo {
                 // TODO: hide fullscreen button without video
                 let aspect: CGFloat = 16.0 / 9

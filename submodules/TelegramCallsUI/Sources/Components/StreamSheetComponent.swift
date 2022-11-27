@@ -189,18 +189,9 @@ final class StreamSheetComponent: CombinedComponent {
                 context.add(bottomButtonsRow
                     .position(CGPoint(x: bottomButtonsRow.size.width / 2, y: context.component.sheetHeight - 50 / 2 + topOffset - context.component.bottomPadding))
                 )
-                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: context.component.sheetHeight - 50 + topOffset - context.component.bottomPadding, width: bottomButtonsRow.size.width, height: bottomButtonsRow.size.height))
+                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: context.component.sheetHeight - 50 - 20 + topOffset - context.component.bottomPadding, width: bottomButtonsRow.size.width, height: bottomButtonsRow.size.height ))
             }
-            /*if let leftItem = leftItem {
-                print(leftItem)
-                context.add(leftItem
-                    .position(CGPoint(x: leftItem.size.width / 2.0, y: contentHeight / 2.0))
-                )
-                (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames = [
-                    .init(x: 0, y: 0, width: leftItem.size.width, height: leftItem.size.height)
-                ]
-            }*/
-
+            
             return size
         }
     }
@@ -486,12 +477,13 @@ class AnimatedCountLabel: UILabel {
         fatalError("init(coder:) has not been implemented")
     }
     var itemWidth: CGFloat { 36 }
+    var commaWidth: CGFloat { 8 }
     override func layoutSubviews() {
         super.layoutSubviews()
         let interItemSpacing: CGFloat = 0
         let countWidth = chars.reduce(0) {
             if $1.attributedText?.string == "," {
-                return $0 + 12
+                return $0 + commaWidth
             }
             return $0 + itemWidth + interItemSpacing
         } - interItemSpacing
@@ -500,7 +492,7 @@ class AnimatedCountLabel: UILabel {
         chars.enumerated().forEach { (index, char) in
             let offset = chars[0..<index].reduce(0) {
                 if $1.attributedText?.string == "," {
-                    return $0 + 12
+                    return $0 + commaWidth
                 }
                 return $0 + itemWidth + interItemSpacing
             }
@@ -615,7 +607,7 @@ class AnimatedCountLabel: UILabel {
                 newLayer.attributedText = newChars[newCharIndex]
                 let offset = newChars[0..<newCharIndex].reduce(0) {
                     if $1.string == "," {
-                        return $0 + 12
+                        return $0 + commaWidth
                     }
                     return $0 + itemWidth + interItemSpacing
                 }
@@ -648,7 +640,7 @@ class AnimatedCountLabel: UILabel {
             
             let offset = newChars[0..<newCharIndex].reduce(0) {
                 if $1.string == "," {
-                    return $0 + 12
+                    return $0 + commaWidth
                 }
                 return $0 + itemWidth + interItemSpacing
             }
@@ -663,7 +655,7 @@ class AnimatedCountLabel: UILabel {
         
         let countWidth = newChars.reduce(-interItemSpacing) {
             if $1.string == "," {
-                return $0 + 12
+                return $0 + commaWidth
             }
             return $0 + itemWidth + interItemSpacing
         }

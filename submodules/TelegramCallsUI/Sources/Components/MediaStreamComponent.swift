@@ -785,11 +785,15 @@ public final class _MediaStreamComponent: CombinedComponent {
             })
             
             self.connectionDisposable = call.state.start(next: { [weak self] state in
+                let prev = self?.videoStalled
                 switch state.networkState {
                 case .connected:
                     self?.videoStalled = false
                 default:
                     self?.videoStalled = true
+                }
+                if prev != self?.videoStalled {
+                    self?.updated(transition: .immediate)
                 }
             })
             
@@ -804,16 +808,14 @@ public final class _MediaStreamComponent: CombinedComponent {
                 var updated = false
                 // TODO: remove debug
                 Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(/*members.totalCount*/Int.random(in: 0..<10000000)) { [weak strongSelf] latestCount in
+                    strongSelf.infoThrottler.publish(members.totalCount/*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
-                        print(members)
                         let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: latestCount)
                         if strongSelf.originInfo != originInfo {
                             strongSelf.originInfo = originInfo
                             updated = true
-                        }
-                        //                    
+                        }    
                         if updated {
                             strongSelf.updated(transition: .immediate)
                         }
@@ -1021,7 +1023,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 size: CGSize(width: 32.0, height: 32.0)
                             ))),
                             AnyComponentWithIdentity(id: "a", component: AnyComponent(BundleIconComponent(
-                                name: "Media Gallery/PictureInPictureButton",
+                                name: "Call/pip",
                                 tintColor: .white
                             )))
                         ]
@@ -1383,17 +1385,16 @@ public final class _MediaStreamComponent: CombinedComponent {
                     ).minSize(CGSize(width: 65, height: 80))),
                     // TODO: disable button instead of hiding
                     rightItem: AnyComponent(Button(
-                        content: AnyComponent(RoundGradientButtonComponent(// BundleIconComponent(
+                        content: AnyComponent(RoundGradientButtonComponent(
                             gradientColors: [UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor, UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor],
                             image: generateImage(CGSize(width: 44.0, height: 44), opaque: false, rotatedContext: { size, context in
                                 context.translateBy(x: size.width / 2, y: size.height / 2)
                                 context.scaleBy(x: 0.4, y: 0.4)
                                 context.translateBy(x: -size.width / 2, y: -size.height / 2)
-//                                context.translateBy(x: size.width * 0.66, y: size.height * 0.66)
                                 let imageColor = UIColor.white
                                 let bounds = CGRect(origin: CGPoint(), size: size)
                                 context.clear(bounds)
-                                let lineWidth: CGFloat = size.width / 6
+                                let lineWidth: CGFloat = size.width / 7
                                 context.setLineWidth(lineWidth - UIScreenPixel)
                                 context.setLineCap(.round)
                                 context.setStrokeColor(imageColor.cgColor)
@@ -1406,10 +1407,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 context.addLine(to: CGPoint(x: lineWidth / 2 + UIScreenPixel, y: size.height - lineWidth / 2 - UIScreenPixel))
                                 context.strokePath()
                             }),
-                            title:
-                                // TODO: localize
-                            "leave"
-                                                                          )),
+                            title: "leave"
+                        )),
                         action: { [weak call] in
                             let _ = call?.leave(terminateIfPossible: false)
                         }
@@ -1423,34 +1422,34 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 let bounds = CGRect(origin: CGPoint(), size: size)
                                 context.clear(bounds)
                                 
-                                context.setLineWidth(2.7 - UIScreenPixel)
+                                context.setLineWidth(2.4 - UIScreenPixel)
                                 context.setLineCap(.round)
                                 context.setStrokeColor(imageColor.cgColor)
 //                                context.setLineJoin(.round)
                                 
                                 let lineSide = size.width / 5
-                                let centerOffset = size.width / 16
-                                context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - centerOffset))
+                                let centerOffset = size.width / 20
+                                context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - centerOffset / 2))
                                 context.addLine(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 + centerOffset, y: size.height / 2 - lineSide))
+                                context.addLine(to: CGPoint(x: size.width / 2 + centerOffset / 2, y: size.height / 2 - lineSide))
                                 context.move(to: CGPoint(x: size.width / 2 + lineSide, y: size.height / 2 - lineSide))
                                 context.addLine(to: CGPoint(x: size.width / 2 + centerOffset, y: size.height / 2 - centerOffset))
                                 context.strokePath()
                                 
-                                context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + centerOffset))
+                                context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + centerOffset / 2))
                                 context.addLine(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
-                                context.addLine(to: CGPoint(x: size.width / 2 - centerOffset, y: size.height / 2 + lineSide))
+                                context.addLine(to: CGPoint(x: size.width / 2 - centerOffset / 2, y: size.height / 2 + lineSide))
                                 context.move(to: CGPoint(x: size.width / 2 - lineSide, y: size.height / 2 + lineSide))
                                 context.addLine(to: CGPoint(x: size.width / 2 - centerOffset, y: size.height / 2 + centerOffset))
                                 context.strokePath()
-                                //context.move(to: CGPoint(x: 26.0 - UIScreenPixel, y: 2.0 + UIScreenPixel))
-                                //context.addLine(to: CGPoint(x: 2.0 + UIScreenPixel, y: 26.0 - UIScreenPixel))
-//                                context.strokePath()
                             }),
                             title: "expand"
                         )),
                         action: {
-                            guard state.hasVideo else { return }
+                            guard state.hasVideo else {
+                                state.isFullscreen = false 
+                                return
+                            }
                             if let controller = controller() as? MediaStreamComponentController {
                                 guard let size = state.videoSize else { return }
                                 state.isFullscreen.toggle()
@@ -1669,10 +1668,10 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
             self.onViewDidDisappear?()
         }
         
-        if let initialOrientation = self.initialOrientation {
-            self.initialOrientation = nil
-            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
-        }
+//        if let initialOrientation = self.initialOrientation {
+//            self.initialOrientation = nil
+//            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
+//        }
     }
     
     override public func viewDidLoad() {
