@@ -3362,6 +3362,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         isStandalone: false,
                         isStatusSelection: true,
                         isReactionSelection: false,
+                        isEmojiSelection: false,
                         topReactionItems: [],
                         areUnicodeEmojiEnabled: false,
                         areCustomEmojiEnabled: true,

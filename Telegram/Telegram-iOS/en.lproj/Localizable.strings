@@ -8337,3 +8337,5 @@ Sorry for the inconvenience.";
 "UserInfo.AnonymousNumberInfo" = "This number is not tied to a SIM card and was acquired on [Fragment]().";
 
 "Login.NewNumber" = "New Number";
+
+"EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";

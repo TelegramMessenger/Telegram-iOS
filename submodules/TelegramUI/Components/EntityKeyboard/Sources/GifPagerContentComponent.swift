@@ -883,15 +883,22 @@ public final class GifPagerContentComponent: Component {
             guard let theme = self.theme else {
                 return
             }
-            if self.vibrancyEffectView == nil {
-                let style: UIBlurEffect.Style
-                style = .extraLight
-                let blurEffect = UIBlurEffect(style: style)
-                let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
-                let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
-                self.vibrancyEffectView = vibrancyEffectView
-                self.backgroundView.addSubview(vibrancyEffectView)
-                vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+            if theme.overallDarkAppearance {
+                if let vibrancyEffectView = self.vibrancyEffectView {
+                    self.vibrancyEffectView = nil
+                    vibrancyEffectView.removeFromSuperview()
+                }
+            } else {
+                if self.vibrancyEffectView == nil {
+                    let style: UIBlurEffect.Style
+                    style = .extraLight
+                    let blurEffect = UIBlurEffect(style: style)
+                    let vibrancyEffect = UIVibrancyEffect(blurEffect: blurEffect)
+                    let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
+                    self.vibrancyEffectView = vibrancyEffectView
+                    self.backgroundView.addSubview(vibrancyEffectView)
+                    vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+                }
             }
             self.backgroundView.updateColor(color: theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)

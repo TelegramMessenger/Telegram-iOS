@@ -1701,8 +1701,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.clearIconView.isHidden = true
         self.clearIconTintView.isHidden = true
         self.clearIconButton.isHidden = true
-        
-
+                
         self.deactivated()
         
         if let textField = self.textField {
@@ -1711,6 +1710,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
             textField.resignFirstResponder()
             textField.removeFromSuperview()
         }
+
+        self.tintTextView.view?.isHidden = false
+        self.textView.view?.isHidden = false
     }
     
     @objc private func clearPressed() {
@@ -1720,6 +1722,9 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.clearIconView.isHidden = true
         self.clearIconTintView.isHidden = true
         self.clearIconButton.isHidden = true
+        
+        self.tintTextView.view?.isHidden = false
+        self.textView.view?.isHidden = false
     }
     
     public func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -6260,6 +6265,7 @@ public final class EmojiPagerContentComponent: Component {
         isStandalone: Bool,
         isStatusSelection: Bool,
         isReactionSelection: Bool,
+        isEmojiSelection: Bool,
         isTopicIconSelection: Bool = false,
         isQuickReactionSelection: Bool = false,
         topReactionItems: [EmojiComponentReactionItem],
@@ -6977,8 +6983,8 @@ public final class EmojiPagerContentComponent: Component {
                 displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
             } else if isTopicIconSelection {
                 displaySearchWithPlaceholder = strings.EmojiSearch_SearchTopicIconsPlaceholder
-            } else {
-                displaySearchWithPlaceholder = "Search Emoji"
+            } else if isEmojiSelection {
+                displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
                 searchInitiallyHidden = false
             }
             
