@@ -204,6 +204,20 @@ private final class TitleFieldComponent: Component {
             self.placeholderView.view?.isHidden = !text.isEmpty
         }
         
+        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+            let newText = ((textField.text ?? "") as NSString).replacingCharacters(in: range, with: string)
+            if newText.count > 128 {
+                textField.layer.addShakeAnimation()
+                let hapticFeedback = HapticFeedback()
+                hapticFeedback.error()
+                DispatchQueue.main.asyncAfter(deadline: DispatchTime.now() + 1.0, execute: {
+                    let _ = hapticFeedback
+                })
+                return false
+            }
+            return true
+        }
+        
         func update(component: TitleFieldComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<EnvironmentType>, transition: Transition) -> CGSize {
             self.textField.textColor = component.textColor
             self.textField.text = component.text

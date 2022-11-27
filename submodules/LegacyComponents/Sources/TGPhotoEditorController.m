@@ -1138,6 +1138,11 @@
     return _intent & (TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSignupAvatarIntent);
 }
 
+- (bool)presentedForForumAvatarCreation
+{
+    return _intent & (TGPhotoEditorControllerForumAvatarIntent);
+}
+
 #pragma mark - Transition
 
 - (void)transitionIn
@@ -1325,7 +1330,7 @@
             {
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
-                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView];
+                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation]];
                 cropController.scrubberView = _scrubberView;
                 cropController.dotImageView = _dotImageView;
                 cropController.dotMarkerView = _dotMarkerView;

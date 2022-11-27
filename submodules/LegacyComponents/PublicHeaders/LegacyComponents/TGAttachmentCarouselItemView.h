@@ -33,6 +33,7 @@
 @property (nonatomic) bool hasSilentPosting;
 @property (nonatomic) bool hasSchedule;
 @property (nonatomic) bool reminder;
+@property (nonatomic) bool forum;
 @property (nonatomic, copy) void (^presentScheduleController)(bool, void (^)(int32_t));
 @property (nonatomic, copy) void (^presentTimerController)(void (^)(int32_t));
 
