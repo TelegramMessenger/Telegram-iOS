@@ -322,7 +322,7 @@ func changePhoneNumberCodeController(context: AccountContext, phoneNumber: Strin
         } |> afterDisposed {
             actionsDisposable.dispose()
     }
-    
+        
     let controller = ChangePhoneNumberCodeControllerImpl(context: context, state: signal, applyCodeImpl: { code in
         updateState { state in
             return state.withUpdatedCodeText("\(code)")

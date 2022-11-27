@@ -1203,7 +1203,7 @@ public func privacyAndSecurityController(context: AccountContext, initialSetting
                 var dismissCodeControllerImpl: (() -> Void)?
                 var presentControllerImpl: ((ViewController) -> Void)?
                 
-                let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, openUrl: { _ in }, back: {
+                let codeController = AuthorizationSequenceCodeEntryController(presentationData: presentationData, back: {
                     dismissCodeControllerImpl?()
                 })
                 

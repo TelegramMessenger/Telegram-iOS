@@ -18,6 +18,8 @@ import ManagedAnimationNode
 
 private final class PhoneAndCountryNode: ASDisplayNode {
     let strings: PresentationStrings
+    let theme: PresentationTheme
+    
     let countryButton: ASButtonNode
     let phoneBackground: ASImageNode
     let phoneInputNode: PhoneInputNode
@@ -33,6 +35,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
     
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
+        self.theme = theme
         
         let inset: CGFloat = 24.0
         
@@ -118,37 +121,10 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         self.countryButton.contentHorizontalAlignment = .left
         
         self.countryButton.addTarget(self, action: #selector(self.countryPressed), forControlEvents: .touchUpInside)
-        
-        let processNumberChange: (String) -> Bool = { [weak self] number in
-            guard let strongSelf = self else {
-                return false
-            }
-            if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode) {
-                let flagString = emojiFlagForISOCountryCode(country.id)
-                var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: strongSelf.strings) ?? country.name
-                if country.id == "FT" {
-                    localizedName = strongSelf.strings.Login_AnonymousNumbers
-                }
-                strongSelf.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: theme.list.itemAccentColor, for: [])
-                strongSelf.hasCountry = true
                 
-                let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
-                if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: strongSelf.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: theme.list.itemPlaceholderTextColor) }) {
-                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = nil
-                    strongSelf.phoneInputNode.mask = mask
-                } else {
-                    strongSelf.phoneInputNode.mask = nil
-                    strongSelf.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: theme.list.itemPlaceholderTextColor)
-                }
-                return true
-            } else {
-                return false
-            }
-        }
-        
         self.phoneInputNode.numberTextUpdated = { [weak self] number in
             if let strongSelf = self {
-                let _ = processNumberChange(strongSelf.phoneInputNode.number)
+                let _ = strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number)
                                 
                 if strongSelf.hasCountry {
                     strongSelf.hasNumberUpdated?(!strongSelf.phoneInputNode.codeAndNumber.2.isEmpty)
@@ -164,7 +140,7 @@ private final class PhoneAndCountryNode: ASDisplayNode {
                     strongSelf.preferredCountryIdForCode[code] = name
                 }
                                 
-                if processNumberChange(strongSelf.phoneInputNode.number) {
+                if strongSelf.processNumberChange(number: strongSelf.phoneInputNode.number) {
                 } else if let code = Int(code), let name = name, let countryName = countryCodeAndIdToName[CountryCodeAndId(code: code, id: name)] {
                     let flagString = emojiFlagForISOCountryCode(name)
                     var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(name, strings: strongSelf.strings) ?? countryName
@@ -219,6 +195,30 @@ private final class PhoneAndCountryNode: ASDisplayNode {
         
         self.phoneInputNode.keyPressed = { [weak self] num in
             self?.keyPressed?(num)
+        }
+    }
+    
+    func processNumberChange(number: String) -> Bool {
+        if let (country, _) = AuthorizationSequenceCountrySelectionController.lookupCountryIdByNumber(number, preferredCountries: self.preferredCountryIdForCode) {
+            let flagString = emojiFlagForISOCountryCode(country.id)
+            var localizedName: String = AuthorizationSequenceCountrySelectionController.lookupCountryNameById(country.id, strings: self.strings) ?? country.name
+            if country.id == "FT" {
+                localizedName = self.strings.Login_AnonymousNumbers
+            }
+            self.countryButton.setTitle("\(flagString) \(localizedName)", with: Font.regular(20.0), with: self.theme.list.itemAccentColor, for: [])
+            self.hasCountry = true
+            
+            let maskFont = Font.with(size: 20.0, design: .regular, traits: [.monospacedNumbers])
+            if let mask = AuthorizationSequenceCountrySelectionController.lookupPatternByNumber(number, preferredCountries: self.preferredCountryIdForCode).flatMap({ NSAttributedString(string: $0, font: maskFont, textColor: self.theme.list.itemPlaceholderTextColor) }) {
+                self.phoneInputNode.numberField.textField.attributedPlaceholder = nil
+                self.phoneInputNode.mask = mask
+            } else {
+                self.phoneInputNode.mask = nil
+                self.phoneInputNode.numberField.textField.attributedPlaceholder = NSAttributedString(string: strings.Login_PhonePlaceholder, font: Font.regular(20.0), textColor: self.theme.list.itemPlaceholderTextColor)
+            }
+            return true
+        } else {
+            return false
         }
     }
     
@@ -281,7 +281,7 @@ private final class ContactSyncNode: ASDisplayNode {
 
 final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     private let sharedContext: SharedAccountContext
-    private var account: UnauthorizedAccount
+    private var account: UnauthorizedAccount?
     private let strings: PresentationStrings
     private let theme: PresentationTheme
     private let hasOtherAccounts: Bool
@@ -358,7 +358,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         return self.proceedNode
     }
     
-    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount, strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void, hasOtherAccounts: Bool) {
+    init(sharedContext: SharedAccountContext, account: UnauthorizedAccount?, strings: PresentationStrings, theme: PresentationTheme, debugAction: @escaping () -> Void, hasOtherAccounts: Bool) {
         self.sharedContext = sharedContext
         self.account = account
         
@@ -376,14 +376,15 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         self.titleNode = ASTextNode()
         self.titleNode.isUserInteractionEnabled = true
         self.titleNode.displaysAsynchronously = false
-        self.titleNode.attributedText = NSAttributedString(string: strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
+        self.titleNode.attributedText = NSAttributedString(string: account == nil ? strings.Login_NewNumber : strings.Login_PhoneTitle, font: Font.light(30.0), textColor: theme.list.itemPrimaryTextColor)
         
         self.noticeNode = ASTextNode()
         self.noticeNode.maximumNumberOfLines = 0
         self.noticeNode.isUserInteractionEnabled = true
         self.noticeNode.displaysAsynchronously = false
         self.noticeNode.lineSpacing = 0.1
-        self.noticeNode.attributedText = NSAttributedString(string: strings.Login_PhoneAndCountryHelp, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
+        
+        self.noticeNode.attributedText = NSAttributedString(string: account == nil ? strings.ChangePhoneNumberNumber_Help : strings.Login_PhoneAndCountryHelp, font: Font.regular(17.0), textColor: theme.list.itemPrimaryTextColor, paragraphAlignment: .center)
         
         self.contactSyncNode = ContactSyncNode(theme: theme, strings: strings)
         
@@ -425,10 +426,12 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
             }
         }
         
-        self.tokenEventsDisposable.set((account.updateLoginTokenEvents
-        |> deliverOnMainQueue).start(next: { [weak self] _ in
-            self?.refreshQrToken()
-        }))
+        if let account = account {
+            self.tokenEventsDisposable.set((account.updateLoginTokenEvents
+            |> deliverOnMainQueue).start(next: { [weak self] _ in
+                self?.refreshQrToken()
+            }))
+        }
         
         self.proceedNode.pressed = { [weak self] in
             self?.checkPhone?()
@@ -517,6 +520,7 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     
     func updateCountryCode() {
         self.phoneAndCountryNode.phoneInputNode.codeAndNumber = self.codeAndNumber
+        let _ = self.phoneAndCountryNode.processNumberChange(number: self.phoneAndCountryNode.phoneInputNode.number)
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
@@ -536,7 +540,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
         let titleSize = self.titleNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
-        let noticeSize = self.noticeNode.measure(CGSize(width: min(274.0, maximumWidth - 28.0), height: CGFloat.greatestFiniteMagnitude))
+        
+        let noticeInset: CGFloat = self.account == nil ? 32.0 : 0.0
+        
+        let noticeSize = self.noticeNode.measure(CGSize(width: min(274.0 + noticeInset, maximumWidth - 28.0), height: CGFloat.greatestFiniteMagnitude))
         let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
         let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
         
@@ -625,8 +632,10 @@ final class AuthorizationSequencePhoneEntryControllerNode: ASDisplayNode {
     }
     
     private func refreshQrToken() {
+        guard let account = self.account else {
+            return
+        }
         let sharedContext = self.sharedContext
-        let account = self.account
         let tokenSignal = sharedContext.activeAccountContexts
         |> castError(ExportAuthTransferTokenError.self)
         |> take(1)
