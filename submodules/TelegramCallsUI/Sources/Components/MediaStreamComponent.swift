@@ -814,6 +814,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         var videoHiddenForPip = false
         /// To update videoHiddenForPip
         var onExpandedFromPictureInPicture: ((State) -> Void)?
+        private let infoThrottler = Throttler<Int?>.init(duration: 5, queue: .main)
         
         init(call: PresentationGroupCallImpl) {
             self.call = call
@@ -821,7 +822,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
                 self.isPictureInPictureSupported = true
             } else {
-                self.isPictureInPictureSupported = false
+                self.isPictureInPictureSupported = true
             }
             
             super.init()
@@ -853,6 +854,22 @@ public final class _MediaStreamComponent: CombinedComponent {
                 }
                 
                 var updated = false
+                // TODO: remove debug
+                Timer.scheduledTimer(withTimeInterval: 2, repeats: true) { _ in
+                    strongSelf.infoThrottler.publish(members.totalCount/*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
+                        guard let strongSelf = strongSelf else { return }
+                        var updated = false
+                        let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
+                        if strongSelf.originInfo != originInfo {
+                            strongSelf.originInfo = originInfo
+                            updated = true
+                        }
+                        //                    
+                        if updated {
+                            strongSelf.updated(transition: .immediate)
+                        }
+                    }
+                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
@@ -873,12 +890,12 @@ public final class _MediaStreamComponent: CombinedComponent {
                     updated = true
                 }
                 
-                let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
-                if strongSelf.originInfo != originInfo {
-                    strongSelf.originInfo = originInfo
-                    updated = true
-                }
-                
+//                let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
+//                if strongSelf.originInfo != originInfo {
+//                    strongSelf.originInfo = originInfo
+//                    updated = true
+//                }
+//
                 if updated {
                     strongSelf.updated(transition: .immediate)
                 }
@@ -998,8 +1015,9 @@ public final class _MediaStreamComponent: CombinedComponent {
             }
             var isFullscreen = state.isFullscreen
             let isLandscape = context.availableSize.width > context.availableSize.height
-            if let videoSize = context.state.videoSize {
-                if videoSize.width > videoSize.height && isLandscape && !isFullscreen {
+            if let _ = context.state.videoSize {
+                // Always fullscreen in landscape
+                if /*videoSize.width > videoSize.height &&*/ isLandscape && !isFullscreen {
                     state.isFullscreen = true
                     isFullscreen = true
                 }
@@ -1500,7 +1518,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                         topOffset: context.availableSize.height - sheetHeight + context.state.dismissOffset,
                         sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
-                        bottomPadding: bottomPadding
+                        bottomPadding: bottomPadding,
+                        participantsCount: // [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
+                            context.state.originInfo?.memberCount ?? 0
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
@@ -1582,7 +1602,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                         topOffset: context.availableSize.height - sheetHeight + context.state.dismissOffset,
                         sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
-                        bottomPadding: 12
+                        bottomPadding: 12,
+                        participantsCount: -1 // context.state.originInfo?.memberCount ?? 0
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
@@ -1866,3 +1887,67 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
 }
 
 public typealias MediaStreamComponentController = _MediaStreamComponentController
+
+public final class Throttler<T: Hashable> {
+    public var duration: TimeInterval = 0.25
+    public var queue: DispatchQueue = .main
+    public var isEnabled: Bool { duration > 0 }
+    
+    private var isThrottling: Bool = false
+    private var lastValue: T?
+    private var accumulator = Set<T>()
+    private var lastCompletedValue: T?
+    
+    public init(duration: TimeInterval = 0.25, queue: DispatchQueue = .main) {
+        self.duration = duration
+        self.queue = queue
+    }
+    
+    public func publish(_ value: T, includingLatest: Bool = false, using completion: ((T) -> Void)?) {
+        accumulator.insert(value)
+        
+        if !isThrottling {
+            isThrottling = true
+            lastValue = nil
+            queue.async {
+                completion?(value)
+                self.lastCompletedValue = value
+            }
+        } else {
+            lastValue = value
+        }
+        
+        if lastValue == nil {
+            queue.asyncAfter(deadline: .now() + duration) { [self] in
+                accumulator.removeAll()
+                isThrottling = false
+                
+                guard
+                    let lastValue = lastValue,
+                    lastCompletedValue != lastValue || includingLatest
+                else { return }
+                
+                accumulator.insert(lastValue)
+                self.lastValue = nil
+                completion?(lastValue)
+                lastCompletedValue = lastValue
+            }
+        }
+    }
+    
+    public func cancelCurrent() {
+        lastValue = nil
+        isThrottling = false
+        accumulator.removeAll()
+    }
+    
+    public func canEmit(_ value: T) -> Bool {
+        !accumulator.contains(value)
+    }
+}
+
+public extension Throttler where T == Bool {
+    func throttle(includingLatest: Bool = false, _ completion: ((T) -> Void)?) {
+        publish(true, includingLatest: includingLatest, using: completion)
+    }
+}

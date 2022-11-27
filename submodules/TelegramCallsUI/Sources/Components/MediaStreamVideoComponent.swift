@@ -220,7 +220,7 @@ final class _MediaStreamVideoComponent: Component {
                                     let delegate = PlaybackDelegateImpl()
                                     delegate.onTransitionFinished = { [weak self] in
                                         if self?.videoView?.alpha == 0 {
-                                            self?.videoView?.alpha = 1
+//                                            self?.videoView?.alpha = 1
                                         }
                                     }
                                     return delegate
