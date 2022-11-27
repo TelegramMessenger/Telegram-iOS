@@ -985,9 +985,18 @@ public final class AvatarBadgeView: UIImageView {
             context.setFillColor(UIColor(white: 0.0, alpha: 0.05).cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))*/
             
-            let string = NSAttributedString(string: parameters.text, font: Font.bold(floor(parameters.size.height * 0.48)), textColor: .white)
-            let stringBounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
-            string.draw(at: CGPoint(x: stringBounds.minX + floorToScreenPixels((size.width - stringBounds.width) / 2.0), y: stringBounds.minY + floorToScreenPixels((size.height - stringBounds.height) / 2.0)))
+            var fontSize: CGFloat = floor(parameters.size.height * 0.48)
+            while true {
+                let string = NSAttributedString(string: parameters.text, font: Font.bold(fontSize), textColor: .white)
+                let stringBounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
+                
+                if stringBounds.width <= size.width - 5.0 * 2.0 || fontSize <= 2.0 {
+                    string.draw(at: CGPoint(x: stringBounds.minX + floorToScreenPixels((size.width - stringBounds.width) / 2.0), y: stringBounds.minY + floorToScreenPixels((size.height - stringBounds.height) / 2.0)))
+                    break
+                } else {
+                    fontSize -= 1.0
+                }
+            }
             
             let lineWidth: CGFloat = 1.5
             let lineInset: CGFloat = 2.0
