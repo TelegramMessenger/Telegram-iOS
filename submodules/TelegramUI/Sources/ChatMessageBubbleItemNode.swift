@@ -1221,7 +1221,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                     }
                     
                     if !isBroadcastChannel {
-                        hasAvatar = item.content.firstMessage.effectivelyIncoming(item.context.account.peerId)
+                        hasAvatar = incoming
                     } else if case .feed = item.chatLocation {
                         hasAvatar = true
                     }
@@ -1269,7 +1269,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
         } else if item.message.id.peerId.isReplies {
             needsShareButton = false
-        } else if item.message.effectivelyIncoming(item.context.account.peerId) {
+        } else if incoming {
             if let _ = sourceReference {
                 needsShareButton = true
             }
@@ -1801,7 +1801,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 let dateText = stringForMessageTimestampStatus(accountPeerId: item.context.account.peerId, message: message, dateTimeFormat: item.presentationData.dateTimeFormat, nameDisplayOrder: item.presentationData.nameDisplayOrder, strings: item.presentationData.strings, format: dateFormat)
                 
                 let statusType: ChatMessageDateAndStatusType
-                if message.effectivelyIncoming(item.context.account.peerId) {
+                if incoming {
                     statusType = .ImageIncoming
                 } else {
                     if isFailed {
@@ -2080,7 +2080,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                 reactions: bubbleReactions,
                 message: item.message,
                 accountPeer: item.associatedData.accountPeer,
-                isIncoming: item.message.effectivelyIncoming(item.context.account.peerId),
+                isIncoming: incoming,
                 constrainedWidth: maximumNodeWidth
             ))
             maxContentWidth = max(maxContentWidth, minWidth)

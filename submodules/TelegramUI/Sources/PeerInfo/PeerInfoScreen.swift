@@ -5523,6 +5523,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             phoneCallAction()
                         }
                     })))
+                } else {
                     isAnonymousNumber = true
                 }
                 items.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_ContextMenuCopy, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Copy"), color: theme.contextMenu.primaryColor) }, action: { c, _ in
@@ -5539,6 +5540,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             }
                         }))
                     )
+                } else {
                     isAnonymousNumber = true
                 }
                 items.append(
