@@ -215,7 +215,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.loginWithCode?(code)
     }
     
-    func applyConfirmationCode(_ code: Int) {
+    public func applyConfirmationCode(_ code: Int) {
         self.controllerNode.updateCode("\(code)")
     }
 }
