@@ -39,7 +39,7 @@ private func removePlus(_ text: String?) -> String {
     return result
 }
 
-private func lookupCountryIdByNumber(_ number: String, configuration: CountriesConfiguration) -> (Country, Country.CountryCode)? {
+public func lookupCountryIdByNumber(_ number: String, configuration: CountriesConfiguration) -> (Country, Country.CountryCode)? {
     let number = removePlus(number)
     var results: [(Country, Country.CountryCode)]? = nil
     for i in 0 ..< number.count {

@@ -5473,13 +5473,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             return
         }
         
-        let _ = (getUserPeer(engine: self.context.engine, peerId: self.peerId)
-        |> deliverOnMainQueue).start(next: { [weak self] peer in
+        let _ = (combineLatest(
+            getUserPeer(engine: self.context.engine, peerId: self.peerId),
+            getUserPeer(engine: self.context.engine, peerId: self.context.account.peerId)
+        ) |> deliverOnMainQueue).start(next: { [weak self] peer, accountPeer in
             guard let strongSelf = self else {
                 return
             }
             let presentationData = strongSelf.presentationData
-            
+                        
             let telegramCallAction: (Bool) -> Void = { [weak self] isVideo in
                 guard let strongSelf = self else {
                     return
@@ -5501,6 +5503,15 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 UIPasteboard.general.string = formatPhoneNumber(context: strongSelf.context, number: value)
                 
                 strongSelf.controller?.present(UndoOverlayController(presentationData: presentationData, content: .copy(text: presentationData.strings.Conversation_PhoneCopied), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
+            }
+            
+            var accountIsFromUS = false
+            if let accountPeer, case let .user(user) = accountPeer, let phone = user.phone {
+                if let (country, _) = lookupCountryIdByNumber(phone, configuration: strongSelf.context.currentCountriesConfiguration.with { $0 }) {
+                    if country.id == "US" {
+                        accountIsFromUS = true
+                    }
+                }
             }
             
             let formattedPhoneNumber = formatPhoneNumber(context: strongSelf.context, number: value)
@@ -5552,7 +5563,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 )
             }
             var actions = ContextController.Items(content: .list(items))
-            if isAnonymousNumber {
+            if isAnonymousNumber && !accountIsFromUS {
                 actions.tip = .animatedEmoji(text: strongSelf.presentationData.strings.UserInfo_AnonymousNumberInfo, arguments: nil, file: nil, action: { [weak self] in
                     if let strongSelf = self {
                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: "https://fragment.com", forceExternal: true, presentationData: strongSelf.presentationData, navigationController: nil, dismissInput: {})
