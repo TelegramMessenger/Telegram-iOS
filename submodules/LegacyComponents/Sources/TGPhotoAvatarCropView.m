@@ -52,7 +52,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
 
 @implementation TGPhotoAvatarCropView
 
-- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(TGPhotoEntitiesContainerView *)fullEntitiesView
+- (instancetype)initWithOriginalSize:(CGSize)originalSize screenSize:(CGSize)screenSize fullPreviewView:(PGPhotoEditorView *)fullPreviewView fullPaintingView:(UIImageView *)fullPaintingView fullEntitiesView:(TGPhotoEntitiesContainerView *)fullEntitiesView square:(bool)square
 {
     self = [super initWithFrame:CGRectZero];
     if (self != nil)
@@ -142,7 +142,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         _areaMaskView.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
         [self addSubview:_areaMaskView];
         
-        [self updateCircleImageWithReferenceSize:screenSize];
+        [self updateCircleImageWithReferenceSize:screenSize square:square];
         
         UITapGestureRecognizer *tapRecognier = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(handleTap:)];
         [_wrapperView addGestureRecognizer:tapRecognier];
@@ -169,7 +169,7 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
         self.tapped();
 }
 
-- (void)updateCircleImageWithReferenceSize:(CGSize)referenceSize
+- (void)updateCircleImageWithReferenceSize:(CGSize)referenceSize square:(bool)square
 {
     CGFloat shortSide = MIN(referenceSize.width, referenceSize.height);
     CGFloat diameter = shortSide - [TGPhotoAvatarCropView areaInsetSize].width * 2;
@@ -183,7 +183,12 @@ const CGFloat TGPhotoAvatarCropViewCurtainMargin = 200;
     CGContextRef context = UIGraphicsGetCurrentContext();
     CGContextSetFillColorWithColor(context, [TGPhotoEditorInterfaceAssets cropTransparentOverlayColor].CGColor);
     
-    UIBezierPath *path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, diameter, diameter)];
+    UIBezierPath *path;
+    if (square) {
+        path = [UIBezierPath bezierPathWithRoundedRect:CGRectMake(0, 0, diameter, diameter) cornerRadius:diameter * 0.25];
+    } else {
+        path = [UIBezierPath bezierPathWithOvalInRect:CGRectMake(0, 0, diameter, diameter)];
+    }
     [path appendPath:[UIBezierPath bezierPathWithRect:CGRectMake(0, 0, diameter, diameter)]];
     path.usesEvenOddFillRule = true;
     [path fill];

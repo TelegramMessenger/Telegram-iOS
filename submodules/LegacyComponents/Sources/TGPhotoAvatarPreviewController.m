@@ -47,6 +47,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     bool _wasPlayingBeforeCropping;
     
     bool _scheduledTransitionIn;
+    
+    bool _isForum;
 }
 
 @property (nonatomic, weak) PGPhotoEditor *photoEditor;
@@ -56,12 +58,13 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum {
     self = [super initWithContext:context];
     if (self != nil)
     {
         self.photoEditor = photoEditor;
         self.previewView = previewView;
+        _isForum = isForum;
     }
     return self;
 }
@@ -104,7 +107,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     };
     
     PGPhotoEditor *photoEditor = self.photoEditor;
-    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView fullPaintingView:_fullPaintingView fullEntitiesView:_fullEntitiesView];
+    TGPhotoAvatarCropView *cropView = [[TGPhotoAvatarCropView alloc] initWithOriginalSize:photoEditor.originalSize screenSize:[self referenceViewSize] fullPreviewView:_fullPreviewView fullPaintingView:_fullPaintingView fullEntitiesView:_fullEntitiesView square:_isForum];
     _cropView = cropView;
     [_cropView setCropRect:photoEditor.cropRect];
     [_cropView setCropOrientation:photoEditor.cropOrientation];
@@ -816,7 +819,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     CGSize referenceSize = [self referenceViewSize];
     if ([UIDevice currentDevice].userInterfaceIdiom == UIUserInterfaceIdiomPad)
-        [_cropView updateCircleImageWithReferenceSize:referenceSize];
+        [_cropView updateCircleImageWithReferenceSize:referenceSize square:_isForum];
     
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height);
     _wrapperView.frame = CGRectMake((referenceSize.width - screenSide) / 2, (referenceSize.height - screenSide) / 2, screenSide, screenSide);
