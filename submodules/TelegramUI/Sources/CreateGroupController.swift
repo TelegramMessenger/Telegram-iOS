@@ -310,16 +310,15 @@ private func createGroupEntries(presentationData: PresentationData, state: Creat
     
     entries.append(.groupInfo(presentationData.theme, presentationData.strings, presentationData.dateTimeFormat, peer, groupInfoState, state.avatar))
     
-    //TODO:localize
     let autoremoveTimeout = state.autoremoveTimeout ?? globalAutoremoveTimeout
     let autoRemoveText: String
     if autoremoveTimeout == 0 {
-        autoRemoveText = "Off"
+        autoRemoveText = presentationData.strings.Autoremove_OptionOff
     } else {
         autoRemoveText = timeIntervalString(strings: presentationData.strings, value: autoremoveTimeout)
     }
-    entries.append(.autoDelete(title: "Auto-Delete Messages", value: autoRemoveText))
-    entries.append(.autoDeleteInfo("Automatically delete messages sent in this group for everyone after a period of time."))
+    entries.append(.autoDelete(title: presentationData.strings.CreateGroup_AutoDeleteTitle, value: autoRemoveText))
+    entries.append(.autoDeleteInfo(presentationData.strings.CreateGroup_AutoDeleteText))
     
     var peers: [Peer] = []
     for peerId in peerIds {
@@ -846,8 +845,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
             }
             
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            //TODO:localize
-            subItems.append(.action(ContextMenuActionItem(text: "Off", icon: { theme in
+            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Autoremove_OptionOff, icon: { theme in
                 if currentValue == 0 {
                     return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Check"), color: theme.contextMenu.primaryColor)
                 } else {
@@ -882,8 +880,7 @@ public func createGroupControllerImpl(context: AccountContext, peerIds: [PeerId]
                 })))
             }
             
-            //TODO:localize
-            subItems.append(.action(ContextMenuActionItem(text: "Set Custom Time...", icon: { _ in
+            subItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Autoremove_SetCustomTime, icon: { _ in
                 return nil
             }, action: { _, f in
                 f(.default)

@@ -149,8 +149,7 @@ private func globalAutoremoveScreenEntries(presentationData: PresentationData, s
     
     let effectiveCurrentValue = state.updatedValue
     
-    //TODO:localize
-    entries.append(.sectionHeader("SELF-DESTRUCT TIMER"))
+    entries.append(.sectionHeader(presentationData.strings.GlobalAutodeleteSettings_OptionsHeader))
     
     var values: [Int32] = [
         0,
@@ -170,25 +169,22 @@ private func globalAutoremoveScreenEntries(presentationData: PresentationData, s
     
     values.sort()
     
-    //TODO:localize
     for value in values {
         let text: String
         if value == 0 {
-            text = "Off"
+            text = presentationData.strings.Autoremove_OptionOff
         } else {
-            text = "After \(timeIntervalString(strings: presentationData.strings, value: value))"
+            text = presentationData.strings.GlobalAutodeleteSettings_OptionTitle(timeIntervalString(strings: presentationData.strings, value: value, usage: .afterTime)).string
         }
         entries.append(.timerOption(value: value, text: text, isSelected: effectiveCurrentValue == value))
     }
     
-    entries.append(.customAction("Set Custom Time..."))
+    entries.append(.customAction(presentationData.strings.GlobalAutodeleteSettings_SetCustomTime))
     
-    //TODO:localize
     if effectiveCurrentValue == 0 {
-        entries.append(.info("If enabled, all new messages in chats you start will be automatically deleted for everyone at some point after they have been sent. This will not affect your existing chats."))
+        entries.append(.info(presentationData.strings.GlobalAutodeleteSettings_InfoDisabled))
     } else {
-        
-        entries.append(.info("All new messages in chats you started will be automatically deleted for everyone \(timeIntervalString(strings: presentationData.strings, value: effectiveCurrentValue)) after they have been sent. You can also [apply this setting for your existing chats]()."))
+        entries.append(.info(presentationData.strings.GlobalAutodeleteSettings_InfoEnabled(timeIntervalString(strings: presentationData.strings, value: effectiveCurrentValue, usage: .afterTime)).string))
     }
     
     return entries
@@ -237,10 +233,10 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
             var isOn: Bool = true
             var text: String?
             if timeout != 0 {
-                text = "Messages in all new chats you start will be automatically deleted after \(timeIntervalString(strings: presentationData.strings, value: timeout))."
+                text = presentationData.strings.GlobalAutodeleteSettings_SetConfirmToastEnabled(timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime)).string
             } else {
                 isOn = false
-                text = "Messages in all new chats you start will not be automatically deleted.";
+                text = presentationData.strings.GlobalAutodeleteSettings_SetConfirmToastDisabled
             }
             if let text = text {
                 var animateAsReplacement = false
@@ -264,14 +260,13 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
             apply(timeout)
         } else {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            //TODO:localize
-            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout)
+            let valueText = timeIntervalString(strings: presentationData.strings, value: timeout, usage: .afterTime)
             presentControllerImpl?(standardTextAlertController(
                 theme: AlertControllerTheme(presentationData: presentationData),
-                title: "Self-Destruct Timer",
-                text: "Are you sure you want all messages in your new private chats and in new groups you create to be automatically deleted for everyone \(valueText) after they have been sent?",
+                title: presentationData.strings.GlobalAutodeleteSettings_SetConfirmTitle,
+                text: presentationData.strings.GlobalAutodeleteSettings_SetConfirmText(valueText).string,
                 actions: [
-                    TextAlertAction(type: .defaultAction, title: "Enable Auto-Deletion", action: {
+                    TextAlertAction(type: .defaultAction, title: presentationData.strings.GlobalAutodeleteSettings_SetConfirmAction, action: {
                         apply(timeout)
                     }),
                     TextAlertAction(type: .genericAction, title: presentationData.strings.Common_Cancel, action: {})
@@ -299,16 +294,14 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                 return
             }
             
-            //TODO:localize
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let valueText = timeIntervalString(strings: presentationData.strings, value: value)
+            let valueText = timeIntervalString(strings: presentationData.strings, value: value, usage: .timer)
             
-            //TODO:localize
             let selectionController = context.sharedContext.makeContactMultiselectionController(ContactMultiselectionControllerParams(
                 context: context,
                 mode: .chatSelection(ContactMultiselectionControllerMode.ChatSelection(
-                    title: "Select Chats",
-                    searchPlaceholder: "Select chats to apply the \(valueText) self-destruct timer",
+                    title: presentationData.strings.GlobalAutodeleteSettings_ApplyChatsTitle,
+                    searchPlaceholder: presentationData.strings.GlobalAutodeleteSettings_ApplyChatsPlaceholder(valueText).string,
                     selectedChats: Set(),
                     additionalCategories: nil,
                     chatListFilters: nil,
@@ -333,6 +326,31 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         canManage = channel.hasPermission(.changeInfo)
                     }
                     return canManage
+                },
+                attemptDisabledItemSelection: { peer in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    let text: String
+                    if case let .channel(channel) = peer {
+                        if case .group = channel.info {
+                            text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGroupSelection
+                        } else {
+                            text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledChannelSelection
+                        }
+                    } else if case .legacyGroup = peer {
+                        text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGroupSelection
+                    } else {
+                        text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGenericSelection
+                    }
+                    
+                    presentControllerImpl?(standardTextAlertController(
+                        theme: AlertControllerTheme(presentationData: presentationData),
+                        title: nil,
+                        text: text,
+                        actions: [
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                    ), nil)
                 }
             ))
             selectionController.navigationPresentation = .modal
@@ -362,8 +380,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         selectionController?.dismiss()
                         
                         let isOn: Bool = true
-                        //TODO:localize
-                        let text = "You applied the \(timeIntervalString(strings: presentationData.strings, value: value)) self-destruct timer to \(peerIds.count) \(peerIds.count == 1 ? "chat" : "chats")."
+                        let text = presentationData.strings.GlobalAutodeleteSettings_ApplyChatsToast(timeIntervalString(strings: presentationData.strings, value: value, usage: .timer), presentationData.strings.GlobalAutodeleteSettings_ApplyChatsSubject(Int32(peerIds.count))).string
                         
                         var animateAsReplacement = false
                         if let window = getController?()?.window {
@@ -390,8 +407,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
     |> map { presentationData, state -> (ItemListControllerState, (ItemListNodeState, Any)) in
         let rightNavigationButton: ItemListNavigationButton? = nil
         
-        //TODO:localize
-        let title: ItemListControllerTitle = .text("Auto-Delete Messages")
+        let title: ItemListControllerTitle = .text(presentationData.strings.GlobalAutodeleteSettings_Title)
         
         let entries: [GlobalAutoremoveEntry] = globalAutoremoveScreenEntries(presentationData: presentationData, state: state)
         
