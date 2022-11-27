@@ -28,6 +28,7 @@ import Markdown
 import WebUI
 import BotPaymentsUI
 import PremiumUI
+import AuthorizationUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -223,7 +224,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             present(ProxyServerActionSheetController(context: context, server: server), nil)
         case let .confirmationCode(code):
-            if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
+            if let topController = navigationController?.topViewController as? AuthorizationSequenceCodeEntryController {
+                topController.applyConfirmationCode(code)
+            } else if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
                 topController.applyCode(code)
             } else {
                 var found = false

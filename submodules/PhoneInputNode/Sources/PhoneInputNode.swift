@@ -165,6 +165,7 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
     }
     
+    private var didSetupPlaceholder = false
     private func updatePlaceholder() {
         if let mask = self.mask {
             let mutableMask = NSMutableAttributedString(attributedString: mask)
@@ -178,7 +179,10 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         } else {
             self.placeholderNode.attributedText = NSAttributedString(string: "")
         }
-        let _ = self.placeholderNode.updateLayout(CGSize(width: self.frame.size.width, height: CGFloat.greatestFiniteMagnitude))
+        if !self.frame.size.width.isZero {
+            self.didSetupPlaceholder = true
+            let _ = self.placeholderNode.updateLayout(CGSize(width: self.frame.size.width, height: CGFloat.greatestFiniteMagnitude))
+        }
     }
     
     private let fontSize: CGFloat
@@ -351,5 +355,13 @@ public final class PhoneInputNode: ASDisplayNode, UITextFieldDelegate {
         }
         
         self.updatePlaceholder()
+    }
+    
+    public override func layout() {
+        super.layout()
+        
+        if !self.didSetupPlaceholder, self.frame.width > 0.0 {
+            self.updatePlaceholder()
+        }
     }
 }

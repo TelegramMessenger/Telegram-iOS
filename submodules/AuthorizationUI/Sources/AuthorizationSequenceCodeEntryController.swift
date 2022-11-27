@@ -15,7 +15,6 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
     
     private let strings: PresentationStrings
     private let theme: PresentationTheme
-    private let openUrl: (String) -> Void
     
     public var loginWithCode: ((String) -> Void)?
     public var signInWithApple: (() -> Void)?
@@ -38,10 +37,9 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         }
     }
     
-    public init(presentationData: PresentationData, openUrl: @escaping (String) -> Void, back: @escaping () -> Void) {
+    public init(presentationData: PresentationData, back: @escaping () -> Void) {
         self.strings = presentationData.strings
         self.theme = presentationData.theme
-        self.openUrl = openUrl
         
         super.init(navigationBarPresentationData: NavigationBarPresentationData(theme: AuthorizationSequenceController.navigationBarTheme(theme), strings: NavigationBarStrings(presentationStrings: strings)))
         
@@ -217,7 +215,7 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
         self.loginWithCode?(code)
     }
     
-    func applyConfirmationCode(_ code: Int) {
+    public func applyConfirmationCode(_ code: Int) {
         self.controllerNode.updateCode("\(code)")
     }
 }
