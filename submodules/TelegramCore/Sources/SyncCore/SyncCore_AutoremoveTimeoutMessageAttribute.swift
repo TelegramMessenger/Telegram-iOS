@@ -14,7 +14,9 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.countdownBeginTime = countdownBeginTime
         
         if let countdownBeginTime = countdownBeginTime {
-            self.automaticTimestampBasedAttribute = (0, countdownBeginTime + timeout)
+            let result = Int64(countdownBeginTime) + Int64(timeout)
+            
+            self.automaticTimestampBasedAttribute = (0, Int32(min(result, Int64(Int32.max - 1))))
         } else {
             self.automaticTimestampBasedAttribute = nil
         }
