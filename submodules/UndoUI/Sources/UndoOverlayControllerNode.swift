@@ -158,7 +158,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 }
                 self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(14.0), textColor: .white)
                 displayUndo = false
-                self.originalRemainingSeconds = 3.5
+                self.originalRemainingSeconds = 4.5
             case let .succeed(text):
                 self.avatarNode = nil
                 self.iconNode = nil

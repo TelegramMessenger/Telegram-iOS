@@ -187,7 +187,8 @@ private func globalAutoremoveScreenEntries(presentationData: PresentationData, s
     if effectiveCurrentValue == 0 {
         entries.append(.info("If enabled, all new messages in chats you start will be automatically deleted for everyone at some point after they have been sent. This will not affect your existing chats."))
     } else {
-        entries.append(.info("All new messages in chats you started will be automatically deleted for everyone 3 weeks after they have been sent. You can also [apply this setting for your existing chats]()."))
+        
+        entries.append(.info("All new messages in chats you started will be automatically deleted for everyone \(timeIntervalString(strings: presentationData.strings, value: effectiveCurrentValue)) after they have been sent. You can also [apply this setting for your existing chats]()."))
     }
     
     return entries

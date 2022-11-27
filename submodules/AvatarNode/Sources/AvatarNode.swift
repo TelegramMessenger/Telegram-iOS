@@ -835,6 +835,7 @@ public final class AvatarBadgeView: UIImageView {
     
     private var originalContent: OriginalContent?
     private var parameters: Parameters?
+    private var hasContent: Bool = false
     
     override public init(frame: CGRect) {
         super.init(frame: frame)
@@ -845,7 +846,7 @@ public final class AvatarBadgeView: UIImageView {
     }
     
     func update(content: OriginalContent) {
-        if self.originalContent != content {
+        if self.originalContent != content || !self.hasContent {
             self.originalContent = content
             self.update()
         }
@@ -853,7 +854,7 @@ public final class AvatarBadgeView: UIImageView {
     
     public func update(size: CGSize, text: String) {
         let parameters = Parameters(size: size, text: text)
-        if self.parameters != parameters {
+        if self.parameters != parameters || !self.hasContent {
             self.parameters = parameters
             self.update()
         }
@@ -863,6 +864,8 @@ public final class AvatarBadgeView: UIImageView {
         guard let originalContent = self.originalContent, let parameters = self.parameters else {
             return
         }
+        
+        self.hasContent = true
         
         let blurredWidth = 16
         let blurredHeight = 16
@@ -876,8 +879,11 @@ public final class AvatarBadgeView: UIImageView {
                 c.setFillColor(color.cgColor)
                 c.fill(CGRect(origin: CGPoint(), size: blurredSize))
             case let .image(image):
+                c.setFillColor(UIColor.black.cgColor)
+                c.fill(CGRect(origin: CGPoint(), size: blurredSize))
+                
                 c.scaleBy(x: blurredSize.width / parameters.size.width, y: blurredSize.height / parameters.size.height)
-                let offsetFactor: CGFloat = 1.0 - 0.7071
+                let offsetFactor: CGFloat = 1.0 - 0.6
                 let imageFrame = CGRect(origin: CGPoint(x: parameters.size.width - image.size.width + offsetFactor * parameters.size.width, y: parameters.size.height - image.size.height + offsetFactor * parameters.size.height), size: image.size)
                 
                 UIGraphicsPushContext(c)
@@ -900,7 +906,7 @@ public final class AvatarBadgeView: UIImageView {
             UInt32(15),
             UInt32(15),
             nil,
-            vImage_Flags(kvImageEdgeExtend)
+            vImage_Flags(kvImageTruncateKernel | kvImageDoNotTile)
         )
         
         let divisor: Int32 = 0x1000
@@ -909,7 +915,7 @@ public final class AvatarBadgeView: UIImageView {
         let gwgt: CGFloat = 0.6094
         let bwgt: CGFloat = 0.0820
 
-        let adjustSaturation: CGFloat = 1.9
+        let adjustSaturation: CGFloat = 1.7
 
         let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
         let b = (1.0 - adjustSaturation) * rwgt
@@ -927,8 +933,31 @@ public final class AvatarBadgeView: UIImageView {
             g, h, i, 0,
             0, 0, 0, 1
         ]
+        
+        let brightness: CGFloat = 0.94
+        let brighnessMatrix: [CGFloat] = [
+            brightness, 0, 0, 0,
+            0, brightness, 0, 0,
+            0, 0, brightness, 0,
+            0, 0, 0, 1
+        ]
+        
+        func matrixMul(a: [CGFloat], b: [CGFloat], result: inout [CGFloat]) {
+            for i in 0 ..< 4 {
+                for j in 0 ..< 4 {
+                    var sum: CGFloat = 0.0
+                    for k in 0 ..< 4 {
+                        sum += a[i + k * 4] * b[k + j * 4]
+                    }
+                    result[i + j * 4] = sum
+                }
+            }
+        }
+        
+        var resultMatrix = Array<CGFloat>(repeating: 0.0, count: 4 * 4)
+        matrixMul(a: satMatrix, b: brighnessMatrix, result: &resultMatrix)
 
-        var matrix: [Int16] = satMatrix.map { value in
+        var matrix: [Int16] = resultMatrix.map { value in
             return Int16(value * CGFloat(divisor))
         }
 
@@ -947,14 +976,14 @@ public final class AvatarBadgeView: UIImageView {
             context.setFillColor(UIColor.black.cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
             
-            context.setBlendMode(.sourceIn)
-            
             blurredImage.draw(in: CGRect(origin: CGPoint(), size: size), blendMode: .sourceIn, alpha: 1.0)
             
             context.setBlendMode(.normal)
             
-            context.setFillColor(UIColor(white: 0.0, alpha: 0.05).cgColor)
+            /*context.setFillColor(UIColor(white: 1.0, alpha: 0.08).cgColor)
             context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
+            context.setFillColor(UIColor(white: 0.0, alpha: 0.05).cgColor)
+            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))*/
             
             let string = NSAttributedString(string: parameters.text, font: Font.bold(floor(parameters.size.height * 0.48)), textColor: .white)
             let stringBounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
@@ -970,7 +999,6 @@ public final class AvatarBadgeView: UIImageView {
             context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: CGFloat.pi * 0.5, endAngle: -CGFloat.pi * 0.5, clockwise: false)
             context.strokePath()
             
-            
             let sectionAngle: CGFloat = CGFloat.pi / 11.0
             
             for i in 0 ..< 10 {
@@ -978,14 +1006,12 @@ public final class AvatarBadgeView: UIImageView {
                     continue
                 }
                 
-                let startAngle = CGFloat.pi * 0.5 - CGFloat(i) * sectionAngle - sectionAngle * 0.1
-                let endAngle = startAngle - sectionAngle * 0.8
+                let startAngle = CGFloat.pi * 0.5 - CGFloat(i) * sectionAngle - sectionAngle * 0.15
+                let endAngle = startAngle - sectionAngle * 0.75
                 
                 context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
                 context.strokePath()
             }
-            
-            //context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: 2.0 + lineWidth * 0.5, dy: 2.0 + lineWidth * 0.5))
             
             UIGraphicsPopContext()
         })

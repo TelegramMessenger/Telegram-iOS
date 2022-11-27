@@ -46,8 +46,31 @@ func applyUpdateMessage(postbox: Postbox, stateManager: AccountStateManager, mes
         let messageId: Int32?
         var apiMessage: Api.Message?
         
+        var correspondingMessageId: Int32?
+        
+        for update in result.allUpdates {
+            switch update {
+            case let .updateMessageID(id, randomId):
+                for attribute in message.attributes {
+                    if let attribute = attribute as? OutgoingMessageInfoAttribute {
+                        if attribute.uniqueId == randomId {
+                            correspondingMessageId = id
+                            break
+                        }
+                    }
+                }
+            default:
+                break
+            }
+        }
+        
         for resultMessage in result.messages {
             if let id = resultMessage.id() {
+                if let correspondingMessageId = correspondingMessageId {
+                    if id.id != correspondingMessageId {
+                        continue
+                    }
+                }
                 if id.peerId == message.id.peerId {
                     apiMessage = resultMessage
                     break

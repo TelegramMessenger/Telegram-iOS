@@ -155,6 +155,12 @@ func _internal_requestAccountPrivacySettings(account: Account) -> Signal<Account
                 return updated
             })
             
+            updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+                var settings = settings
+                settings.messageAutoremoveTimeout = messageAutoremoveSeconds
+                return settings
+            })
+            
             return AccountPrivacySettings(presence: SelectivePrivacySettings(apiRules: lastSeenRules, peers: peerMap), groupInvitations: SelectivePrivacySettings(apiRules: groupRules, peers: peerMap), voiceCalls: SelectivePrivacySettings(apiRules: voiceRules, peers: peerMap), voiceCallsP2P: SelectivePrivacySettings(apiRules: voiceP2PRules, peers: peerMap), profilePhoto: SelectivePrivacySettings(apiRules: profilePhotoRules, peers: peerMap), forwards: SelectivePrivacySettings(apiRules: forwardRules, peers: peerMap), phoneNumber: SelectivePrivacySettings(apiRules: phoneNumberRules, peers: peerMap), phoneDiscoveryEnabled: phoneDiscoveryValue, voiceMessages: SelectivePrivacySettings(apiRules: voiceMessagesRules, peers: peerMap), automaticallyArchiveAndMuteNonContacts: automaticallyArchiveAndMuteNonContacts, accountRemovalTimeout: accountTimeoutSeconds, messageAutoremoveTimeout: messageAutoremoveSeconds)
         }
     }
