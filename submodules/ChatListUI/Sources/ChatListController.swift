@@ -3653,8 +3653,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 }
                 
                 if isHidden {
-                    //TODO:localize
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: "General hidden", text: "Pull down to see the general topic.", undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .hidArchive(title: strongSelf.presentationData.strings.ChatList_GeneralHidden, text: strongSelf.presentationData.strings.ChatList_GeneralHiddenInfo, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] value in
                         guard let strongSelf = self else {
                             return false
                         }
@@ -3665,7 +3664,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                         return false
                     }), in: .current)
                 } else {
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: "General unhidden", text: "Swipe left on the general topic to hide it.", undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, content: .revealedArchive(title: strongSelf.presentationData.strings.ChatList_GeneralUnhidden, text: strongSelf.presentationData.strings.ChatList_GeneralUnhiddenInfo, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false
                     }), in: .current)
                 }
             }

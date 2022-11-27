@@ -2972,11 +2972,9 @@ private func statusStringForPeerType(accountPeerId: EnginePeer.Id, strings: Pres
     
     if displayAutoremoveTimeout {
         if let autoremoveTimeout = autoremoveTimeout {
-            //TODO:localize
-            return ("auto-delete after \(timeIntervalString(strings: strings, value: autoremoveTimeout))", false, true, .autoremove)
+            return (strings.ChatList_LabelAutodeleteAfter(timeIntervalString(strings: strings, value: autoremoveTimeout, usage: .afterTime)).string, false, true, .autoremove)
         } else {
-            //TODO:localize
-            return ("auto-deletion disabled", false, false, .autoremove)
+            return (strings.ChatList_LabelAutodeleteDisabled, false, false, .autoremove)
         }
     }
     

@@ -514,7 +514,6 @@ private func privacyAndSecurityControllerEntries(
     }
     entries.append(.twoStepVerification(presentationData.theme, presentationData.strings.PrivacySettings_TwoStepAuth, twoStepAuthString, twoStepAuthData))
     
-    //TODO:localize
     if let privacySettings = privacySettings {
         let value: Int32?
         if let updatingMessageAutoremoveTimeoutValue = state.updatingMessageAutoremoveTimeoutValue {
@@ -526,13 +525,13 @@ private func privacyAndSecurityControllerEntries(
         if let value {
             valueText = timeIntervalString(strings: presentationData.strings, value: value)
         } else {
-            valueText = "Off"
+            valueText = presentationData.strings.Autoremove_OptionOff
         }
-        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", valueText))
+        entries.append(.messageAutoremoveTimeout(presentationData.theme, presentationData.strings.Settings_AutoDeleteTitle, valueText))
     } else {
-        entries.append(.messageAutoremoveTimeout(presentationData.theme, "Auto-Delete Messages", presentationData.strings.Channel_NotificationLoading))
+        entries.append(.messageAutoremoveTimeout(presentationData.theme, presentationData.strings.Settings_AutoDeleteTitle, presentationData.strings.Channel_NotificationLoading))
     }
-    entries.append(.messageAutoremoveInfo(presentationData.theme, "Automatically delete messages for everyone after a period of time in all new chats you start."))
+    entries.append(.messageAutoremoveInfo(presentationData.theme, presentationData.strings.Settings_AutoDeleteInfo))
     
     if loginEmail != nil {
         entries.append(.loginEmail(presentationData.theme, presentationData.strings.PrivacySettings_LoginEmail, loginEmail))

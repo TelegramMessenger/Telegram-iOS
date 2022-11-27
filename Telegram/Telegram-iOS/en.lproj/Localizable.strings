@@ -8337,3 +8337,66 @@ Sorry for the inconvenience.";
 "UserInfo.AnonymousNumberInfo" = "This number is not tied to a SIM card and was acquired on [Fragment]().";
 
 "Login.NewNumber" = "New Number";
+
+"ChatList.GeneralHidden" = "General hidden";
+"ChatList.GeneralHiddenInfo" = "Pull down to see the general topic.";
+"ChatList.GeneralUnhidden" = "General unhidden";
+"ChatList.GeneralUnhiddenInfo" = "Swipe left on the general topic to hide it.";
+
+"Autoremove.OptionOff" = "Off";
+"Autoremove.SetCustomTime" = "Set Custom Time...";
+"CreateGroup.AutoDeleteTitle" = "Auto-Delete Messages";
+"CreateGroup.AutoDeleteText" = "Automatically delete messages sent in this group for everyone after a period of time.";
+
+"Settings.AutoDeleteTitle" = "Auto-Delete Messages";
+"Settings.AutoDeleteInfo" = "Automatically delete messages for everyone after a period of time in all new chats you start.";
+
+"Time.AfterSeconds_1" = "%@ second";
+"Time.AfterSeconds_any" = "%@ seconds";
+"Time.AfterMinutes_1" = "%@ minute";
+"Time.AfterMinutes_any" = "%@ minutes";
+"Time.AfterHours_1" = "%@ hour";
+"Time.AfterHours_any" = "%@ hours";
+"Time.AfterDays_1" = "%@ day";
+"Time.AfterDays_any" = "%@ days";
+"Time.AfterWeeks_1" = "%@ week";
+"Time.AfterWeeks_any" = "%@ weeks";
+"Time.AfterMonths_1" = "%@ month";
+"Time.AfterMonths_any" = "%@ months";
+"Time.AfterYears_1" = "%@ years";
+"Time.AfterYears_any" = "%@ years";
+
+"Time.TimerSeconds_1" = "%@-second";
+"Time.TimerSeconds_any" = "%@-second";
+"Time.TimerMinutes_1" = "%@-minute";
+"Time.TimerMinutes_any" = "%@-minute";
+"Time.TimerHours_1" = "%@-hour";
+"Time.TimerHours_any" = "%@-hour";
+"Time.TimerDays_1" = "%@-day";
+"Time.TimerDays_any" = "%@-day";
+"Time.TimerWeeks_1" = "%@-week";
+"Time.TimerWeeks_any" = "%@-week";
+"Time.TimerMonths_1" = "%@-month";
+"Time.TimerMonths_any" = "%@-month";
+"Time.TimerYears_1" = "%@-year";
+"Time.TimerYears_any" = "%@-year";
+
+"ChatList.LabelAutodeleteAfter" = "auto-delete after %@";
+"ChatList.LabelAutodeleteDisabled" = "auto-deletion disabled";
+
+"GlobalAutodeleteSettings.Title" = "Auto-Delete Messages";
+"GlobalAutodeleteSettings.OptionsHeader" = "SELF-DESTRUCT TIMER";
+"GlobalAutodeleteSettings.OptionTitle" = "After %@";
+"GlobalAutodeleteSettings.SetCustomTime" = "Set Custom Time...";
+"GlobalAutodeleteSettings.InfoDisabled" = "If enabled, all new messages in chats you start will be automatically deleted for everyone at some point after they have been sent. This will not affect your existing chats.";
+"GlobalAutodeleteSettings.InfoEnabled" = "All new messages in chats you started will be automatically deleted for everyone %@ after they have been sent. You can also [apply this setting for your existing chats]().";
+"GlobalAutodeleteSettings.SetConfirmTitle" = "Self-Destruct Timer";
+"GlobalAutodeleteSettings.SetConfirmText" = "Are you sure you want all messages in your new private chats and in new groups you create to be automatically deleted for everyone %@ after they have been sent?";
+"GlobalAutodeleteSettings.SetConfirmAction" = "Enable Auto-Deletion";
+"GlobalAutodeleteSettings.SetConfirmToastEnabled" = "Messages in all new chats you start will be automatically deleted after %@.";
+"GlobalAutodeleteSettings.SetConfirmToastDisabled" = "Messages in all new chats you start will not be automatically deleted.";
+"GlobalAutodeleteSettings.ApplyChatsTitle" = "Select Chats";
+"GlobalAutodeleteSettings.ApplyChatsPlaceholder" = "Select chats to apply the %@ self-destruct timer";
+"GlobalAutodeleteSettings.ApplyChatsToast" = "You applied the %1$@ self-destruct timer to %2$@.";
+"GlobalAutodeleteSettings.ApplyChatsSubject_1" = "%@ chat";
+"GlobalAutodeleteSettings.ApplyChatsSubject_any" = "%@ chats";
