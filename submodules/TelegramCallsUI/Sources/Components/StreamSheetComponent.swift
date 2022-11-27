@@ -171,16 +171,16 @@ final class StreamSheetComponent: CombinedComponent {
             
             if let topItem = topItem {
                 context.add(topItem
-                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + contentHeight / 2.0))
+                    .position(CGPoint(x: topItem.size.width / 2.0, y: topOffset + 32))
                 )
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
-            
             let videoHeight = (availableWidth - 32) / 16 * 9
+            let sheetHeight = context.component.sheetHeight
             let animatedParticipantsVisible = context.component.participantsCount != -1
             if true {
                 context.add(viewerCounter
-                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + 40 + 30))
+                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + (sheetHeight - 69 - videoHeight - 50 - context.component.bottomPadding) / 2 - 12))
                     .opacity(animatedParticipantsVisible ? 1 : 0)
                 )
             }
@@ -214,55 +214,6 @@ private let pink = UIColor(rgb: 0xe4436c)
 
 private let latePurple = UIColor(rgb: 0x974aa9)
 private let latePink = UIColor(rgb: 0xf0436c)
-
-final class ViewerCountComponent: Component {
-    private let count: Int
-    
-//    private let counterView: VoiceChatTimerNode
-    
-    static func ==(lhs: ViewerCountComponent, rhs: ViewerCountComponent) -> Bool {
-        if lhs.count != rhs.count {
-            return false
-        }
-        return true
-    }
-    
-    init(count: Int) {
-        self.count = count
-    }
-    
-    public func update(view: UIView, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        
-        /*self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
-        self.foregroundGradientLayer.frame = self.foregroundView.bounds
-        self.maskView.frame = self.foregroundView.bounds
-        
-        let text: String = presentationStringsFormattedNumber(participants, groupingSeparator)
-        let subtitle = "listening"
-        
-        self.titleNode.attributedText = NSAttributedString(string: "", font: Font.with(size: 23.0, design: .round, weight: .semibold, traits: []), textColor: .white)
-        let titleSize = self.titleNode.updateLayout(size)
-        self.titleNode.frame = CGRect(x: floor((size.width - titleSize.width) / 2.0), y: 48.0, width: titleSize.width, height: titleSize.height)
-        
-        self.timerNode.attributedText = NSAttributedString(string: text, font: Font.with(size: 68.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
-        
-        var timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
-        if timerSize.width > size.width - 32.0 {
-            self.timerNode.attributedText = NSAttributedString(string: text, font: Font.with(size: 60.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
-            timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
-        }
-        
-        self.timerNode.frame = CGRect(x: floor((size.width - timerSize.width) / 2.0), y: 78.0, width: timerSize.width, height: timerSize.height)
-        
-        self.subtitleNode.attributedText = NSAttributedString(string: subtitle, font: Font.with(size: 21.0, design: .round, weight: .semibold, traits: []), textColor: .white)
-        let subtitleSize = self.subtitleNode.updateLayout(size)
-        self.subtitleNode.frame = CGRect(x: floor((size.width - subtitleSize.width) / 2.0), y: 164.0, width: subtitleSize.width, height: subtitleSize.height)
-        
-        self.foregroundView.frame = CGRect(origin: CGPoint(), size: size)
-        */
-        return availableSize
-    }
-}
 
 final class SheetBackgroundComponent: Component {
     private let color: UIColor
@@ -401,7 +352,7 @@ public final class AnimatedCountView: UIView {
         self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
         self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
         countLabel.frame = CGRect(origin: .zero, size: bounds.size)
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 10 : bounds.height, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
+        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 10 : bounds.height - 6, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
     }
     
     func update(countString: String, subtitle: String) {
@@ -614,7 +565,6 @@ class AnimatedCountLabel: UILabel {
     }
     
     func udpateAttributed(with newString: NSAttributedString) {
-        let initialDuration: TimeInterval = 0.25
         let interItemSpacing: CGFloat = 0
         
         let separatedStrings = Array(newString.string).map { String($0) }
@@ -629,10 +579,22 @@ class AnimatedCountLabel: UILabel {
         
         let currentChars = chars.map { $0.attributedText ?? .init() }
         
+        let maxAnimationDuration: TimeInterval = 0.5
+        var numberOfChanges = abs(newChars.count - currentChars.count)
+        for index in 0..<min(newChars.count, currentChars.count) {
+            let newCharIndex = newChars.count - 1 - index
+            let currCharIndex = currentChars.count - 1 - index
+            if newChars[newCharIndex] != currentChars[currCharIndex] {
+                numberOfChanges += 1
+            }
+        }
+        
+        let initialDuration: TimeInterval = min(0.25, maxAnimationDuration / Double(numberOfChanges)) /// 0.25
+        
 //        let currentWidth = itemWidth * CGFloat(currentChars.count)
 //        let newWidth = itemWidth * CGFloat(newChars.count)
         
-        let interItemDelay: TimeInterval = 0.15
+        let interItemDelay: TimeInterval = 0.08
         var changeIndex = 0
         
         var newLayers = [AnimatedCharLayer]()
@@ -706,7 +668,7 @@ class AnimatedCountLabel: UILabel {
             return $0 + itemWidth + interItemSpacing
         }
         if didBegin && prevCount != chars.count {
-            UIView.animate(withDuration: 0.3, delay: initialDuration * Double(changeIndex)) { [self] in
+            UIView.animate(withDuration: Double(changeIndex) * initialDuration/*, delay: initialDuration * Double(changeIndex)*/) { [self] in
                 containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
                 //            containerView.backgroundColor = .red.withAlphaComponent(0.3)
             }
@@ -714,13 +676,14 @@ class AnimatedCountLabel: UILabel {
             containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
             didBegin = true
         }
-        self.backgroundColor = .green.withAlphaComponent(0.2)
+//        self.backgroundColor = .green.withAlphaComponent(0.2)
+        self.clipsToBounds = false
     }
     var didBegin = false
     func animateOut(for layer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
         let animation = CAKeyframeAnimation()
         animation.keyPath = "opacity"
-        animation.values = [layer.value(forKey: "opacity") ?? 1, 0.0]
+        animation.values = [layer.presentation()?.value(forKey: "opacity") ?? 1, 0.0]
         animation.keyTimes = [0, 1]
         animation.duration = duration
         animation.beginTime = CACurrentMediaTime() + beginTime
@@ -735,7 +698,7 @@ class AnimatedCountLabel: UILabel {
             layer.removeFromSuperlayer()
         }
         let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
-        scaleOutAnimation.fromValue = layer.value(forKey: "transform.scale") ?? 1
+        scaleOutAnimation.fromValue = layer.presentation()?.value(forKey: "transform.scale") ?? 1
         scaleOutAnimation.toValue = 0.1
         scaleOutAnimation.duration = duration
         scaleOutAnimation.beginTime = CACurrentMediaTime() + beginTime

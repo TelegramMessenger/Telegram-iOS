@@ -24,6 +24,7 @@ final class _MediaStreamVideoComponent: Component {
     let peerImage: Any?
     let isFullscreen: Bool
     let onVideoSizeRetrieved: (CGSize) -> Void
+    let videoLoading: Bool
     init(
         call: PresentationGroupCallImpl,
         hasVideo: Bool,
@@ -32,6 +33,7 @@ final class _MediaStreamVideoComponent: Component {
         peerTitle: String,
         peerImage: Any?,
         isFullscreen: Bool,
+        videoLoading: Bool,
         activatePictureInPicture: ActionSlot<Action<Void>>,
         deactivatePictureInPicture: ActionSlot<Void>,
         bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void,
@@ -43,6 +45,7 @@ final class _MediaStreamVideoComponent: Component {
         self.isVisible = isVisible
         self.isAdmin = isAdmin
         self.peerTitle = peerTitle
+        self.videoLoading = videoLoading
         self.activatePictureInPicture = activatePictureInPicture
         self.deactivatePictureInPicture = deactivatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
@@ -100,7 +103,8 @@ final class _MediaStreamVideoComponent: Component {
         
         private var videoPlaceholderView: UIView?
         private var noSignalView: ComponentHostView<Empty>?
-        
+        private let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        private let shimmerOverlayView = CALayer()
         private var pictureInPictureController: AVPictureInPictureController?
         
         private var component: _MediaStreamVideoComponent?
@@ -181,7 +185,6 @@ final class _MediaStreamVideoComponent: Component {
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
                         self.addSubview(videoView)
-                        videoView.alpha = 1
                         if let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
@@ -262,6 +265,8 @@ final class _MediaStreamVideoComponent: Component {
                             strongSelf.noSignalView?.removeFromSuperview()
                             strongSelf.noSignalView = nil
                             
+                            let snapshot = strongSelf.videoView?.snapshotView(afterScreenUpdates: true)
+                            strongSelf.addSubview(snapshot ?? UIVisualEffectView(effect: UIBlurEffect(style: .dark)))
                             state?.updated(transition: .immediate)
                         }
                     }
@@ -316,7 +321,12 @@ final class _MediaStreamVideoComponent: Component {
                 videoView.layer.cornerRadius = component.isFullscreen ? 0 : 10
               //  var aspect = videoView.getAspect()
 //                if aspect <= 0.01 {
-                
+                // TODO: remove debug
+//                if component.videoLoading {
+//                    videoView.alpha = 0.5
+//                } else {
+//                    videoView.alpha = 1
+//                }
                 
                 transition.withAnimation(.none).setFrame(view: videoView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize), completion: nil)
                 
@@ -354,7 +364,7 @@ final class _MediaStreamVideoComponent: Component {
                     activityIndicatorTransition = transition.withAnimation(.none)
                     activityIndicatorView = ComponentHostView<Empty>()
                     self.activityIndicatorView = activityIndicatorView
-                    self.addSubview(activityIndicatorView)
+//                    self.addSubview(activityIndicatorView)
                 }
                 
                 let activityIndicatorSize = activityIndicatorView.update(
@@ -431,6 +441,11 @@ final class _MediaStreamVideoComponent: Component {
             return availableSize
         }
         
+        func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            videoView?.alpha = 0
+            videoBlurView?.alpha = 0
+        }
+        
         public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
             guard let component = self.component else {
                 completionHandler(false)
@@ -455,6 +470,8 @@ final class _MediaStreamVideoComponent: Component {
         }
         
         func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+            self.videoView?.alpha = 1
+            self.videoBlurView?.alpha = 1
             self.state?.updated(transition: .immediate)
         }
     }
