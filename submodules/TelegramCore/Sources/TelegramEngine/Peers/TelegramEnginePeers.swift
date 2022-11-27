@@ -973,6 +973,14 @@ public extension TelegramEngine {
         public func forumChannelTopicNotificationExceptions(id: EnginePeer.Id) -> Signal<[EngineMessageHistoryThread.NotificationException], NoError> {
             return _internal_forumChannelTopicNotificationExceptions(account: self.account, id: id)
         }
+        
+        public func importContactToken(token: String) -> Signal<EnginePeer?, NoError> {
+            return _internal_importContactToken(account: self.account, token: token)
+        }
+        
+        public func exportContactToken() -> Signal<ExportedContactToken?, NoError> {
+            return _internal_exportContactToken(account: self.account)
+        }
     }
 }
 

@@ -94,6 +94,7 @@ public enum ParsedInternalUrl {
     case theme(String)
     case phone(String, String?, String?)
     case startAttach(String, String?, String?)
+    case contactToken(String)
 }
 
 private enum ParsedUrl {
@@ -160,7 +161,7 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                         if let _ = url {
                             return .internalInstantView(url: "https://t.me/\(query)")
                         }
-                    } else if peerName == "login" {
+                    } else if peerName == "contact" {
                         var code: String?
                         for queryItem in queryItems {
                             if let value = queryItem.value {
@@ -290,6 +291,8 @@ public func parseInternalUrl(query: String) -> ParsedInternalUrl? {
                     if let code = Int(pathComponents[1]) {
                         return .confirmationCode(code)
                     }
+                } else if peerName == "contact" {
+                    return .contactToken(pathComponents[1])
                 } else if pathComponents[0] == "share" && pathComponents[1] == "url" {
                     if let queryItems = components.queryItems {
                         var url: String?
@@ -653,6 +656,15 @@ private func resolveInternalUrl(context: AccountContext, url: ParsedInternalUrl)
                     return .single(.peer(peer._asPeer(), .chat(textInputState: nil, subject: nil, peekData: nil)))
                 } else {
                     return .single(.inaccessiblePeer)
+                }
+            }
+        case let .contactToken(token):
+            return context.engine.peers.importContactToken(token: token)
+            |> mapToSignal { peer -> Signal<ResolvedUrl?, NoError> in
+                if let peer = peer {
+                    return .single(.peer(peer._asPeer(), .info))
+                } else {
+                    return .single(.peer(nil, .info))
                 }
             }
         case let .privateMessage(messageId, threadId, timecode):

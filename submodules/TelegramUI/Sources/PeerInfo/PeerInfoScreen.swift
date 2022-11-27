@@ -7024,11 +7024,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             threadId = Int64(message.messageId.id)
         }
         
-//        var temporary = false
-//        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false {
-//            temporary = true
-//        }
-        controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer: peer, threadId: threadId, temporary: false)), in: .window(.root))
+        var temporary = false
+        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false {
+            temporary = true
+        }
+        controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary)), in: .window(.root))
     }
     
     fileprivate func openSettings(section: PeerInfoSettingsSection) {
