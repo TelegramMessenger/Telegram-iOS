@@ -2665,19 +2665,19 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         avatarBadgeBackground.bounds = CGRect(origin: CGPoint(), size: avatarBadgeBackgroundFrame.size)
                         
                         if animateIn {
-                            ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.001)
-                            ContainedViewLayoutTransition.immediate.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.001)
+                            ContainedViewLayoutTransition.immediate.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.00001)
+                            ContainedViewLayoutTransition.immediate.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.00001)
                         }
-                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: max(0.001, inlineNavigationLocation.progress))
-                        transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: max(0.001, inlineNavigationLocation.progress))
+                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: max(0.00001, inlineNavigationLocation.progress))
+                        transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: max(0.00001, inlineNavigationLocation.progress))
                     } else if let avatarBadgeNode = strongSelf.avatarBadgeNode {
                         strongSelf.avatarBadgeNode = nil
-                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.001, completion: { [weak avatarBadgeNode] _ in
+                        transition.updateSublayerTransformScale(node: avatarBadgeNode, scale: 0.00001, completion: { [weak avatarBadgeNode] _ in
                             avatarBadgeNode?.removeFromSupernode()
                         })
                         if let avatarBadgeBackground = strongSelf.avatarBadgeBackground {
                             strongSelf.avatarBadgeBackground = nil
-                            transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.001, completion: { [weak avatarBadgeBackground] _ in
+                            transition.updateTransformScale(layer: avatarBadgeBackground.layer, scale: 0.00001, completion: { [weak avatarBadgeBackground] _ in
                                 avatarBadgeBackground?.removeFromSupernode()
                             })
                         }
@@ -2747,7 +2747,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     
                     let onlineInlineNavigationFraction: CGFloat = item.interaction.inlineNavigationLocation?.progress ?? 0.0
                     transition.updateAlpha(node: strongSelf.onlineNode, alpha: 1.0 - onlineInlineNavigationFraction)
-                    transition.updateSublayerTransformScale(node: strongSelf.onlineNode, scale: (1.0 - onlineInlineNavigationFraction) * 1.0 + onlineInlineNavigationFraction * 0.001)
+                    transition.updateSublayerTransformScale(node: strongSelf.onlineNode, scale: (1.0 - onlineInlineNavigationFraction) * 1.0 + onlineInlineNavigationFraction * 0.00001)
                     
                     let onlineIcon: UIImage?
                     if strongSelf.reallyHighlighted {
@@ -2775,7 +2775,6 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             avatarTimerTransition = .immediate
                             avatarTimerBadge = AvatarBadgeView(frame: CGRect())
                             strongSelf.avatarTimerBadge = avatarTimerBadge
-                            strongSelf.avatarNode.badgeView = avatarTimerBadge
                             strongSelf.contextContainer.view.addSubview(avatarTimerBadge)
                         }
                         let avatarBadgeSize = CGSize(width: avatarTimerBadgeDiameter, height: avatarTimerBadgeDiameter)
@@ -2783,7 +2782,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - avatarBadgeSize.width, y: avatarFrame.maxY - avatarBadgeSize.height), size: avatarBadgeSize)
                         avatarTimerTransition.updatePosition(layer: avatarTimerBadge.layer, position: avatarBadgeFrame.center)
                         avatarTimerTransition.updateBounds(layer: avatarTimerBadge.layer, bounds: CGRect(origin: CGPoint(), size: avatarBadgeFrame.size))
-                        avatarTimerTransition.updateTransformScale(layer: avatarTimerBadge.layer, scale: autoremoveTimeoutFraction * 1.0 + (1.0 - autoremoveTimeoutFraction) * 0.001)
+                        avatarTimerTransition.updateTransformScale(layer: avatarTimerBadge.layer, scale: autoremoveTimeoutFraction * 1.0 + (1.0 - autoremoveTimeoutFraction) * 0.00001)
+                        
+                        strongSelf.avatarNode.badgeView = avatarTimerBadge
                     } else if let avatarTimerBadge = strongSelf.avatarTimerBadge {
                         strongSelf.avatarTimerBadge = nil
                         strongSelf.avatarNode.badgeView = nil

@@ -207,3 +207,23 @@ extension SelectivePrivacySettings {
         self = current.withEnabledPeers(enableFor).withDisabledPeers(disableFor)
     }
 }
+
+public struct GlobalMessageAutoremoveTimeoutSettings: Equatable, Codable {
+    public static var `default` = GlobalMessageAutoremoveTimeoutSettings(
+        messageAutoremoveTimeout: nil
+    )
+
+    public var messageAutoremoveTimeout: Int32?
+
+    public init(messageAutoremoveTimeout: Int32?) {
+        self.messageAutoremoveTimeout = messageAutoremoveTimeout
+    }
+}
+
+func updateGlobalMessageAutoremoveTimeoutSettings(transaction: Transaction, _ f: (GlobalMessageAutoremoveTimeoutSettings) -> GlobalMessageAutoremoveTimeoutSettings) {
+    transaction.updatePreferencesEntry(key: PreferencesKeys.globalMessageAutoremoveTimeoutSettings, { current in
+        let previous = current?.get(GlobalMessageAutoremoveTimeoutSettings.self) ?? GlobalMessageAutoremoveTimeoutSettings.default
+        let updated = f(previous)
+        return PreferencesEntry(updated)
+    })
+}
