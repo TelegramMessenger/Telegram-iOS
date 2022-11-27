@@ -322,6 +322,9 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         if user.botInfo == nil {
                             canManage = true
                         }
+                        if user.id.isRepliesOrSavedMessages(accountPeerId: context.account.peerId) {
+                            return false
+                        }
                     } else if case .secretChat = peer {
                         canManage = true
                     } else if case let .legacyGroup(group) = peer {
