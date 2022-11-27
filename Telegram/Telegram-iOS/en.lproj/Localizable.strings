@@ -8403,3 +8403,5 @@ Sorry for the inconvenience.";
 "GlobalAutodeleteSettings.AttemptDisabledGroupSelection" = "You need admin rights in this group to enable auto-delete.";
 "GlobalAutodeleteSettings.AttemptDisabledChannelSelection" = "You need admin rights in this channel to enable auto-delete.";
 "GlobalAutodeleteSettings.AttemptDisabledGenericSelection" = "You can't enable auto-delete in this chat.";
+
+"EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";

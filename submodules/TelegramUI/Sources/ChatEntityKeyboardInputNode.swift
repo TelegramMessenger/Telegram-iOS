@@ -90,7 +90,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
-        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
+        let emojiItems = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, isStandalone: false, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: true, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: chatPeerId)
         
         let stickerNamespaces: [ItemCollectionId.Namespace] = [Namespaces.ItemCollection.CloudStickerPacks]
         let stickerOrderedItemListCollectionIds: [Int32] = [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers]
@@ -1210,10 +1210,17 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         |> map { view, availableReactions, hasPremium -> [EmojiPagerContentComponent.ItemGroup] in
                             var result: [(String, TelegramMediaFile?, String)] = []
                             
+                            var existingEmoticons = Set<String>()
+                            var allEmoticonsList: [String] = []
                             var allEmoticons: [String: String] = [:]
                             for keyword in keywords {
                                 for emoticon in keyword.emoticons {
                                     allEmoticons[emoticon] = keyword.keyword
+                                    
+                                    if !existingEmoticons.contains(emoticon) {
+                                        allEmoticonsList.append(emoticon)
+                                        existingEmoticons.insert(emoticon)
+                                    }
                                 }
                             }
                             
@@ -1250,12 +1257,24 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     let item = EmojiPagerContentComponent.Item(
                                         animationData: animationData,
                                         content: .animation(animationData),
-                                        itemFile: itemFile, subgroupId: nil,
+                                        itemFile: itemFile,
+                                        subgroupId: nil,
                                         icon: .none,
                                         accentTint: false
                                     )
                                     items.append(item)
                                 }
+                            }
+                            
+                            for emoji in allEmoticonsList {
+                                items.append(EmojiPagerContentComponent.Item(
+                                    animationData: nil,
+                                    content: .staticEmoji(emoji),
+                                    itemFile: nil,
+                                    subgroupId: nil,
+                                    icon: .none,
+                                    accentTint: false)
+                                )
                             }
                             
                             return [EmojiPagerContentComponent.ItemGroup(
@@ -2262,7 +2281,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
+        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -2277,7 +2296,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

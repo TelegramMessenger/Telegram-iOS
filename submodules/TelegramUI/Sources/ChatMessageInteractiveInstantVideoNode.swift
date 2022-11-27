@@ -231,6 +231,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
             
+            var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if case .forwardedMessages = item.associatedData.subject {
+                incoming = false
+            }
+            
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
             var updatedReplyBackgroundNode: NavigationBackgroundNode?
@@ -430,7 +435,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let arguments = TransformImageArguments(corners: ImageCorners(radius: videoFrame.size.width / 2.0), imageSize: videoFrame.size, boundingSize: videoFrame.size, intrinsicInsets: UIEdgeInsets())
             
             let statusType: ChatMessageDateAndStatusType
-            if item.message.effectivelyIncoming(item.context.account.peerId) {
+            if incoming {
                 switch statusDisplayType {
                     case .free:
                         statusType = .FreeIncoming
@@ -622,7 +627,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                         case .bubble:
                             durationBlurColor = nil
-                            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                            if incoming {
                                 durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                             } else {
                                 durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
@@ -733,9 +738,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }))
                     }
-                    
-                    let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-                                 
+                                        
                     var displayTranscribe: Bool
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
                         if item.associatedData.isPremium {
