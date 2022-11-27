@@ -29,6 +29,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     private let context: AccountContext
     private let mode: ContactMultiselectionControllerMode
     private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    private let attemptDisabledItemSelection: ((EnginePeer) -> Void)?
     
     private let titleView: CounterContollerTitleView
     
@@ -85,6 +86,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         self.context = params.context
         self.mode = params.mode
         self.isPeerEnabled = params.isPeerEnabled
+        self.attemptDisabledItemSelection = params.attemptDisabledItemSelection
         self.options = params.options
         self.filters = params.filters
         self.limit = params.limit
@@ -222,7 +224,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     override func loadDisplayNode() {
-        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, options: self.options, filters: self.filters, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
+        self.displayNode = ContactMultiselectionControllerNode(navigationBar: self.navigationBar, context: self.context, presentationData: self.presentationData, mode: self.mode, isPeerEnabled: self.isPeerEnabled, attemptDisabledItemSelection: self.attemptDisabledItemSelection, options: self.options, filters: self.filters, limit: self.limit, reachedSelectionLimit: self.params.reachedLimit)
         switch self.contactsNode.contentNode {
         case let .contacts(contactsNode):
             self._listReady.set(contactsNode.ready)

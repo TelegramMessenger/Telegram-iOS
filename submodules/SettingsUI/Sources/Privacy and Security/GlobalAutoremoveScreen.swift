@@ -326,6 +326,31 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         canManage = channel.hasPermission(.changeInfo)
                     }
                     return canManage
+                },
+                attemptDisabledItemSelection: { peer in
+                    let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                    
+                    let text: String
+                    if case let .channel(channel) = peer {
+                        if case .group = channel.info {
+                            text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGroupSelection
+                        } else {
+                            text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledChannelSelection
+                        }
+                    } else if case .legacyGroup = peer {
+                        text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGroupSelection
+                    } else {
+                        text = presentationData.strings.GlobalAutodeleteSettings_AttemptDisabledGenericSelection
+                    }
+                    
+                    presentControllerImpl?(standardTextAlertController(
+                        theme: AlertControllerTheme(presentationData: presentationData),
+                        title: nil,
+                        text: text,
+                        actions: [
+                            TextAlertAction(type: .defaultAction, title: presentationData.strings.Common_OK, action: {})
+                        ]
+                    ), nil)
                 }
             ))
             selectionController.navigationPresentation = .modal
