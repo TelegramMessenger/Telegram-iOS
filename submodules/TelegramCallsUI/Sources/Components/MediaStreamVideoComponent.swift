@@ -214,7 +214,7 @@ final class _MediaStreamVideoComponent: Component {
                                         return false
                                     }
                                 }
-                            let pictureInPictureController: AVPictureInPictureController?
+                            var pictureInPictureController: AVPictureInPictureController? = nil
                             if #available(iOS 15.0, *) {
                                 pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: {
                                     let delegate = PlaybackDelegateImpl()
@@ -225,7 +225,7 @@ final class _MediaStreamVideoComponent: Component {
                                     }
                                     return delegate
                                 }()))
-                            } else {
+                            } else if AVPictureInPictureController.isPictureInPictureSupported() {
                                 // TODO: support PiP for iOS < 15.0
                                 // sampleBufferVideoView.sampleBufferLayer
                                 pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))

@@ -822,7 +822,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
                 self.isPictureInPictureSupported = true
             } else {
-                self.isPictureInPictureSupported = true
+                self.isPictureInPictureSupported = AVPictureInPictureController.isPictureInPictureSupported()
             }
             
             super.init()

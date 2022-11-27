@@ -176,11 +176,12 @@ final class StreamSheetComponent: CombinedComponent {
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
             
+            let videoHeight = (availableWidth - 32) / 16 * 9
             let animatedParticipantsVisible = context.component.participantsCount != -1
-            if animatedParticipantsVisible {
-                // let videoHeight = availableWidth / 2
+            if true {
                 context.add(viewerCounter
-                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + 200 + 40 + 30))
+                    .position(CGPoint(x: context.availableSize.width / 2, y: topOffset + 50 + videoHeight + 40 + 30))
+                    .opacity(animatedParticipantsVisible ? 1 : 0)
                 )
             }
             
@@ -533,15 +534,27 @@ class AnimatedCountLabel: UILabel {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    
+    var itemWidth: CGFloat { 36 }
     override func layoutSubviews() {
         super.layoutSubviews()
         let interItemSpacing: CGFloat = 0
-        let countWidth = chars.reduce(0) { $0 + $1.frame.width + interItemSpacing } - interItemSpacing
+        let countWidth = chars.reduce(0) {
+            if $1.attributedText?.string == "," {
+                return $0 + 12
+            }
+            return $0 + itemWidth + interItemSpacing
+        } - interItemSpacing
         
         containerView.frame = .init(x: bounds.midX - countWidth / 2, y: 0, width: countWidth, height: bounds.height)
         chars.enumerated().forEach { (index, char) in
-            char.frame.origin.x = CGFloat(chars.count - 1 - index) * (40 + interItemSpacing)
+            let offset = chars[0..<index].reduce(0) {
+                if $1.attributedText?.string == "," {
+                    return $0 + 12
+                }
+                return $0 + itemWidth + interItemSpacing
+            }
+            char.frame.origin.x = offset
+//            char.frame.origin.x = CGFloat(chars.count - 1 - index) * (40 + interItemSpacing)
             char.frame.origin.y = 0
         }
     }
@@ -601,7 +614,6 @@ class AnimatedCountLabel: UILabel {
     }
     
     func udpateAttributed(with newString: NSAttributedString) {
-        let itemWidth: CGFloat = 40
         let initialDuration: TimeInterval = 0.25
         let interItemSpacing: CGFloat = 0
         
@@ -629,15 +641,29 @@ class AnimatedCountLabel: UILabel {
             let newCharIndex = newChars.count - 1 - index
             let currCharIndex = currentChars.count - 1 - index
             
-            if newChars[newCharIndex] != currentChars[currCharIndex] {
+            if true || newChars[newCharIndex] != currentChars[currCharIndex] {
                let initialDuration = newChars[newCharIndex] != currentChars[currCharIndex] ? initialDuration : 0
-                animateOut(for: chars[currCharIndex].layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
                 
+                if newChars[newCharIndex] != currentChars[currCharIndex] {
+                    animateOut(for: chars[currCharIndex].layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
+                } else {
+                    chars[currCharIndex].layer.removeFromSuperlayer()
+                }
                 let newLayer = AnimatedCharLayer()
                 newLayer.attributedText = newChars[newCharIndex]
-                newLayer.frame = .init(x: CGFloat(chars.count - 1 - index) * (40 + interItemSpacing), y: 0, width: itemWidth, height: itemWidth * 1.8)
+                let offset = newChars[0..<newCharIndex].reduce(0) {
+                    if $1.string == "," {
+                        return $0 + 12
+                    }
+                    return $0 + itemWidth + interItemSpacing
+                }
+                newLayer.frame = .init(x: offset/*CGFloat(newCharIndex) * (40 + interItemSpacing)*/, y: 0, width: itemWidth, height: itemWidth * 1.8)
+                // newLayer.frame = .init(x: CGFloat(chars.count - 1 - index) * (40 + interItemSpacing), y: 0, width: itemWidth, height: itemWidth * 1.8)
                 containerView.layer.addSublayer(newLayer)
-                animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
+                if newChars[newCharIndex] != currentChars[currCharIndex] {
+                    newLayer.layer.opacity = 0
+                    animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
+                }
                 newLayers.append(newLayer)
                 changeIndex += 1
             } else {
@@ -657,16 +683,29 @@ class AnimatedCountLabel: UILabel {
             
             let newLayer = AnimatedCharLayer()
             newLayer.attributedText = newChars[newCharIndex]
-            newLayer.frame = .init(x: CGFloat(chars.count - 1 - index) * (40 + interItemSpacing), y: 0, width: itemWidth, height: itemWidth * 1.8)
+            
+            let offset = newChars[0..<newCharIndex].reduce(0) {
+                if $1.string == "," {
+                    return $0 + 12
+                }
+                return $0 + itemWidth + interItemSpacing
+            }
+            newLayer.frame = .init(x: offset/*CGFloat(newCharIndex) * (40 + interItemSpacing)*/, y: 0, width: itemWidth, height: itemWidth * 1.8)
             containerView.layer.addSublayer(newLayer)
             animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
             newLayers.append(newLayer)
             changeIndex += 1
         }
-        chars = newLayers
+        let prevCount = chars.count
+        chars = newLayers.reversed()
         
-        let countWidth = chars.reduce(-interItemSpacing) { $0 + $1.frame.width + interItemSpacing }
-        if didBegin {
+        let countWidth = newChars.reduce(-interItemSpacing) {
+            if $1.string == "," {
+                return $0 + 12
+            }
+            return $0 + itemWidth + interItemSpacing
+        }
+        if didBegin && prevCount != chars.count {
             UIView.animate(withDuration: 0.3, delay: initialDuration * Double(changeIndex)) { [self] in
                 containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
                 //            containerView.backgroundColor = .red.withAlphaComponent(0.3)
@@ -675,26 +714,28 @@ class AnimatedCountLabel: UILabel {
             containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
             didBegin = true
         }
-//        self.backgroundColor = .green.withAlphaComponent(0.2)
+        self.backgroundColor = .green.withAlphaComponent(0.2)
     }
     var didBegin = false
     func animateOut(for layer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
         let animation = CAKeyframeAnimation()
         animation.keyPath = "opacity"
-        animation.values = [1, 0.2]
+        animation.values = [layer.value(forKey: "opacity") ?? 1, 0.0]
         animation.keyTimes = [0, 1]
         animation.duration = duration
         animation.beginTime = CACurrentMediaTime() + beginTime
 //        animation.isAdditive = true
-//        animation.isRemovedOnCompletion = true
-        layer.add(animation, forKey: "opacity")
+        animation.isRemovedOnCompletion = false
+        animation.fillMode = .backwards
         layer.opacity = 0
+        layer.add(animation, forKey: "opacity")
+//
 //
         DispatchQueue.main.asyncAfter(deadline: .now() + duration + beginTime) {
             layer.removeFromSuperlayer()
         }
         let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
-        scaleOutAnimation.fromValue = 1
+        scaleOutAnimation.fromValue = layer.value(forKey: "transform.scale") ?? 1
         scaleOutAnimation.toValue = 0.1
         scaleOutAnimation.duration = duration
         scaleOutAnimation.beginTime = CACurrentMediaTime() + beginTime
@@ -713,18 +754,22 @@ class AnimatedCountLabel: UILabel {
      //   newLayer.backgroundColor = UIColor.red.cgColor
         
         let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
-        opacityInAnimation.fromValue = 0.5
+        opacityInAnimation.fromValue = 0
         opacityInAnimation.toValue = 1
         opacityInAnimation.duration = duration
         opacityInAnimation.beginTime = CACurrentMediaTime() + beginTime
-        newLayer.add(opacityInAnimation, forKey: "opacity")
+//        opacityInAnimation.isAdditive = true
+        opacityInAnimation.fillMode = .backwards
         newLayer.opacity = 1
+        newLayer.add(opacityInAnimation, forKey: "opacity")
+//        newLayer.opacity = 1
         
         let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
         scaleOutAnimation.fromValue = 0
         scaleOutAnimation.toValue = 1
         scaleOutAnimation.duration = duration
         scaleOutAnimation.beginTime = CACurrentMediaTime() + beginTime
+//        scaleOutAnimation.isAdditive = true
         newLayer.add(scaleOutAnimation, forKey: "scalein")
         
         let animation = CAKeyframeAnimation()
@@ -734,7 +779,7 @@ class AnimatedCountLabel: UILabel {
         animation.timingFunction = CAMediaTimingFunction.init(name: .easeInEaseOut)
         animation.duration = duration / 0.64
         animation.beginTime = CACurrentMediaTime() + beginTime
-//        animation.isAdditive = true
+        animation.isAdditive = true
         newLayer.add(animation, forKey: "pos")
     }
 }
