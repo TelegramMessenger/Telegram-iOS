@@ -226,6 +226,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                 var state = state
                 state.updatedValue = timeout
                 if timeout != 0 {
+                    state.additionalValues.removeAll()
                     state.additionalValues.insert(timeout)
                 }
                 return state
@@ -354,8 +355,23 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                 } else {
                     selectionController?.displayProgress = true
                     let _ = (context.engine.peers.setChatMessageAutoremoveTimeouts(peerIds: peerIds, timeout: value)
-                             |> deliverOnMainQueue).start(completed: {
+                    |> deliverOnMainQueue).start(completed: {
                         selectionController?.dismiss()
+                        
+                        let isOn: Bool = true
+                        //TODO:localize
+                        let text = "You applied the \(timeIntervalString(strings: presentationData.strings, value: value)) self-destruct timer to \(peerIds.count) \(peerIds.count == 1 ? "chat" : "chats")."
+                        
+                        var animateAsReplacement = false
+                        if let window = getController?()?.window {
+                            window.forEachController { other in
+                                if let other = other as? UndoOverlayController {
+                                    animateAsReplacement = true
+                                    other.dismiss()
+                                }
+                            }
+                        }
+                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }), nil)
                     })
                 }
             })
