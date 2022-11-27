@@ -556,6 +556,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/login/\(code)"
                         }
                     }
+                } else if parsedUrl.host == "contact" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var token: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "token" {
+                                        token = value
+                                    }
+                                }
+                            }
+                        }
+                        if let token = token {
+                            convertedUrl = "https://t.me/contact/\(token)"
+                        }
+                    }
                 } else if parsedUrl.host == "confirmphone" {
                     if let components = URLComponents(string: "/?" + query) {
                         var phone: String?
