@@ -1156,12 +1156,12 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return controllerInteraction?.navigationController()
             },
             requestUpdate: { [weak self] transition in
-                guard let _ = self else {
+                guard let strongSelf = self else {
                     return
                 }
-//                if !transition.animation.isImmediate {
-//                    strongSelf.interfaceInteraction?.requestLayout(transition.containedViewLayoutTransition)
-//                }
+                if !transition.animation.isImmediate {
+                    strongSelf.interfaceInteraction?.requestLayout(transition.containedViewLayoutTransition)
+                }
             },
             updateSearchQuery: { [weak self] rawQuery, languageCode in
                 guard let strongSelf = self else {

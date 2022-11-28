@@ -1550,7 +1550,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
     }
     
     private let activated: () -> Void
-    private let deactivated: () -> Void
+    private let deactivated: (Bool) -> Void
     private let updateQuery: (String, String) -> Void
     
     let tintContainerView: UIView
@@ -1581,7 +1581,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         return self.textField != nil
     }
     
-    init(activated: @escaping () -> Void, deactivated: @escaping () -> Void, updateQuery: @escaping (String, String) -> Void) {
+    init(activated: @escaping () -> Void, deactivated: @escaping (Bool) -> Void, updateQuery: @escaping (String, String) -> Void) {
         self.activated = activated
         self.deactivated = deactivated
         self.updateQuery = updateQuery
@@ -1702,7 +1702,7 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         self.clearIconTintView.isHidden = true
         self.clearIconButton.isHidden = true
                 
-        self.deactivated()
+        self.deactivated(self.textField?.isFirstResponder ?? false)
         
         if let textField = self.textField {
             self.textField = nil
@@ -1725,6 +1725,14 @@ public final class EmojiSearchHeaderView: UIView, UITextFieldDelegate {
         
         self.tintTextView.view?.isHidden = false
         self.textView.view?.isHidden = false
+    }
+    
+    func deactivate() {
+        if let text = self.textField?.text, !text.isEmpty {
+            self.textField?.endEditing(true)
+        } else {
+            self.cancelPressed()
+        }
     }
     
     public func textFieldDidBeginEditing(_ textField: UITextField) {
@@ -3263,6 +3271,7 @@ public final class EmojiPagerContentComponent: Component {
         private var isSearchActivated: Bool = false
         
         private let backgroundView: BlurredBackgroundView
+        private var vibrancyClippingView: UIView
         private var vibrancyEffectView: UIVisualEffectView?
         public private(set) var mirrorContentClippingView: UIView?
         private let mirrorContentScrollView: UIView
@@ -3312,6 +3321,9 @@ public final class EmojiPagerContentComponent: Component {
                 self.shimmerHostView = nil
                 self.standaloneShimmerEffect = nil
             }
+            
+            self.vibrancyClippingView = UIView()
+            self.vibrancyClippingView.clipsToBounds = true
             
             self.scrollViewClippingView = UIView()
             self.scrollViewClippingView.clipsToBounds = true
@@ -4793,7 +4805,7 @@ public final class EmojiPagerContentComponent: Component {
             self.updateScrollingOffset(isReset: false, transition: .immediate)
             
             if self.isSearchActivated {
-                self.visibleSearchHeader?.endEditing(true)
+                self.visibleSearchHeader?.deactivate()
             }
         }
         
@@ -5704,7 +5716,8 @@ public final class EmojiPagerContentComponent: Component {
                     let vibrancyEffectView = UIVisualEffectView(effect: vibrancyEffect)
                     self.vibrancyEffectView = vibrancyEffectView
                     self.backgroundView.addSubview(vibrancyEffectView)
-                    vibrancyEffectView.contentView.addSubview(self.mirrorContentScrollView)
+                    self.vibrancyClippingView.addSubview(self.mirrorContentScrollView)
+                    vibrancyEffectView.contentView.addSubview(self.vibrancyClippingView)
                 }
             }
             
@@ -5950,8 +5963,10 @@ public final class EmojiPagerContentComponent: Component {
             transition.setPosition(view: self.scrollView, position: CGPoint(x: 0.0, y: scrollOriginY))
             
             transition.setFrame(view: self.scrollViewClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? itemLayout.searchHeight : 0.0), size: availableSize))
-            
             transition.setBounds(view: self.scrollViewClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? itemLayout.searchHeight : 0.0), size: availableSize))
+            
+            transition.setFrame(view: self.vibrancyClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? itemLayout.searchHeight : 0.0), size: availableSize))
+            transition.setBounds(view: self.vibrancyClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: self.isSearchActivated ? itemLayout.searchHeight : 0.0), size: availableSize))
             
             let previousSize = self.scrollView.bounds.size
             var resetScrolling = false
@@ -6122,7 +6137,7 @@ public final class EmojiPagerContentComponent: Component {
                             if self.mirrorContentClippingView != nil {
                                 self.mirrorContentClippingView?.addSubview(visibleSearchHeader.tintContainerView)
                             } else {
-                                self.mirrorContentScrollView.superview?.addSubview(visibleSearchHeader.tintContainerView)
+                                self.mirrorContentScrollView.superview?.superview?.addSubview(visibleSearchHeader.tintContainerView)
                             }
                         }
                     } else {
@@ -6144,7 +6159,7 @@ public final class EmojiPagerContentComponent: Component {
                             strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(true)
                             strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
                         }
-                    }, deactivated: { [weak self] in
+                    }, deactivated: { [weak self] isFirstResponder in
                         guard let strongSelf = self else {
                             return
                         }
@@ -6154,7 +6169,9 @@ public final class EmojiPagerContentComponent: Component {
                         strongSelf.isSearchActivated = false
                         strongSelf.pagerEnvironment?.onWantsExclusiveModeUpdated(false)
                         if strongSelf.component?.searchInitiallyHidden == false {
-                            strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.easeInOut(duration: 0.5))
+                            if !isFirstResponder {
+                                strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.easeInOut(duration: 0.2))
+                            }
                         } else {
                             strongSelf.component?.inputInteractionHolder.inputInteraction?.requestUpdate(.immediate)
                         }
