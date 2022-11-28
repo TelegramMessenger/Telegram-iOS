@@ -202,6 +202,7 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
     }
     
     var presentControllerImpl: ((ViewController, ViewControllerPresentationArguments?) -> Void)?
+    var presentInCurrentControllerImpl: ((ViewController) -> Void)?
     var pushControllerImpl: ((ViewController) -> Void)?
     var dismissImpl: (() -> Void)?
     var getController: (() -> ViewController?)?
@@ -248,7 +249,16 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                         }
                     }
                 }
-                presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }), nil)
+                if let current = getController?() {
+                    current.forEachController { other in
+                        if let other = other as? UndoOverlayController {
+                            animateAsReplacement = true
+                            other.dismiss()
+                        }
+                        return true
+                    }
+                }
+                presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
             }
             
             updateTimeoutDisposable.set((context.engine.privacy.updateGlobalMessageRemovalTimeout(timeout: timeout == 0 ? nil : timeout)
@@ -391,7 +401,16 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
                                 }
                             }
                         }
-                        presentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }), nil)
+                        if let current = getController?() {
+                            current.forEachController { other in
+                                if let other = other as? UndoOverlayController {
+                                    animateAsReplacement = true
+                                    other.dismiss()
+                                }
+                                return true
+                            }
+                        }
+                        presentInCurrentControllerImpl?(UndoOverlayController(presentationData: presentationData, content: .autoDelete(isOn: isOn, title: nil, text: text), elevatedLayout: false, animateInAsReplacement: animateAsReplacement, action: { _ in return false }))
                     })
                 }
             })
@@ -431,6 +450,12 @@ public func globalAutoremoveScreen(context: AccountContext, initialValue: Int32,
             return
         }
         controller.present(c, in: .window(.root), with: p)
+    }
+    presentInCurrentControllerImpl = { [weak controller] c in
+        guard let controller else {
+            return
+        }
+        controller.present(c, in: .current, with: nil)
     }
     pushControllerImpl = { [weak controller] c in
         controller?.push(c)
