@@ -963,7 +963,7 @@ public final class ChatTitleComponent: Component {
     }
     
     public final class View: UIView {
-        private var contentView: ChatTitleView?
+        public private(set) var contentView: ChatTitleView?
         
         private var component: ChatTitleComponent?
         

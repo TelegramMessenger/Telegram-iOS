@@ -882,12 +882,15 @@ public final class ContactListNode: ASDisplayNode {
     
     public var multipleSelection = false
     
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
+    private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, presentation: Signal<ContactListPresentation, NoError>, filters: [ContactListFilter] = [.excludeSelf], isPeerEnabled: ((EnginePeer) -> Bool)? = nil, selectionState: ContactListNodeGroupSelectionState? = nil, displayPermissionPlaceholder: Bool = true, displaySortOptions: Bool = false, displayCallIcons: Bool = false, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)? = nil, isSearch: Bool = false, multipleSelection: Bool = false) {
         self.context = context
         self.filters = filters
         self.displayPermissionPlaceholder = displayPermissionPlaceholder
         self.contextAction = contextAction
         self.multipleSelection = multipleSelection
+        self.isPeerEnabled = isPeerEnabled
         
         let presentationData = updatedPresentationData?.initial ?? context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -1069,7 +1072,13 @@ public final class ContactListNode: ASDisplayNode {
                                     }
                                 }
                                 if let mainPeer = peer.chatMainPeer {
-                                    resultPeers.append(FoundPeer(peer: mainPeer, subscribers: nil))
+                                    var matches = true
+                                    if let isPeerEnabled = isPeerEnabled {
+                                        matches = isPeerEnabled(EnginePeer(mainPeer))
+                                    }
+                                    if matches {
+                                        resultPeers.append(FoundPeer(peer: mainPeer, subscribers: nil))
+                                    }
                                 }
                             }
                             

@@ -446,7 +446,7 @@ open class NavigationBar: ASDisplayNode {
         return 38.0
     }
     
-    static func backArrowImage(color: UIColor) -> UIImage? {
+    public static func backArrowImage(color: UIColor) -> UIImage? {
         var red: CGFloat = 0.0
         var green: CGFloat = 0.0
         var blue: CGFloat = 0.0
@@ -487,7 +487,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public let stripeNode: ASDisplayNode
-    private let clippingNode: SparseNode
+    public let clippingNode: SparseNode
     private let buttonsContainerNode: ASDisplayNode
     
     public private(set) var contentNode: NavigationBarContentNode?
@@ -1498,6 +1498,22 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func makeTransitionBackButtonView(accentColor: UIColor) -> UIView? {
+        if self.backButtonNode.supernode != nil {
+            let node = NavigationButtonNode()
+            node.manualAlpha = self.backButtonNode.manualAlpha
+            node.updateManualText(self.backButtonNode.manualText)
+            node.color = accentColor
+            if let validLayout = self.validLayout {
+                let _ = node.updateLayout(constrainedSize: CGSize(width: validLayout.size.width, height: validLayout.defaultHeight), isLandscape: validLayout.isLandscape)
+                node.frame = self.backButtonNode.frame
+            }
+            return node.view
+        } else {
+            return nil
+        }
+    }
+    
     public func makeTransitionRightButtonNode(accentColor: UIColor) -> NavigationButtonNode? {
         if self.rightButtonNode.supernode != nil {
             let node = NavigationButtonNode()
@@ -1534,6 +1550,17 @@ open class NavigationBar: ASDisplayNode {
         }
     }
     
+    public func makeTransitionBackArrowView(accentColor: UIColor) -> UIView? {
+        if self.backButtonArrow.supernode != nil {
+            let view = UIImageView()
+            view.image = NavigationBar.backArrowImage(color: accentColor)
+            view.frame = self.backButtonArrow.frame
+            return view
+        } else {
+            return nil
+        }
+    }
+    
     public func makeTransitionBadgeNode() -> ASDisplayNode? {
         if self.badgeNode.supernode != nil && !self.badgeNode.isHidden {
             let node = NavigationBarBadgeNode(fillColor: self.presentationData.theme.buttonColor, strokeColor: self.presentationData.theme.buttonColor, textColor: self.presentationData.theme.badgeTextColor)
@@ -1547,6 +1574,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public var intrinsicCanTransitionInline: Bool = true
+    public var shouldTransitionInline: (() -> Bool)?
     
     public var passthroughTouches = true
     
@@ -1554,6 +1582,11 @@ open class NavigationBar: ASDisplayNode {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
             return false
         } else {
+            if let shouldTransitionInline = self.shouldTransitionInline {
+                if !shouldTransitionInline() {
+                    return false
+                }
+            }
             return self.intrinsicCanTransitionInline
         }
     }

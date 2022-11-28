@@ -2782,7 +2782,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.contextContainer.view.addSubview(avatarTimerBadge)
                         }
                         let avatarBadgeSize = CGSize(width: avatarTimerBadgeDiameter, height: avatarTimerBadgeDiameter)
-                        avatarTimerBadge.update(size: avatarBadgeSize, text: shortTimeIntervalString(strings: item.presentationData.strings, value: autoremoveTimeout))
+                        avatarTimerBadge.update(size: avatarBadgeSize, text: shortTimeIntervalString(strings: item.presentationData.strings, value: autoremoveTimeout, useLargeFormat: true))
                         let avatarBadgeFrame = CGRect(origin: CGPoint(x: avatarFrame.maxX - avatarBadgeSize.width, y: avatarFrame.maxY - avatarBadgeSize.height), size: avatarBadgeSize)
                         avatarTimerTransition.updatePosition(layer: avatarTimerBadge.layer, position: avatarBadgeFrame.center)
                         avatarTimerTransition.updateBounds(layer: avatarTimerBadge.layer, bounds: CGRect(origin: CGPoint(), size: avatarBadgeFrame.size))

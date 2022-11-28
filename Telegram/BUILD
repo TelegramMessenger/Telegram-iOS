@@ -413,8 +413,8 @@ official_apple_pay_merchants = [
     "merchant.org.telegram.Best2pay.test",
     "merchant.psbank.test.telegramios",
     "merchant.psbank.prod.telegramios",
-    "merchant.org.telegram.billinenet.test",
-    "merchant.org.telegram.portmone.test",
+    #"merchant.org.telegram.billinenet.test",
+    #"merchant.org.telegram.portmone.test",
 ]
 
 official_bundle_ids = [

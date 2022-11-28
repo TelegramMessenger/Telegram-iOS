@@ -2371,7 +2371,11 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             }
         }, openUrl: { [weak self] url, concealed, _, message in
             if let strongSelf = self {
-                strongSelf.openUrl(url, concealed: concealed, message: message)
+                var skipConcealedAlert = false
+                if let author = message?.author, author.isVerified {
+                    skipConcealedAlert = true
+                }
+                strongSelf.openUrl(url, concealed: concealed, skipConcealedAlert: skipConcealedAlert, message: message)
             }
         }, shareCurrentLocation: { [weak self] in
             if let strongSelf = self {

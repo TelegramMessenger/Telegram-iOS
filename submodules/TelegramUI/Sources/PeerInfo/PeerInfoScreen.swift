@@ -82,6 +82,7 @@ import NotificationExceptionsScreen
 import ChatTimerScreen
 import NotificationPeerExceptionController
 import StickerPackPreviewUI
+import ChatListHeaderComponent
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -8949,6 +8950,21 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
            
         if self.chatLocation.peerId != nil {
+            /*self.navigationBar?.shouldTransitionInline = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationItem.leftBarButtonItem != nil {
+                    return false
+                }
+                if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {
+                    return false
+                }
+                if strongSelf.controllerNode.headerNode.isAvatarExpanded {
+                    return false
+                }
+                return false
+            }*/
             self.navigationBar?.makeCustomTransitionNode = { [weak self] other, isInteractive in
                 guard let strongSelf = self else {
                     return nil
@@ -9136,6 +9152,9 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             }, action: { _, f in
                 f(.default)
                 
+                if let controller = navigationController?.viewControllers.first as? TabBarController, let chatListController = controller.currentController as? ChatListControllerImpl {
+                    chatListController.setInlineChatList(location: nil)
+                }
                 navigationController?.popToRoot(animated: true)
             })))
             
@@ -9372,15 +9391,21 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     
     private let headerNode: PeerInfoHeaderNode
     
-    private var previousBackButtonArrow: ASDisplayNode?
-    private var previousBackButton: ASDisplayNode?
+    private var previousBackButtonArrow: UIView?
+    private var previousBackButton: UIView?
     private var currentBackButtonArrow: ASDisplayNode?
     private var previousBackButtonBadge: ASDisplayNode?
     private var currentBackButton: ASDisplayNode?
     
     private var previousRightButton: CALayer?
+    
     private var previousContentNode: ASDisplayNode?
     private var previousContentNodeFrame: CGRect?
+    private var previousContentNodeAlpha: CGFloat = 1.0
+    
+    private var previousSecondaryContentNode: ASDisplayNode?
+    private var previousSecondaryContentNodeFrame: CGRect?
+    private var previousSecondaryContentNodeAlpha: CGFloat = 1.0
     
     private var previousTitleNode: (ASDisplayNode, PortalView)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
@@ -9413,40 +9438,82 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         if let topNavigationBar = self.topNavigationBar, let bottomNavigationBar = self.bottomNavigationBar {
             self.addSubnode(bottomNavigationBar.additionalContentNode)
 
-            if let previousBackButtonArrow = bottomNavigationBar.makeTransitionBackArrowNode(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
-                self.previousBackButtonArrow = previousBackButtonArrow
-                self.addSubnode(previousBackButtonArrow)
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let previousBackButtonArrow = headerView.makeTransitionBackArrowView(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+                    self.previousBackButtonArrow = previousBackButtonArrow
+                    self.view.addSubview(previousBackButtonArrow)
+                }
+                if let previousBackButton = headerView.makeTransitionBackButtonView(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+                    self.previousBackButton = previousBackButton
+                    self.view.addSubview(previousBackButton)
+                }
+            } else {
+                if let previousBackButtonArrow = bottomNavigationBar.makeTransitionBackArrowView(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+                    self.previousBackButtonArrow = previousBackButtonArrow
+                    self.view.addSubview(previousBackButtonArrow)
+                }
+                if let previousBackButton = bottomNavigationBar.makeTransitionBackButtonView(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
+                    self.previousBackButton = previousBackButton
+                    self.view.addSubview(previousBackButton)
+                }
             }
-            if let previousBackButton = bottomNavigationBar.makeTransitionBackButtonNode(accentColor: self.presentationData.theme.rootController.navigationBar.accentTextColor) {
-                self.previousBackButton = previousBackButton
-                self.addSubnode(previousBackButton)
-            }
+                
             if self.screenNode.headerNode.isAvatarExpanded, let currentBackButtonArrow = topNavigationBar.makeTransitionBackArrowNode(accentColor: self.screenNode.headerNode.isAvatarExpanded ? .white : self.presentationData.theme.rootController.navigationBar.accentTextColor) {
                 self.currentBackButtonArrow = currentBackButtonArrow
                 self.addSubnode(currentBackButtonArrow)
             }
-            if let previousBackButtonBadge = bottomNavigationBar.makeTransitionBadgeNode() {
-                self.previousBackButtonBadge = previousBackButtonBadge
-                self.addSubnode(previousBackButtonBadge)
+            
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                let _ = headerView
+            } else {
+                if let previousBackButtonBadge = bottomNavigationBar.makeTransitionBadgeNode() {
+                    self.previousBackButtonBadge = previousBackButtonBadge
+                    self.addSubnode(previousBackButtonBadge)
+                }
             }
+            
             if let currentBackButton = topNavigationBar.makeTransitionBackButtonNode(accentColor: self.screenNode.headerNode.isAvatarExpanded ? .white : self.presentationData.theme.rootController.navigationBar.accentTextColor) {
                 self.currentBackButton = currentBackButton
                 self.addSubnode(currentBackButton)
             }
             
-            if let _ = bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
-            } else if let previousRightButton = bottomNavigationBar.rightButtonNode.view.layer.snapshotContentTree() {
-                self.previousRightButton = previousRightButton
-                self.view.layer.addSublayer(previousRightButton)
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let previousRightButton = headerView.rightButtonView?.layer.snapshotContentTree() {
+                    self.previousRightButton = previousRightButton
+                    self.view.layer.addSublayer(previousRightButton)
+                }
+            } else {
+                if let _ = bottomNavigationBar.rightButtonNode.singleCustomNode as? ChatAvatarNavigationNode {
+                } else if let previousRightButton = bottomNavigationBar.rightButtonNode.view.layer.snapshotContentTree() {
+                    self.previousRightButton = previousRightButton
+                    self.view.layer.addSublayer(previousRightButton)
+                }
             }
             
             if let contentNode = bottomNavigationBar.contentNode {
                 self.previousContentNode = contentNode
                 self.previousContentNodeFrame = contentNode.view.convert(contentNode.view.bounds, to: bottomNavigationBar.view)
+                self.previousContentNodeAlpha = contentNode.alpha
                 self.addSubnode(contentNode)
             }
             
-            if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false) {
+            if let secondaryContentNode = bottomNavigationBar.secondaryContentNode {
+                self.previousSecondaryContentNode = secondaryContentNode
+                self.previousSecondaryContentNodeFrame = secondaryContentNode.view.convert(secondaryContentNode.view.bounds, to: bottomNavigationBar.view)
+                self.previousSecondaryContentNodeAlpha = secondaryContentNode.alpha
+                self.addSubnode(secondaryContentNode)
+            }
+            
+            var previousTitleView: UIView?
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let componentView = headerView.titleContentView as? ChatTitleComponent.View {
+                    previousTitleView = componentView.contentView
+                }
+            } else {
+                previousTitleView = bottomNavigationBar.titleView
+            }
+            
+            if let previousTitleView = previousTitleView as? ChatTitleView, let previousTitleNode = PortalView(matchPosition: false) {
                 previousTitleNode.view.frame = previousTitleView.titleContainerView.frame
                 previousTitleView.titleContainerView.addPortal(view: previousTitleNode)
                 let previousTitleContainerNode = ASDisplayNode()
@@ -9473,20 +9540,43 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         let fraction = self.reverseFraction ? (1.0 - fraction) : fraction
         
         if let previousBackButtonArrow = self.previousBackButtonArrow {
-            let previousBackButtonArrowFrame = bottomNavigationBar.backButtonArrow.view.convert(bottomNavigationBar.backButtonArrow.view.bounds, to: bottomNavigationBar.view)
-            previousBackButtonArrow.frame = previousBackButtonArrowFrame
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let backArrowView = headerView.backArrowView {
+                    let previousBackButtonArrowFrame = backArrowView.convert(backArrowView.bounds, to: bottomNavigationBar.view)
+                    previousBackButtonArrow.frame = previousBackButtonArrowFrame
+                }
+            } else {
+                let previousBackButtonArrowFrame = bottomNavigationBar.backButtonArrow.view.convert(bottomNavigationBar.backButtonArrow.view.bounds, to: bottomNavigationBar.view)
+                previousBackButtonArrow.frame = previousBackButtonArrowFrame
+            }
         }
         
         if let previousBackButton = self.previousBackButton {
-            let previousBackButtonFrame = bottomNavigationBar.backButtonNode.view.convert(bottomNavigationBar.backButtonNode.view.bounds, to: bottomNavigationBar.view)
-            previousBackButton.frame = previousBackButtonFrame
-            transition.updateAlpha(node: previousBackButton, alpha: fraction)
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let backButtonTitleView = headerView.backButtonTitleView {
+                    let previousBackButtonFrame = backButtonTitleView.convert(backButtonTitleView.bounds, to: bottomNavigationBar.view)
+                    previousBackButton.frame = previousBackButtonFrame
+                    transition.updateAlpha(layer: previousBackButton.layer, alpha: fraction)
+                }
+            } else {
+                let previousBackButtonFrame = bottomNavigationBar.backButtonNode.view.convert(bottomNavigationBar.backButtonNode.view.bounds, to: bottomNavigationBar.view)
+                previousBackButton.frame = previousBackButtonFrame
+                transition.updateAlpha(layer: previousBackButton.layer, alpha: fraction)
+            }
         }
         
         if let previousRightButton = self.previousRightButton {
-            let previousRightButtonFrame = bottomNavigationBar.rightButtonNode.view.convert(bottomNavigationBar.rightButtonNode.view.bounds, to: bottomNavigationBar.view)
-            previousRightButton.frame = previousRightButtonFrame
-            transition.updateAlpha(layer: previousRightButton, alpha: fraction)
+            if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+                if let rightButtonView = headerView.rightButtonView {
+                    let previousRightButtonFrame = rightButtonView.convert(rightButtonView.bounds, to: bottomNavigationBar.view)
+                    previousRightButton.frame = previousRightButtonFrame
+                    transition.updateAlpha(layer: previousRightButton, alpha: fraction)
+                }
+            } else {
+                let previousRightButtonFrame = bottomNavigationBar.rightButtonNode.view.convert(bottomNavigationBar.rightButtonNode.view.bounds, to: bottomNavigationBar.view)
+                previousRightButton.frame = previousRightButtonFrame
+                transition.updateAlpha(layer: previousRightButton, alpha: fraction)
+            }
         }
         
         if let currentBackButtonArrow = self.currentBackButtonArrow {
@@ -9495,7 +9585,7 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             
             transition.updateAlpha(node: currentBackButtonArrow, alpha: 1.0 - fraction)
             if let previousBackButtonArrow = self.previousBackButtonArrow {
-                transition.updateAlpha(node: previousBackButtonArrow, alpha: fraction)
+                transition.updateAlpha(layer: previousBackButtonArrow.layer, alpha: fraction)
             }
         }
         
@@ -9510,7 +9600,16 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             transition.updateAlpha(node: currentBackButton, alpha: (1.0 - fraction))
         }
         
-        if let previousTitleView = bottomNavigationBar.titleView as? ChatTitleView, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
+        var previousTitleView: UIView?
+        if let headerView = bottomNavigationBar.customHeaderContentView as? ChatListHeaderComponent.View {
+            if let componentView = headerView.titleContentView as? ChatTitleComponent.View {
+                previousTitleView = componentView.contentView
+            }
+        } else {
+            previousTitleView = bottomNavigationBar.titleView
+        }
+        
+        if let previousTitleView = previousTitleView as? ChatTitleView, let (previousTitleContainerNode, previousTitleNode) = self.previousTitleNode, let (previousStatusContainerNode, previousStatusNode) = self.previousStatusNode {
             let previousTitleFrame = previousTitleView.titleContainerView.convert(previousTitleView.titleContainerView.bounds, to: bottomNavigationBar.view)
             let previousStatusFrame = previousTitleView.activityNode.view.convert(previousTitleView.activityNode.bounds, to: bottomNavigationBar.view)
             
@@ -9572,6 +9671,13 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
                 transition.updateFrame(node: previousContentNode, frame: updatedPreviousContentNodeFrame)
                 transition.updateAlpha(node: previousContentNode, alpha: fraction)
             }
+            
+            if let previousSecondaryContentNode = self.previousSecondaryContentNode, let previousSecondaryContentNodeFrame = self.previousSecondaryContentNodeFrame {
+                var updatedPreviousSecondaryContentNodeFrame = bottomNavigationBar.view.convert(previousSecondaryContentNodeFrame, to: bottomNavigationBar.view)
+                updatedPreviousSecondaryContentNodeFrame.origin.y += (1.0 - fraction) * (topHeight - bottomHeight)
+                transition.updateFrame(node: previousSecondaryContentNode, frame: updatedPreviousSecondaryContentNodeFrame)
+                transition.updateAlpha(node: previousSecondaryContentNode, alpha: fraction)
+            }
         }
     }
     
@@ -9595,7 +9701,14 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         
         if let previousContentNode = self.previousContentNode, let previousContentNodeFrame = self.previousContentNodeFrame {
             previousContentNode.frame = previousContentNodeFrame
+            previousContentNode.alpha = self.previousContentNodeAlpha
             bottomNavigationBar.insertSubnode(previousContentNode, belowSubnode: bottomNavigationBar.stripeNode)
+        }
+        
+        if let previousSecondaryContentNode = self.previousSecondaryContentNode, let previousSecondaryContentNodeFrame = self.previousSecondaryContentNodeFrame {
+            previousSecondaryContentNode.frame = previousSecondaryContentNodeFrame
+            previousSecondaryContentNode.alpha = self.previousSecondaryContentNodeAlpha
+            bottomNavigationBar.clippingNode.addSubnode(previousSecondaryContentNode)
         }
     }
 }

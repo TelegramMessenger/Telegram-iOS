@@ -198,6 +198,9 @@ public protocol CustomViewControllerNavigationDataSummary: AnyObject {
     
     public let statusBar: StatusBar
     public let navigationBar: NavigationBar?
+    open var transitionNavigationBar: NavigationBar? {
+        return self.navigationBar
+    }
     public private(set) var toolbar: Toolbar?
     
     public var displayNavigationBar = true
