@@ -120,7 +120,7 @@ private func fetchWebpage(account: Account, messageId: MessageId) -> Signal<Void
                     }
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
+                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: isScheduledMessage ? Namespaces.Message.ScheduledCloud : Namespaces.Message.Cloud) {
                             var webpage: TelegramMediaWebpage?
                             for media in storeMessage.media {
                                 if let media = media as? TelegramMediaWebpage {
@@ -1065,22 +1065,22 @@ public final class AccountViewTracker {
                             }
                             
                             return signal
-                            |> map { result -> ([Api.Message], [Api.Chat], [Api.User]) in
+                            |> map { result -> (Peer, [Api.Message], [Api.Chat], [Api.User]) in
                                 switch result {
                                     case let .messages(messages, chats, users):
-                                        return (messages, chats, users)
+                                        return (peer, messages, chats, users)
                                     case let .messagesSlice(_, _, _, _, messages, chats, users):
-                                        return (messages, chats, users)
+                                        return (peer, messages, chats, users)
                                     case let .channelMessages(_, _, _, _, messages, _, chats, users):
-                                        return (messages, chats, users)
+                                        return (peer, messages, chats, users)
                                     case .messagesNotModified:
-                                        return ([], [], [])
+                                        return (peer, [], [], [])
                                 }
                             }
                             |> `catch` { _ in
-                                return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                                return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>.single((peer, [], [], []))
                             }
-                            |> mapToSignal { messages, chats, users -> Signal<Void, NoError> in
+                            |> mapToSignal { topPeer, messages, chats, users -> Signal<Void, NoError> in
                                 return account.postbox.transaction { transaction -> Void in
                                     var peers: [Peer] = []
                                     var peerPresences: [PeerId: Api.User] = [:]
@@ -1104,7 +1104,7 @@ public final class AccountViewTracker {
                                     updatePeerPresences(transaction: transaction, accountPeerId: account.peerId, peerPresences: peerPresences)
                                     
                                     for message in messages {
-                                        guard let storeMessage = StoreMessage(apiMessage: message) else {
+                                        guard let storeMessage = StoreMessage(apiMessage: message, peerIsForum: topPeer.isForum) else {
                                             continue
                                         }
                                         guard case let .Id(id) = storeMessage.id else {

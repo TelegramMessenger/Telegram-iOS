@@ -153,7 +153,11 @@ private func parseDialogs(apiDialogs: [Api.Dialog], apiMessages: [Api.Message], 
     var lowerNonPinnedIndex: MessageIndex?
     
     for message in apiMessages {
-        if let storeMessage = StoreMessage(apiMessage: message) {
+        var peerIsForum = false
+        if let peerId = message.peerId, let peer = peers[peerId], peer.isForum {
+            peerIsForum = true
+        }
+        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
             var updatedStoreMessage = storeMessage
             if case let .Id(id) = storeMessage.id {
                 if let channelPts = channelStates[id.peerId] {

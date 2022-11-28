@@ -713,7 +713,11 @@ func finalStateWithDifference(accountPeerId: PeerId, postbox: Postbox, network: 
                 updatedState.addPreCachedResource(resource, data: data)
             }
         }
-        if let message = StoreMessage(apiMessage: message) {
+        var peerIsForum = false
+        if let peerId = message.peerId {
+            peerIsForum = updatedState.isPeerForum(peerId: peerId)
+        }
+        if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
             updatedState.addMessages([message], location: .UpperHistoryBlock)
         }
     }
@@ -917,7 +921,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     }
                 }
             case let .updateEditChannelMessage(apiMessage, pts, ptsCount):
-                if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum), case let .Id(messageId) = message.id {
                     let peerId = messageId.peerId
                     if let previousState = updatedState.channelStates[peerId] {
                         if previousState.pts >= pts {
@@ -984,7 +992,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
                 }, pinned: (flags & (1 << 0)) != 0)
             case let .updateEditMessage(apiMessage, _, _):
-                if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id {
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum), case let .Id(messageId) = message.id {
                     if let preCachedResources = apiMessage.preCachedResources {
                         for (resource, data) in preCachedResources {
                             updatedState.addPreCachedResource(resource, data: data)
@@ -1000,7 +1012,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     }
                 }
             case let .updateNewChannelMessage(apiMessage, pts, ptsCount):
-                if let message = StoreMessage(apiMessage: apiMessage) {
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum) {
                     if let previousState = updatedState.channelStates[message.id.peerId] {
                         if previousState.pts >= pts {
                             let messageText: String
@@ -1038,7 +1054,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                     }
                 }
             case let .updateNewMessage(apiMessage, _, _):
-                if let message = StoreMessage(apiMessage: apiMessage) {
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum) {
                     if let preCachedResources = apiMessage.preCachedResources {
                         for (resource, data) in preCachedResources {
                             updatedState.addPreCachedResource(resource, data: data)
@@ -1510,7 +1530,11 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                 }
                 updatedState.updatePeersNearby(peersNearby)
             case let .updateNewScheduledMessage(apiMessage):
-                if let message = StoreMessage(apiMessage: apiMessage, namespace: Namespaces.Message.ScheduledCloud) {
+                var peerIsForum = false
+                if let peerId = apiMessage.peerId {
+                    peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                }
+                if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum, namespace: Namespaces.Message.ScheduledCloud) {
                     updatedState.addScheduledMessages([message])
                 }
             case let .updateDeleteScheduledMessages(peer, messages):
@@ -1703,17 +1727,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
             if missingForumThreadIds.isEmpty {
                 return .single(state)
             } else {
-                var signals: [Signal<(PeerId, Api.messages.ForumTopics)?, NoError>] = []
+                var signals: [Signal<(Peer, Api.messages.ForumTopics)?, NoError>] = []
                 for (peerId, threadIds) in missingForumThreadIds {
-                    guard let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel) else {
+                    guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
                         Logger.shared.log("State", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
                         continue
                     }
                     let signal = network.request(Api.functions.channels.getForumTopicsByID(channel: inputChannel, topics: threadIds))
-                    |> map { result -> (PeerId, Api.messages.ForumTopics)? in
-                        return (peerId, result)
+                    |> map { result -> (Peer, Api.messages.ForumTopics)? in
+                        return (peer, result)
                     }
-                    |> `catch` { _ -> Signal<(PeerId, Api.messages.ForumTopics)?, NoError> in
+                    |> `catch` { _ -> Signal<(Peer, Api.messages.ForumTopics)?, NoError> in
                         return .single(nil)
                     }
                     signals.append(signal)
@@ -1726,14 +1750,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, state: AccountMutab
                     var storeMessages: [StoreMessage] = []
                     
                     for maybeResult in results {
-                        if let (peerId, result) = maybeResult {
+                        if let (peer, result) = maybeResult {
+                            let peerIsForum = peer.isForum
+                            let peerId = peer.id
+                            
                             switch result {
                             case let .forumTopics(_, _, topics, messages, chats, users, pts):
                                 state.mergeChats(chats)
                                 state.mergeUsers(users)
                                 
                                 for message in messages {
-                                    if let message = StoreMessage(apiMessage: message) {
+                                    if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                                         storeMessages.append(message)
                                     }
                                 }
@@ -1805,17 +1832,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
             if missingForumThreadIds.isEmpty {
                 return .single(Void())
             } else {
-                var signals: [Signal<(PeerId, Api.messages.ForumTopics)?, NoError>] = []
+                var signals: [Signal<(Peer, Api.messages.ForumTopics)?, NoError>] = []
                 for (peerId, threadIds) in missingForumThreadIds {
-                    guard let inputChannel = transaction.getPeer(peerId).flatMap(apiInputChannel) else {
+                    guard let peer = transaction.getPeer(peerId), let inputChannel = apiInputChannel(peer) else {
                         Logger.shared.log("State", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
                         continue
                     }
                     let signal = network.request(Api.functions.channels.getForumTopicsByID(channel: inputChannel, topics: threadIds))
-                    |> map { result -> (PeerId, Api.messages.ForumTopics)? in
-                        return (peerId, result)
+                    |> map { result -> (Peer, Api.messages.ForumTopics)? in
+                        return (peer, result)
                     }
-                    |> `catch` { _ -> Signal<(PeerId, Api.messages.ForumTopics)?, NoError> in
+                    |> `catch` { _ -> Signal<(Peer, Api.messages.ForumTopics)?, NoError> in
                         return .single(nil)
                     }
                     signals.append(signal)
@@ -1829,14 +1856,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, ids: [MessageId]) -
                         var storeMessages: [StoreMessage] = []
                         
                         for maybeResult in results {
-                            if let (peerId, result) = maybeResult {
+                            if let (peer, result) = maybeResult {
+                                let peerIsForum = peer.isForum
+                                let peerId = peer.id
+                                
                                 switch result {
                                 case let .forumTopics(_, _, topics, messages, apiChats, apiUsers, _):
                                     chats.append(contentsOf: apiChats)
                                     users.append(contentsOf: apiUsers)
                                     
                                     for message in messages {
-                                        if let message = StoreMessage(apiMessage: message) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                                             storeMessages.append(message)
                                         }
                                     }
@@ -1927,17 +1957,17 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
             if missingForumThreadIds.isEmpty {
                 return .single(fetchedChatList)
             } else {
-                var signals: [Signal<(PeerId, Api.messages.ForumTopics)?, NoError>] = []
+                var signals: [Signal<(Peer, Api.messages.ForumTopics)?, NoError>] = []
                 for (peerId, threadIds) in missingForumThreadIds {
-                    guard let inputChannel = fetchedChatList.peers.first(where: { $0.id == peerId }).flatMap(apiInputChannel) else {
+                    guard let peer = fetchedChatList.peers.first(where: { $0.id == peerId }), let inputChannel = apiInputChannel(peer) else {
                         Logger.shared.log("resolveForumThreads", "can't fetch thread infos \(threadIds) for peer \(peerId): can't create inputChannel")
                         continue
                     }
                     let signal = network.request(Api.functions.channels.getForumTopicsByID(channel: inputChannel, topics: threadIds))
-                    |> map { result -> (PeerId, Api.messages.ForumTopics)? in
-                        return (peerId, result)
+                    |> map { result -> (Peer, Api.messages.ForumTopics)? in
+                        return (peer, result)
                     }
-                    |> `catch` { _ -> Signal<(PeerId, Api.messages.ForumTopics)?, NoError> in
+                    |> `catch` { _ -> Signal<(Peer, Api.messages.ForumTopics)?, NoError> in
                         return .single(nil)
                     }
                     signals.append(signal)
@@ -1948,7 +1978,10 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                     var fetchedChatList = fetchedChatList
                     
                     for maybeResult in results {
-                        if let (peerId, result) = maybeResult {
+                        if let (peer, result) = maybeResult {
+                            let peerIsForum = peer.isForum
+                            let peerId = peer.id
+                            
                             switch result {
                             case let .forumTopics(_, _, topics, messages, chats, users, _):
                                 fetchedChatList.peers.append(contentsOf: chats.compactMap { chat in
@@ -1959,7 +1992,7 @@ func resolveForumThreads(postbox: Postbox, network: Network, fetchedChatList: Fe
                                 })
                                 
                                 for message in messages {
-                                    if let message = StoreMessage(apiMessage: message) {
+                                    if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                                         fetchedChatList.storeMessages.append(message)
                                     }
                                 }
@@ -2141,20 +2174,25 @@ private func resolveAssociatedMessages(postbox: Postbox, network: Network, state
         |> map { results in
             var updatedState = state
             for (messages, chats, users) in results {
-                if !messages.isEmpty {
-                    var storeMessages: [StoreMessage] = []
-                    for message in messages {
-                        if let message = StoreMessage(apiMessage: message) {
-                            storeMessages.append(message)
-                        }
-                    }
-                    updatedState.addMessages(storeMessages, location: .Random)
-                }
                 if !chats.isEmpty {
                     updatedState.mergeChats(chats)
                 }
                 if !users.isEmpty {
                     updatedState.mergeUsers(users)
+                }
+                
+                if !messages.isEmpty {
+                    var storeMessages: [StoreMessage] = []
+                    for message in messages {
+                        var peerIsForum = false
+                        if let peerId = message.peerId {
+                            peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                        }
+                        if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+                            storeMessages.append(message)
+                        }
+                    }
+                    updatedState.addMessages(storeMessages, location: .Random)
                 }
             }
             return updatedState
@@ -2272,7 +2310,11 @@ private func resolveMissingPeerChatInfos(network: Network, state: AccountMutable
                     
                     var storeMessages: [StoreMessage] = []
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
+                        var peerIsForum = false
+                        if let peerId = message.peerId {
+                            peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                        }
+                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                             var updatedStoreMessage = storeMessage
                             if case let .Id(id) = storeMessage.id {
                                 if let channelState = channelStates[id.peerId] {
@@ -2501,7 +2543,11 @@ private func resetChannels(accountPeerId: PeerId, postbox: Postbox, network: Net
                     }
                     
                     for message in messages {
-                        if let storeMessage = StoreMessage(apiMessage: message) {
+                        var peerIsForum = false
+                        if let peerId = message.peerId {
+                            peerIsForum = updatedState.isPeerForum(peerId: peerId)
+                        }
+                        if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                             var updatedStoreMessage = storeMessage
                             if case let .Id(id) = storeMessage.id {
                                 if let channelState = channelStates[id.peerId] {
@@ -2645,7 +2691,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 var forumThreadIds = Set<MessageId>()
                 
                 for apiMessage in newMessages {
-                    if var message = StoreMessage(apiMessage: apiMessage) {
+                    var peerIsForum = peer.isForum
+                    if let peerId = apiMessage.peerId, updatedState.isPeerForum(peerId: peerId) {
+                        peerIsForum = true
+                    }
+                    if var message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum) {
                         var attributes = message.attributes
                         attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
                         message = message.withUpdatedAttributes(attributes)
@@ -2674,7 +2724,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                         let peerId = peer.id
                         updatedState.deleteMessages(messages.map({ MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: $0) }))
                     case let .updateEditChannelMessage(apiMessage, _, _):
-                        if let message = StoreMessage(apiMessage: apiMessage), case let .Id(messageId) = message.id, messageId.peerId == peer.id {
+                        var peerIsForum = peer.isForum
+                        if let peerId = apiMessage.peerId, updatedState.isPeerForum(peerId: peerId) {
+                            peerIsForum = true
+                        }
+                        if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum), case let .Id(messageId) = message.id, messageId.peerId == peer.id {
                             if let preCachedResources = apiMessage.preCachedResources {
                                 for (resource, data) in preCachedResources {
                                     updatedState.addPreCachedResource(resource, data: data)
@@ -2766,6 +2820,11 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                 
                 var resetForumTopics = Set<PeerId>()
                 
+                var peerIsForum = peer.isForum
+                if updatedState.isPeerForum(peerId: peer.id) {
+                    peerIsForum = true
+                }
+                
                 if let (peer, pts, topMessage, readInboxMaxId, readOutboxMaxId, unreadCount, unreadMentionsCount, unreadReactionsCount, ttlPeriod) = parameters {
                     updatedState.updateChannelState(peer.peerId, pts: pts)
                     updatedState.updateChannelInvalidationPts(peer.peerId, invalidationPts: pts)
@@ -2779,7 +2838,7 @@ private func pollChannel(accountPeerId: PeerId, postbox: Postbox, network: Netwo
                     resetForumTopics.insert(peer.peerId)
                     
                     for apiMessage in messages {
-                        if var message = StoreMessage(apiMessage: apiMessage) {
+                        if var message = StoreMessage(apiMessage: apiMessage, peerIsForum: peerIsForum) {
                             var attributes = message.attributes
                             attributes.append(ChannelMessageStateVersionAttribute(pts: pts))
                             message = message.withUpdatedAttributes(attributes)

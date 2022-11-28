@@ -151,6 +151,11 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                     peers.append(telegramUser)
                     peerPresences[telegramUser.id] = user
                 }
+            
+                var peerMap: [PeerId: Peer] = [:]
+                for peer in peers {
+                    peerMap[peer.id] = peer
+                }
                 
                 loop: for dialog in dialogs {
                     let apiPeer: Api.Peer
@@ -197,7 +202,11 @@ private func synchronizePinnedChats(transaction: Transaction, postbox: Postbox, 
                 }
                 
                 for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message) {
+                    var peerIsForum = false
+                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                        peerIsForum = true
+                    }
+                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                         storeMessages.append(storeMessage)
                     }
                 }

@@ -418,7 +418,7 @@ func messageTextEntitiesFromApiEntities(_ entities: [Api.MessageEntity]) -> [Mes
 }
 
 extension StoreMessage {
-    convenience init?(apiMessage: Api.Message, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
+    convenience init?(apiMessage: Api.Message, peerIsForum: Bool, namespace: MessageId.Namespace = Namespaces.Message.Cloud) {
         switch apiMessage {
             case let .message(flags, id, fromId, chatPeerId, fwdFrom, viaBotId, replyTo, date, message, media, replyMarkup, entities, views, forwards, replies, editDate, postAuthor, groupingId, reactions, restrictionReason, ttlPeriod):
                 let resolvedFromId = fromId?.peerId ?? chatPeerId.peerId
@@ -443,7 +443,9 @@ extension StoreMessage {
                 if let replyTo = replyTo {
                     var threadMessageId: MessageId?
                     switch replyTo {
-                    case let .messageReplyHeader(_, replyToMsgId, replyToPeerId, replyToTopId):
+                    case let .messageReplyHeader(flags, replyToMsgId, replyToPeerId, replyToTopId):
+                        let isForumTopic = (flags & (1 << 3)) != 0
+                        
                         let replyPeerId = replyToPeerId?.peerId ?? peerId
                         if let replyToTopId = replyToTopId {
                             let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
@@ -453,8 +455,16 @@ extension StoreMessage {
                             }
                         } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                             let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
-                            threadMessageId = threadIdValue
-                            threadId = makeMessageThreadId(threadIdValue)
+                            
+                            if peerIsForum {
+                                if isForumTopic {
+                                    threadMessageId = threadIdValue
+                                    threadId = makeMessageThreadId(threadIdValue)
+                                }
+                            } else {
+                                threadMessageId = threadIdValue
+                                threadId = makeMessageThreadId(threadIdValue)
+                            }
                         }
                         attributes.append(ReplyMessageAttribute(messageId: MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId), threadMessageId: threadMessageId))
                     }
