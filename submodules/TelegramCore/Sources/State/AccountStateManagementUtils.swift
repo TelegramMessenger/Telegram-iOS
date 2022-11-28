@@ -3574,11 +3574,22 @@ func replayFinalState(
                         updatedIncomingThreadReadStates[threadMessageId] = readMaxId
                     }
                     if let channel = transaction.getPeer(threadMessageId.peerId) as? TelegramChannel, case .group = channel.info, channel.flags.contains(.isForum) {
-                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id))?.data.get(MessageHistoryThreadData.self) {
+                        let threadId = Int64(threadMessageId.id)
+                        if var data = transaction.getMessageHistoryThreadInfo(peerId: threadMessageId.peerId, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
                             if readMaxId > data.maxIncomingReadId {
                                 if let toIndex = transaction.getMessage(MessageId(peerId: threadMessageId.peerId, namespace: threadMessageId.namespace, id: readMaxId))?.index {
                                     if let count = transaction.getThreadMessageCount(peerId: threadMessageId.peerId, threadId: Int64(threadMessageId.id), namespace: threadMessageId.namespace, fromIdExclusive: data.maxIncomingReadId, toIndex: toIndex) {
                                         data.incomingUnreadCount = max(0, data.incomingUnreadCount - Int32(count))
+                                    }
+                                }
+                                
+                                if let topMessageIndex = transaction.getMessageHistoryThreadTopMessage(peerId: threadMessageId.peerId, threadId: threadId, namespaces: Set([Namespaces.Message.Cloud])) {
+                                    if readMaxId >= topMessageIndex.id.id {
+                                        let containingHole = transaction.getThreadIndexHole(peerId: threadMessageId.peerId, threadId: threadId, namespace: topMessageIndex.id.namespace, containing: topMessageIndex.id.id)
+                                        if let _ = containingHole[.everywhere] {
+                                        } else {
+                                            data.incomingUnreadCount = 0
+                                        }
                                     }
                                 }
                                 
