@@ -406,6 +406,9 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
     if !view.hasLater && savedMessagesPeer == nil {
         pinnedIndexOffset += UInt16(filteredAdditionalItemEntries.count)
     }
+    
+    var hiddenGeneralThread: ChatListNodeEntry?
+    
     loop: for entry in view.items {
         var peerId: EnginePeer.Id?
         var threadId: Int64?
@@ -458,7 +461,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             threadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadData.info, isOwnedByMe: threadData.isOwnedByMe, isClosed: threadData.isClosed, isHidden: threadData.isHidden)
         }
 
-        result.append(.PeerEntry(ChatListNodeEntry.PeerEntryData(
+        let entry: ChatListNodeEntry = .PeerEntry(ChatListNodeEntry.PeerEntryData(
             index: offsetPinnedIndex(entry.index, offset: pinnedIndexOffset),
             presentationData: state.presentationData,
             messages: updatedMessages,
@@ -481,8 +484,19 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
             forumTopicData: entry.forumTopicData,
             topForumTopicItems: entry.topForumTopicItems,
             revealed: threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
-        )))
+        ))
+        
+        if let threadInfo, threadInfo.isHidden {
+            hiddenGeneralThread = entry
+        } else {
+            result.append(entry)
+        }
     }
+    
+    if let hiddenGeneralThread {
+        result.append(hiddenGeneralThread)
+    }
+    
     if !view.hasLater {
         var pinningIndex: UInt16 = UInt16(pinnedIndexOffset == 0 ? 0 : (pinnedIndexOffset - 1))
         
