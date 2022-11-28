@@ -1574,6 +1574,7 @@ open class NavigationBar: ASDisplayNode {
     }
     
     public var intrinsicCanTransitionInline: Bool = true
+    public var shouldTransitionInline: (() -> Bool)?
     
     public var passthroughTouches = true
     
@@ -1581,6 +1582,11 @@ open class NavigationBar: ASDisplayNode {
         if let contentNode = self.contentNode, case .replacement = contentNode.mode {
             return false
         } else {
+            if let shouldTransitionInline = self.shouldTransitionInline {
+                if !shouldTransitionInline() {
+                    return false
+                }
+            }
             return self.intrinsicCanTransitionInline
         }
     }

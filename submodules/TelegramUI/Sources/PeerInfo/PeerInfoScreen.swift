@@ -8950,6 +8950,21 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
            
         if self.chatLocation.peerId != nil {
+            /*self.navigationBar?.shouldTransitionInline = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationItem.leftBarButtonItem != nil {
+                    return false
+                }
+                if strongSelf.controllerNode.scrollNode.view.contentOffset.y > .ulpOfOne {
+                    return false
+                }
+                if strongSelf.controllerNode.headerNode.isAvatarExpanded {
+                    return false
+                }
+                return false
+            }*/
             self.navigationBar?.makeCustomTransitionNode = { [weak self] other, isInteractive in
                 guard let strongSelf = self else {
                     return nil
@@ -9386,9 +9401,11 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
     
     private var previousContentNode: ASDisplayNode?
     private var previousContentNodeFrame: CGRect?
+    private var previousContentNodeAlpha: CGFloat = 1.0
     
     private var previousSecondaryContentNode: ASDisplayNode?
     private var previousSecondaryContentNodeFrame: CGRect?
+    private var previousSecondaryContentNodeAlpha: CGFloat = 1.0
     
     private var previousTitleNode: (ASDisplayNode, PortalView)?
     private var previousStatusNode: (ASDisplayNode, ASDisplayNode)?
@@ -9476,12 +9493,14 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
             if let contentNode = bottomNavigationBar.contentNode {
                 self.previousContentNode = contentNode
                 self.previousContentNodeFrame = contentNode.view.convert(contentNode.view.bounds, to: bottomNavigationBar.view)
+                self.previousContentNodeAlpha = contentNode.alpha
                 self.addSubnode(contentNode)
             }
             
             if let secondaryContentNode = bottomNavigationBar.secondaryContentNode {
                 self.previousSecondaryContentNode = secondaryContentNode
                 self.previousSecondaryContentNodeFrame = secondaryContentNode.view.convert(secondaryContentNode.view.bounds, to: bottomNavigationBar.view)
+                self.previousSecondaryContentNodeAlpha = secondaryContentNode.alpha
                 self.addSubnode(secondaryContentNode)
             }
             
@@ -9682,11 +9701,13 @@ private final class PeerInfoNavigationTransitionNode: ASDisplayNode, CustomNavig
         
         if let previousContentNode = self.previousContentNode, let previousContentNodeFrame = self.previousContentNodeFrame {
             previousContentNode.frame = previousContentNodeFrame
+            previousContentNode.alpha = self.previousContentNodeAlpha
             bottomNavigationBar.insertSubnode(previousContentNode, belowSubnode: bottomNavigationBar.stripeNode)
         }
         
         if let previousSecondaryContentNode = self.previousSecondaryContentNode, let previousSecondaryContentNodeFrame = self.previousSecondaryContentNodeFrame {
             previousSecondaryContentNode.frame = previousSecondaryContentNodeFrame
+            previousSecondaryContentNode.alpha = self.previousSecondaryContentNodeAlpha
             bottomNavigationBar.clippingNode.addSubnode(previousSecondaryContentNode)
         }
     }
