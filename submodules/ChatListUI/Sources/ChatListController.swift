@@ -140,7 +140,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     private let primaryInfoReady = Promise<Bool>()
     
     private var pendingSecondaryContext: ChatListLocationContext?
-    private var secondaryContext: ChatListLocationContext?
+    fileprivate private(set) var secondaryContext: ChatListLocationContext?
     
     fileprivate var effectiveContext: ChatListLocationContext? {
         return self.secondaryContext ?? self.primaryContext
@@ -250,34 +250,6 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         case let .forum(peerId):
             title = ""
             self.forumChannelTracker = ForumChannelTopics(account: self.context.account, peerId: peerId)
-            
-            self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
-            self.navigationBar?.allowsCustomTransition = { [weak self] in
-                guard let strongSelf = self else {
-                    return false
-                }
-                if strongSelf.navigationBar?.userInfo == nil {
-                    return false
-                }
-                
-                //TODO:loc
-                if "".isEmpty {
-                    return false
-                }
-                return true
-            }
-        }
-        
-        switch self.location {
-        case .chatList:
-            /*if let titleView = self.titleView {
-                titleView.title = NetworkStatusTitle(text: title, activity: false, hasProxy: false, connectsViaProxy: false, isPasscodeSet: false, isManuallyLocked: false, peerStatus: nil)
-                //self.navigationItem.titleView = titleView
-            }*/
-            //self.primaryInfoReady.set(.single(true))
-            break
-        case .forum:
-            break
         }
         
         let primaryContext = ChatListLocationContext(
@@ -736,6 +708,8 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             }
             self.reloadFilters()
         }
+        
+        self.updateNavigationMetadata()
     }
 
     required public init(coder aDecoder: NSCoder) {
@@ -759,6 +733,31 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         self.addMemberDisposable.dispose()
         self.joinForumDisposable.dispose()
         self.actionDisposables.dispose()
+    }
+    
+    private func updateNavigationMetadata() {
+        guard let currentContext = self.secondaryContext ?? self.primaryContext else {
+            return
+        }
+        
+        switch currentContext.location {
+        case .chatList:
+            self.navigationBar?.userInfo = nil
+            self.navigationBar?.allowsCustomTransition = {
+                return false
+            }
+        case let .forum(peerId):
+            self.navigationBar?.userInfo = PeerInfoNavigationSourceTag(peerId: peerId)
+            self.navigationBar?.allowsCustomTransition = { [weak self] in
+                guard let strongSelf = self else {
+                    return false
+                }
+                if strongSelf.navigationBar?.userInfo == nil {
+                    return false
+                }
+                return true
+            }
+        }
     }
     
     func findTitleView() -> ChatListTitleView? {
@@ -2178,7 +2177,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
         }
     }
     
-    func setInlineChatList(location: ChatListControllerLocation?) {
+    public func setInlineChatList(location: ChatListControllerLocation?) {
         if let location {
             let inlineNode = self.chatListDisplayNode.makeInlineChatList(location: location)
             let pendingSecondaryContext = ChatListLocationContext(
@@ -2205,6 +2204,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
                 self.secondaryContext = pendingSecondaryContext
                 self.setToolbar(pendingSecondaryContext.toolbar, transition: .animated(duration: 0.5, curve: .spring))
                 self.chatListDisplayNode.setInlineChatList(inlineStackContainerNode: inlineNode)
+                self.updateNavigationMetadata()
             })
         } else {
             if self.chatListDisplayNode.effectiveContainerNode.currentItemNode.currentState.editing {
@@ -2214,6 +2214,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
             self.secondaryContext = nil
             self.setToolbar(self.primaryContext?.toolbar, transition: .animated(duration: 0.5, curve: .spring))
             self.chatListDisplayNode.setInlineChatList(inlineStackContainerNode: nil)
+            self.updateNavigationMetadata()
         }
     }
     
@@ -4739,13 +4740,14 @@ private final class ChatListLocationContext {
                 }
             )))
         } else {
+            let parentController = self.parentController
             self.rightButton = AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
                 content: .more,
-                pressed: { [weak self] sourceView in
-                    guard let self, let parentController = self.parentController else {
+                pressed: { [weak parentController] sourceView in
+                    guard let secondaryContext = parentController?.secondaryContext else {
                         return
                     }
-                    ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: nil)
+                    secondaryContext.performMoreAction(sourceView: sourceView)
                 },
                 contextAction: { [weak self] sourceView, gesture in
                     guard let self, let parentController = self.parentController else {
@@ -4768,6 +4770,18 @@ private final class ChatListLocationContext {
             }
         } else {
             self.parentController?.requestUpdateHeaderContent(transition: .immediate)
+        }
+    }
+    
+    private func performMoreAction(sourceView: UIView) {
+        guard let parentController = self.parentController else {
+            return
+        }
+        switch self.location {
+        case .chatList:
+            break
+        case let .forum(peerId):
+            ChatListControllerImpl.openMoreMenu(context: self.context, peerId: peerId, sourceController: parentController, isViewingAsTopics: true, sourceView: sourceView, gesture: nil)
         }
     }
 }

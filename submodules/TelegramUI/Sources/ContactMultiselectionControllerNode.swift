@@ -71,6 +71,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
+    private let isPeerEnabled: ((EnginePeer) -> Bool)?
+    
     init(navigationBar: NavigationBar?, context: AccountContext, presentationData: PresentationData, mode: ContactMultiselectionControllerMode, isPeerEnabled: ((EnginePeer) -> Bool)?, attemptDisabledItemSelection: ((EnginePeer) -> Void)?, options: [ContactListAdditionalOption], filters: [ContactListFilter], limit: Int32?, reachedSelectionLimit: ((Int32) -> Void)?) {
         self.navigationBar = navigationBar
         
@@ -79,6 +81,8 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
         
         self.animationCache = context.animationCache
         self.animationRenderer = context.animationRenderer
+        
+        self.isPeerEnabled = isPeerEnabled
         
         var placeholder: String
         var includeChatList = false
@@ -210,7 +214,7 @@ final class ContactMultiselectionControllerNode: ASDisplayNode {
                             searchChannels = true
                             globalSearch = false
                         }
-                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, selectionState: selectionState, isSearch: true)
+                        let searchResultsNode = ContactListNode(context: context, presentation: .single(.search(signal: searchText.get(), searchChatList: searchChatList, searchDeviceContacts: false, searchGroups: searchGroups, searchChannels: searchChannels, globalSearch: globalSearch)), filters: filters, isPeerEnabled: strongSelf.isPeerEnabled, selectionState: selectionState, isSearch: true)
                         searchResultsNode.openPeer = { peer, _ in
                             self?.tokenListNode.setText("")
                             self?.openPeer?(peer)

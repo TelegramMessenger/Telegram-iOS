@@ -247,11 +247,11 @@ public final class ChatListHeaderComponent: Component {
             
             let arrowSize = self.arrowView.image?.size ?? CGSize(width: 13.0, height: 22.0)
             
-            let arrowFrame = CGRect(origin: CGPoint(x: iconOffset, y: floor((availableSize.height - arrowSize.height) / 2.0)), size: arrowSize)
+            let arrowFrame = CGRect(origin: CGPoint(x: iconOffset - 1.0, y: floor((availableSize.height - arrowSize.height) / 2.0)), size: arrowSize)
             transition.setPosition(view: self.arrowView, position: arrowFrame.center)
             transition.setBounds(view: self.arrowView, bounds: CGRect(origin: CGPoint(), size: arrowFrame.size))
             
-            transition.setFrame(view: self.titleView, frame: CGRect(origin: CGPoint(x: iconOffset + arrowSize.width + iconSpacing, y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize))
+            transition.setFrame(view: self.titleView, frame: CGRect(origin: CGPoint(x: iconOffset - 3.0 + arrowSize.width + iconSpacing, y: floor((availableSize.height - titleSize.height) / 2.0)), size: titleSize))
             
             return CGSize(width: iconOffset + arrowSize.width + iconSpacing + titleSize.width, height: availableSize.height)
         }
@@ -589,12 +589,55 @@ public final class ChatListHeaderComponent: Component {
         private var primaryContentView: ContentView?
         private var secondaryContentView: ContentView?
         
+        private var effectiveContentView: ContentView? {
+            return self.secondaryContentView ?? self.primaryContentView
+        }
+        
         override init(frame: CGRect) {
             super.init(frame: frame)
         }
         
         required public init?(coder: NSCoder) {
             fatalError("init(coder:) has not been implemented")
+        }
+        
+        public var backArrowView: UIView? {
+            return self.effectiveContentView?.backButtonView?.arrowView
+        }
+        
+        public var backButtonTitleView: UIView? {
+            return self.effectiveContentView?.backButtonView?.titleView
+        }
+        
+        public var rightButtonView: UIView? {
+            return self.effectiveContentView?.rightButtonViews.first?.value.view
+        }
+        
+        public var titleContentView: UIView? {
+            return self.effectiveContentView?.titleContentView?.view 
+        }
+        
+        public func makeTransitionBackArrowView(accentColor: UIColor) -> UIView? {
+            if let backArrowView = self.backArrowView {
+                let view = UIImageView()
+                view.image = NavigationBar.backArrowImage(color: accentColor)
+                view.frame = backArrowView.convert(backArrowView.bounds, to: self)
+                return view
+            } else {
+                return nil
+            }
+        }
+        
+        public func makeTransitionBackButtonView(accentColor: UIColor) -> UIView? {
+            if let backButtonTitleView = self.backButtonTitleView as? ImmediateTextView {
+                let view = ImmediateTextView()
+                view.attributedText = NSAttributedString(string: backButtonTitleView.attributedText?.string ?? "", font: Font.regular(17.0), textColor: accentColor)
+                let _ = view.updateLayout(CGSize(width: 100.0, height: 100.0))
+                view.frame = backButtonTitleView.convert(backButtonTitleView.bounds, to: self)
+                return view
+            } else {
+                return nil
+            }
         }
         
         func update(component: ChatListHeaderComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {

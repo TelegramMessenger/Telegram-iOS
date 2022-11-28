@@ -183,6 +183,14 @@ func _internal_updateAccountRemovalTimeout(account: Account, timeout: Int32) -> 
 }
 
 func _internal_updateMessageRemovalTimeout(account: Account, timeout: Int32?) -> Signal<Void, NoError> {
+    let _ = account.postbox.transaction({ transaction -> Void in
+        updateGlobalMessageAutoremoveTimeoutSettings(transaction: transaction, { settings in
+            var settings = settings
+            settings.messageAutoremoveTimeout = timeout
+            return settings
+        })
+    }).start()
+    
     return account.network.request(Api.functions.messages.setDefaultHistoryTTL(period: timeout ?? 0))
     |> `catch` { _ -> Signal<Api.Bool, NoError> in
         return .single(.boolFalse)
