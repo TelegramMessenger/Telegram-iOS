@@ -190,11 +190,14 @@ func _internal_setChatMessageAutoremoveTimeoutInteractively(account: Account, pe
                             updatedTimeout = .known(nil)
                         }
                         
-                        if let current = current as? CachedUserData {
+                        if peerId.namespace == Namespaces.Peer.CloudUser {
+                            let current = (current as? CachedUserData) ?? CachedUserData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
-                        } else if let current = current as? CachedGroupData {
+                        } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                            let current = (current as? CachedChannelData) ?? CachedChannelData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
-                        } else if let current = current as? CachedChannelData {
+                        } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                            let current = (current as? CachedGroupData) ?? CachedGroupData()
                             return current.withUpdatedAutoremoveTimeout(updatedTimeout)
                         } else {
                             return current

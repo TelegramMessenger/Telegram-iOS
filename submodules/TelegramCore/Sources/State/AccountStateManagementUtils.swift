@@ -4069,14 +4069,18 @@ func replayFinalState(
                         }
                     })
                 }
-            case let .UpdateAutoremoveTimeout(peer, value):
-                transaction.updatePeerCachedData(peerIds: Set([peer.peerId]), update: { _, current in
-                    if let current = current as? CachedUserData {
-                        return current.withUpdatedAutoremoveTimeout(.known(value))
-                    } else if let current = current as? CachedGroupData {
-                        return current.withUpdatedAutoremoveTimeout(.known(value))
-                    } else if let current = current as? CachedChannelData {
-                        return current.withUpdatedAutoremoveTimeout(.known(value))
+            case let .UpdateAutoremoveTimeout(peer, autoremoveValue):
+                let peerId = peer.peerId
+                transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        let current = (current as? CachedUserData) ?? CachedUserData()
+                        return current.withUpdatedAutoremoveTimeout(.known(autoremoveValue))
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let current = (current as? CachedChannelData) ?? CachedChannelData()
+                        return current.withUpdatedAutoremoveTimeout(.known(autoremoveValue))
+                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let current = (current as? CachedGroupData) ?? CachedGroupData()
+                        return current.withUpdatedAutoremoveTimeout(.known(autoremoveValue))
                     } else {
                         return current
                     }
