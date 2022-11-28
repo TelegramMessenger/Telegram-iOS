@@ -728,9 +728,18 @@ private func loadAndStorePeerChatInfos(accountPeerId: PeerId, postbox: Postbox, 
                     }
                 }
                 
+                var peerMap: [PeerId: Peer] = [:]
+                for peer in peers {
+                    peerMap[peer.id] = peer
+                }
+                
                 var storeMessages: [StoreMessage] = []
                 for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message) {
+                    var peerIsForum = false
+                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                        peerIsForum = true
+                    }
+                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
                         var updatedStoreMessage = storeMessage
                         if case let .Id(id) = storeMessage.id {
                             if let channelPts = channelStates[id.peerId] {

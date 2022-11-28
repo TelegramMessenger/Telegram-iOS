@@ -134,7 +134,7 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
                 }
             }
         } else {
-            var signals: [Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>] = []
+            var signals: [Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>] = []
             for (peerId, messageIds) in messagesIdsGroupedByPeerId(referencedReplyIds) {
                 if let peer = transaction.getPeer(peerId) ?? peers[peerId] {
                     var signal: Signal<Api.messages.Messages, MTRpcError>?
@@ -150,18 +150,18 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
                         |> map { result in
                             switch result {
                                 case let .messages(messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case let .messagesSlice(_, _, _, _, messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
                                     let _ = apiTopics
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case .messagesNotModified:
-                                    return ([], [], [])
+                                    return (peer, [], [], [])
                             }
                         }
                         |> `catch` { _ in
-                            return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                            return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>.single((peer, [], [], []))
                         })
                     }
                 }
@@ -181,18 +181,18 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
                         |> map { result in
                             switch result {
                                 case let .messages(messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case let .messagesSlice(_, _, _, _, messages, chats, users):
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case let .channelMessages(_, _, _, _, messages, apiTopics, chats, users):
                                     let _ = apiTopics
-                                    return (messages, chats, users)
+                                    return (peer, messages, chats, users)
                                 case .messagesNotModified:
-                                    return ([], [], [])
+                                    return (peer, [], [], [])
                             }
                         }
                         |> `catch` { _ in
-                            return Signal<([Api.Message], [Api.Chat], [Api.User]), NoError>.single(([], [], []))
+                            return Signal<(Peer, [Api.Message], [Api.Chat], [Api.User]), NoError>.single((peer, [], [], []))
                         })
                     }
                 }
@@ -204,10 +204,10 @@ private func withResolvedAssociatedMessages<T>(postbox: Postbox, source: FetchMe
             |> mapToSignal { results -> Signal<T, NoError> in
                 var additionalPeers: [Peer] = []
                 var additionalMessages: [StoreMessage] = []
-                for (messages, chats, users) in results {
+                for (peer, messages, chats, users) in results {
                     if !messages.isEmpty {
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message) {
+                            if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                                 additionalMessages.append(message)
                             }
                         }
@@ -286,16 +286,19 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
     }
     |> take(1)
     |> mapToSignal { _ -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-        return postbox.transaction { transaction -> (Api.InputPeer?, Int64) in
+        return postbox.transaction { transaction -> (Peer?, Int64) in
             switch peerInput {
             case let .direct(peerId, _):
-                return (transaction.getPeer(peerId).flatMap(forceApiInputPeer), 0)
+                return (transaction.getPeer(peerId), 0)
             case let .threadFromChannel(channelMessageId):
-                return (transaction.getPeer(channelMessageId.peerId).flatMap(forceApiInputPeer), 0)
+                return (transaction.getPeer(channelMessageId.peerId), 0)
             }
         }
-        |> mapToSignal { (inputPeer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-            guard let inputPeer = inputPeer else {
+        |> mapToSignal { (peer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
+            guard let peer else {
+                return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
+            }
+            guard let inputPeer = forceApiInputPeer(peer) else {
                 return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
             
@@ -649,7 +652,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
                 var storeMessages: [StoreMessage] = []
                 
                 for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message, namespace: namespace) {
+                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peer.isForum, namespace: namespace) {
                         if let channelPts = channelPts {
                             var attributes = storeMessage.attributes
                             attributes.append(ChannelMessageStateVersionAttribute(pts: channelPts))
@@ -908,22 +911,6 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                 var storeMessages: [StoreMessage] = []
                 var topIndex: MessageIndex?
                 
-                for message in messages {
-                    if let storeMessage = StoreMessage(apiMessage: message) {
-                        storeMessages.append(storeMessage)
-                        if let index = storeMessage.index, topIndex == nil || index < topIndex! {
-                            topIndex = index
-                        }
-                    }
-                }
-                
-                var updatedIndex: MessageIndex?
-                if let topIndex = topIndex {
-                    updatedIndex = topIndex.globalPredecessor()
-                }
-                
-                transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
-                
                 var peers: [Peer] = []
                 var peerPresences: [PeerId: Api.User] = [:]
                 for chat in chats {
@@ -937,6 +924,30 @@ func fetchCallListHole(network: Network, postbox: Postbox, accountPeerId: PeerId
                         peerPresences[telegramUser.id] = user
                     }
                 }
+                var peerMap: [PeerId: Peer] = [:]
+                for peer in peers {
+                    peerMap[peer.id] = peer
+                }
+                
+                for message in messages {
+                    var peerIsForum = false
+                    if let peerId = message.peerId, let peer = peerMap[peerId], peer.isForum {
+                        peerIsForum = true
+                    }
+                    if let storeMessage = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
+                        storeMessages.append(storeMessage)
+                        if let index = storeMessage.index, topIndex == nil || index < topIndex! {
+                            topIndex = index
+                        }
+                    }
+                }
+                
+                var updatedIndex: MessageIndex?
+                if let topIndex = topIndex {
+                    updatedIndex = topIndex.globalPredecessor()
+                }
+                
+                transaction.replaceGlobalMessageTagsHole(globalTags: [.Calls, .MissedCalls], index: holeIndex, with: updatedIndex, messages: storeMessages)
                 
                 updatePeers(transaction: transaction, peers: peers, update: { _, updated -> Peer in
                     return updated

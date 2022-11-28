@@ -188,12 +188,15 @@ public enum CreateForumChannelTopicError {
 }
 
 func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
-    return account.postbox.transaction { transaction -> Api.InputChannel? in
-        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
     }
     |> castError(CreateForumChannelTopicError.self)
-    |> mapToSignal { inputChannel -> Signal<Int64, CreateForumChannelTopicError> in
-        guard let inputChannel = inputChannel else {
+    |> mapToSignal { peer -> Signal<Int64, CreateForumChannelTopicError> in
+        guard let peer else {
+            return .fail(.generic)
+        }
+        guard let inputChannel = apiInputChannel(peer) else {
             return .fail(.generic)
         }
         var flags: Int32 = 0
@@ -221,7 +224,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             for update in result.allUpdates {
                 switch update {
                 case let .updateNewChannelMessage(message, _, _):
-                    if let message = StoreMessage(apiMessage: message) {
+                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                         if case let .Id(id) = message.id {
                             topicId = Int64(id.id)
                         }
@@ -605,7 +608,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                 var pinnedIds: [Int64] = []
                 
                 let addedMessages = messages.compactMap { message -> StoreMessage? in
-                    return StoreMessage(apiMessage: message)
+                    return StoreMessage(apiMessage: message, peerIsForum: true)
                 }
                 
                 let _ = pts

@@ -199,6 +199,14 @@ public extension Peer {
             return false
         }
     }
+    
+    var isForum: Bool {
+        if let channel = self as? TelegramChannel {
+            return channel.flags.contains(.isForum)
+        } else {
+            return false
+        }
+    }
 }
 
 public extension TelegramPeerUsername {

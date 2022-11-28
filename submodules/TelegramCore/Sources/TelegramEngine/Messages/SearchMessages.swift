@@ -121,7 +121,11 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
     
     var renderedMessages: [Message] = []
     for message in messages {
-        if let message = StoreMessage(apiMessage: message) {
+        var peerIsForum = false
+        if let peerId = message.peerId, let peer = peers[peerId], peer.isForum {
+            peerIsForum = true
+        }
+        if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum) {
             var associatedThreadInfo: Message.AssociatedThreadInfo?
             if let threadId = message.threadId, let threadInfo = transaction.getMessageHistoryThreadInfo(peerId: message.id.peerId, threadId: threadId) {
                 associatedThreadInfo = seedConfiguration.decodeMessageThreadInfo(threadInfo.data)
@@ -521,7 +525,7 @@ func _internal_downloadMessage(postbox: Postbox, network: Network, messageId: Me
                         
                         var renderedMessages: [Message] = []
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
+                            if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let renderedMessage = locallyRenderedMessage(message: message, peers: peers) {
                                 renderedMessages.append(renderedMessage)
                             }
                         }
@@ -610,7 +614,11 @@ func fetchRemoteMessage(postbox: Postbox, source: FetchMessageHistoryHoleSource,
             
             var renderedMessages: [Message] = []
             for message in messages {
-                if let message = StoreMessage(apiMessage: message, namespace: id.namespace), case let .Id(updatedId) = message.id {
+                var peerIsForum = false
+                if let peerId = message.peerId, let peer = transaction.getPeer(peerId), peer.isForum {
+                    peerIsForum = true
+                }
+                if let message = StoreMessage(apiMessage: message, peerIsForum: peerIsForum, namespace: id.namespace), case let .Id(updatedId) = message.id {
                     var addedExisting = false
                     if transaction.getMessage(updatedId) != nil {
                         transaction.updateMessage(updatedId, update: { _ in
@@ -655,7 +663,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                     }
                     for message in messages {
-                        if let message = StoreMessage(apiMessage: message) {
+                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                             return message.index
                         }
                     }
@@ -685,7 +693,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                                 messages = []
                         }
                         for message in messages {
-                            if let message = StoreMessage(apiMessage: message) {
+                            if let message = StoreMessage(apiMessage: message, peerIsForum: secondaryPeer.isForum) {
                                 return message.index
                             }
                         }
@@ -709,7 +717,7 @@ func _internal_searchMessageIdByTimestamp(account: Account, peerId: PeerId, thre
                             messages = []
                     }
                     for message in messages {
-                        if let message = StoreMessage(apiMessage: message) {
+                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                             return message.index
                         }
                     }

@@ -115,6 +115,19 @@ extension Api.Message {
                 return MessageId(peerId: peerId, namespace: Namespaces.Message.Cloud, id: id)
         }
     }
+    
+    var peerId: PeerId? {
+        switch self {
+        case let .message(_, _, _, messagePeerId, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _, _):
+            let peerId: PeerId = messagePeerId.peerId
+            return peerId
+        case let .messageEmpty(_, _, peerId):
+            return peerId?.peerId
+        case let .messageService(_, _, _, chatPeerId, _, _, _, _):
+            let peerId: PeerId = chatPeerId.peerId
+            return peerId
+        }
+    }
 
     var timestamp: Int32? {
         switch self {

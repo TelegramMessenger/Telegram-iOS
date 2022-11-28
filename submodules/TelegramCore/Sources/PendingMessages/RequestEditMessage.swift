@@ -191,7 +191,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                     if let result = result {
                         return postbox.transaction { transaction -> RequestEditMessageResult in
                             var toMedia: Media?
-                            if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0) }) {
+                            if let message = result.messages.first.flatMap({ StoreMessage(apiMessage: $0, peerIsForum: peer.isForum) }) {
                                 toMedia = message.media.first
                             }
                             
@@ -217,7 +217,7 @@ private func requestEditMessageInternal(postbox: Postbox, network: Network, stat
                                         
                                         updatePeers(transaction: transaction, peers: peers, update: { _, updated in updated })
                                         
-                                        if let message = StoreMessage(apiMessage: message), case let .Id(id) = message.id {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), case let .Id(id) = message.id {
                                             transaction.updateMessage(id, update: { previousMessage in
                                                 var updatedFlags = message.flags
                                                 var updatedLocalTags = message.localTags

@@ -491,7 +491,7 @@ func _internal_sendBotPaymentForm(account: Account, formId: Int64, source: BotPa
                     account.stateManager.addUpdates(updates)
                     var receiptMessageId: MessageId?
                     for apiMessage in updates.messages {
-                        if let message = StoreMessage(apiMessage: apiMessage) {
+                        if let message = StoreMessage(apiMessage: apiMessage, peerIsForum: false) {
                             for media in message.media {
                                 if let action = media as? TelegramMediaAction {
                                     if case .paymentSent = action.action {

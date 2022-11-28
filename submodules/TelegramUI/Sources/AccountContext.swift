@@ -366,9 +366,8 @@ public final class AccountContextImpl: AccountContext {
                 let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
                 return .thread(peerId: data.messageId.peerId, threadId: makeMessageThreadId(data.messageId), data: context.state)
             }
-        case let .feed(id):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
-            return .feed(id: id, data: context.state)
+        case .feed:
+            preconditionFailure()
         }
     }
     
@@ -391,9 +390,8 @@ public final class AccountContextImpl: AccountContext {
                 let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
                 return context.maxReadOutgoingMessageId
             }
-        case let .feed(id):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
-            return context.maxReadOutgoingMessageId
+        case .feed:
+            return .single(nil)
         }
     }
 
@@ -428,9 +426,8 @@ public final class AccountContextImpl: AccountContext {
                 let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
                 return context.unreadCount
             }
-        case let .feed(id):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
-            return context.unreadCount
+        case .feed:
+            return .single(0)
         }
     }
     
@@ -441,9 +438,8 @@ public final class AccountContextImpl: AccountContext {
         case let .replyThread(data):
             let context = chatLocationContext(holder: contextHolder, account: self.account, data: data)
             context.applyMaxReadIndex(messageIndex: messageIndex)
-        case let .feed(id):
-            let context = chatLocationContext(holder: contextHolder, account: self.account, feedId: id)
-            context.applyMaxReadIndex(messageIndex: messageIndex)
+        case .feed:
+            break
         }
     }
     
@@ -605,30 +601,11 @@ private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, acc
     return holder.context
 }
 
-private func chatLocationContext(holder: Atomic<ChatLocationContextHolder?>, account: Account, feedId: Int32) -> FeedHistoryContext {
-    let holder = holder.modify { current in
-        if let current = current as? ChatLocationFeedContextHolderImpl {
-            return current
-        } else {
-            return ChatLocationFeedContextHolderImpl(account: account, feedId: feedId)
-        }
-    } as! ChatLocationFeedContextHolderImpl
-    return holder.context
-}
-
 private final class ChatLocationReplyContextHolderImpl: ChatLocationContextHolder {
     let context: ReplyThreadHistoryContext
     
     init(account: Account, data: ChatReplyThreadMessage) {
         self.context = ReplyThreadHistoryContext(account: account, peerId: data.messageId.peerId, data: data)
-    }
-}
-
-private final class ChatLocationFeedContextHolderImpl: ChatLocationContextHolder {
-    let context: FeedHistoryContext
-    
-    init(account: Account, feedId: Int32) {
-        self.context = FeedHistoryContext(account: account, feedId: feedId)
     }
 }
 

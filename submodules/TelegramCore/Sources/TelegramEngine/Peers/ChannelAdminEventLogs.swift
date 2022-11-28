@@ -195,16 +195,16 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         case .messageEmpty:
                                             action = .updatePinned(nil)
                                         default:
-                                            if let message = StoreMessage(apiMessage: new), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                            if let message = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                                 action = .updatePinned(rendered)
                                             }
                                         }
                                     case let .channelAdminLogEventActionEditMessage(prev, new):
-                                        if let prev = StoreMessage(apiMessage: prev), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
+                                        if let prev = StoreMessage(apiMessage: prev, peerIsForum: peer.isForum), let prevRendered = locallyRenderedMessage(message: prev, peers: peers), let new = StoreMessage(apiMessage: new, peerIsForum: peer.isForum), let newRendered = locallyRenderedMessage(message: new, peers: peers) {
                                             action = .editMessage(prev: prevRendered, new: newRendered)
                                         }
                                     case let .channelAdminLogEventActionDeleteMessage(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .deleteMessage(rendered)
                                         }
                                     case .channelAdminLogEventActionParticipantJoin:
@@ -238,7 +238,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                     case let .channelAdminLogEventActionDefaultBannedRights(prevBannedRights, newBannedRights):
                                         action = .updateDefaultBannedRights(prev: TelegramChatBannedRights(apiBannedRights: prevBannedRights), new: TelegramChatBannedRights(apiBannedRights: newBannedRights))
                                     case let .channelAdminLogEventActionStopPoll(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .pollStopped(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeLinkedChat(prevValue, newValue):
@@ -277,7 +277,7 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                     case let .channelAdminLogEventActionToggleNoForwards(new):
                                         action = .toggleCopyProtection(boolFromApiValue(new))
                                     case let .channelAdminLogEventActionSendMessage(message):
-                                        if let message = StoreMessage(apiMessage: message), let rendered = locallyRenderedMessage(message: message, peers: peers) {
+                                        if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum), let rendered = locallyRenderedMessage(message: message, peers: peers) {
                                             action = .sendMessage(rendered)
                                         }
                                     case let .channelAdminLogEventActionChangeAvailableReactions(prevValue, newValue):

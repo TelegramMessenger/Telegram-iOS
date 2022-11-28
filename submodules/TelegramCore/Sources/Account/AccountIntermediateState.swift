@@ -183,6 +183,7 @@ struct AccountMutableState {
     
     var state: AuthorizedAccountState.State
     var peers: [PeerId: Peer]
+    var apiChats: [PeerId: Api.Chat]
     var channelStates: [PeerId: AccountStateChannelState]
     var peerChatInfos: [PeerId: PeerChatInfo]
     var referencedReplyMessageIds: ReferencedReplyMessageIds
@@ -213,6 +214,7 @@ struct AccountMutableState {
         self.initialState = initialState
         self.state = initialState.state
         self.peers = initialPeers
+        self.apiChats = [:]
         self.referencedReplyMessageIds = initialReferencedReplyMessageIds
         self.referencedGeneralMessageIds = initialReferencedGeneralMessageIds
         self.storedMessages = initialStoredMessages
@@ -225,11 +227,12 @@ struct AccountMutableState {
         self.updatedOutgoingUniqueMessageIds = [:]
     }
     
-    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
+    init(initialState: AccountInitialState, operations: [AccountStateMutationOperation], state: AuthorizedAccountState.State, peers: [PeerId: Peer], apiChats: [PeerId: Api.Chat], channelStates: [PeerId: AccountStateChannelState], peerChatInfos: [PeerId: PeerChatInfo], referencedReplyMessageIds: ReferencedReplyMessageIds, referencedGeneralMessageIds: Set<MessageId>, storedMessages: Set<MessageId>, readInboxMaxIds: [PeerId: MessageId], storedMessagesByPeerIdAndTimestamp: [PeerId: Set<MessageIndex>], namespacesWithHolesFromPreviousState: [PeerId: [MessageId.Namespace: HoleFromPreviousState]], updatedOutgoingUniqueMessageIds: [Int64: Int32], displayAlerts: [(text: String, isDropAuth: Bool)], dismissBotWebViews: [Int64], branchOperationIndex: Int) {
         self.initialState = initialState
         self.operations = operations
         self.state = state
         self.peers = peers
+        self.apiChats = apiChats
         self.channelStates = channelStates
         self.referencedReplyMessageIds = referencedReplyMessageIds
         self.referencedGeneralMessageIds = referencedGeneralMessageIds
@@ -245,7 +248,7 @@ struct AccountMutableState {
     }
     
     func branch() -> AccountMutableState {
-        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
+        return AccountMutableState(initialState: self.initialState, operations: self.operations, state: self.state, peers: self.peers, apiChats: self.apiChats, channelStates: self.channelStates, peerChatInfos: self.peerChatInfos, referencedReplyMessageIds: self.referencedReplyMessageIds, referencedGeneralMessageIds: self.referencedGeneralMessageIds, storedMessages: self.storedMessages, readInboxMaxIds: self.readInboxMaxIds, storedMessagesByPeerIdAndTimestamp: self.storedMessagesByPeerIdAndTimestamp, namespacesWithHolesFromPreviousState: self.namespacesWithHolesFromPreviousState, updatedOutgoingUniqueMessageIds: self.updatedOutgoingUniqueMessageIds, displayAlerts: self.displayAlerts, dismissBotWebViews: self.dismissBotWebViews, branchOperationIndex: self.operations.count)
     }
     
     mutating func merge(_ other: AccountMutableState) {
@@ -257,6 +260,9 @@ struct AccountMutableState {
         }
         for (_, peer) in other.insertedPeers {
             self.peers[peer.id] = peer
+        }
+        for (_, chat) in other.apiChats {
+            self.apiChats[chat.peerId] = chat
         }
         self.preCachedResources.append(contentsOf: other.preCachedResources)
         self.externallyUpdatedPeerId.formUnion(other.externallyUpdatedPeerId)
@@ -410,8 +416,26 @@ struct AccountMutableState {
         }
     }
     
+    func isPeerForum(peerId: PeerId) -> Bool {
+        if let peer = self.peers[peerId] {
+            return peer.isForum
+        } else if let chat = self.apiChats[peerId] {
+            if let channel = parseTelegramGroupOrChannel(chat: chat) {
+                return channel.isForum
+            } else {
+                return false
+            }
+        } else {
+            Logger.shared.log("AccountIntermediateState", "isPeerForum undefinded for \(peerId)")
+            return false
+        }
+    }
+    
     mutating func mergeChats(_ chats: [Api.Chat]) {
         self.addOperation(.MergeApiChats(chats))
+        for chat in chats {
+            self.apiChats[chat.peerId] = chat
+        }
         
         for chat in chats {
             switch chat {
