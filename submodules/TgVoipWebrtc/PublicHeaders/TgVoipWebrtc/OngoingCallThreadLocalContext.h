@@ -203,6 +203,16 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 
 @end
 
+@interface CallAudioTone : NSObject
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull samples;
+@property (nonatomic, readonly) NSInteger sampleRate;
+@property (nonatomic, readonly) NSInteger loopCount;
+
+- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount;
+
+@end
+
 @interface OngoingCallThreadLocalContextWebrtc : NSObject
 
 + (void)logMessage:(NSString * _Nonnull)string;
@@ -390,6 +400,8 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
 - (void)stop;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
+- (void)setTone:(CallAudioTone * _Nullable)tone;
 
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 

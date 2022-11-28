@@ -433,6 +433,15 @@ private extension CurrentImpl {
             break
         }
     }
+    
+    func setTone(tone: OngoingGroupCallContext.Tone?) {
+        switch self {
+        case let .call(callContext):
+            callContext.setTone(tone: tone)
+        case .mediaStream:
+            break
+        }
+    }
 }
 
 public func groupCallLogsPath(account: Account) -> String {
@@ -2475,7 +2484,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func beginTone(tone: PresentationCallTone) {
-        if "".isEmpty {
+        if let toneData = presentationCallToneData(tone) {
+            self.genericCallContext?.setTone(tone: OngoingGroupCallContext.Tone(
+                samples: toneData,
+                sampleRate: 44100,
+                loopCount: 1000
+            ))
+        }
+        
+        /*if "".isEmpty {
             return
         }
         if self.isStream {
@@ -2500,7 +2517,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
         }
 
         self.toneRenderer = toneRenderer
-        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
+        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)*/
     }
 
     public func playTone(_ tone: PresentationGroupCallTone) {

@@ -400,6 +400,18 @@ public final class OngoingGroupCallContext {
         public var incomingVideoStats: [String: IncomingVideoStats]
     }
     
+    public final class Tone {
+        public let samples: Data
+        public let sampleRate: Int
+        public let loopCount: Int
+        
+        public init(samples: Data, sampleRate: Int, loopCount: Int) {
+            self.samples = samples
+            self.sampleRate = sampleRate
+            self.loopCount = loopCount
+        }
+    }
+    
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
@@ -884,6 +896,12 @@ public final class OngoingGroupCallContext {
                 completion(Stats(incomingVideoStats: incomingVideoStats))
             })
         }
+        
+        func setTone(tone: Tone?) {
+            self.context.setTone(tone.flatMap { tone in
+                CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
+            })
+        }
     }
     
     private let queue = Queue()
@@ -1073,6 +1091,12 @@ public final class OngoingGroupCallContext {
     public func getStats(completion: @escaping (Stats) -> Void) {
         self.impl.with { impl in
             impl.getStats(completion: completion)
+        }
+    }
+    
+    public func setTone(tone: Tone?) {
+        self.impl.with { impl in
+            impl.setTone(tone: tone)
         }
     }
 }
