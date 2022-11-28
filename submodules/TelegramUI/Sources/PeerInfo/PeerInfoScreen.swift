@@ -7045,7 +7045,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         var temporary = false
-        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false {
+        if self.isSettings && self.data?.globalSettings?.privacySettings?.phoneDiscoveryEnabled == false && (self.data?.peer?.addressName ?? "").isEmpty {
             temporary = true
         }
         controller.present(ChatQrCodeScreen(context: self.context, subject: .peer(peer: peer, threadId: threadId, temporary: temporary)), in: .window(.root))

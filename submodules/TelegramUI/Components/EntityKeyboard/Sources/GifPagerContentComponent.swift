@@ -968,7 +968,7 @@ public final class GifPagerContentComponent: Component {
                             return
                         }
                         strongSelf.component?.inputInteraction.openSearch()
-                    }, deactivated: {
+                    }, deactivated: { _ in
                     }, updateQuery: {_, _ in
                     })
                     self.visibleSearchHeader = visibleSearchHeader
