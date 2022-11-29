@@ -519,7 +519,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                         
                         let durationMilliseconds: Int64 = 32000
                         let bufferOffset: Int64 = 1 * durationMilliseconds
-                        let timestampId = latestTimestamp - bufferOffset
+                        let timestampId = (latestTimestamp / durationMilliseconds) * durationMilliseconds - bufferOffset
                         
                         return engine.calls.getVideoBroadcastPart(dataSource: source, callId: info.id, accessHash: info.accessHash, timestampIdMilliseconds: timestampId, durationMilliseconds: durationMilliseconds, channelId: 2, quality: 0)
                         |> mapToSignal { result -> Signal<Data?, NoError> in
