@@ -891,6 +891,34 @@ public final class AvatarBadgeView: UIImageView {
                 UIGraphicsPopContext()
             }
         }
+        
+        var rSum: Int64 = 0
+        var gSum: Int64 = 0
+        var bSum: Int64 = 0
+        for y in 0 ..< blurredHeight {
+            let row = blurredContext.bytes.assumingMemoryBound(to: UInt8.self).advanced(by: y * blurredContext.bytesPerRow)
+            for x in 0 ..< blurredWidth {
+                let pixel = row.advanced(by: x * 4)
+                bSum += Int64(pixel.advanced(by: 0).pointee)
+                gSum += Int64(pixel.advanced(by: 1).pointee)
+                rSum += Int64(pixel.advanced(by: 2).pointee)
+            }
+        }
+        let colorNorm = CGFloat(blurredWidth * blurredHeight)
+        let invColorNorm: CGFloat = 1.0 / (255.0 * colorNorm)
+        let aR = CGFloat(rSum) * invColorNorm
+        let aG = CGFloat(gSum) * invColorNorm
+        let aB = CGFloat(bSum) * invColorNorm
+        let luminance: CGFloat = 0.299 * aR + 0.587 * aG + 0.114 * aB
+        
+        let isLightImage = luminance > 0.9
+        
+        var brightness: CGFloat = 1.0
+        if isLightImage {
+            brightness = 0.99
+        } else {
+            brightness = 0.94
+        }
             
         var destinationBuffer = vImage_Buffer()
         destinationBuffer.width = UInt(blurredWidth)
@@ -934,7 +962,6 @@ public final class AvatarBadgeView: UIImageView {
             0, 0, 0, 1
         ]
         
-        let brightness: CGFloat = 0.94
         let brighnessMatrix: [CGFloat] = [
             brightness, 0, 0, 0,
             0, brightness, 0, 0,
@@ -980,14 +1007,16 @@ public final class AvatarBadgeView: UIImageView {
             
             context.setBlendMode(.normal)
             
-            /*context.setFillColor(UIColor(white: 1.0, alpha: 0.08).cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))
-            context.setFillColor(UIColor(white: 0.0, alpha: 0.05).cgColor)
-            context.fillEllipse(in: CGRect(origin: CGPoint(), size: size))*/
+            let textColor: UIColor
+            if isLightImage {
+                textColor = UIColor(white: 0.7, alpha: 1.0)
+            } else {
+                textColor = .white
+            }
             
             var fontSize: CGFloat = floor(parameters.size.height * 0.48)
             while true {
-                let string = NSAttributedString(string: parameters.text, font: Font.bold(fontSize), textColor: .white)
+                let string = NSAttributedString(string: parameters.text, font: Font.bold(fontSize), textColor: textColor)
                 let stringBounds = string.boundingRect(with: CGSize(width: 100.0, height: 100.0), options: .usesLineFragmentOrigin, context: nil)
                 
                 if stringBounds.width <= size.width - 5.0 * 2.0 || fontSize <= 2.0 {
@@ -1002,7 +1031,7 @@ public final class AvatarBadgeView: UIImageView {
             let lineInset: CGFloat = 2.0
             let lineRadius: CGFloat = size.width * 0.5 - lineInset - lineWidth * 0.5
             context.setLineWidth(lineWidth)
-            context.setStrokeColor(UIColor.white.cgColor)
+            context.setStrokeColor(textColor.cgColor)
             context.setLineCap(.round)
             
             context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: CGFloat.pi * 0.5, endAngle: -CGFloat.pi * 0.5, clockwise: false)
@@ -1021,6 +1050,12 @@ public final class AvatarBadgeView: UIImageView {
                 context.addArc(center: CGPoint(x: size.width * 0.5, y: size.height * 0.5), radius: lineRadius, startAngle: startAngle, endAngle: endAngle, clockwise: true)
                 context.strokePath()
             }
+            
+            /*if isLightImage {
+                context.setLineWidth(UIScreenPixel)
+                context.setStrokeColor(textColor.withMultipliedAlpha(1.0).cgColor)
+                context.strokeEllipse(in: CGRect(origin: CGPoint(), size: size).insetBy(dx: UIScreenPixel * 0.5, dy: UIScreenPixel * 0.5))
+            }*/
             
             UIGraphicsPopContext()
         })
