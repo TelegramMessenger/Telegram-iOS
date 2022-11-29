@@ -136,7 +136,7 @@ public class ChatListControllerImpl: TelegramBaseController, ChatListController 
     
     private let headerContentView = ComponentView<Empty>()
     
-    private var primaryContext: ChatListLocationContext?
+    fileprivate private(set) var primaryContext: ChatListLocationContext?
     private let primaryInfoReady = Promise<Bool>()
     
     private var pendingSecondaryContext: ChatListLocationContext?
@@ -4744,10 +4744,11 @@ private final class ChatListLocationContext {
             self.rightButton = AnyComponentWithIdentity(id: "more", component: AnyComponent(NavigationButtonComponent(
                 content: .more,
                 pressed: { [weak parentController] sourceView in
-                    guard let secondaryContext = parentController?.secondaryContext else {
-                        return
+                    if let secondaryContext = parentController?.secondaryContext {
+                        secondaryContext.performMoreAction(sourceView: sourceView)
+                    } else if let primaryContext = parentController?.primaryContext {
+                        primaryContext.performMoreAction(sourceView: sourceView)
                     }
-                    secondaryContext.performMoreAction(sourceView: sourceView)
                 },
                 contextAction: { [weak self] sourceView, gesture in
                     guard let self, let parentController = self.parentController else {

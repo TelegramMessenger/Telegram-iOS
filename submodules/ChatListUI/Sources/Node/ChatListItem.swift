@@ -921,6 +921,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     
     private var isHighlighted: Bool = false
     private var skipFadeout: Bool = false
+    private var customAnimationInProgress: Bool = false
     
     private var onlineIsVoiceChat: Bool = false
     
@@ -2463,8 +2464,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
                     strongSelf.onlineIsVoiceChat = onlineIsVoiceChat
                     
-                    strongSelf.clipsToBounds = true
-                   
+                    if let currentHiddenOffset = currentItem?.hiddenOffset, item.hiddenOffset, currentHiddenOffset != item.hiddenOffset {
+                        strongSelf.supernode?.insertSubnode(strongSelf, at: 0)
+                    }
+                                       
                     if case .groupReference = item.content {
                         strongSelf.layer.sublayerTransform = CATransform3DMakeTranslation(0.0, layout.contentSize.height - itemHeight, 0.0)
                     }
@@ -2473,7 +2476,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.separatorNode.backgroundColor = item.presentationData.theme.chatList.itemSeparatorColor
                     }
                     
-                    let revealOffset = 0.0//strongSelf.revealOffset
+                    let revealOffset = 0.0
                     
                     let transition: ContainedViewLayoutTransition
                     if animated {
@@ -2482,8 +2485,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         transition = .immediate
                     }
                     
-                    let contextContainerFrame = CGRect(origin: CGPoint(), size: layout.contentSize)
-                    strongSelf.contextContainer.position = contextContainerFrame.center
+                    let contextContainerFrame = CGRect(origin: CGPoint(), size: CGSize(width: layout.contentSize.width, height: itemHeight))
+//                    strongSelf.contextContainer.position = contextContainerFrame.center
+                    transition.updatePosition(node: strongSelf.contextContainer, position: contextContainerFrame.center)
                     transition.updateBounds(node: strongSelf.contextContainer, bounds: contextContainerFrame.offsetBy(dx: -strongSelf.revealOffset, dy: 0.0))
                     
                     var mainContentFrame: CGRect
@@ -3280,14 +3284,16 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         strongSelf.peerPresenceManager?.reset(presence: EnginePeer.Presence(status: peerPresence.status, lastActivity: 0), isOnline: online)
                     }
                     
-                    strongSelf.updateLayout(size: layout.contentSize, leftInset: params.leftInset, rightInset: params.rightInset)
+                    strongSelf.updateLayout(size: CGSize(width: layout.contentSize.width, height: itemHeight), leftInset: params.leftInset, rightInset: params.rightInset)
                     
                     if item.editing {
                         strongSelf.setRevealOptions((left: [], right: []))
                     } else {
                         strongSelf.setRevealOptions((left: peerLeftRevealOptions, right: peerRevealOptions))
                     }
-                    strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
+                    if !strongSelf.customAnimationInProgress {
+                        strongSelf.setRevealOptionsOpened(item.hasActiveRevealControls, animated: true)
+                    }
                     
                     strongSelf.view.accessibilityLabel = strongSelf.accessibilityLabel
                     strongSelf.view.accessibilityValue = strongSelf.accessibilityValue
@@ -3648,8 +3654,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.updatePeerGrouping(index.messageIndex.id.peerId, true)
                 close = false
                 self.skipFadeout = true
+                self.customAnimationInProgress = true
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
+                    self.customAnimationInProgress = false
                 }
             case RevealOptionKey.unarchive.rawValue:
                 item.interaction.updatePeerGrouping(index.messageIndex.id.peerId, false)
@@ -3665,8 +3673,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.toggleArchivedFolderHiddenByDefault()
                 close = false
                 self.skipFadeout = true
+                self.customAnimationInProgress = true
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
+                    self.customAnimationInProgress = false
                 }
             case RevealOptionKey.unhide.rawValue:
                 item.interaction.toggleArchivedFolderHiddenByDefault()
@@ -3677,8 +3687,10 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
                 close = false
                 self.skipFadeout = true
+                self.customAnimationInProgress = true
                 self.animateRevealOptionsFill {
                     self.revealOptionsInteractivelyClosed()
+                    self.customAnimationInProgress = false
                 }
             default:
                 break
@@ -3703,6 +3715,13 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 item.interaction.setPeerThreadPinned(peerId, threadId, false)
             case RevealOptionKey.hide.rawValue:
                 item.interaction.setPeerThreadHidden(peerId, threadId, true)
+                close = false
+                self.skipFadeout = true
+                self.customAnimationInProgress = true
+                self.animateRevealOptionsFill {
+                    self.revealOptionsInteractivelyClosed()
+                    self.customAnimationInProgress = false
+                }
             case RevealOptionKey.unhide.rawValue:
                 item.interaction.setPeerThreadHidden(peerId, threadId, false)
             default:

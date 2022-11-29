@@ -295,7 +295,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
             }
         }
         |> mapToSignal { (peer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-            guard let peer else {
+            guard let peer = peer else {
                 return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
             guard let inputPeer = forceApiInputPeer(peer) else {
@@ -820,11 +820,14 @@ func fetchChatListHole(postbox: Postbox, network: Network, accountPeerId: PeerId
             
             for (peerId, autoremoveValue) in fetchedChats.ttlPeriods {
                 transaction.updatePeerCachedData(peerIds: Set([peerId]), update: { _, current in
-                    if let current = current as? CachedUserData {
+                    if peerId.namespace == Namespaces.Peer.CloudUser {
+                        let current = (current as? CachedUserData) ?? CachedUserData()
                         return current.withUpdatedAutoremoveTimeout(autoremoveValue)
-                    } else if let current = current as? CachedGroupData {
+                    } else if peerId.namespace == Namespaces.Peer.CloudChannel {
+                        let current = (current as? CachedChannelData) ?? CachedChannelData()
                         return current.withUpdatedAutoremoveTimeout(autoremoveValue)
-                    } else if let current = current as? CachedChannelData {
+                    } else if peerId.namespace == Namespaces.Peer.CloudGroup {
+                        let current = (current as? CachedGroupData) ?? CachedGroupData()
                         return current.withUpdatedAutoremoveTimeout(autoremoveValue)
                     } else {
                         return current

@@ -351,7 +351,7 @@ private func channelAdminsControllerEntries(presentationData: PresentationData, 
         }
         entries.append(.recentActions(presentationData.theme, presentationData.strings.Group_Info_AdminLog))
         
-        if isGroup && peer.hasPermission(.deleteAllMessages) && antiSpamAvailable {
+        if isGroup && peer.hasPermission(.deleteAllMessages) && (antiSpamAvailable || antiSpamEnabled) {
             entries.append(.antiSpam(presentationData.theme, presentationData.strings.Group_Management_AntiSpam, antiSpamEnabled))
             entries.append(.antiSpamInfo(presentationData.theme, presentationData.strings.Group_Management_AntiSpamInfo))
         }

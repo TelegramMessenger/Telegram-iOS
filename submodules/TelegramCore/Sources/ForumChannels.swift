@@ -193,7 +193,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
     }
     |> castError(CreateForumChannelTopicError.self)
     |> mapToSignal { peer -> Signal<Int64, CreateForumChannelTopicError> in
-        guard let peer else {
+        guard let peer = peer else {
             return .fail(.generic)
         }
         guard let inputChannel = apiInputChannel(peer) else {

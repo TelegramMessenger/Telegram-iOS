@@ -272,7 +272,7 @@ private final class ChatListShimmerNode: ASDisplayNode {
                     
                     if !isInlineMode {
                         if !itemNodes[sampleIndex].avatarNode.isHidden {
-                            context.fillEllipse(in: itemNodes[sampleIndex].avatarNode.frame.offsetBy(dx: 0.0, dy: currentY))
+                            context.fillEllipse(in: itemNodes[sampleIndex].avatarNode.view.convert(itemNodes[sampleIndex].avatarNode.bounds, to: itemNodes[sampleIndex].view).offsetBy(dx: 0.0, dy: currentY))
                         }
                     }
                     
