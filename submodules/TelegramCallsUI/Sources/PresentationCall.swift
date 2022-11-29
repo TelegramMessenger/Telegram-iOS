@@ -221,6 +221,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var callContextState: OngoingCallContextState?
     private var ongoingContext: OngoingCallContext?
     private var ongoingContextStateDisposable: Disposable?
+    private var sharedAudioDevice: OngoingCallContext.AudioDevice?
     private var requestedVideoAspect: Float?
     private var reception: Int32?
     private var receptionDisposable: Disposable?
@@ -283,6 +284,7 @@ public final class PresentationCallImpl: PresentationCall {
     private var isAudioSessionActive = false
     
     private var toneRenderer: PresentationCallToneRenderer?
+    private var currentTone: PresentationCallTone?
     
     private var droppedCall = false
     private var dropCallKitCallTimer: SwiftSignalKit.Timer?
@@ -462,6 +464,10 @@ public final class PresentationCallImpl: PresentationCall {
                 }
             }
         })
+        
+        #if DEBUG
+        self.sharedAudioDevice = OngoingCallContext.AudioDevice.create()
+        #endif
         
         self.audioSessionActiveDisposable = (self.audioSessionActive.get()
         |> deliverOnMainQueue).start(next: { [weak self] value in
@@ -702,7 +708,7 @@ public final class PresentationCallImpl: PresentationCall {
 
                     let updatedConnections = connections
                     
-                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec)
+                    let ongoingContext = OngoingCallContext(account: self.context.account, callSessionManager: self.callSessionManager, callId: id, internalId: self.internalId, proxyServer: proxyServer, initialNetworkType: self.currentNetworkType, updatedNetworkType: self.updatedNetworkType, serializedData: self.serializedData, dataSaving: dataSaving, key: key, isOutgoing: sessionState.isOutgoing, video: self.videoCapturer, connections: updatedConnections, maxLayer: maxLayer, version: version, allowP2P: allowsP2P, enableTCP: self.enableTCP, enableStunMarking: self.enableStunMarking, audioSessionActive: self.audioSessionActive.get(), logName: logName, preferredVideoCodec: self.preferredVideoCodec, audioDevice: self.sharedAudioDevice)
                     self.ongoingContext = ongoingContext
                     ongoingContext.setIsMuted(self.isMutedValue)
                     if let requestedVideoAspect = self.requestedVideoAspect {
@@ -864,8 +870,12 @@ public final class PresentationCallImpl: PresentationCall {
                     break
             }
         }
-        if tone != self.toneRenderer?.tone {
-            if let tone = tone {
+        if tone != self.currentTone {
+            self.currentTone = tone
+            self.sharedAudioDevice?.setTone(tone: tone.flatMap(presentationCallToneData).flatMap { data in
+                return OngoingCallContext.Tone(samples: data, sampleRate: 44100, loopCount: tone?.loopCount ?? 1000000)
+            })
+            /*if let tone = tone {
                 if "".isEmpty {
                     let _ = tone
                 } else {
@@ -875,7 +885,7 @@ public final class PresentationCallImpl: PresentationCall {
                 }
             } else {
                 self.toneRenderer = nil
-            }
+            }*/
         }
     }
     
@@ -884,6 +894,7 @@ public final class PresentationCallImpl: PresentationCall {
             self.isAudioSessionActive = value
             self.toneRenderer?.setAudioSessionActive(value)
         }
+        self.sharedAudioDevice?.setIsAudioSessionActive(value)
     }
     
     public func answer() {

@@ -43,6 +43,28 @@
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
 #include "rtc_base/logging.h"
 
+@implementation CallAudioTone
+
+- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount {
+    self = [super init];
+    if (self != nil) {
+        _samples = samples;
+        _sampleRate = sampleRate;
+        _loopCount = loopCount;
+    }
+    return self;
+}
+
+- (std::shared_ptr<tgcalls::CallAudioTone>)asTone {
+    std::vector<int16_t> data;
+    data.resize(_samples.length / 2);
+    memcpy(data.data(), _samples.bytes, _samples.length);
+    
+    return std::make_shared<tgcalls::CallAudioTone>(std::move(data), (int)_sampleRate, (int)_loopCount);
+}
+
+@end
+
 namespace tgcalls {
 
 class SharedAudioDeviceModule {
@@ -50,7 +72,7 @@ public:
     virtual ~SharedAudioDeviceModule() = default;
     
 public:
-    virtual rtc::scoped_refptr<webrtc::AudioDeviceModule> audioDeviceModule() = 0;
+    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() = 0;
 };
 
 }
@@ -60,9 +82,17 @@ public:
     SharedAudioDeviceModuleImpl() {
         if (tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent()) {
             _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
+            _audioDeviceModule->Init();
+            if (!_audioDeviceModule->Playing()) {
+                _audioDeviceModule->InitPlayout();
+            }
         } else {
             tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
                 _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
+                _audioDeviceModule->Init();
+                if (!_audioDeviceModule->Playing()) {
+                    _audioDeviceModule->InitPlayout();
+                }
             });
         }
     }
@@ -78,12 +108,12 @@ public:
     }
     
 public:
-    virtual rtc::scoped_refptr<webrtc::AudioDeviceModule> audioDeviceModule() override {
+    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() override {
         return _audioDeviceModule;
     }
     
 private:
-    rtc::scoped_refptr<webrtc::AudioDeviceModule> _audioDeviceModule;
+    rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _audioDeviceModule;
 };
 
 @implementation SharedCallAudioDevice {
@@ -102,6 +132,12 @@ private:
 
 - (void)dealloc {
     _audioDeviceModule.reset();
+}
+
+- (void)setTone:(CallAudioTone * _Nullable)tone {
+    _audioDeviceModule->perform([tone](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
+        audioDeviceModule->audioDeviceModule()->setTone([tone asTone]);
+    });
 }
 
 - (std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>>)getAudioDeviceModule {
@@ -788,28 +824,6 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
         _finalState = finalState;
     }
     return self;
-}
-
-@end
-
-@implementation CallAudioTone
-
-- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount {
-    self = [super init];
-    if (self != nil) {
-        _samples = samples;
-        _sampleRate = sampleRate;
-        _loopCount = loopCount;
-    }
-    return self;
-}
-
-- (std::shared_ptr<tgcalls::CallAudioTone>)asTone {
-    std::vector<int16_t> data;
-    data.resize(_samples.length / 2);
-    memcpy(data.data(), _samples.bytes, _samples.length);
-    
-    return std::make_shared<tgcalls::CallAudioTone>(std::move(data), (int)_sampleRate, (int)_loopCount);
 }
 
 @end

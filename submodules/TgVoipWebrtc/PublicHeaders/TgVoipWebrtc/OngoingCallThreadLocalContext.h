@@ -11,6 +11,16 @@
 #define UIView NSView
 #endif
 
+@interface CallAudioTone : NSObject
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull samples;
+@property (nonatomic, readonly) NSInteger sampleRate;
+@property (nonatomic, readonly) NSInteger loopCount;
+
+- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount;
+
+@end
+
 @interface SharedCallAudioDevice : NSObject
 
 - (instancetype _Nonnull)init;
@@ -18,6 +28,8 @@
 + (void)setupAudioSession;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
+- (void)setTone:(CallAudioTone * _Nullable)tone;
 
 @end
 
@@ -200,16 +212,6 @@ typedef NS_ENUM(int32_t, OngoingCallDataSavingWebrtc) {
 #endif
 
 - (GroupCallDisposable * _Nonnull)addVideoOutput:(void (^_Nonnull)(CallVideoFrameData * _Nonnull))sink;
-
-@end
-
-@interface CallAudioTone : NSObject
-
-@property (nonatomic, strong, readonly) NSData * _Nonnull samples;
-@property (nonatomic, readonly) NSInteger sampleRate;
-@property (nonatomic, readonly) NSInteger loopCount;
-
-- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount;
 
 @end
 

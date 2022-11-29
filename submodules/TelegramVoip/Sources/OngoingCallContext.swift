@@ -706,6 +706,40 @@ public final class OngoingCallContext {
         }
     }
     
+    public final class Tone {
+        public let samples: Data
+        public let sampleRate: Int
+        public let loopCount: Int
+        
+        public init(samples: Data, sampleRate: Int, loopCount: Int) {
+            self.samples = samples
+            self.sampleRate = sampleRate
+            self.loopCount = loopCount
+        }
+    }
+    
+    public final class AudioDevice {
+        let impl: SharedCallAudioDevice
+        
+        public static func create() -> AudioDevice? {
+            return AudioDevice(impl: SharedCallAudioDevice())
+        }
+        
+        private init(impl: SharedCallAudioDevice) {
+            self.impl = impl
+        }
+        
+        public func setIsAudioSessionActive(_ isActive: Bool) {
+            self.impl.setManualAudioSessionIsActive(isActive)
+        }
+        
+        public func setTone(tone: Tone?) {
+            self.impl.setTone(tone.flatMap { tone in
+                CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
+            })
+        }
+    }
+    
     public static func setupAudioSession() {
         OngoingCallThreadLocalContextWebrtc.setupAudioSession()
     }
@@ -751,7 +785,7 @@ public final class OngoingCallContext {
     
     private var signalingConnectionManager: QueueLocalObject<CallSignalingConnectionManager>?
     
-    private let audioDevice: SharedCallAudioDevice?
+    private let audioDevice: AudioDevice?
     
     public static func versions(includeExperimental: Bool, includeReference: Bool) -> [(version: String, supportsVideo: Bool)] {
         #if os(iOS) && DEBUG && false
@@ -771,7 +805,7 @@ public final class OngoingCallContext {
         }
     }
 
-    public init(account: Account, callSessionManager: CallSessionManager, callId: CallId, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?) {
+    public init(account: Account, callSessionManager: CallSessionManager, callId: CallId, internalId: CallSessionInternalId, proxyServer: ProxyServerSettings?, initialNetworkType: NetworkType, updatedNetworkType: Signal<NetworkType, NoError>, serializedData: String?, dataSaving: VoiceCallDataSaving, key: Data, isOutgoing: Bool, video: OngoingCallVideoCapturer?, connections: CallSessionConnectionSet, maxLayer: Int32, version: String, allowP2P: Bool, enableTCP: Bool, enableStunMarking: Bool, audioSessionActive: Signal<Bool, NoError>, logName: String, preferredVideoCodec: String?, audioDevice: AudioDevice?) {
         let _ = setupLogs
         OngoingCallThreadLocalContext.applyServerConfig(serializedData)
         
@@ -782,12 +816,6 @@ public final class OngoingCallContext {
         self.logPath = logName.isEmpty ? "" : callLogsPath(account: self.account) + "/" + logName + ".log"
         let logPath = self.logPath
         
-        let audioDevice: SharedCallAudioDevice?
-        if !"".isEmpty {
-            audioDevice = SharedCallAudioDevice()
-        } else {
-            audioDevice = nil
-        }
         self.audioDevice = audioDevice
         
         let _ = try? FileManager.default.createDirectory(atPath: callLogsPath(account: account), withIntermediateDirectories: true, attributes: nil)
@@ -910,7 +938,7 @@ public final class OngoingCallContext {
                                 callSessionManager.sendSignalingData(internalId: internalId, data: data)
                             }
                         }
-                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "", audioDevice: audioDevice)
+                    }, videoCapturer: video?.impl, preferredVideoCodec: preferredVideoCodec, audioInputDeviceId: "", audioDevice: audioDevice?.impl)
                     
                     strongSelf.contextRef = Unmanaged.passRetained(OngoingCallThreadLocalContextHolder(context))
                     context.stateChanged = { [weak callSessionManager] state, videoState, remoteVideoState, remoteAudioState, remoteBatteryLevel, _ in
