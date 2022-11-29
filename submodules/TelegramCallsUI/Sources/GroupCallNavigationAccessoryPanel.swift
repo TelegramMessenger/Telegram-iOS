@@ -139,6 +139,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let membersDisposable = MetaDisposable()
     private let isMutedDisposable = MetaDisposable()
     private let audioLevelDisposable = MetaDisposable()
+    private var imageDisposable: Disposable?
     
     private var callState: PresentationGroupCallState?
     
@@ -233,6 +234,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.isMutedDisposable.dispose()
         self.audioLevelGeneratorTimer?.invalidate()
         self.updateTimer?.invalidate()
+        self.imageDisposable?.dispose()
+        self.audioLevelDisposable.dispose()
     }
     
     public override func didLoad() {
@@ -366,6 +369,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
             } else {
                 self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                
+                if let imageDisposable = self.imageDisposable {
+                    self.imageDisposable = nil
+                    imageDisposable.dispose()
+                }
             }
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
@@ -483,6 +491,57 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             updateAudioLevels = true
         }
+        
+        #if DEBUG
+        if data.info.isStream {
+            if self.imageDisposable == nil {
+                let engine = self.context.engine
+                let info = data.info
+                self.imageDisposable = (engine.calls.getAudioBroadcastDataSource(callId: info.id, accessHash: info.accessHash)
+                |> mapToSignal { source -> Signal<Data?, NoError> in
+                    guard let source else {
+                        return .single(nil)
+                    }
+                    
+                    let time = engine.calls.requestStreamState(dataSource: source, callId: info.id, accessHash: info.accessHash)
+                    |> map { state -> Int64? in
+                        guard let state else {
+                            return nil
+                        }
+                        return state.channels.first?.latestTimestamp
+                    }
+                    
+                    return time
+                    |> mapToSignal { latestTimestamp -> Signal<Data?, NoError> in
+                        guard let latestTimestamp else {
+                            return .single(nil)
+                        }
+                        
+                        let durationMilliseconds: Int64 = 32000
+                        let bufferOffset: Int64 = 1 * durationMilliseconds
+                        let timestampId = latestTimestamp - bufferOffset
+                        
+                        return engine.calls.getVideoBroadcastPart(dataSource: source, callId: info.id, accessHash: info.accessHash, timestampIdMilliseconds: timestampId, durationMilliseconds: durationMilliseconds, channelId: 2, quality: 0)
+                        |> mapToSignal { result -> Signal<Data?, NoError> in
+                            switch result.status {
+                            case let .data(data):
+                                return .single(data)
+                            case .notReady, .resyncNeeded, .rejoinNeeded:
+                                return .single(nil)
+                            }
+                        }
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let self, let data else {
+                        return
+                    }
+                    let _ = self
+                    let _ = data
+                })
+            }
+        }
+        #endif
         
         if let (size, leftInset, rightInset) = self.validLayout {
             self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
