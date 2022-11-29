@@ -924,6 +924,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
     private var customAnimationInProgress: Bool = false
     
     private var onlineIsVoiceChat: Bool = false
+    private var currentOnline: Bool?
     
     override var canBeSelected: Bool {
         if self.selectableControlNode != nil || self.item?.editing == true {
@@ -2464,6 +2465,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     strongSelf.cachedChatListSearchResult = chatListSearchResult
                     strongSelf.onlineIsVoiceChat = onlineIsVoiceChat
                     
+                    var animateOnline = animateOnline
+                    if let currentOnline = strongSelf.currentOnline, currentOnline == online {
+                        animateOnline = false
+                    }
+                    strongSelf.currentOnline = online
+                    
                     if let currentHiddenOffset = currentItem?.hiddenOffset, item.hiddenOffset, currentHiddenOffset != item.hiddenOffset {
                         strongSelf.supernode?.insertSubnode(strongSelf, at: 0)
                     }
@@ -2773,6 +2780,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     if let autoremoveTimeout = autoremoveTimeout {
                         let avatarTimerBadge: AvatarBadgeView
                         var avatarTimerTransition = transition
+                        if !avatarTimerTransition.isAnimated, animateOnline {
+                            avatarTimerTransition = .animated(duration: 0.3, curve: .spring)
+                        }
                         if let current = strongSelf.avatarTimerBadge {
                             avatarTimerBadge = current
                         } else {

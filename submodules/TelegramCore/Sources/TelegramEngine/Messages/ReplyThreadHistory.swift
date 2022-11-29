@@ -143,7 +143,7 @@ private class ReplyThreadHistoryContextImpl {
         }
         |> castError(FetchChannelReplyThreadMessageError.self)
         |> mapToSignal { peer -> Signal<DiscussionMessage, FetchChannelReplyThreadMessageError> in
-            guard let peer else {
+            guard let peer = peer else {
                 return .fail(.generic)
             }
             guard let inputPeer = apiInputPeer(peer) else {
@@ -613,7 +613,7 @@ func _internal_fetchChannelReplyThreadMessage(account: Account, messageId: Messa
     }
     |> castError(FetchChannelReplyThreadMessageError.self)
     |> mapToSignal { peer -> Signal<ChatReplyThreadMessage, FetchChannelReplyThreadMessageError> in
-        guard let peer else {
+        guard let peer = peer else {
             return .fail(.generic)
         }
         guard let inputPeer = apiInputPeer(peer) else {
