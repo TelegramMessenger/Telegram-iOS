@@ -295,7 +295,7 @@ func fetchMessageHistoryHole(accountPeerId: PeerId, source: FetchMessageHistoryH
             }
         }
         |> mapToSignal { (peer, hash) -> Signal<FetchMessageHistoryHoleResult?, NoError> in
-            guard let peer else {
+            guard let peer = peer else {
                 return .single(FetchMessageHistoryHoleResult(removedIndices: IndexSet(), strictRemovedIndices: IndexSet(), actualPeerId: nil, actualThreadId: nil, ids: []))
             }
             guard let inputPeer = forceApiInputPeer(peer) else {

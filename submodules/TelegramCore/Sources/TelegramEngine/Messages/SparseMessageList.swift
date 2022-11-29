@@ -807,7 +807,7 @@ public final class SparseMessageCalendar {
                 return transaction.getPeer(peerId)
             }
             |> mapToSignal { peer -> Signal<LoadResult, NoError> in
-                guard let peer else {
+                guard let peer = peer else {
                     return .single(LoadResult(messagesByDay: [:], nextOffset: nil, minMessageId: nil, minTimestamp: nil))
                 }
                 guard let inputPeer = apiInputPeer(peer) else {
