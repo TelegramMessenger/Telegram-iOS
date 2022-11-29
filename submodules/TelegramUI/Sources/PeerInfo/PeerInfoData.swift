@@ -1151,7 +1151,7 @@ func peerInfoHeaderButtons(peer: Peer?, cachedData: CachedPeerData?, isOpenedFro
             }
             
             var canReport = true
-            if channel.isVerified || channel.adminRights != nil || channel.flags.contains(.isCreator)  {
+            if channel.adminRights != nil || channel.flags.contains(.isCreator)  {
                 canReport = false
             }
             

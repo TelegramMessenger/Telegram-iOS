@@ -74,6 +74,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.alpha = self.inProgress ? 0.6 : 1.0
         }
     }
+    
+    private let appearanceTimestamp = CACurrentMediaTime()
         
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
@@ -270,7 +272,15 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
         
         let maximumWidth: CGFloat = min(430.0, layout.size.width)
         let inset: CGFloat = 24.0
