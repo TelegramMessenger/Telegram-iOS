@@ -1325,4 +1325,22 @@ public struct PresentationResourcesChat {
             return generateTintedImage(image: UIImage(bundleImageName: "Chat/Info/GeneralIcon"), color: theme.rootController.navigationBar.controlColor)
         })
     }
+    
+    public static func chatGeneralThreadIncomingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadIncomingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.incoming.accentTextColor)
+        })
+    }
+    
+    public static func chatGeneralThreadOutgoingIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadOutgoingIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.outgoing.accentTextColor)
+        })
+    }
+    
+    public static func chatGeneralThreadFreeIcon(_ theme: PresentationTheme) -> UIImage? {
+        return theme.image(PresentationResourceKey.chatGeneralThreadFreeIcon.rawValue, { theme in
+            return generateTintedImage(image: UIImage(bundleImageName: "Chat List/GeneralTopicIcon"), color: theme.chat.message.mediaOverlayControlColors.foregroundColor)
+        })
+    }
 }

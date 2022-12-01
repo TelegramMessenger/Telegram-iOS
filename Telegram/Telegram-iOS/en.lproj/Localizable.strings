@@ -8405,6 +8405,8 @@ Sorry for the inconvenience.";
 "GlobalAutodeleteSettings.AttemptDisabledGenericSelection" = "You can't enable auto-delete in this chat.";
 
 "EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";
+"StickersSearch.SearchStickersPlaceholder" = "Search Stickers";
+"GifSearch.SearchGifPlaceholder" = "Search GIFs";
 
 "MessageTimer.LargeShortSeconds_1" = "%@s";
 "MessageTimer.LargeShortSeconds_2" = "%@s";
