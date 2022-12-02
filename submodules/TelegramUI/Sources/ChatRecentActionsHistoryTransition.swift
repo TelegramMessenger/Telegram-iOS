@@ -1714,7 +1714,14 @@ struct ChatRecentActionsEntry: Comparable, Identifiable {
                 "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";*/
             
                 let authorTitle: String = author.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
-                if prevInfo.isClosed != newInfo.isClosed {
+                if prevInfo.isHidden != newInfo.isHidden {
+                    appendAttributedText(text: newInfo.isHidden ? self.presentationData.strings.Channel_AdminLog_TopicHidden(authorTitle, newInfo.info.title) : self.presentationData.strings.Channel_AdminLog_TopicUnhidden(authorTitle, newInfo.info.title), generateEntities: { index in
+                        if index == 0, let author = author {
+                            return [.TextMention(peerId: author.id)]
+                        }
+                        return []
+                    }, to: &text, entities: &entities)
+                } else if prevInfo.isClosed != newInfo.isClosed {
                     appendAttributedText(text: newInfo.isClosed ? self.presentationData.strings.Channel_AdminLog_TopicClosed(authorTitle, newInfo.info.title) : self.presentationData.strings.Channel_AdminLog_TopicReopened(authorTitle, newInfo.info.title), generateEntities: { index in
                         if index == 0, let author = author {
                             return [.TextMention(peerId: author.id)]

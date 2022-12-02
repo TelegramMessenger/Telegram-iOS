@@ -614,6 +614,7 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 }
             }
             
+            var replyMessage: Message?
             for attribute in item.message.attributes {
                 if let attribute = attribute as? InlineBotMessageAttribute {
                     var inlineBotNameString: String?
@@ -634,47 +635,46 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                     }
                 }
                 
-                if let replyAttribute = attribute as? ReplyMessageAttribute, let replyMessage = item.message.associatedMessages[replyAttribute.messageId] {
-                    var hasReply = true
-                    
-                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
-                        hasReply = false
-                    }
-                    
-                    if case .peer = item.chatLocation, replyMessage.threadId != nil, case let .peer(peerId) = item.chatLocation, peerId == replyMessage.id.peerId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum) {
-                        if let threadId = item.message.threadId, Int64(replyMessage.id.id) == threadId {
-                            hasReply = false
-                        }
-                        threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
-                            presentationData: item.presentationData,
-                            strings: item.presentationData.strings,
-                            context: item.context,
-                            controllerInteraction: item.controllerInteraction,
-                            type: .standalone,
-                            message: replyMessage,
-                            parentMessage: item.message,
-                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
-                            animationCache: item.controllerInteraction.presentationContext.animationCache,
-                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                        ))
-                    }
-                    
-                    if hasReply {
-                        replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
-                            presentationData: item.presentationData,
-                            strings: item.presentationData.strings,
-                            context: item.context,
-                            type: .standalone,
-                            message: replyMessage,
-                            parentMessage: item.message,
-                            constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
-                            animationCache: item.controllerInteraction.presentationContext.animationCache,
-                            animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
-                        ))
-                    }
+              
+                if let replyAttribute = attribute as? ReplyMessageAttribute {
+                    replyMessage = item.message.associatedMessages[replyAttribute.messageId]
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
+            }
+            
+            var hasReply = replyMessage != nil
+            if case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+                if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
+                    hasReply = false
+                }
+                    
+                threadInfoApply = makeThreadInfoLayout(ChatMessageThreadInfoNode.Arguments(
+                    presentationData: item.presentationData,
+                    strings: item.presentationData.strings,
+                    context: item.context,
+                    controllerInteraction: item.controllerInteraction,
+                    type: .standalone,
+                    threadId: item.message.threadId ?? 1,
+                    parentMessage: item.message,
+                    constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                    animationCache: item.controllerInteraction.presentationContext.animationCache,
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                ))
+            }
+            
+            if let replyMessage = replyMessage, hasReply {
+                replyInfoApply = makeReplyInfoLayout(ChatMessageReplyInfoNode.Arguments(
+                    presentationData: item.presentationData,
+                    strings: item.presentationData.strings,
+                    context: item.context,
+                    type: .standalone,
+                    message: replyMessage,
+                    parentMessage: item.message,
+                    constrainedSize: CGSize(width: availableWidth, height: CGFloat.greatestFiniteMagnitude),
+                    animationCache: item.controllerInteraction.presentationContext.animationCache,
+                    animationRenderer: item.controllerInteraction.presentationContext.animationRenderer
+                ))
             }
             
             if item.message.id.peerId != item.context.account.peerId && !item.message.id.peerId.isReplies {

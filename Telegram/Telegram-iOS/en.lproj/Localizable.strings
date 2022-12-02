@@ -8261,6 +8261,8 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
 "Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
 "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";
+"Channel.AdminLog.TopicUnhidden" = "%1$@ unhid topic %2$@";
+"Channel.AdminLog.TopicHidden" = "%1$@ hid topic %2$@";
 
 "Attachment.Pasteboard" = "Clipboard";
 "Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
@@ -8405,6 +8407,8 @@ Sorry for the inconvenience.";
 "GlobalAutodeleteSettings.AttemptDisabledGenericSelection" = "You can't enable auto-delete in this chat.";
 
 "EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";
+"StickersSearch.SearchStickersPlaceholder" = "Search Stickers";
+"GifSearch.SearchGifPlaceholder" = "Search GIFs";
 
 "MessageTimer.LargeShortSeconds_1" = "%@s";
 "MessageTimer.LargeShortSeconds_2" = "%@s";

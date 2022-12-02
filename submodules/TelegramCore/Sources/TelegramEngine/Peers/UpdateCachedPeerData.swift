@@ -267,7 +267,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                         return previous.withUpdatedAbout(userFullAbout).withUpdatedBotInfo(botInfo).withUpdatedCommonGroupCount(userFullCommonChatsCount).withUpdatedIsBlocked(isBlocked).withUpdatedVoiceCallsAvailable(voiceCallsAvailable).withUpdatedVideoCallsAvailable(videoCallsAvailable).withUpdatedCallsPrivate(callsPrivate).withUpdatedCanPinMessages(canPinMessages).withUpdatedPeerStatusSettings(peerStatusSettings).withUpdatedPinnedMessageId(pinnedMessageId).withUpdatedHasScheduledMessages(hasScheduledMessages)
                                             .withUpdatedAutoremoveTimeout(autoremoveTimeout)
                                             .withUpdatedThemeEmoticon(userFullThemeEmoticon)
-                                            .withUpdatedPhoto(photo)
+                                            .withUpdatedPhoto(.known(photo))
                                             .withUpdatedPremiumGiftOptions(premiumGiftOptions)
                                             .withUpdatedVoiceMessagesAvailable(voiceMessagesAvailable)
                                 }

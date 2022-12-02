@@ -50,6 +50,34 @@ public enum CachedPeerAutoremoveTimeout: Equatable, PostboxCoding {
     }
 }
 
+public enum CachedPeerProfilePhoto: Equatable, PostboxCoding {
+    case unknown
+    case known(TelegramMediaImage?)
+    
+    public init(decoder: PostboxDecoder) {
+        switch decoder.decodeInt32ForKey("_v", orElse: 0) {
+        case 1:
+            self = .known(decoder.decodeObjectForKey("v", decoder: { TelegramMediaImage(decoder: $0) }) as? TelegramMediaImage)
+        default:
+            self = .unknown
+        }
+    }
+    
+    public func encode(_ encoder: PostboxEncoder) {
+        switch self {
+        case .unknown:
+            encoder.encodeInt32(0, forKey: "_v")
+        case let .known(value):
+            encoder.encodeInt32(1, forKey: "_v")
+            if let value = value {
+                encoder.encodeObject(value, forKey: "v")
+            } else {
+                encoder.encodeNil(forKey: "v")
+            }
+        }
+    }
+}
+
 public struct CachedPremiumGiftOption: Equatable, PostboxCoding {
     public let months: Int32
     public let currency: String
@@ -123,7 +151,7 @@ public final class CachedUserData: CachedPeerData {
     public let hasScheduledMessages: Bool
     public let autoremoveTimeout: CachedPeerAutoremoveTimeout
     public let themeEmoticon: String?
-    public let photo: TelegramMediaImage?
+    public let photo: CachedPeerProfilePhoto
     public let premiumGiftOptions: [CachedPremiumGiftOption]
     public let voiceMessagesAvailable: Bool
     
@@ -145,14 +173,14 @@ public final class CachedUserData: CachedPeerData {
         self.hasScheduledMessages = false
         self.autoremoveTimeout = .unknown
         self.themeEmoticon = nil
-        self.photo = nil
+        self.photo = .unknown
         self.premiumGiftOptions = []
         self.voiceMessagesAvailable = true
         self.peerIds = Set()
         self.messageIds = Set()
     }
     
-    public init(about: String?, botInfo: BotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: TelegramMediaImage?, premiumGiftOptions: [CachedPremiumGiftOption], voiceMessagesAvailable: Bool) {
+    public init(about: String?, botInfo: BotInfo?, peerStatusSettings: PeerStatusSettings?, pinnedMessageId: MessageId?, isBlocked: Bool, commonGroupCount: Int32, voiceCallsAvailable: Bool, videoCallsAvailable: Bool, callsPrivate: Bool, canPinMessages: Bool, hasScheduledMessages: Bool, autoremoveTimeout: CachedPeerAutoremoveTimeout, themeEmoticon: String?, photo: CachedPeerProfilePhoto, premiumGiftOptions: [CachedPremiumGiftOption], voiceMessagesAvailable: Bool) {
         self.about = about
         self.botInfo = botInfo
         self.peerStatusSettings = peerStatusSettings
@@ -204,12 +232,8 @@ public final class CachedUserData: CachedPeerData {
         self.autoremoveTimeout = decoder.decodeObjectForKey("artv", decoder: CachedPeerAutoremoveTimeout.init(decoder:)) as? CachedPeerAutoremoveTimeout ?? .unknown
         self.themeEmoticon = decoder.decodeOptionalStringForKey("te")
         
-        if let photo = decoder.decodeObjectForKey("ph", decoder: { TelegramMediaImage(decoder: $0) }) as? TelegramMediaImage {
-            self.photo = photo
-        } else {
-            self.photo = nil
-        }
-                
+        self.photo = decoder.decodeObjectForKey("phv", decoder: CachedPeerProfilePhoto.init(decoder:)) as? CachedPeerProfilePhoto ?? .unknown
+        
         self.premiumGiftOptions = decoder.decodeObjectArrayWithDecoderForKey("pgo") as [CachedPremiumGiftOption]
         self.voiceMessagesAvailable = decoder.decodeInt32ForKey("vma", orElse: 0) != 0
         
@@ -261,12 +285,8 @@ public final class CachedUserData: CachedPeerData {
             encoder.encodeNil(forKey: "te")
         }
         
-        if let photo = self.photo {
-            encoder.encodeObject(photo, forKey: "ph")
-        } else {
-            encoder.encodeNil(forKey: "ph")
-        }
-        
+        encoder.encodeObject(self.photo, forKey: "phv")
+
         encoder.encodeObjectArray(self.premiumGiftOptions, forKey: "pgo")
         encoder.encodeInt32(self.voiceMessagesAvailable ? 1 : 0, forKey: "vma")
     }
@@ -338,7 +358,7 @@ public final class CachedUserData: CachedPeerData {
         return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, voiceCallsAvailable: self.voiceCallsAvailable, videoCallsAvailable: self.videoCallsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, themeEmoticon: themeEmoticon, photo: self.photo, premiumGiftOptions: self.premiumGiftOptions, voiceMessagesAvailable: self.voiceMessagesAvailable)
     }
     
-    public func withUpdatedPhoto(_ photo: TelegramMediaImage?) -> CachedUserData {
+    public func withUpdatedPhoto(_ photo: CachedPeerProfilePhoto) -> CachedUserData {
         return CachedUserData(about: self.about, botInfo: self.botInfo, peerStatusSettings: self.peerStatusSettings, pinnedMessageId: self.pinnedMessageId, isBlocked: self.isBlocked, commonGroupCount: self.commonGroupCount, voiceCallsAvailable: self.voiceCallsAvailable, videoCallsAvailable: self.videoCallsAvailable, callsPrivate: self.callsPrivate, canPinMessages: self.canPinMessages, hasScheduledMessages: self.hasScheduledMessages, autoremoveTimeout: self.autoremoveTimeout, themeEmoticon: self.themeEmoticon, photo: photo, premiumGiftOptions: self.premiumGiftOptions, voiceMessagesAvailable: self.voiceMessagesAvailable)
     }
     

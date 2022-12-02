@@ -531,8 +531,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     return
                 }
                 let cachedPeerData = peerView.cachedData
-                if let cachedPeerData = cachedPeerData as? CachedUserData {
-                    if let photo = cachedPeerData.photo, let video = photo.videoRepresentations.last, let peerReference = PeerReference(peer) {
+                if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
+                    if let photo = maybePhoto, let video = photo.videoRepresentations.last, let peerReference = PeerReference(peer) {
                         let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                         let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
                         let videoContent = NativeVideoContent(id: .profileVideo(videoId, "\(Int32.random(in: 0 ..< Int32.max))"), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)

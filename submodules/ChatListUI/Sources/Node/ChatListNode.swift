@@ -2299,7 +2299,7 @@ public final class ChatListNode: ListView {
                             isEmpty = true
                             loop1: for entry in transition.chatListView.filteredEntries {
                                 switch entry {
-                                case .GroupReferenceEntry, .HeaderEntry, .HoleEntry:
+                                case .HeaderEntry, .HoleEntry:
                                     break
                                 default:
                                     if case .ArchiveIntro = entry {
