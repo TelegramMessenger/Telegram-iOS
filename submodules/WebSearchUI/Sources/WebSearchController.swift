@@ -413,11 +413,7 @@ public final class WebSearchController: ViewController {
         }
     }
     
-    private func updateSearchQuery(_ query: String) {
-        if !query.isEmpty {
-            let _ = addRecentWebSearchQuery(engine: self.context.engine, string: query).start()
-        }
-        
+    private func updateSearchQuery(_ query: String) {        
         let scope: Signal<WebSearchScope?, NoError>
         switch self.mode {
             case .media:

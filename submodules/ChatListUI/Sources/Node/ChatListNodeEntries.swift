@@ -612,7 +612,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                         autoremoveTimeout: item.item.autoremoveTimeout,
                         forumTopicData: item.item.forumTopicData,
                         topForumTopicItems: item.item.topForumTopicItems,
-                        revealed:  threadId == 1 && (state.hiddenItemShouldBeTemporaryRevealed || state.editing)
+                        revealed: state.hiddenItemShouldBeTemporaryRevealed || state.editing
                     )))
                     if pinningIndex != 0 {
                         pinningIndex -= 1
@@ -632,7 +632,7 @@ func chatListNodeEntriesForView(_ view: EngineChatList, state: ChatListNodeState
                     message: groupReference.topMessage,
                     editing: state.editing,
                     unreadCount: groupReference.unreadCount,
-                    revealed: state.hiddenItemShouldBeTemporaryRevealed,
+                    revealed: state.hiddenItemShouldBeTemporaryRevealed || view.items.isEmpty,
                     hiddenByDefault: hideArchivedFolderByDefault
                 ))
                 if pinningIndex != 0 {

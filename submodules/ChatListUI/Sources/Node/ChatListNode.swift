@@ -95,6 +95,8 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
+    var isSearchMode: Bool = false
+    
     var isInlineMode: Bool = false
     var inlineNavigationLocation: ChatListHighlightedLocation?
     
@@ -2297,7 +2299,7 @@ public final class ChatListNode: ListView {
                             isEmpty = true
                             loop1: for entry in transition.chatListView.filteredEntries {
                                 switch entry {
-                                case .GroupReferenceEntry, .HeaderEntry, .HoleEntry:
+                                case .HeaderEntry, .HoleEntry:
                                     break
                                 default:
                                     if case .ArchiveIntro = entry {

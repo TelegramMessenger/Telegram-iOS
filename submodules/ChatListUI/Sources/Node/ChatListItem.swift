@@ -1295,8 +1295,8 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         return
                     }
                     let cachedPeerData = peerView.cachedData
-                    if let cachedPeerData = cachedPeerData as? CachedUserData {
-                        if let photo = cachedPeerData.photo, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
+                    if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
+                        if let photo = maybePhoto, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
                             let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
                             let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
@@ -1590,6 +1590,15 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                 }
             }
             
+            let useChatListLayout: Bool
+            if case .chatList = item.chatListLocation {
+                useChatListLayout = true
+            } else if displayAsMessage {
+                useChatListLayout = true
+            } else {
+                useChatListLayout = false
+            }
+            
             let theme = item.presentationData.theme.chatList
             
             var updatedTheme: PresentationTheme?
@@ -1653,7 +1662,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
             let avatarLeftInset: CGFloat
             if item.interaction.isInlineMode {
                 avatarLeftInset = 12.0
-            } else if case .forum = item.index {
+            } else if !useChatListLayout {
                 avatarLeftInset = 50.0
             } else {
                 avatarLeftInset = 18.0 + avatarDiameter
@@ -2501,7 +2510,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var mainContentBoundsOffset: CGFloat
                     var mainContentAlpha: CGFloat = 1.0
                     
-                    if case .chatList = item.chatListLocation {
+                    if useChatListLayout {
                         mainContentFrame = CGRect(origin: CGPoint(x: leftInset - 2.0, y: 0.0), size: CGSize(width: layout.contentSize.width, height: layout.contentSize.height))
                         mainContentBoundsOffset = mainContentFrame.origin.x
                         
@@ -2694,7 +2703,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         }
                     }
                     
-                    if let threadInfo = threadInfo {
+                    if let threadInfo = threadInfo, !displayAsMessage {
                         let avatarIconView: ComponentHostView<Empty>
                         if let current = strongSelf.avatarIconView {
                             avatarIconView = current
@@ -2742,7 +2751,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         avatarIconView.removeFromSuperview()
                     }
                     
-                    if case .forum = item.index {
+                    if !useChatListLayout {
                         strongSelf.avatarContainerNode.isHidden = true
                     } else {
                         strongSelf.avatarContainerNode.isHidden = false

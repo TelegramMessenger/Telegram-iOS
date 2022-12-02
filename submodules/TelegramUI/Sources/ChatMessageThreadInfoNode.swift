@@ -183,7 +183,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
         let context: AccountContext
         let controllerInteraction: ChatControllerInteraction
         let type: ChatMessageThreadInfoType
-        let message: Message
+        let threadId: Int64
         let parentMessage: Message
         let constrainedSize: CGSize
         let animationCache: AnimationCache?
@@ -195,7 +195,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             context: AccountContext,
             controllerInteraction: ChatControllerInteraction,
             type: ChatMessageThreadInfoType,
-            message: Message,
+            threadId: Int64,
             parentMessage: Message,
             constrainedSize: CGSize,
             animationCache: AnimationCache?,
@@ -206,7 +206,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             self.context = context
             self.controllerInteraction = controllerInteraction
             self.type = type
-            self.message = message
+            self.threadId = threadId
             self.parentMessage = parentMessage
             self.constrainedSize = constrainedSize
             self.animationCache = animationCache
@@ -318,7 +318,6 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             var topicIconId: Int64?
             var topicIconColor: Int32 = 0
             if let _ = arguments.parentMessage.threadId, let channel = arguments.parentMessage.peers[arguments.parentMessage.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), let threadInfo = arguments.parentMessage.associatedThreadInfo {
-                
                 topicTitle = threadInfo.title
                 topicIconId = threadInfo.icon
                 topicIconColor = threadInfo.iconColor
@@ -327,9 +326,10 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
             let backgroundColor: UIColor
             let textColor: UIColor
             let arrowIcon: UIImage?
+            let generalThreadIcon: UIImage?
             switch arguments.type {
             case let .bubble(incoming):
-                if topicIconId == nil, topicIconColor != 0, incoming {
+                if topicIconId == nil, topicIconColor != 0, incoming, arguments.threadId != 1 {
                     let colors = topicIconColors(for: topicIconColor)
                     backgroundColor = UIColor(rgb: colors.0.last ?? 0x000000)
                     textColor = UIColor(rgb: colors.1.first ?? 0x000000)
@@ -345,13 +345,15 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                         arrowIcon = PresentationResourcesChat.chatBubbleArrowOutgoingImage(arguments.presentationData.theme.theme)
                     }
                 }
+                generalThreadIcon = incoming ? PresentationResourcesChat.chatGeneralThreadIncomingIcon(arguments.presentationData.theme.theme) : PresentationResourcesChat.chatGeneralThreadOutgoingIcon(arguments.presentationData.theme.theme)
             case .standalone:
-                textColor = .white
+                textColor = arguments.presentationData.theme.theme.chat.message.mediaOverlayControlColors.foregroundColor
                 backgroundColor = .white
                 arrowIcon = PresentationResourcesChat.chatBubbleArrowFreeImage(arguments.presentationData.theme.theme)
+                generalThreadIcon = PresentationResourcesChat.chatGeneralThreadFreeIcon(arguments.presentationData.theme.theme)
             }
             
-            let placeholderColor: UIColor = arguments.message.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
+            let placeholderColor: UIColor = arguments.parentMessage.effectivelyIncoming(arguments.context.account.peerId) ? arguments.presentationData.theme.theme.chat.message.incoming.mediaPlaceholderColor : arguments.presentationData.theme.theme.chat.message.outgoing.mediaPlaceholderColor
             
             let text = NSAttributedString(string: topicTitle, font: textFont, textColor: textColor)
                          
@@ -390,9 +392,7 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                 }
                 
                 node.pressed = {
-                    if let threadId = arguments.message.threadId {
-                        arguments.controllerInteraction.navigateToThreadMessage(arguments.parentMessage.id.peerId, threadId, arguments.parentMessage.id)
-                    }
+                    arguments.controllerInteraction.navigateToThreadMessage(arguments.parentMessage.id.peerId, arguments.threadId, arguments.parentMessage.id)
                 }
                                 
                 if node.lineRects != lineRects {
@@ -480,7 +480,9 @@ class ChatMessageThreadInfoNode: ASDisplayNode {
                 }
                 
                 let titleTopicIconContent: EmojiStatusComponent.Content
-                if let fileId = topicIconId, fileId != 0 {
+                if arguments.threadId == 1 {
+                    titleTopicIconContent = .image(image: generalThreadIcon)
+                } else if let fileId = topicIconId, fileId != 0 {
                     titleTopicIconContent = .animation(content: .customEmoji(fileId: fileId), size: CGSize(width: 36.0, height: 36.0), placeholderColor: arguments.presentationData.theme.theme.list.mediaPlaceholderColor, themeColor: arguments.presentationData.theme.theme.list.itemAccentColor, loopMode: .count(1))
                 } else {
                     titleTopicIconContent = .topic(title: String(topicTitle.prefix(1)), color: topicIconColor, size: CGSize(width: 22.0, height: 22.0))

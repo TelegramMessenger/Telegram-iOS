@@ -290,6 +290,9 @@ public enum PresentationResourceKey: Int32 {
     case chatKeyboardActionButtonWebAppIcon
     
     case chatGeneralThreadIcon
+    case chatGeneralThreadIncomingIcon
+    case chatGeneralThreadOutgoingIcon
+    case chatGeneralThreadFreeIcon
     
     case uploadToneIcon
 }

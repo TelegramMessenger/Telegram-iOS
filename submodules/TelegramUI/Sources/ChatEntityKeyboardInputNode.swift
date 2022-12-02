@@ -501,6 +501,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 }
             }
             
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             return EmojiPagerContentComponent(
                 id: "stickers",
                 context: context,
@@ -537,7 +538,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
-                displaySearchWithPlaceholder: "Search Stickers",
+                displaySearchWithPlaceholder: presentationData.strings.StickersSearch_SearchStickersPlaceholder,
                 searchInitiallyHidden: false,
                 searchIsPlaceholderOnly: true,
                 emptySearchResults: nil,
@@ -748,6 +749,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 return !savedGifs.isEmpty
             }
             
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
             let gifItems: Signal<EntityKeyboardGifContent, NoError>
             switch subject {
             case .recent:
@@ -769,7 +771,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             items: items,
                             isLoading: false,
                             loadMoreToken: nil,
-                            displaySearchWithPlaceholder: "Search GIFs",
+                            displaySearchWithPlaceholder: presentationData.strings.GifSearch_SearchGifPlaceholder,
                             searchInitiallyHidden: false
                         )
                     )

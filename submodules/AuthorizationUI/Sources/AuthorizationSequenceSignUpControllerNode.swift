@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
 import Markdown
@@ -39,6 +40,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     private let proceedNode: SolidRoundedButtonNode
     
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
+    
+    private let appearanceTimestamp = CACurrentMediaTime()
     
     var currentName: (String, String) {
         return (self.firstNameField.textField.text ?? "", self.lastNameField.textField.text ?? "")
@@ -209,7 +212,15 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
         
         let maximumWidth: CGFloat = min(430.0, layout.size.width)
         
