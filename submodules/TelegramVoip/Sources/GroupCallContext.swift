@@ -415,6 +415,7 @@ public final class OngoingGroupCallContext {
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
+        let audioDevice: SharedCallAudioDevice?
         
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
@@ -432,6 +433,12 @@ public final class OngoingGroupCallContext {
         
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String, audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, preferX264: Bool, logPath: String) {
             self.queue = queue
+            
+            #if DEBUG
+            self.audioDevice = SharedCallAudioDevice(disableRecording: disableAudioInput)
+            #else
+            self.audioDevice = nil
+            #endif
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
@@ -538,7 +545,8 @@ public final class OngoingGroupCallContext {
                 enableNoiseSuppression: enableNoiseSuppression,
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
-                logPath: logPath
+                logPath: logPath,
+                audioDevice: self.audioDevice
             )
             
             let queue = self.queue
@@ -592,6 +600,7 @@ public final class OngoingGroupCallContext {
                     return
                 }
                 #if os(iOS)
+                self.audioDevice?.setManualAudioSessionIsActive(isActive)
                 self.context.setManualAudioSessionIsActive(isActive)
                 #endif
             }))
@@ -898,7 +907,7 @@ public final class OngoingGroupCallContext {
         }
         
         func setTone(tone: Tone?) {
-            self.context.setTone(tone.flatMap { tone in
+            self.audioDevice?.setTone(tone.flatMap { tone in
                 CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
             })
         }

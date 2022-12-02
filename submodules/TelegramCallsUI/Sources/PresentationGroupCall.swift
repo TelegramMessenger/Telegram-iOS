@@ -2484,11 +2484,19 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     }
 
     private func beginTone(tone: PresentationCallTone) {
+        if self.isStream {
+            switch tone {
+            case .groupJoined, .groupLeft:
+                return
+            default:
+                break
+            }
+        }
         if let toneData = presentationCallToneData(tone) {
             self.genericCallContext?.setTone(tone: OngoingGroupCallContext.Tone(
                 samples: toneData,
                 sampleRate: 44100,
-                loopCount: 1000
+                loopCount: tone.loopCount ?? 100000
             ))
         }
         
