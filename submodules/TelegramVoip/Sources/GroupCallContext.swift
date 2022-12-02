@@ -434,11 +434,12 @@ public final class OngoingGroupCallContext {
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String, audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, preferX264: Bool, logPath: String) {
             self.queue = queue
             
-            #if DEBUG
+            self.audioDevice = nil
+            /*#if DEBUG
             self.audioDevice = SharedCallAudioDevice(disableRecording: disableAudioInput)
             #else
             self.audioDevice = nil
-            #endif
+            #endif*/
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
@@ -907,9 +908,14 @@ public final class OngoingGroupCallContext {
         }
         
         func setTone(tone: Tone?) {
-            self.audioDevice?.setTone(tone.flatMap { tone in
+            let mappedTone = tone.flatMap { tone in
                 CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
-            })
+            }
+            if let audioDevice = self.audioDevice {
+                audioDevice.setTone(mappedTone)
+            } else {
+                self.context.setTone(mappedTone)
+            }
         }
     }
     
