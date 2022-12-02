@@ -1186,7 +1186,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     let iconFrame = CGRect(origin: CGPoint(x: params.leftInset + leftOffset + 12.0, y: 8.0), size: iconSize)
                     transition.updateFrame(node: strongSelf.extensionIconNode, frame: iconFrame)
                     strongSelf.extensionIconNode.image = extensionIconImage
-                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floor((iconFrame.width - extensionTextLayout.size.width) / 2.0), y: iconFrame.minY + 7.0 + floor((iconFrame.height - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
+                    transition.updateFrame(node: strongSelf.extensionIconText, frame: CGRect(origin: CGPoint(x: iconFrame.minX + floorToScreenPixels((iconFrame.width - extensionTextLayout.size.width) / 2.0), y: iconFrame.minY + 7.0 + floorToScreenPixels((iconFrame.height - extensionTextLayout.size.height) / 2.0)), size: extensionTextLayout.size))
                     
                     transition.updateFrame(node: strongSelf.iconStatusNode, frame: iconFrame)
                     
@@ -1235,7 +1235,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
                     }
 
                     if let downloadStatusIconNode = strongSelf.downloadStatusIconNode {
-                        transition.updateFrame(node: downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floor((strongSelf.descriptionNode.frame.height - 18.0) / 2.0)), size: CGSize(width: 18.0, height: 18.0)))
+                        transition.updateFrame(node: downloadStatusIconNode, frame: CGRect(origin: CGPoint(x: leftOffset + leftInset - 3.0, y: strongSelf.descriptionNode.frame.minY + floorToScreenPixels((strongSelf.descriptionNode.frame.height - 18.0) / 2.0) + UIScreenPixel), size: CGSize(width: 18.0, height: 18.0)))
                     }
                     
                     if let updatedFetchControls = updatedFetchControls {
@@ -1280,10 +1280,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
                         let lineDiameter: CGFloat = 8.0
 
                         let titleFrame = strongSelf.titleNode.frame
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floor((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: titleFrame.minX, y: titleFrame.minY + floorToScreenPixels((titleFrame.height - lineDiameter) / 2.0)), width: titleLineWidth, diameter: lineDiameter))
                         
                         let descriptionFrame = strongSelf.descriptionNode.frame
-                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: descriptionFrame.minX, y: descriptionFrame.minY + floor((descriptionFrame.height - lineDiameter) / 2.0)), width: descriptionLineWidth, diameter: lineDiameter))
+                        shapes.append(.roundedRectLine(startPoint: CGPoint(x: descriptionFrame.minX, y: descriptionFrame.minY + floorToScreenPixels((descriptionFrame.height - lineDiameter) / 2.0)), width: descriptionLineWidth, diameter: lineDiameter))
                         
                         if let media = selectedMedia as? TelegramMediaFile, media.isInstantVideo {
                             shapes.append(.circle(iconFrame))
@@ -1453,7 +1453,7 @@ public final class ListMessageFileItemNode: ListMessageNode {
             
             switch maybeFetchStatus {
                 case .Fetching(_, let progress), .Paused(let progress):
-                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floor((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
+                    let progressFrame = CGRect(x: self.currentLeftOffset + leftInset + 65.0, y: size.height - 3.0, width: floorToScreenPixels((size.width - 65.0 - leftInset - rightInset)), height: 3.0)
                     let linearProgressNode: LinearProgressNode
                     if let current = self.linearProgressNode {
                         linearProgressNode = current
@@ -1543,10 +1543,10 @@ public final class ListMessageFileItemNode: ListMessageNode {
             alphaTransition.updateAlpha(node: self.descriptionNode, alpha: 1.0)
         }
         
-        let descriptionFont = Font.with(size: floor(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
+        let descriptionFont = Font.with(size: floorToScreenPixels(item.presentationData.fontSize.baseDisplaySize * 13.0 / 17.0), design: .regular, weight: .regular, traits: [.monospacedNumbers])
         self.descriptionProgressNode.attributedText = NSAttributedString(string: downloadingString ?? "", font: descriptionFont, textColor: item.presentationData.theme.theme.list.itemSecondaryTextColor)
         let descriptionSize = self.descriptionProgressNode.updateLayout(CGSize(width: size.width - 14.0, height: size.height))
-        transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: self.descriptionNode.frame.origin, size: descriptionSize))
+        transition.updateFrame(node: self.descriptionProgressNode, frame: CGRect(origin: CGPoint(x: self.descriptionNode.frame.minX, y: self.descriptionNode.frame.minY + floorToScreenPixels((self.descriptionNode.bounds.height - descriptionSize.height) / 2.0)), size: descriptionSize))
     }
     
     public func activateMedia() {
