@@ -637,7 +637,10 @@ class ChatMessageStickerItemNode: ChatMessageItemView {
                 
               
                 if let replyAttribute = attribute as? ReplyMessageAttribute {
-                    replyMessage = item.message.associatedMessages[replyAttribute.messageId]
+                    if case let .replyThread(replyThreadMessage) = item.chatLocation, replyThreadMessage.messageId == replyAttribute.messageId {
+                    } else {
+                        replyMessage = item.message.associatedMessages[replyAttribute.messageId]
+                    }
                 } else if let attribute = attribute as? ReplyMarkupMessageAttribute, attribute.flags.contains(.inline), !attribute.rows.isEmpty {
                     replyMarkup = attribute
                 }
