@@ -8261,14 +8261,16 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
 "Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
 "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";
+"Channel.AdminLog.TopicUnhidden" = "%1$@ unhid topic %2$@";
+"Channel.AdminLog.TopicHidden" = "%1$@ hid topic %2$@";
 
 "Attachment.Pasteboard" = "Clipboard";
 "Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
 
 "Undo.DeletedTopic" = "Topic Deleted";
 
-"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than **%@** thread to the top. Unpin some that are currently pinned.";
-"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than **%@** threads to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
 
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
@@ -8299,8 +8301,8 @@ Sorry for the inconvenience.";
 
 "Notification.ForumTopicHidden" = "Topic hidden";
 "Notification.ForumTopicUnhidden" = "Topic unhidden";
-"Notification.ForumTopicHiddenAuthor" = "%1$@ hid topic";
-"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid topic";
+"Notification.ForumTopicHiddenAuthor" = "%1$@ hid the topic";
+"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid the topic";
 "Notification.OverviewTopicHidden" = "%1$@ hid %2$@ %3$@";
 "Notification.OverviewTopicUnhidden" = "%1$@ unhid %2$@ %3$@";
 
@@ -8405,6 +8407,8 @@ Sorry for the inconvenience.";
 "GlobalAutodeleteSettings.AttemptDisabledGenericSelection" = "You can't enable auto-delete in this chat.";
 
 "EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";
+"StickersSearch.SearchStickersPlaceholder" = "Search Stickers";
+"GifSearch.SearchGifPlaceholder" = "Search GIFs";
 
 "MessageTimer.LargeShortSeconds_1" = "%@s";
 "MessageTimer.LargeShortSeconds_2" = "%@s";

@@ -1737,6 +1737,9 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             if replyMessage != nil {
                 displayHeader = true
             }
+            if !displayHeader, case .peer = item.chatLocation, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+                displayHeader = true
+            }
         }
         
         let firstNodeTopPosition: ChatMessageBubbleRelativePosition
@@ -1963,8 +1966,8 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
             }
             
             var hasReply = replyMessage != nil
-            if !isInstantVideo, let replyMessage = replyMessage, replyMessage.threadId != nil, case let .peer(peerId) = item.chatLocation, peerId == replyMessage.id.peerId, let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
-                if let threadId = item.message.threadId, Int64(replyMessage.id.id) == threadId {
+            if !isInstantVideo, case let .peer(peerId) = item.chatLocation, (peerId == replyMessage?.id.peerId || item.message.threadId == 1), let channel = item.message.peers[item.message.id.peerId] as? TelegramChannel, channel.flags.contains(.isForum), item.message.associatedThreadInfo != nil {
+                if let threadId = item.message.threadId, let replyMessage = replyMessage, Int64(replyMessage.id.id) == threadId {
                     hasReply = false
                 }
                     
@@ -1980,7 +1983,7 @@ class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewItemNode
                         context: item.context,
                         controllerInteraction: item.controllerInteraction,
                         type: .bubble(incoming: incoming),
-                        message: replyMessage,
+                        threadId: item.message.threadId ?? 1,
                         parentMessage: item.message,
                         constrainedSize: CGSize(width: maximumNodeWidth - layoutConstants.text.bubbleInsets.left - layoutConstants.text.bubbleInsets.right, height: CGFloat.greatestFiniteMagnitude),
                         animationCache: item.controllerInteraction.presentationContext.animationCache,

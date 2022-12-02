@@ -43,6 +43,28 @@
 #import "platform/darwin/TGRTCCVPixelBuffer.h"
 #include "rtc_base/logging.h"
 
+@implementation CallAudioTone
+
+- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount {
+    self = [super init];
+    if (self != nil) {
+        _samples = samples;
+        _sampleRate = sampleRate;
+        _loopCount = loopCount;
+    }
+    return self;
+}
+
+- (std::shared_ptr<tgcalls::CallAudioTone>)asTone {
+    std::vector<int16_t> data;
+    data.resize(_samples.length / 2);
+    memcpy(data.data(), _samples.bytes, _samples.length);
+    
+    return std::make_shared<tgcalls::CallAudioTone>(std::move(data), (int)_sampleRate, (int)_loopCount);
+}
+
+@end
+
 namespace tgcalls {
 
 class SharedAudioDeviceModule {
@@ -50,51 +72,67 @@ public:
     virtual ~SharedAudioDeviceModule() = default;
     
 public:
-    virtual rtc::scoped_refptr<webrtc::AudioDeviceModule> audioDeviceModule() = 0;
+    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() = 0;
+    virtual void start() = 0;
 };
 
 }
 
 class SharedAudioDeviceModuleImpl: public tgcalls::SharedAudioDeviceModule {
 public:
-    SharedAudioDeviceModuleImpl() {
-        if (tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent()) {
-            _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
-        } else {
-            tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
-                _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
-            });
-        }
+    SharedAudioDeviceModuleImpl(bool disableAudioInput) {
+        RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
+        _audioDeviceModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, disableAudioInput ? 2 : 1);
     }
     
     virtual ~SharedAudioDeviceModuleImpl() override {
         if (tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent()) {
+            if (_audioDeviceModule->Playing()) {
+                _audioDeviceModule->StopPlayout();
+                _audioDeviceModule->StopRecording();
+            }
             _audioDeviceModule = nullptr;
         } else {
             tgcalls::StaticThreads::getThreads()->getWorkerThread()->BlockingCall([&]() {
+                if (_audioDeviceModule->Playing()) {
+                    _audioDeviceModule->StopPlayout();
+                    _audioDeviceModule->StopRecording();
+                }
                 _audioDeviceModule = nullptr;
             });
         }
     }
     
 public:
-    virtual rtc::scoped_refptr<webrtc::AudioDeviceModule> audioDeviceModule() override {
+    virtual rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> audioDeviceModule() override {
         return _audioDeviceModule;
     }
     
+    virtual void start() override {
+        RTC_DCHECK(tgcalls::StaticThreads::getThreads()->getWorkerThread()->IsCurrent());
+        
+        _audioDeviceModule->Init();
+        if (!_audioDeviceModule->Playing()) {
+            _audioDeviceModule->InitPlayout();
+            //_audioDeviceModule->InitRecording();
+            _audioDeviceModule->InternalStartPlayout();
+            //_audioDeviceModule->InternalStartRecording();
+        }
+    }
+    
 private:
-    rtc::scoped_refptr<webrtc::AudioDeviceModule> _audioDeviceModule;
+    rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _audioDeviceModule;
 };
 
 @implementation SharedCallAudioDevice {
     std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>> _audioDeviceModule;
 }
 
-- (instancetype _Nonnull)init {
+- (instancetype _Nonnull)initWithDisableRecording:(bool)disableRecording {
     self = [super init];
     if (self != nil) {
-        _audioDeviceModule.reset(new tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>(tgcalls::StaticThreads::getThreads()->getWorkerThread(), []() mutable {
-            return (tgcalls::SharedAudioDeviceModule *)(new SharedAudioDeviceModuleImpl());
+        _audioDeviceModule.reset(new tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>(tgcalls::StaticThreads::getThreads()->getWorkerThread(), [disableRecording]() mutable {
+            return (tgcalls::SharedAudioDeviceModule *)(new SharedAudioDeviceModuleImpl(disableRecording));
         }));
     }
     return self;
@@ -102,6 +140,12 @@ private:
 
 - (void)dealloc {
     _audioDeviceModule.reset();
+}
+
+- (void)setTone:(CallAudioTone * _Nullable)tone {
+    _audioDeviceModule->perform([tone](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
+        audioDeviceModule->audioDeviceModule()->setTone([tone asTone]);
+    });
 }
 
 - (std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>>)getAudioDeviceModule {
@@ -128,6 +172,12 @@ private:
         [[RTCAudioSession sharedInstance] audioSessionDidDeactivate:[AVAudioSession sharedInstance]];
     }
     [RTCAudioSession sharedInstance].isAudioEnabled = isAudioSessionActive;
+    
+    if (isAudioSessionActive) {
+        _audioDeviceModule->perform([](tgcalls::SharedAudioDeviceModule *audioDeviceModule) {
+            audioDeviceModule->start();
+        });
+    }
 }
 
 @end
@@ -800,6 +850,9 @@ tgcalls::VideoCaptureInterfaceObject *GetVideoCaptureAssumingSameThread(tgcalls:
     bool _useManualAudioSessionControl;
     SharedCallAudioDevice *_audioDevice;
     
+    rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _currentAudioDeviceModule;
+    rtc::Thread *_currentAudioDeviceModuleThread;
+    
     OngoingCallNetworkTypeWebrtc _networkType;
     NSTimeInterval _callReceiveTimeout;
     NSTimeInterval _callRingTimeout;
@@ -1213,11 +1266,20 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
                     }
                 }];
             },
-            .createAudioDeviceModule = [audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+            .createAudioDeviceModule = [weakSelf, queue, audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
                 if (audioDeviceModule) {
                     return audioDeviceModule->getSyncAssumingSameThread()->audioDeviceModule();
                 } else {
-                    return rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
+                    rtc::Thread *audioDeviceModuleThread = rtc::Thread::Current();
+                    auto resultModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, false, 1);
+                    [queue dispatch:^{
+                        __strong OngoingCallThreadLocalContextWebrtc *strongSelf = weakSelf;
+                        if (strongSelf) {
+                            strongSelf->_currentAudioDeviceModuleThread = audioDeviceModuleThread;
+                            strongSelf->_currentAudioDeviceModule = resultModule;
+                        }
+                    }];
+                    return resultModule;
                 }
             }
         });
@@ -1230,6 +1292,14 @@ static void (*InternalVoipLoggingFunction)(NSString *) = NULL;
 - (void)dealloc {
     if (InternalVoipLoggingFunction) {
         InternalVoipLoggingFunction(@"OngoingCallThreadLocalContext: dealloc");
+    }
+    
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        _currentAudioDeviceModule = nullptr;
+        _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule]() {
+        });
+        _currentAudioDeviceModuleThread = nullptr;
     }
     
     if (_tgVoip != NULL) {
@@ -1537,6 +1607,11 @@ private:
 
     int _nextSinkId;
     NSMutableDictionary<NSNumber *, GroupCallVideoSink *> *_sinks;
+    
+    rtc::scoped_refptr<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS> _currentAudioDeviceModule;
+    rtc::Thread *_currentAudioDeviceModuleThread;
+    
+    SharedCallAudioDevice * _audioDevice;
 }
 
 @end
@@ -1558,7 +1633,8 @@ private:
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
     preferX264:(bool)preferX264
-    logPath:(NSString * _Nonnull)logPath {
+    logPath:(NSString * _Nonnull)logPath
+audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice {
     self = [super init];
     if (self != nil) {
         _queue = queue;
@@ -1569,6 +1645,12 @@ private:
         
         _networkStateUpdated = [networkStateUpdated copy];
         _videoCapturer = videoCapturer;
+        
+        _audioDevice = audioDevice;
+        std::shared_ptr<tgcalls::ThreadLocalObject<tgcalls::SharedAudioDeviceModule>> audioDeviceModule;
+        if (_audioDevice) {
+            audioDeviceModule = [_audioDevice getAudioDeviceModule];
+        }
         
         tgcalls::VideoContentType _videoContentType;
         switch (videoContentType) {
@@ -1777,16 +1859,61 @@ private:
 
                 return std::make_shared<RequestMediaChannelDescriptionTaskImpl>(task);
             },
-            .minOutgoingVideoBitrateKbit = minOutgoingVideoBitrateKbit
+            .minOutgoingVideoBitrateKbit = minOutgoingVideoBitrateKbit,
+            .createAudioDeviceModule = [weakSelf, queue, disableAudioInput, audioDeviceModule](webrtc::TaskQueueFactory *taskQueueFactory) -> rtc::scoped_refptr<webrtc::AudioDeviceModule> {
+                if (audioDeviceModule) {
+                    return audioDeviceModule->getSyncAssumingSameThread()->audioDeviceModule();
+                } else {
+                    rtc::Thread *audioDeviceModuleThread = rtc::Thread::Current();
+                    auto resultModule = rtc::make_ref_counted<webrtc::tgcalls_ios_adm::AudioDeviceModuleIOS>(false, disableAudioInput, disableAudioInput ? 2 : 1);
+                    [queue dispatch:^{
+                        __strong GroupCallThreadLocalContext *strongSelf = weakSelf;
+                        if (strongSelf) {
+                            strongSelf->_currentAudioDeviceModuleThread = audioDeviceModuleThread;
+                            strongSelf->_currentAudioDeviceModule = resultModule;
+                        }
+                    }];
+                    return resultModule;
+                }
+            }
         }));
     }
     return self;
 }
 
+- (void)dealloc {
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        _currentAudioDeviceModule = nullptr;
+        _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule]() {
+        });
+        _currentAudioDeviceModuleThread = nullptr;
+    }
+}
+
 - (void)stop {
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        _currentAudioDeviceModule = nullptr;
+        _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule]() {
+        });
+        _currentAudioDeviceModuleThread = nullptr;
+    }
+    
     if (_instance) {
         _instance->stop();
         _instance.reset();
+    }
+}
+
+- (void)setTone:(CallAudioTone * _Nullable)tone {
+    if (_currentAudioDeviceModuleThread) {
+        auto currentAudioDeviceModule = _currentAudioDeviceModule;
+        if (currentAudioDeviceModule) {
+            _currentAudioDeviceModuleThread->PostTask([currentAudioDeviceModule, tone]() {
+                currentAudioDeviceModule->setTone([tone asTone]);
+            });
+        }
     }
 }
 

@@ -11,13 +11,25 @@
 #define UIView NSView
 #endif
 
+@interface CallAudioTone : NSObject
+
+@property (nonatomic, strong, readonly) NSData * _Nonnull samples;
+@property (nonatomic, readonly) NSInteger sampleRate;
+@property (nonatomic, readonly) NSInteger loopCount;
+
+- (instancetype _Nonnull)initWithSamples:(NSData * _Nonnull)samples sampleRate:(NSInteger)sampleRate loopCount:(NSInteger)loopCount;
+
+@end
+
 @interface SharedCallAudioDevice : NSObject
 
-- (instancetype _Nonnull)init;
+- (instancetype _Nonnull)initWithDisableRecording:(bool)disableRecording;
 
 + (void)setupAudioSession;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
+- (void)setTone:(CallAudioTone * _Nullable)tone;
 
 @end
 
@@ -385,11 +397,14 @@ typedef NS_ENUM(int32_t, OngoingGroupCallRequestedVideoQuality) {
     enableNoiseSuppression:(bool)enableNoiseSuppression
     disableAudioInput:(bool)disableAudioInput
     preferX264:(bool)preferX264
-    logPath:(NSString * _Nonnull)logPath;
+    logPath:(NSString * _Nonnull)logPath
+audioDevice:(SharedCallAudioDevice * _Nullable)audioDevice;
 
 - (void)stop;
 
 - (void)setManualAudioSessionIsActive:(bool)isAudioSessionActive;
+
+- (void)setTone:(CallAudioTone * _Nullable)tone;
 
 - (void)setConnectionMode:(OngoingCallConnectionMode)connectionMode keepBroadcastConnectedIfWasEnabled:(bool)keepBroadcastConnectedIfWasEnabled isUnifiedBroadcast:(bool)isUnifiedBroadcast;
 

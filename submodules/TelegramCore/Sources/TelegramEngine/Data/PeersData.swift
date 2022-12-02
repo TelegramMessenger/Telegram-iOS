@@ -739,7 +739,11 @@ public extension TelegramEngine.EngineData.Item {
                     preconditionFailure()
                 }
                 if let cachedData = view.cachedPeerData as? CachedUserData {
-                    return .known(cachedData.photo)
+                    if case let .known(value) = cachedData.photo {
+                        return .known(value)
+                    } else {
+                        return .unknown
+                    }
                 } else if let cachedData = view.cachedPeerData as? CachedGroupData {
                     return .known(cachedData.photo)
                 } else if let cachedData = view.cachedPeerData as? CachedChannelData {

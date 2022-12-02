@@ -8,6 +8,7 @@ import Postbox
 import TelegramAudio
 import AccountContext
 import AVKit
+import UniversalMediaPlayer
 
 public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInPictureSampleBufferPlaybackDelegate {
     public let content: UniversalVideoContent
@@ -36,6 +37,9 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
     public var customExpand: (() -> Void)?
     public var customClose: (() -> Void)?
     public var controlsAreShowingUpdated: ((Bool) -> Void)?
+    
+    private var statusDisposable: Disposable?
+    private var status: MediaPlayerStatus?
     
     public init(postbox: Postbox, audioSession: ManagedAudioSession, manager: UniversalVideoManager, content: UniversalVideoContent, shouldBeDismissed: Signal<Bool, NoError> = .single(false), expand: @escaping () -> Void, close: @escaping () -> Void) {
         self.content = content
@@ -124,6 +128,16 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
             strongSelf.dismiss()
             closeImpl?()
         })
+        
+        self.statusDisposable = (self.videoNode.status
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            self?.status = status
+        })
+    }
+    
+    deinit {
+        self.shouldBeDismissedDisposable?.dispose()
+        self.statusDisposable?.dispose()
     }
     
     override public func didLoad() {
@@ -194,7 +208,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
     }
 
     public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
-        return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 10.0, preferredTimescale: CMTimeScale(30.0)))
+        guard let status = self.status else {
+            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)))
+        }
+        return CMTimeRange(start: CMTime(seconds: status.timestamp, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
     }
 
     public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {

@@ -433,6 +433,15 @@ private extension CurrentImpl {
             break
         }
     }
+    
+    func setTone(tone: OngoingGroupCallContext.Tone?) {
+        switch self {
+        case let .call(callContext):
+            callContext.setTone(tone: tone)
+        case .mediaStream:
+            break
+        }
+    }
 }
 
 public func groupCallLogsPath(account: Account) -> String {
@@ -823,7 +832,6 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     
     private var didStartConnectingOnce: Bool = false
     private var didConnectOnce: Bool = false
-    private var toneRenderer: PresentationCallToneRenderer?
     
     private var videoCapturer: OngoingCallVideoCapturer?
     private var useFrontCamera: Bool = true
@@ -1841,7 +1849,7 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                     if isConnecting {
                         strongSelf.beginTone(tone: .groupConnecting)
                     } else {
-                        strongSelf.toneRenderer = nil
+                        strongSelf.beginTone(tone: nil)
                     }
                 }
                 
@@ -2470,15 +2478,11 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
     private func updateIsAudioSessionActive(_ value: Bool) {
         if self.isAudioSessionActive != value {
             self.isAudioSessionActive = value
-            self.toneRenderer?.setAudioSessionActive(value)
         }
     }
 
-    private func beginTone(tone: PresentationCallTone) {
-        if "".isEmpty {
-            return
-        }
-        if self.isStream {
+    private func beginTone(tone: PresentationCallTone?) {
+        if self.isStream, let tone {
             switch tone {
             case .groupJoined, .groupLeft:
                 return
@@ -2486,21 +2490,15 @@ public final class PresentationGroupCallImpl: PresentationGroupCall {
                 break
             }
         }
-        var completed: (() -> Void)?
-        let toneRenderer = PresentationCallToneRenderer(tone: tone, completed: {
-            completed?()
-        })
-        completed = { [weak self, weak toneRenderer] in
-            Queue.mainQueue().async {
-                guard let strongSelf = self, let toneRenderer = toneRenderer, toneRenderer === strongSelf.toneRenderer else {
-                    return
-                }
-                strongSelf.toneRenderer = nil
-            }
+        if let tone, let toneData = presentationCallToneData(tone) {
+            self.genericCallContext?.setTone(tone: OngoingGroupCallContext.Tone(
+                samples: toneData,
+                sampleRate: 48000,
+                loopCount: tone.loopCount ?? 100000
+            ))
+        } else {
+            self.genericCallContext?.setTone(tone: nil)
         }
-
-        self.toneRenderer = toneRenderer
-        toneRenderer.setAudioSessionActive(self.isAudioSessionActive)
     }
 
     public func playTone(_ tone: PresentationGroupCallTone) {

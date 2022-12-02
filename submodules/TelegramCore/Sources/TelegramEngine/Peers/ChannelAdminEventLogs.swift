@@ -35,10 +35,12 @@ public enum AdminLogEventAction {
     public struct ForumTopicInfo {
         public var info: EngineMessageHistoryThread.Info
         public var isClosed: Bool
+        public var isHidden: Bool
         
-        public init(info: EngineMessageHistoryThread.Info, isClosed: Bool) {
+        public init(info: EngineMessageHistoryThread.Info, isClosed: Bool, isHidden: Bool) {
             self.info = info
             self.isClosed = isClosed
+            self.isHidden = isHidden
         }
     }
     
@@ -302,17 +304,17 @@ func channelAdminLogEvents(postbox: Postbox, network: Network, peerId: PeerId, m
                                         let prevInfo: AdminLogEventAction.ForumTopicInfo
                                         switch prevTopic {
                                         case let .forumTopic(flags, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
-                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0)
+                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0, isHidden: (flags & (1 << 6)) != 0)
                                         case .forumTopicDeleted:
-                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false)
+                                            prevInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false, isHidden: false)
                                         }
                                     
                                         let newInfo: AdminLogEventAction.ForumTopicInfo
                                         switch newTopic {
                                         case let .forumTopic(flags, _, _, title, iconColor, iconEmojiId, _, _, _, _, _, _, _, _, _):
-                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0)
+                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: title, icon: iconEmojiId, iconColor: iconColor), isClosed: (flags & (1 << 2)) != 0, isHidden: (flags & (1 << 6)) != 0)
                                         case .forumTopicDeleted:
-                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false)
+                                            newInfo = AdminLogEventAction.ForumTopicInfo(info: EngineMessageHistoryThread.Info(title: "", icon: nil, iconColor: 0), isClosed: false, isHidden: false)
                                         }
                                     
                                         action = .editTopic(prevInfo: prevInfo, newInfo: newInfo)
