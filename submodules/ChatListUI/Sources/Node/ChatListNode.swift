@@ -95,6 +95,8 @@ public final class ChatListNodeInteraction {
     public var searchTextHighightState: String?
     var highlightedChatLocation: ChatListHighlightedLocation?
     
+    var isSearchMode: Bool = false
+    
     var isInlineMode: Bool = false
     var inlineNavigationLocation: ChatListHighlightedLocation?
     

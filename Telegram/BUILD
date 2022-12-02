@@ -414,6 +414,7 @@ official_apple_pay_merchants = [
     "merchant.psbank.test.telegramios",
     "merchant.psbank.prod.telegramios",
     #"merchant.org.telegram.billinenet.test",
+    #"merchant.org.telegram.billinenet.prod",
     #"merchant.org.telegram.portmone.test",
 ]
 

@@ -8267,8 +8267,8 @@ Sorry for the inconvenience.";
 
 "Undo.DeletedTopic" = "Topic Deleted";
 
-"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than **%@** thread to the top. Unpin some that are currently pinned.";
-"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than **%@** threads to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
 
 "EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
 "EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
@@ -8299,8 +8299,8 @@ Sorry for the inconvenience.";
 
 "Notification.ForumTopicHidden" = "Topic hidden";
 "Notification.ForumTopicUnhidden" = "Topic unhidden";
-"Notification.ForumTopicHiddenAuthor" = "%1$@ hid topic";
-"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid topic";
+"Notification.ForumTopicHiddenAuthor" = "%1$@ hid the topic";
+"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid the topic";
 "Notification.OverviewTopicHidden" = "%1$@ hid %2$@ %3$@";
 "Notification.OverviewTopicUnhidden" = "%1$@ unhid %2$@ %3$@";
 
