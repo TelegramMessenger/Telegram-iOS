@@ -117,7 +117,10 @@ private func mergedState(transaction: Transaction, seedConfiguration: SeedConfig
     
     var peerIdsSet: Set<PeerId> = Set()
     var readStates: [PeerId: CombinedPeerReadState] = [:]
-    var threadInfo:[MessageId : MessageHistoryThreadData] = [:]
+    var threadInfo: [MessageId : MessageHistoryThreadData] = [:]
+    if let state = state {
+        threadInfo = state.threadInfo
+    }
     
     var renderedMessages: [Message] = []
     for message in messages {

@@ -738,16 +738,23 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                 } else {
                     let index: EngineChatList.Item.Index
                     var chatThreadInfo: ChatListItemContent.ThreadInfo?
+                    chatThreadInfo = nil
+                    var displayAsMessage = false
                     switch location {
                     case .chatList:
                         index = .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index))
                     case let .forum(peerId):
-                        if message.id.peerId == peerId, !"".isEmpty {
+                        let _ = peerId
+                        let _ = threadInfo
+                        
+                        displayAsMessage = true
+                        
+                        if message.id.peerId == peerId {
                             if let threadId = message.threadId, let threadInfo = threadInfo {
                                 chatThreadInfo = ChatListItemContent.ThreadInfo(id: threadId, info: threadInfo, isOwnedByMe: false, isClosed: false, isHidden: false)
                                 index = .forum(pinnedIndex: .none, timestamp: message.index.timestamp, threadId: threadId, namespace: message.index.id.namespace, id: message.index.id.id)
                             } else {
-                                index = .chatList( EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index))
+                                index = .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index))
                             }
                         } else {
                             index = .chatList(EngineChatList.Item.Index.ChatList(pinningIndex: nil, messageIndex: message.index))
@@ -766,7 +773,7 @@ public enum ChatListSearchEntry: Comparable, Identifiable {
                         inputActivities: nil,
                         promoInfo: nil,
                         ignoreUnreadBadge: true,
-                        displayAsMessage: true,
+                        displayAsMessage: displayAsMessage,
                         hasFailedMessages: false,
                         forumTopicData: nil,
                         topForumTopicItems: [],
@@ -1492,7 +1499,13 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                 }
                 
                 let searchSignals: [Signal<(SearchMessagesResult, SearchMessagesState), NoError>] = searchLocations.map { searchLocation in
-                    return context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: nil, limit: 50)
+                    let limit: Int32
+                    #if DEBUG
+                    limit = 50
+                    #else
+                    limit = 50
+                    #endif
+                    return context.engine.messages.searchMessages(location: searchLocation, query: finalQuery, state: nil, limit: limit)
                 }
                 
                 let searchSignal = combineLatest(searchSignals)
@@ -1537,6 +1550,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 for i in 0 ..< 2 {
                                     if let currentContext = searchContexts[i] {
                                         currentResults.append(FoundRemoteMessages(messages: currentContext.result.messages, readCounters: currentContext.result.readStates, threadsData: currentContext.result.threadInfo, totalCount: currentContext.result.totalCount))
+                                        if currentContext.result.hasMore {
+                                            break
+                                        }
                                     }
                                 }
                                 return .single((currentResults, false))
@@ -1561,6 +1577,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         var result: [FoundRemoteMessages] = []
                         for i in 0 ..< foundMessages.count {
                             result.append(FoundRemoteMessages(messages: foundMessages[i].messages, readCounters: foundMessages[i].readStates, threadsData: foundMessages[i].threadInfo, totalCount: foundMessages[i].totalCount))
+                            if foundMessages[i].hasMore {
+                                break
+                            }
                         }
                         return (result, false)
                     }
@@ -1865,16 +1884,25 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         
         let loadMore = {
             updateSearchContexts { previousMap in
-                guard let previous = previousMap[0] else {
-                    return ([:], false)
+                var updatedMap = previousMap
+                var isSearching = false
+                for i in 0 ..< 2 {
+                    if let previous = updatedMap[i] {
+                        if previous.loadMoreIndex != nil {
+                            continue
+                        }
+                        guard let last = previous.result.messages.last else {
+                            continue
+                        }
+                        updatedMap[i] = ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index)
+                        isSearching = true
+                        
+                        if previous.result.hasMore {
+                            break
+                        }
+                    }
                 }
-                if previous.loadMoreIndex != nil {
-                    return ([0: previous], false)
-                }
-                guard let last = previous.result.messages.last else {
-                    return ([0: previous], false)
-                }
-                return ([0: ChatListSearchMessagesContext(result: previous.result, loadMoreIndex: last.index)], true)
+                return (updatedMap, isSearching)
             }
         }
         
