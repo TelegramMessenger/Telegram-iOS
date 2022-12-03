@@ -39,6 +39,7 @@
 #import "TGPhotoCropController.h"
 #import "TGPhotoToolsController.h"
 #import "TGPhotoPaintController.h"
+#import "TGPhotoDrawingController.h"
 #import "TGPhotoQualityController.h"
 #import "TGPhotoAvatarPreviewController.h"
 
@@ -710,7 +711,7 @@
             startPosition = self.trimStartValue;
         
         CMTime targetTime = CMTimeMakeWithSeconds(startPosition, NSEC_PER_SEC);
-        [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero];
+        [_player.currentItem seekToTime:targetTime toleranceBefore:kCMTimeZero toleranceAfter:kCMTimeZero completionHandler:nil];
         
         [self _setupPlaybackStartedObserver];
         
@@ -1232,7 +1233,7 @@
         [self savePaintingData];
                 
         bool resetTransform = false;
-        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoPaintController class]]) {
+        if ([self presentedForAvatarCreation] && tab == TGPhotoEditorCropTab && [currentController isKindOfClass:[TGPhotoDrawingController class]]) {
             resetTransform = true;
         }
         
@@ -1560,10 +1561,26 @@
             
         case TGPhotoEditorPaintTab:
         {
-            TGPhotoPaintController *paintController = [[TGPhotoPaintController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
-            paintController.stickersContext = _stickersContext;
-            paintController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
-            paintController.controlVideoPlayback = ^(bool play) {
+            [_portraitToolbarView setAllButtonsHidden:true animated:false];
+            [_landscapeToolbarView setAllButtonsHidden:true animated:false];
+            
+            [_containerView.superview bringSubviewToFront:_containerView];
+            
+            TGPhotoDrawingController *drawingController = [[TGPhotoDrawingController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView stickersContext:_stickersContext];
+            drawingController.requestDismiss = ^{
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                [strongSelf dismissEditor];
+            };
+            drawingController.requestApply = ^{
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                [strongSelf applyEditor];
+            };
+            drawingController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
+            drawingController.controlVideoPlayback = ^(bool play) {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
@@ -1573,7 +1590,7 @@
                     [strongSelf stopVideoPlayback:false];
                 }
             };
-            paintController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
+            drawingController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)
             {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -1585,7 +1602,7 @@
                 
                 return transitionReferenceView;
             };
-            paintController.finishedTransitionIn = ^
+            drawingController.finishedTransitionIn = ^
             {
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -1599,8 +1616,17 @@
                 if (isInitialAppearance)
                     [strongSelf startVideoPlayback:true];
             };
+            drawingController.finishedTransitionOut = ^{
+                __strong TGPhotoEditorController *strongSelf = weakSelf;
+                if (strongSelf == nil)
+                    return;
+                
+                [strongSelf->_containerView.superview insertSubview:strongSelf->_containerView atIndex:2];
+                [strongSelf->_portraitToolbarView setAllButtonsHidden:false animated:true];
+                [strongSelf->_landscapeToolbarView setAllButtonsHidden:false animated:true];
+            };
             
-            controller = paintController;
+            controller = drawingController;
         }
             break;
             
@@ -1680,7 +1706,7 @@
     _currentTabController.switchingFromTab = switchingFromTab;
     _currentTabController.initialAppearance = isInitialAppearance;
     
-    if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
+    if (![_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
         _currentTabController.availableTabs = _availableTabs;
     
     if ([self presentedForAvatarCreation] && self.navigationController == nil)
@@ -1877,57 +1903,57 @@
     };
     
     TGPaintingData *paintingData = nil;
-    if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
-        paintingData = [(TGPhotoPaintController *)_currentTabController paintingData];
+    if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
+        paintingData = [(TGPhotoDrawingController *)_currentTabController paintingData];
     
     PGPhotoEditorValues *editorValues = paintingData == nil ? [_photoEditor exportAdjustments] : [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
     
-    if ((_initialAdjustments == nil && (![editorValues isDefaultValuesForAvatar:[self presentedForAvatarCreation]] || editorValues.cropOrientation != UIImageOrientationUp)) || (_initialAdjustments != nil && ![editorValues isEqual:_initialAdjustments]))
-    {
-        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
-        controller.dismissesByOutsideTap = true;
-        controller.narrowInLandscape = true;
-        __weak TGMenuSheetController *weakController = controller;
-        
-        NSArray *items = @
-        [
-         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.DiscardChanges") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
-            {
-                __strong TGMenuSheetController *strongController = weakController;
-                if (strongController == nil)
-                    return;
-                
-                [strongController dismissAnimated:true manual:false completion:^
-                {
-                    dismiss();
-                }];
-            }],
-            [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
-            {
-                __strong TGMenuSheetController *strongController = weakController;
-                if (strongController != nil)
-                    [strongController dismissAnimated:true];
-            }]
-        ];
-        
-        [controller setItemViews:items];
-        controller.sourceRect = ^
-        {
-            __strong TGPhotoEditorController *strongSelf = weakSelf;
-            if (strongSelf == nil)
-                return CGRectZero;
-            
-            if (UIInterfaceOrientationIsPortrait(strongSelf.effectiveOrientation))
-                return [strongSelf.view convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
-            else
-                return [strongSelf.view convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
-        };
-        [controller presentInViewController:self sourceView:self.view animated:true];
-    }
-    else
-    {
+//    if ((_initialAdjustments == nil && (![editorValues isDefaultValuesForAvatar:[self presentedForAvatarCreation]] || editorValues.cropOrientation != UIImageOrientationUp)) || (_initialAdjustments != nil && ![editorValues isEqual:_initialAdjustments]))
+//    {
+//        TGMenuSheetController *controller = [[TGMenuSheetController alloc] initWithContext:_context dark:false];
+//        controller.dismissesByOutsideTap = true;
+//        controller.narrowInLandscape = true;
+//        __weak TGMenuSheetController *weakController = controller;
+//
+//        NSArray *items = @
+//        [
+//         [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"PhotoEditor.DiscardChanges") type:TGMenuSheetButtonTypeDefault fontSize:20.0 action:^
+//            {
+//                __strong TGMenuSheetController *strongController = weakController;
+//                if (strongController == nil)
+//                    return;
+//
+//                [strongController dismissAnimated:true manual:false completion:^
+//                {
+//                    dismiss();
+//                }];
+//            }],
+//            [[TGMenuSheetButtonItemView alloc] initWithTitle:TGLocalized(@"Common.Cancel") type:TGMenuSheetButtonTypeCancel fontSize:20.0 action:^
+//            {
+//                __strong TGMenuSheetController *strongController = weakController;
+//                if (strongController != nil)
+//                    [strongController dismissAnimated:true];
+//            }]
+//        ];
+//
+//        [controller setItemViews:items];
+//        controller.sourceRect = ^
+//        {
+//            __strong TGPhotoEditorController *strongSelf = weakSelf;
+//            if (strongSelf == nil)
+//                return CGRectZero;
+//
+//            if (UIInterfaceOrientationIsPortrait(strongSelf.effectiveOrientation))
+//                return [strongSelf.view convertRect:strongSelf->_portraitToolbarView.cancelButtonFrame fromView:strongSelf->_portraitToolbarView];
+//            else
+//                return [strongSelf.view convertRect:strongSelf->_landscapeToolbarView.cancelButtonFrame fromView:strongSelf->_landscapeToolbarView];
+//        };
+//        [controller presentInViewController:self sourceView:self.view animated:true];
+//    }
+//    else
+//    {
         dismiss();
-    }
+//    }
 }
 
 - (void)doneButtonPressed
@@ -1940,10 +1966,10 @@
 }
 
 - (void)savePaintingData {
-    if (![_currentTabController isKindOfClass:[TGPhotoPaintController class]])
+    if (![_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
         return;
     
-    TGPhotoPaintController *paintController = (TGPhotoPaintController *)_currentTabController;
+    TGPhotoDrawingController *paintController = (TGPhotoDrawingController *)_currentTabController;
     TGPaintingData *paintingData = [paintController paintingData];
     _photoEditor.paintingData = paintingData;
     
@@ -1967,7 +1993,7 @@
     NSTimeInterval trimStartValue = 0.0;
     NSTimeInterval trimEndValue = 0.0;
     
-    if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
+    if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
     {
         [self savePaintingData];
     }
@@ -2244,8 +2270,8 @@
     [progressWindow performSelector:@selector(showAnimated) withObject:nil afterDelay:0.5];
     
     TGPaintingData *paintingData = nil;
-    if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
-        paintingData = [(TGPhotoPaintController *)_currentTabController paintingData];
+    if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
+        paintingData = [(TGPhotoDrawingController *)_currentTabController paintingData];
     
     PGPhotoEditorValues *editorValues = paintingData == nil ? [_photoEditor exportAdjustments] : [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
     
@@ -2266,8 +2292,8 @@
     [progressWindow performSelector:@selector(showAnimated) withObject:nil afterDelay:0.5];
     
     TGPaintingData *paintingData = nil;
-    if ([_currentTabController isKindOfClass:[TGPhotoPaintController class]])
-        paintingData = [(TGPhotoPaintController *)_currentTabController paintingData];
+    if ([_currentTabController isKindOfClass:[TGPhotoDrawingController class]])
+        paintingData = [(TGPhotoDrawingController *)_currentTabController paintingData];
     
     PGPhotoEditorValues *editorValues = paintingData == nil ? [_photoEditor exportAdjustments] : [_photoEditor exportAdjustmentsWithPaintingData:paintingData];
     

@@ -11,6 +11,7 @@
 
 @end
 
+
 @protocol TGPhotoPaintStickerRenderView <NSObject>
 
 @property (nonatomic, copy) void(^started)(double);
@@ -56,6 +57,65 @@
 
 @end
 
+
+@protocol TGPhotoDrawingView <NSObject>
+
+@property (nonatomic, readonly) BOOL isTracking;
+
+@property (nonatomic, copy) void(^zoomOut)(void);
+
+- (void)updateZoomScale:(CGFloat)scale;
+
+@end
+
+@protocol TGPhotoDrawingEntitiesView <NSObject>
+
+@property (nonatomic, copy) void(^hasSelectionChanged)(bool);
+@property (nonatomic, readonly) BOOL hasSelection;
+
+- (void)play;
+- (void)pause;
+- (void)seekTo:(double)timestamp;
+- (void)resetToStart;
+- (void)updateVisibility:(BOOL)visibility;
+- (void)clearSelection;
+- (void)onZoom;
+
+- (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer;
+- (void)handleRotate:(UIRotationGestureRecognizer *)gestureRecognizer;
+
+@end
+
+@protocol TGPhotoDrawingInterfaceController <NSObject>
+
+@property (nonatomic, copy) void(^requestDismiss)(void);
+@property (nonatomic, copy) void(^requestApply)(void);
+@property (nonatomic, copy) UIImage *(^getCurrentImage)(void);
+
+- (TGPaintingData *)generateResultData;
+- (void)animateOut:(void(^)(void))completion;
+
+- (void)adapterContainerLayoutUpdatedSize:(CGSize)size
+                          intrinsicInsets:(UIEdgeInsets)intrinsicInsets
+                               safeInsets:(UIEdgeInsets)safeInsets
+                          statusBarHeight:(CGFloat)statusBarHeight
+                              inputHeight:(CGFloat)inputHeight
+                                 animated:(BOOL)animated;
+
+@end
+
+
+@protocol TGPhotoDrawingAdapter <NSObject>
+
+@property (nonatomic, readonly) id<TGPhotoDrawingView> drawingView;
+@property (nonatomic, readonly) id<TGPhotoDrawingEntitiesView> drawingEntitiesView;
+@property (nonatomic, readonly) UIView * selectionContainerView;
+@property (nonatomic, readonly) UIView * contentWrapperView;
+@property (nonatomic, readonly) id<TGPhotoDrawingInterfaceController> interfaceController;
+
+@end
+
+
 @protocol TGPhotoPaintStickersContext <NSObject>
 
 - (int64_t)documentIdForDocument:(id)document;
@@ -66,5 +126,7 @@
 @property (nonatomic, copy) id<TGPhotoPaintStickersScreen>(^presentStickersController)(void(^)(id, bool, UIView *, CGRect));
 
 @property (nonatomic, copy) id<TGCaptionPanelView>(^captionPanelView)(void);
+
+- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size;
 
 @end
