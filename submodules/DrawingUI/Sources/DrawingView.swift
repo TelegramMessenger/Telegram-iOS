@@ -675,13 +675,14 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
 
     private func prepareNewElement() -> DrawingElement? {
+        let scale = 1.0 / self.zoomScale
         let element: DrawingElement?
         switch self.tool {
         case .pen:
             let penTool = PenTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: self.toolHasArrow
             )
             element = penTool
@@ -689,7 +690,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             let markerTool = MarkerTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: self.toolHasArrow
             )
             markerTool.metalView = self.metalView
@@ -698,14 +699,14 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             element = NeonTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: self.toolHasArrow
             )
         case .pencil:
             let pencilTool = PencilTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: self.toolHasArrow
             )
             pencilTool.metalView = self.metalView
@@ -714,7 +715,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             let blurTool = BlurTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: false)
             blurTool.getFullImage = { [weak self] in
                 return self?.preparredEraserImage
@@ -724,7 +725,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             let eraserTool = EraserTool(
                 drawingSize: self.imageSize,
                 color: self.toolColor,
-                lineWidth: self.toolBrushSize,
+                lineWidth: self.toolBrushSize * scale,
                 arrow: false)
             eraserTool.getFullImage = { [weak self] in
                 return self?.preparredEraserImage

@@ -218,16 +218,6 @@
     [self.view setNeedsLayout];
 }
 
-- (void)viewDidLoad
-{
-    [super viewDidLoad];
-    
-//    PGPhotoEditor *photoEditor = _photoEditor;
-//    if (!_skipEntitiesSetup) {
-//        [_entitiesView setupWithPaintingData:photoEditor.paintingData];
-//    }
-}
-
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
