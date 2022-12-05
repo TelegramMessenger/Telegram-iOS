@@ -1,3 +1,4 @@
+import Foundation
 import SwiftSignalKit
 import Postbox
 
@@ -25,6 +26,10 @@ public extension TelegramEngine {
             return _internal_updateContactName(account: self.account, peerId: peerId, firstName: firstName, lastName: lastName)
         }
 
+        public func updateContactPhoto(peerId: PeerId, resource: MediaResource?, videoResource: MediaResource?, videoStartTimestamp: Double?, mapResourceToAvatarSizes: @escaping (MediaResource, [TelegramMediaImageRepresentation]) -> Signal<[Int: Data], NoError>) -> Signal<UpdatePeerPhotoStatus, UploadPeerPhotoError> {
+            return _internal_updateContactPhoto(account: self.account, peerId: peerId, resource: resource, videoResource: videoResource, videoStartTimestamp: videoStartTimestamp, mapResourceToAvatarSizes: mapResourceToAvatarSizes)
+        }
+        
         public func deviceContactsImportedByCount(contacts: [(String, [DeviceContactNormalizedPhoneNumber])]) -> Signal<[String: Int32], NoError> {
             return _internal_deviceContactsImportedByCount(postbox: self.account.postbox, contacts: contacts)
         }

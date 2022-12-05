@@ -8443,3 +8443,6 @@ Sorry for the inconvenience.";
 "MessageTimer.LargeShortMonths_any" = "%@m";
 "MessageTimer.LargeShortYears_1" = "%@y";
 "MessageTimer.LargeShortYears_any" = "%@y";
+
+"Channel.AdminLog.AntiSpamEnabled" = "%1$@ enabled anti-spam";
+"Channel.AdminLog.AntiSpamDisabled" = "%1$@ disabled anti-spam";

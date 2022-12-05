@@ -122,6 +122,7 @@ fileprivate let parsers: [Int32 : (BufferReader) -> Any?] = {
     dict[663693416] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionSendMessage($0) }
     dict[589338437] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionStartGroupCall($0) }
     dict[-1895328189] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionStopPoll($0) }
+    dict[1693675004] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleAntiSpam($0) }
     dict[46949251] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleForum($0) }
     dict[1456906823] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleGroupCallSetting($0) }
     dict[460916654] = { return Api.ChannelAdminLogEventAction.parse_channelAdminLogEventActionToggleInvites($0) }

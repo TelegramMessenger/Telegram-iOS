@@ -7563,6 +7563,25 @@ public extension Api.functions.photos {
                 }
 }
 public extension Api.functions.photos {
+                static func uploadContactProfilePhoto(flags: Int32, userId: Api.InputUser, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(-1189444673)
+                    serializeInt32(flags, buffer: buffer, boxed: false)
+                    userId.serialize(buffer, true)
+                    if Int(flags) & Int(1 << 0) != 0 {file!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 1) != 0 {video!.serialize(buffer, true)}
+                    if Int(flags) & Int(1 << 2) != 0 {serializeDouble(videoStartTs!, buffer: buffer, boxed: false)}
+                    return (FunctionDescription(name: "photos.uploadContactProfilePhoto", parameters: [("flags", String(describing: flags)), ("userId", String(describing: userId)), ("file", String(describing: file)), ("video", String(describing: video)), ("videoStartTs", String(describing: videoStartTs))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.photos.Photo? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.photos.Photo?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.photos.Photo
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.photos {
                 static func uploadProfilePhoto(flags: Int32, file: Api.InputFile?, video: Api.InputFile?, videoStartTs: Double?) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.photos.Photo>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-1980559511)

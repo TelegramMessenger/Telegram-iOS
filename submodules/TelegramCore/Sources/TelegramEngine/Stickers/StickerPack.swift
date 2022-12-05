@@ -11,13 +11,13 @@ func telegramStickerPackThumbnailRepresentationFromApiSizes(datacenterId: Int32,
         switch size {
             case let .photoCachedSize(_, w, h, _):
                 let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, thumbVersion: thumbVersion, volumeId: nil, localId: nil)
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
             case let .photoSize(_, w, h, _):
                 let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, thumbVersion: thumbVersion, volumeId: nil, localId: nil)
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
             case let .photoSizeProgressive(_, w, h, sizes):
                 let resource = CloudStickerPackThumbnailMediaResource(datacenterId: datacenterId, thumbVersion: thumbVersion, volumeId: nil, localId: nil)
-                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes, immediateThumbnailData: nil, hasVideo: false))
+                representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: w, height: h), resource: resource, progressiveSizes: sizes, immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
             case let .photoPathSize(_, data):
                 immediateThumbnailData = data.makeData()
             case .photoStrippedSize:

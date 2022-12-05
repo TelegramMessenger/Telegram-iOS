@@ -6251,7 +6251,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             let resource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.call.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
-            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
             
             self.currentUpdatingAvatar = representation
             self.updateAvatarPromise.set(.single((representation, 0.0)))
@@ -6286,7 +6286,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             
             let photoResource = LocalFileMediaResource(fileId: Int64.random(in: Int64.min ... Int64.max))
             self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
-            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false)
+            let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false)
             
             self.currentUpdatingAvatar = representation
             self.updateAvatarPromise.set(.single((representation, 0.0)))
