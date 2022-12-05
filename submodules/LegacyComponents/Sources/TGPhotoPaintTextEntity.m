@@ -50,3 +50,8 @@
 }
 
 @end
+
+
+@implementation TGPhotoPaintStaticEntity
+
+@end

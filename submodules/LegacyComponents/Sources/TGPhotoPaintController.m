@@ -54,7 +54,7 @@
 const CGFloat TGPhotoPaintTopPanelSize = 44.0f;
 const CGFloat TGPhotoPaintBottomPanelSize = 79.0f;
 const CGSize TGPhotoPaintingLightMaxSize = { 1280.0f, 1280.0f };
-const CGSize TGPhotoPaintingMaxSize = { 1920.0f, 1920.0f };
+const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 const CGFloat TGPhotoPaintStickerKeyboardSize = 260.0f;
 

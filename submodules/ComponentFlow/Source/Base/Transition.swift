@@ -391,11 +391,11 @@ public struct Transition {
         }
     }
     
-    public func setAlpha(view: UIView, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
-        self.setAlpha(layer: view.layer, alpha: alpha, completion: completion)
+    public func setAlpha(view: UIView, alpha: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        self.setAlpha(layer: view.layer, alpha: alpha, delay: delay, completion: completion)
     }
     
-    public func setAlpha(layer: CALayer, alpha: CGFloat, completion: ((Bool) -> Void)? = nil) {
+    public func setAlpha(layer: CALayer, alpha: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         if layer.opacity == Float(alpha) {
             completion?(true)
             return
@@ -408,15 +408,15 @@ public struct Transition {
         case .curve:
             let previousAlpha = layer.presentation()?.opacity ?? layer.opacity
             layer.opacity = Float(alpha)
-            self.animateAlpha(layer: layer, from: CGFloat(previousAlpha), to: alpha, completion: completion)
+            self.animateAlpha(layer: layer, from: CGFloat(previousAlpha), to: alpha, delay: delay, completion: completion)
         }
     }
     
-    public func setScale(view: UIView, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
-        self.setScale(layer: view.layer, scale: scale, completion: completion)
+    public func setScale(view: UIView, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
+        self.setScale(layer: view.layer, scale: scale, delay: delay, completion: completion)
     }
     
-    public func setScale(layer: CALayer, scale: CGFloat, completion: ((Bool) -> Void)? = nil) {
+    public func setScale(layer: CALayer, scale: CGFloat, delay: Double = 0.0, completion: ((Bool) -> Void)? = nil) {
         let t = layer.presentation()?.transform ?? layer.transform
         let currentScale = sqrt((t.m11 * t.m11) + (t.m12 * t.m12) + (t.m13 * t.m13))
         if currentScale == scale {
@@ -435,7 +435,7 @@ public struct Transition {
                 to: scale as NSNumber,
                 keyPath: "transform.scale",
                 duration: duration,
-                delay: 0.0,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: false,
@@ -476,19 +476,23 @@ public struct Transition {
     }
     
     public func setSublayerTransform(view: UIView, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
+        self.setSublayerTransform(layer: view.layer, transform: transform, completion: completion)
+    }
+    
+    public func setSublayerTransform(layer: CALayer, transform: CATransform3D, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
-            view.layer.sublayerTransform = transform
+            layer.sublayerTransform = transform
             completion?(true)
         case let .curve(duration, curve):
             let previousValue: CATransform3D
-            if let presentation = view.layer.presentation() {
+            if let presentation = layer.presentation() {
                 previousValue = presentation.sublayerTransform
             } else {
-                previousValue = view.layer.sublayerTransform
+                previousValue = layer.sublayerTransform
             }
-            view.layer.sublayerTransform = transform
-            view.layer.animate(
+            layer.sublayerTransform = transform
+            layer.animate(
                 from: NSValue(caTransform3D: previousValue),
                 to: NSValue(caTransform3D: transform),
                 keyPath: "sublayerTransform",
@@ -502,7 +506,7 @@ public struct Transition {
         }
     }
 
-    public func animateScale(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animateScale(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             completion?(true)
@@ -512,7 +516,7 @@ public struct Transition {
                 to: toValue as NSNumber,
                 keyPath: "transform.scale",
                 duration: duration,
-                delay: 0.0,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: additive,
@@ -540,11 +544,11 @@ public struct Transition {
         }
     }
 
-    public func animateAlpha(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
-        self.animateAlpha(layer: view.layer, from: fromValue, to: toValue, additive: additive, completion: completion)
+    public func animateAlpha(view: UIView, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+        self.animateAlpha(layer: view.layer, from: fromValue, to: toValue, delay: delay, additive: additive, completion: completion)
     }
     
-    public func animateAlpha(layer: CALayer, from fromValue: CGFloat, to toValue: CGFloat, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
+    public func animateAlpha(layer: CALayer, from fromValue: CGFloat, to toValue: CGFloat, delay: Double = 0.0, additive: Bool = false, completion: ((Bool) -> Void)? = nil) {
         switch self.animation {
         case .none:
             completion?(true)
@@ -554,7 +558,7 @@ public struct Transition {
                 to: toValue as NSNumber,
                 keyPath: "opacity",
                 duration: duration,
-                delay: 0.0,
+                delay: delay,
                 curve: curve,
                 removeOnCompletion: true,
                 additive: additive,
@@ -706,6 +710,28 @@ public struct Transition {
             } else {
                 layer.path = path
             }
+        }
+    }
+    
+    public func setShapeLayerLineWidth(layer: CAShapeLayer, lineWidth: CGFloat, completion: ((Bool) -> Void)? = nil) {
+        switch self.animation {
+        case .none:
+            layer.lineWidth = lineWidth
+        case let .curve(duration, curve):
+            let previousLineWidth = layer.lineWidth
+            layer.lineWidth = lineWidth
+            
+            layer.animate(
+                from: previousLineWidth as NSNumber,
+                to: lineWidth as NSNumber,
+                keyPath: "lineWidth",
+                duration: duration,
+                delay: 0.0,
+                curve: curve,
+                removeOnCompletion: true,
+                additive: false,
+                completion: completion
+            )
         }
     }
     

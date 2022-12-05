@@ -40,7 +40,7 @@ private struct DrawingPaneArrangement {
 private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     private let context: AccountContext
     private var presentationData: PresentationData
-    fileprivate var selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    fileprivate var selectSticker: (((FileMediaReference, UIView, CGRect)?) -> Bool)?
     private var searchItemContext = StickerPaneSearchGlobalItemContext()
     private let themeAndStringsPromise: Promise<(PresentationTheme, PresentationStrings)>
     
@@ -98,7 +98,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     
     fileprivate var dismiss: (() -> Void)?
     
-    init(context: AccountContext, selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) {
+    init(context: AccountContext, selectSticker: (((FileMediaReference, UIView, CGRect)?) -> Bool)?) {
         self.context = context
         let presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.presentationData = presentationData
@@ -106,14 +106,14 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
         
         self.themeAndStringsPromise = Promise((self.presentationData.theme, self.presentationData.strings))
         
-        var selectStickerImpl: ((FileMediaReference, UIView, CGRect) -> Bool)?
+//        var selectStickerImpl: (((FileMediaReference, UIView, CGRect)?) -> Bool)?
         
         self.controllerInteraction = ChatControllerInteraction(openMessage: { _, _ in
             return false }, openPeer: { _, _, _, _ in }, openPeerMention: { _ in }, openMessageContextMenu: { _, _, _, _, _, _ in }, openMessageReactionContextMenu: { _, _, _, _ in
             }, updateMessageReaction: { _, _ in }, activateMessagePinch: { _ in
             }, openMessageContextActions: { _, _, _, _ in }, navigateToMessage: { _, _ in }, navigateToMessageStandalone: { _ in
             }, navigateToThreadMessage: { _, _, _ in
-            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, _, _, node, rect, _, _ in return selectStickerImpl?(fileReference, node, rect) ?? false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
+            }, tapMessage: nil, clickThroughMessage: { }, toggleMessagesSelection: { _, _ in }, sendCurrentMessage: { _ in }, sendMessage: { _ in }, sendSticker: { fileReference, _, _, _, _, node, rect, _, _ in return false }, sendEmoji: { _, _ in }, sendGif: { _, _, _, _, _ in return false }, sendBotContextResultAsGif: { _, _, _, _, _ in return false }, requestMessageActionCallback: { _, _, _, _ in }, requestMessageActionUrlAuth: { _, _ in }, activateSwitchInline: { _, _ in }, openUrl: { _, _, _, _ in }, shareCurrentLocation: {}, shareAccountContact: {}, sendBotCommand: { _, _ in }, openInstantPage: { _, _ in  }, openWallpaper: { _ in  }, openTheme: { _ in  }, openHashtag: { _, _ in }, updateInputState: { _ in }, updateInputMode: { _ in }, openMessageShareMenu: { _ in
         }, presentController: { _, _ in
         }, presentControllerInCurrent: { _, _ in
         }, navigationController: {
@@ -743,9 +743,9 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
             self?.updatePaneDidScroll(pane: pane, state: state, transition: transition)
         }
         
-        selectStickerImpl = { [weak self] fileReference, node, rect in
-            return self?.selectSticker?(fileReference, node, rect) ?? false
-        }
+//        selectStickerImpl = { [weak self] fileReferenceNodeAndRect in
+//            return self?.selectSticker?(fileReferenceNodeAndRect) ?? false
+//        }
         
         self.segmentedControlNode.selectedIndexChanged = { [weak self] index in
             if let strongSelf = self {
@@ -767,6 +767,7 @@ private final class DrawingStickersScreenNode: ViewControllerTracingNode {
     }
     
     @objc private func cancelPressed() {
+        let _ = self.selectSticker?(nil)
         self.animateOut()
     }
         
@@ -1311,7 +1312,7 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
     public var screenWillDisappear: (() -> Void)?
     
     private let context: AccountContext
-    var selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
+    var selectSticker: (((FileMediaReference, UIView, CGRect)?) -> Bool)?
     
     private var controllerNode: DrawingStickersScreenNode {
         return self.displayNode as! DrawingStickersScreenNode
@@ -1327,7 +1328,7 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
         return self._ready
     }
         
-    public init(context: AccountContext, selectSticker: ((FileMediaReference, UIView, CGRect) -> Bool)? = nil) {
+    public init(context: AccountContext, selectSticker: (((FileMediaReference, UIView, CGRect)?) -> Bool)? = nil) {
         self.context = context
         self.selectSticker = selectSticker
         
@@ -1367,10 +1368,10 @@ final class DrawingStickersScreen: ViewController, TGPhotoPaintStickersScreen {
     override public func loadDisplayNode() {
         self.displayNode = DrawingStickersScreenNode(
             context: self.context,
-            selectSticker: { [weak self] file, sourceView, sourceRect in
+            selectSticker: { [weak self] fileSourceViewSourceRect in
                 if let strongSelf = self, let selectSticker = strongSelf.selectSticker {
                     (strongSelf.displayNode as! DrawingStickersScreenNode).animateOut()
-                    return selectSticker(file, sourceView, sourceRect)
+                    return selectSticker(fileSourceViewSourceRect)
                 } else {
                     return false
                 }

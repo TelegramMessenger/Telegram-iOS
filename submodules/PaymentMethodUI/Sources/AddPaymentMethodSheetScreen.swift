@@ -196,7 +196,7 @@ private final class AddPaymentMethodSheetComponent: CombinedComponent {
                             })
                         }
                     )),
-                    backgroundColor: .white,
+                    backgroundColor: .color(.white),
                     animateOut: animateOut
                 ),
                 environment: {
@@ -204,6 +204,7 @@ private final class AddPaymentMethodSheetComponent: CombinedComponent {
                     SheetComponentEnvironment(
                         isDisplaying: environment.value.isVisible,
                         isCentered: false,
+                        hasInputHeight: !environment.inputHeight.isZero,
                         dismiss: { animated in
                             if animated {
                                 animateOut.invoke(Action { _ in

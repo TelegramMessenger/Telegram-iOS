@@ -8,6 +8,7 @@ import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
+import DrawingUI
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -471,5 +472,28 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         } else {
             return nil
         }
+    }
+    
+    class LegacyDrawingAdapter: NSObject, TGPhotoDrawingAdapter {
+        let drawingView: TGPhotoDrawingView!
+        let drawingEntitiesView: TGPhotoDrawingEntitiesView!
+        let selectionContainerView: UIView
+        let contentWrapperView: UIView!
+        let interfaceController: TGPhotoDrawingInterfaceController!
+        
+        init(context: AccountContext, size: CGSize) {
+            let interfaceController = DrawingScreen(context: context, size: size)
+            self.interfaceController = interfaceController
+            self.drawingView = interfaceController.drawingView
+            self.drawingEntitiesView = interfaceController.entitiesView
+            self.selectionContainerView = interfaceController.selectionContainerView
+            self.contentWrapperView = interfaceController.contentWrapperView
+            
+            super.init()
+        }
+    }
+    
+    public func drawingAdapter(_ size: CGSize) -> TGPhotoDrawingAdapter! {
+        return LegacyDrawingAdapter(context: self.context, size: size)
     }
 }

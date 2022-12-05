@@ -13,6 +13,7 @@ swift_library(
         "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
         "//submodules/Components/ViewControllerComponent:ViewControllerComponent",
+        "//submodules/SSignalKit/SwiftSignalKit:SwiftSignalKit",
     ],
     visibility = [
         "//visibility:public",
