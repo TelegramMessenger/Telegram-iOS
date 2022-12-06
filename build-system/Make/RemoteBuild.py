@@ -182,7 +182,7 @@ def remote_build(darwin_containers_path, darwin_containers_host, bazel_cache_hos
 
 
 def remote_deploy_testflight(darwin_containers_path, darwin_containers_host, ipa_path, dsyms_path, username, password):
-    macos_version = '12.5'
+    macos_version = '13.0'
 
     DarwinContainers = import_module_from_file('darwin-containers', darwin_containers_path)
 
