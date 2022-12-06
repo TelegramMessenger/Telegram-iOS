@@ -552,10 +552,10 @@ public final class ChatListHeaderComponent: Component {
                 }
                 
                 let chatListTitleContentSize = size
-                chatListTitleView.setTitle(chatListTitle, animated: false)
-                chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), transition: transition.containedViewLayoutTransition)
                 chatListTitleView.theme = theme
                 chatListTitleView.strings = strings
+                chatListTitleView.setTitle(chatListTitle, animated: false)
+                chatListTitleView.updateLayout(size: chatListTitleContentSize, clearBounds: CGRect(origin: CGPoint(), size: chatListTitleContentSize), transition: transition.containedViewLayoutTransition)
                 
                 chatListTitleView.openStatusSetup = { [weak self] sourceView in
                     guard let self else {
