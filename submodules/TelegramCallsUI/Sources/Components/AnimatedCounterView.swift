@@ -63,7 +63,7 @@ public final class AnimatedCountView: UIView {
 //        } else {
 //            self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 54, weight: .semibold)])
 //        }
-        self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 60, weight: .semibold)])
+        self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: 60.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
 //        self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 60, weight: .semibold)])
 //        var timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
 //        if timerSize.width > size.width - 32.0 {

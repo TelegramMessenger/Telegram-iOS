@@ -83,14 +83,20 @@ final class StreamTitleComponent: Component {
                     // TODO: animate
                     wasLive = true
 //                    let frame = self.frame
+                    let anim = CAKeyframeAnimation(keyPath: "transform.scale")
+                    anim.values = [1.0, 1.4, 1.0]
+                    anim.keyTimes = [0, 0.5, 1]
+                    self.layer.add(anim, forKey: "transform")
+                    
+//                    UIView.transition(with: self, duration: <#T##TimeInterval#>, animations: <#T##(() -> Void)?##(() -> Void)?##() -> Void#>)
                     UIView.animate(withDuration: 0.15, animations: {
                         self.toggle(isLive: true)
-                        self.transform = .init(scaleX: 1.5, y: 1.5)
+//                        self.transform = .init(scaleX: 1.5, y: 1.5)
                     }, completion: { _ in
-                        UIView.animate(withDuration: 0.15) {
-                            self.transform = .identity
-//                            self.frame = frame
-                        }
+//                        UIView.animate(withDuration: 0.15) {
+//                            self.transform = .identity
+////                            self.frame = frame
+//                        }
                     })
                     return
                 }
