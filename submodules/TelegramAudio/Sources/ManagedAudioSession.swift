@@ -209,6 +209,7 @@ public final class ManagedAudioSession {
     private let isActiveSubscribers = Bag<(Bool) -> Void>()
     private let isPlaybackActiveSubscribers = Bag<(Bool) -> Void>()
     
+    private var isActiveValue: Bool = false
     private var callKitAudioSessionIsActive: Bool = false
     
     public init() {
@@ -392,7 +393,7 @@ public final class ManagedAudioSession {
         let queue = self.queue
         return Signal { [weak self] subscriber in
             if let strongSelf = self {
-                subscriber.putNext(strongSelf.currentTypeAndOutputMode != nil)
+                subscriber.putNext(strongSelf.isActiveValue || strongSelf.callKitAudioSessionIsActive)
                 
                 let index = strongSelf.isActiveSubscribers.add({ value in
                     subscriber.putNext(value)
@@ -686,7 +687,6 @@ public final class ManagedAudioSession {
         self.deactivateTimer?.invalidate()
         self.deactivateTimer = nil
         
-        let wasActive = self.currentTypeAndOutputMode != nil
         let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         self.currentTypeAndOutputMode = nil
         
@@ -709,10 +709,9 @@ public final class ManagedAudioSession {
             }
         }
         
-        if wasActive {
-            for subscriber in self.isActiveSubscribers.copyItems() {
-                subscriber(false)
-            }
+        self.isActiveValue = false
+        for subscriber in self.isActiveSubscribers.copyItems() {
+            subscriber(self.isActiveValue || self.callKitAudioSessionIsActive)
         }
         if wasPlaybackActive {
             for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
@@ -725,7 +724,6 @@ public final class ManagedAudioSession {
         self.deactivateTimer?.invalidate()
         self.deactivateTimer = nil
         
-        let wasActive = self.currentTypeAndOutputMode != nil
         let wasPlaybackActive = self.currentTypeAndOutputMode?.0.isPlay ?? false
         
         if self.currentTypeAndOutputMode == nil || self.currentTypeAndOutputMode! != (type, outputMode) {
@@ -782,10 +780,9 @@ public final class ManagedAudioSession {
             }
         }
         
-        if !wasActive {
-            for subscriber in self.isActiveSubscribers.copyItems() {
-                subscriber(true)
-            }
+        self.isActiveValue = true
+        for subscriber in self.isActiveSubscribers.copyItems() {
+            subscriber(self.isActiveValue || self.callKitAudioSessionIsActive)
         }
         if !wasPlaybackActive && (self.currentTypeAndOutputMode?.0.isPlay ?? false) {
             for subscriber in self.isPlaybackActiveSubscribers.copyItems() {
@@ -976,6 +973,10 @@ public final class ManagedAudioSession {
             managedAudioSessionLog("ManagedAudioSession callKitActivatedAudioSession")
             self.callKitAudioSessionIsActive = true
             self.updateHolders()
+            
+            for subscriber in self.isActiveSubscribers.copyItems() {
+                subscriber(self.isActiveValue || self.callKitAudioSessionIsActive)
+            }
         }
     }
     
@@ -984,6 +985,10 @@ public final class ManagedAudioSession {
             managedAudioSessionLog("ManagedAudioSession callKitDeactivatedAudioSession")
             self.callKitAudioSessionIsActive = false
             self.updateHolders()
+            
+            for subscriber in self.isActiveSubscribers.copyItems() {
+                subscriber(self.isActiveValue || self.callKitAudioSessionIsActive)
+            }
         }
     }
 }
