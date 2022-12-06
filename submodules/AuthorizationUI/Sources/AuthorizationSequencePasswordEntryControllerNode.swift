@@ -54,6 +54,8 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     
     private var timer: SwiftSignalKit.Timer?
     
+    private let appearanceTimestamp = CACurrentMediaTime()
+    
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
         self.theme = theme
@@ -147,7 +149,15 @@ final class AuthorizationSequencePasswordEntryControllerNode: ASDisplayNode, UIT
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
         
         let inset: CGFloat = 24.0
         let maximumWidth: CGFloat = min(430.0, layout.size.width)

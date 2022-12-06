@@ -60,6 +60,8 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         context.sharedContext.applicationBindings.openUrl(url)
                     case let .peer(peer, navigation):
                         openResolvedPeerImpl(peer.flatMap(EnginePeer.init), navigation)
+                    case let .botStart(peer, payload):
+                        openResolvedPeerImpl(EnginePeer(peer), .withBotStartPayload(ChatControllerInitialBotStart(payload: payload, behavior: .interactive)))
                     case let .channelMessage(peer, messageId, timecode):
                         if let navigationController = controller.navigationController as? NavigationController {
                             context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(EnginePeer(peer)), subject: .message(id: .id(messageId), highlight: true, timecode: timecode)))
