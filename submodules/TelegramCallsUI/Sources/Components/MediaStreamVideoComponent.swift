@@ -9,7 +9,6 @@ import Display
 import ShimmerEffect
 
 import TelegramCore
-
 typealias MediaStreamVideoComponent = _MediaStreamVideoComponent
 
 final class _MediaStreamVideoComponent: Component {

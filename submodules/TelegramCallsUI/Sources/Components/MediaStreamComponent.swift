@@ -55,6 +55,7 @@ final class StreamTitleComponent: Component {
             label.text = "LIVE"
             label.font = .systemFont(ofSize: 12, weight: .semibold)
             label.textAlignment = .center
+            label.textColor = .white
             layer.addSublayer(stalledAnimatedGradient)
             self.clipsToBounds = true
             if #available(iOS 13.0, *) {
@@ -81,14 +82,14 @@ final class StreamTitleComponent: Component {
                 if !wasLive {
                     // TODO: animate
                     wasLive = true
-                    let frame = self.frame
+//                    let frame = self.frame
                     UIView.animate(withDuration: 0.15, animations: {
                         self.toggle(isLive: true)
                         self.transform = .init(scaleX: 1.5, y: 1.5)
                     }, completion: { _ in
                         UIView.animate(withDuration: 0.15) {
                             self.transform = .identity
-                            self.frame = frame
+//                            self.frame = frame
                         }
                     })
                     return
@@ -663,6 +664,7 @@ final class RoundGradientButtonComponent: Component {
             titleLabel.textAlignment = .center
             iconView.contentMode = .scaleAspectFit
             titleLabel.font = .systemFont(ofSize: 13)
+            titleLabel.textColor = .white
         }
         
         required init?(coder: NSCoder) {
@@ -806,9 +808,10 @@ public final class _MediaStreamComponent: CombinedComponent {
                 }
                 
                 var updated = false
-                // TODO: remove debug
+//                 TODO: remove debug timer
                 Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(members.totalCount/*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
+                    strongSelf.infoThrottler.publish(/*members.totalCount*/ Int.random(in: 0..<10000000)) { [weak strongSelf] latestCount in
+                        print(members.totalCount)
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
                         let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: latestCount)
@@ -1846,6 +1849,7 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
     }
 }
 
+public typealias MediaStreamComponent = _MediaStreamComponent
 public typealias MediaStreamComponentController = _MediaStreamComponentController
 
 public final class Throttler<T: Hashable> {
@@ -1880,7 +1884,10 @@ public final class Throttler<T: Hashable> {
         if lastValue == nil {
             queue.asyncAfter(deadline: .now() + duration) { [self] in
                 accumulator.removeAll()
-                isThrottling = false
+                // TODO: quick fix, replace with timer
+                queue.asyncAfter(deadline: .now() + duration) { [self] in
+                    isThrottling = false
+                }
                 
                 guard
                     let lastValue = lastValue,
