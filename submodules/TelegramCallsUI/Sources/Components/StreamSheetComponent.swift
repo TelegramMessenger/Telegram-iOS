@@ -19,6 +19,8 @@ final class StreamSheetComponent: CombinedComponent {
     let backgroundColor: UIColor
     let participantsCount: Int
     let bottomPadding: CGFloat
+    let isFullyExtended: Bool
+    let deviceCornerRadius: CGFloat
     
     init(
 //        color: UIColor,
@@ -28,7 +30,9 @@ final class StreamSheetComponent: CombinedComponent {
         sheetHeight: CGFloat,
         backgroundColor: UIColor,
         bottomPadding: CGFloat,
-        participantsCount: Int
+        participantsCount: Int,
+        isFullyExtended: Bool,
+        deviceCornerRadius: CGFloat
     ) {
 //        self.leftItem = leftItem
         self.topComponent = topComponent
@@ -39,6 +43,8 @@ final class StreamSheetComponent: CombinedComponent {
         self.backgroundColor = backgroundColor
         self.bottomPadding = bottomPadding
         self.participantsCount = participantsCount
+        self.isFullyExtended = isFullyExtended
+        self.deviceCornerRadius = deviceCornerRadius
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
@@ -66,6 +72,9 @@ final class StreamSheetComponent: CombinedComponent {
         if lhs.participantsCount != rhs.participantsCount {
             return false
         }
+        if lhs.isFullyExtended != rhs.isFullyExtended {
+            return false
+        }
         return true
     }
 //
@@ -80,7 +89,7 @@ final class StreamSheetComponent: CombinedComponent {
         }
         
         func update(component: StreamSheetComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
-            self.backgroundColor = .purple.withAlphaComponent(0.6)
+//            self.backgroundColor = .purple.withAlphaComponent(0.6)
             return availableSize
         }
         
@@ -132,11 +141,21 @@ final class StreamSheetComponent: CombinedComponent {
         return { context in
             let availableWidth = context.availableSize.width
 //            let sideInset: CGFloat = 16.0 + context.component.sideInset
-            
             let contentHeight: CGFloat = 44.0
             let size = context.availableSize// CGSize(width: context.availableSize.width, height:44)// context.component.topInset + contentHeight)
             
-            let background = background.update(component: SheetBackgroundComponent(color: context.component.backgroundColor), availableSize: CGSize(width: size.width, height: context.component.sheetHeight), transition: context.transition)
+            let topOffset = context.component.topOffset
+            let backgroundExtraOffset = context.component.isFullyExtended ? -context.view.safeAreaInsets.top : 0
+            
+            let background = background.update(
+                component: SheetBackgroundComponent(
+                    color: context.component.backgroundColor,
+                    radius: context.component.isFullyExtended ? context.component.deviceCornerRadius : 16,
+                    offset: backgroundExtraOffset
+                ),
+                availableSize: CGSize(width: size.width, height: context.component.sheetHeight),
+                transition: context.transition
+            )
             
             let topItem = context.component.topComponent.flatMap { topItemComponent in
                 return topItem.update(
@@ -160,10 +179,9 @@ final class StreamSheetComponent: CombinedComponent {
                 )
             }
             
-            let topOffset = context.component.topOffset
-            
             context.add(background
-                .position(CGPoint(x: size.width / 2.0, y: context.component.topOffset + context.component.sheetHeight / 2))
+                .position(CGPoint(x: size.width / 2.0, y: topOffset + context.component.sheetHeight / 2))
+                // .position(CGPoint(x: size.width / 2.0, y: context.component.topOffset + context.component.sheetHeight / 2 + backgroundExtraOffset))
             )
             
             (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames = []
@@ -208,27 +226,45 @@ private let latePink = UIColor(rgb: 0xf0436c)
 
 final class SheetBackgroundComponent: Component {
     private let color: UIColor
+    private let radius: CGFloat
+    private let offset: CGFloat
     
     class View: UIView {
         private let backgroundView = UIView()
         
-        func update(availableSize: CGSize, color: UIColor, transition: Transition) {
+        func update(availableSize: CGSize, color: UIColor, cornerRadius: CGFloat, offset: CGFloat, transition: Transition) {
             if backgroundView.superview == nil {
                 self.addSubview(backgroundView)
             }
             // To fix release animation
             let extraBottom: CGFloat = 500
-            backgroundView.frame = .init(origin: .zero, size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
-            if backgroundView.backgroundColor != color {
+            
+            if backgroundView.backgroundColor != color && backgroundView.backgroundColor != nil {
+//                let initialVelocity: CGFloat = 0
+//                let xtransition = ComponentFlow.Transition(animation: .curve(duration: 0.45, curve: .spring))// .animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
+                
                 UIView.animate(withDuration: 0.4) { [self] in
                     backgroundView.backgroundColor = color
+                    // TODO: determine if animation is needed (with facts and logic, not color)
+                    backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
                 }
+                
+                let anim = CABasicAnimation(keyPath: "cornerRadius")
+                anim.fromValue = backgroundView.layer.cornerRadius
+                backgroundView.layer.cornerRadius = cornerRadius
+                anim.toValue = cornerRadius
+                anim.duration = 0.4
+                backgroundView.layer.add(anim, forKey: "cornerRadius")
             } else {
                 backgroundView.backgroundColor = color
+                backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
+                backgroundView.layer.cornerRadius = cornerRadius
             }
             backgroundView.isUserInteractionEnabled = false
             backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-            backgroundView.layer.cornerRadius = 16
+//            let currentRadius = backgroundView.layer.cornerRadius
+//            backgroundView.layer.cornerRadius = cornerRadius
+//            transition.animateCornerRadius(layer: backgroundView.layer, from: currentRadius, to: cornerRadius)
             backgroundView.clipsToBounds = true
             backgroundView.layer.masksToBounds = true
         }
@@ -242,6 +278,12 @@ final class SheetBackgroundComponent: Component {
         if !lhs.color.isEqual(rhs.color) {
             return false
         }
+        if lhs.radius != rhs.radius {
+            return false
+        }
+        if lhs.offset != rhs.offset {
+            return false
+        }
 //        if lhs.width != rhs.width {
 //            return false
 //        }
@@ -251,12 +293,14 @@ final class SheetBackgroundComponent: Component {
         return true
     }
     
-    public init(color: UIColor) {
+    public init(color: UIColor, radius: CGFloat, offset: CGFloat) {
         self.color = color
+        self.radius = radius
+        self.offset = offset
     }
     
     public func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        view.update(availableSize: availableSize, color: color, transition: transition)
+        view.update(availableSize: availableSize, color: color, cornerRadius: radius, offset: offset, transition: transition)
         return availableSize
     }
 }

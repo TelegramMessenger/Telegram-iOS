@@ -736,6 +736,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         
         private(set) var displayUI: Bool = true
         var dismissOffset: CGFloat = 0.0
+        var initialOffset: CGFloat = 0.0
         // TODO: remove (replaced by isFullscreen)
         var storedIsLandscape: Bool?
         var isFullscreen: Bool = false
@@ -976,6 +977,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             }
             var isFullscreen = state.isFullscreen
             let isLandscape = context.availableSize.width > context.availableSize.height
+            
             if let videoSize = context.state.videoSize {
                 // Always fullscreen in landscape
                 if /*videoSize.width > videoSize.height &&*/ isLandscape && !isFullscreen {
@@ -985,6 +987,16 @@ public final class _MediaStreamComponent: CombinedComponent {
                     state.isFullscreen = false
                     isFullscreen = false
                 }
+            }
+            
+            let videoHeight: CGFloat = context.availableSize.width / 16 * 9
+            let bottomPadding = 40 + environment.safeInsets.bottom
+            let sheetHeight: CGFloat = isFullscreen ? context.availableSize.height : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
+            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset - context.view.safeAreaInsets.top < 30
+            
+            var dragOffset = context.state.dismissOffset
+            if isFullyDragged {
+                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + context.view.safeAreaInsets.top)// sheetHeight - UIScreen.main.bounds.height
             }
             
             let video = video.update(
@@ -1324,12 +1336,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                     subtitle: memberCountString
                 ))
             }
-            
-            let videoHeight: CGFloat = context.availableSize.width / 16 * 9
-            let bottomPadding = 40 + environment.safeInsets.bottom
-            let sheetHeight: CGFloat = isFullscreen ? context.availableSize.height : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
-            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset < 30
-            
+            let availableSize = context.availableSize
+            let safeAreaTop = context.view.safeAreaInsets.top
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                 .gesture(.tap { [weak state] in
@@ -1344,9 +1352,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                     }
                     switch panState {
                     case .began:
-                        break
+                        state.initialOffset = state.dismissOffset
                     case let .updated(offset):
-                        state.updateDismissOffset(value: offset.y, interactive: true)
+                        state.updateDismissOffset(value: state.initialOffset + offset.y, interactive: true)
                     case let .ended(velocity):
                         // TODO: Dismiss sheet depending on velocity
                         if velocity.y > 200.0 {
@@ -1357,7 +1365,11 @@ public final class _MediaStreamComponent: CombinedComponent {
                                     controller.updateOrientation(orientation: .portrait)
                                 }
                             } else {
-                                let _ = call.leave(terminateIfPossible: false)
+                                if isFullyDragged || state.initialOffset != 0 {
+                                    state.updateDismissOffset(value: 0.0, interactive: false)
+                                } else {
+                                    let _ = call.leave(terminateIfPossible: false)
+                                }
                             }
                             /*activatePictureInPicture.invoke(Action { [weak state] in
                                 guard let state = state, let controller = controller() as? MediaStreamComponentController else {
@@ -1367,7 +1379,16 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 controller.dismiss(closing: false, manual: true)
                             })*/
                         } else {
-                            state.updateDismissOffset(value: 0.0, interactive: false)
+                            if isFullyDragged {
+                                state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                            } else {
+                                if velocity.y < -200 {
+                                    // Expand
+                                    state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                                } else {
+                                    state.updateDismissOffset(value: 0.0, interactive: false)
+                                }
+                            }
                         }
                     }
                 })
@@ -1483,19 +1504,21 @@ public final class _MediaStreamComponent: CombinedComponent {
                     component: StreamSheetComponent(
                         topComponent: AnyComponent(navigationComponent),
                         bottomButtonsRow: bottomComponent,
-                        topOffset: context.availableSize.height - sheetHeight + context.state.dismissOffset,
-                        sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
+                        topOffset: context.availableSize.height - sheetHeight + dragOffset,
+                        sheetHeight: max(sheetHeight - dragOffset, sheetHeight),
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: bottomPadding,
-                        participantsCount: context.state.originInfo?.memberCount ?? 0 // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
+                        participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
                            //
+                        isFullyExtended: isFullyDragged,
+                        deviceCornerRadius: deviceCornerRadius ?? 0
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
                 )
                 
                 // TODO: calculate (although not necessary currently)
-                let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + context.state.dismissOffset
+                let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + dragOffset
                 let sheetPosition = sheetOffset + sheetHeight / 2
                 // Sheet underneath the video when in sheet
 //                if !isFullscreen {
@@ -1507,7 +1530,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 let videoPos: CGFloat
                 
                 if isFullscreen {
-                    videoPos = context.availableSize.height / 2 + state.dismissOffset
+                    videoPos = context.availableSize.height / 2 + dragOffset
                 } else {
                     videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50
                 }
@@ -1516,7 +1539,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 )
             } else {
                 context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2 + state.dismissOffset)
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2 + dragOffset)
                 ))
             }
             
@@ -1571,7 +1594,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                         sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: 12,
-                        participantsCount: -1 // context.state.originInfo?.memberCount ?? 0
+                        participantsCount: -1, // context.state.originInfo?.memberCount ?? 0
+                        isFullyExtended: isFullyDragged,
+                        deviceCornerRadius: deviceCornerRadius ?? 0
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
@@ -1596,6 +1621,9 @@ public final class _MediaStreamComponent: CombinedComponent {
         }
     }
 }
+
+// TODO: pass to component properly
+var deviceCornerRadius: CGFloat? = nil
 
 public final class _MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
     private let context: AccountContext
@@ -1642,12 +1670,15 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
             view.expandFromPictureInPicture()
         }
         
-        if let _ = self.validLayout {
+        if let validLayout = self.validLayout {
             self.view.clipsToBounds = true
+            
+            // TODO: pass to component properly
+            deviceCornerRadius = validLayout.deviceMetrics.screenCornerRadius - 1// 0.5
 //            self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
-            if #available(iOS 13.0, *) {
-                self.view.layer.cornerCurve = .continuous
-            }
+//            if #available(iOS 13.0, *) {
+//                self.view.layer.cornerCurve = .continuous
+//            }
             
             self.view.layer.animatePosition(from: CGPoint(x: self.view.frame.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), to: self.view.center, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in // [weak self] _ in
 //                self?.view.layer.cornerRadius = 0.0
