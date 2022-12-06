@@ -20,10 +20,27 @@ public final class LottieAnimationComponent: Component {
         
         public var name: String
         public var mode: Mode
+        public var range: (CGFloat, CGFloat)?
         
-        public init(name: String, mode: Mode) {
+        public init(name: String, mode: Mode, range: (CGFloat, CGFloat)? = nil) {
             self.name = name
             self.mode = mode
+            self.range = range
+        }
+        
+        public static func == (lhs: LottieAnimationComponent.AnimationItem, rhs: LottieAnimationComponent.AnimationItem) -> Bool {
+            if lhs.name != rhs.name {
+                return false
+            }
+            if lhs.mode != rhs.mode {
+                return false
+            }
+            if let lhsRange = lhs.range, let rhsRange = rhs.range, lhsRange != rhsRange {
+                return false
+            } else if (lhs.range == nil) != (rhs.range == nil) {
+                return false
+            }
+            return true
         }
     }
     
@@ -248,8 +265,14 @@ public final class LottieAnimationComponent: Component {
                 if updatePlayback {
                     if case .animating = component.animation.mode {
                         if !animationView.isAnimationPlaying {
-                            animationView.play { [weak self] _ in
-                                self?.currentCompletion?()
+                            if let range = component.animation.range {
+                                animationView.play(fromProgress: range.0, toProgress: range.1, completion: { [weak self] _ in
+                                    self?.currentCompletion?()
+                                })
+                            } else {
+                                animationView.play { [weak self] _ in
+                                    self?.currentCompletion?()
+                                }
                             }
                         }
                     } else {

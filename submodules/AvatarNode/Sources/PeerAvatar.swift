@@ -84,7 +84,7 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
     }
 }
 
-public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
+public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, forceProvidedRepresentation: Bool = false, representation: TelegramMediaImageRepresentation? = nil, size: CGSize, round: Bool = true, font: UIFont = avatarPlaceholderFont(size: 13.0), drawLetters: Bool = true, fullSize: Bool = false, blurred: Bool = false) -> Signal<UIImage?, NoError> {
     let iconSignal: Signal<UIImage?, NoError>
     
     let clipStyle: AvatarNodeClipStyle
@@ -97,7 +97,15 @@ public func peerAvatarCompleteImage(account: Account, peer: EnginePeer, size: CG
     } else {
         clipStyle = .none
     }
-    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.first, displayDimensions: size, clipStyle: clipStyle, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
+    
+    let thumbnailRepresentation: TelegramMediaImageRepresentation?
+    if forceProvidedRepresentation {
+        thumbnailRepresentation = representation
+    } else {
+        thumbnailRepresentation = peer.profileImageRepresentations.first
+    }
+    
+    if let signal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: thumbnailRepresentation, displayDimensions: size, clipStyle: clipStyle, blurred: blurred, inset: 0.0, emptyColor: nil, synchronousLoad: fullSize) {
         if fullSize, let fullSizeSignal = peerAvatarImage(account: account, peerReference: PeerReference(peer._asPeer()), authorOfMessage: nil, representation: peer.profileImageRepresentations.last, displayDimensions: size, emptyColor: nil, synchronousLoad: true) {
             iconSignal = combineLatest(.single(nil) |> then(signal), .single(nil) |> then(fullSizeSignal))
             |> mapToSignal { thumbnailImage, fullSizeImage -> Signal<UIImage?, NoError> in

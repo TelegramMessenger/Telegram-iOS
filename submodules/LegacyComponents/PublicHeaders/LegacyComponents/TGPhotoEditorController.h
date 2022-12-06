@@ -51,8 +51,8 @@ typedef enum {
 
 @property (nonatomic, copy) void (^willFinishEditing)(id<TGMediaEditAdjustments> adjustments, id temporaryRep, bool hasChanges);
 @property (nonatomic, copy) void (^didFinishRenderingFullSizeImage)(UIImage *fullSizeImage);
-@property (nonatomic, copy) void (^didFinishEditing)(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
-@property (nonatomic, copy) void (^didFinishEditingVideo)(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges);
+@property (nonatomic, copy) void (^didFinishEditing)(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void));
+@property (nonatomic, copy) void (^didFinishEditingVideo)(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void));
 
 @property (nonatomic, assign) bool skipInitialTransition;
 @property (nonatomic, assign) bool dontHideStatusBar;

@@ -37,13 +37,14 @@ func presentLegacyWebSearchEditor(context: AccountContext, theme: PresentationTh
         legacyController.bind(controller: controller)
         
         controller.editingContext = TGMediaEditingContext()
-        controller.didFinishEditing = { [weak controller] _, result, _, hasChanges in
+        controller.didFinishEditing = { [weak controller] _, result, _, hasChanges, commit in
             if !hasChanges {
                 return
             }
             if let result = result {
                 completed(result)
             }
+            commit?()
             controller?.dismiss(animated: true)
         }
         controller.requestThumbnailImage = { _ -> SSignal in

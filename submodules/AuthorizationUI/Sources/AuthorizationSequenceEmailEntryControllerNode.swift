@@ -88,6 +88,8 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
         }
     }
     
+    private let appearanceTimestamp = CACurrentMediaTime()
+    
     init(strings: PresentationStrings, theme: PresentationTheme, mode: AuthorizationSequenceEmailEntryController.Mode) {
         self.strings = strings
         self.theme = theme
@@ -198,7 +200,15 @@ final class AuthorizationSequenceEmailEntryControllerNode: ASDisplayNode, UIText
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
                 
         var insets = layout.insets(options: [])
         insets.top = layout.statusBarHeight ?? 20.0

@@ -89,7 +89,8 @@ func paneGifSearchForQuery(context: AccountContext, query: String, offset: Strin
                                     resource: thumbnailResource,
                                     progressiveSizes: [],
                                     immediateThumbnailData: nil,
-                                    hasVideo: false
+                                    hasVideo: false,
+                                    isPersonal: false
                                 ))
                             }
                         }

@@ -14,8 +14,8 @@ func imageRepresentationsForApiChatPhoto(_ photo: Api.ChatPhoto) -> [TelegramMed
             smallResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: photoId, sizeSpec: .small, volumeId: nil, localId: nil)
             fullSizeResource = CloudPeerPhotoSizeMediaResource(datacenterId: dcId, photoId: photoId, sizeSpec: .fullSize, volumeId: nil, localId: nil)
 
-        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData(), hasVideo: hasVideo))
-            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData(), hasVideo: hasVideo))
+        representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 80, height: 80), resource: smallResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData(), hasVideo: hasVideo, isPersonal: false))
+            representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: fullSizeResource, progressiveSizes: [], immediateThumbnailData: strippedThumb?.makeData(), hasVideo: hasVideo, isPersonal: false))
         case .chatPhotoEmpty:
             break
     }

@@ -23,3 +23,10 @@ typedef enum {
 - (instancetype)initWithText:(NSString *)text font:(TGPhotoPaintFont *)font swatch:(TGPaintSwatch *)swatch baseFontSize:(CGFloat)baseFontSize maxWidth:(CGFloat)maxWidth style:(TGPhotoPaintTextEntityStyle)style;
 
 @end
+
+
+@interface TGPhotoPaintStaticEntity : TGPhotoPaintEntity
+
+@property (nonatomic, strong) UIImage *renderImage;
+
+@end

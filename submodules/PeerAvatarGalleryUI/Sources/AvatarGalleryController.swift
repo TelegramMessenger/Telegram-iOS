@@ -33,10 +33,18 @@ public func peerInfoProfilePhotos(context: AccountContext, peerId: EnginePeer.Id
     |> mapToSignal { entries -> Signal<(Bool, [AvatarGalleryEntry])?, NoError> in
         if let entries = entries {
             if let firstEntry = entries.first {
-                return context.account.postbox.loadedPeerWithId(peerId)
-                |> mapToSignal { peer -> Signal<(Bool, [AvatarGalleryEntry])?, NoError>in
-                    return fetchedAvatarGalleryEntries(engine: context.engine, account: context.account, peer: peer, firstEntry: firstEntry)
-                    |> map(Optional.init)
+                return context.account.postbox.peerView(id: peerId)
+                |> mapToSignal { peerView -> Signal<(Bool, [AvatarGalleryEntry])?, NoError>in
+                    if let peer = peerViewMainPeer(peerView) {
+                        var secondEntry: TelegramMediaImage?
+                        if firstEntry.representations.first?.representation.isPersonal == true, let cachedData = peerView.cachedData as? CachedUserData, case let .known(photo) = cachedData.photo {
+                            secondEntry = photo
+                        }
+                        return fetchedAvatarGalleryEntries(engine: context.engine, account: context.account, peer: peer, firstEntry: firstEntry, secondEntry: secondEntry)
+                        |> map(Optional.init)
+                    } else {
+                        return .single(nil)
+                    }
                 }
             } else {
                 return .single((true, []))
@@ -268,7 +276,7 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
     }
 }
 
-public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: Peer, firstEntry: AvatarGalleryEntry) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
+public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account, peer: Peer, firstEntry: AvatarGalleryEntry, secondEntry: TelegramMediaImage?) -> Signal<(Bool, [AvatarGalleryEntry]), NoError> {
     let initialEntries = [firstEntry]
     return Signal<(Bool, [AvatarGalleryEntry]), NoError>.single((false, initialEntries))
     |> then(
@@ -313,6 +321,10 @@ public func fetchedAvatarGalleryEntries(engine: TelegramEngine, account: Account
                         index += 1
                     }
                 } else {
+                    var photos = photos
+                    if let secondEntry {
+                        photos.insert(TelegramPeerPhoto(image: secondEntry, reference: secondEntry.reference, date: 0, index: 1, totalCount: 0, messageId: nil), at: 1)
+                    }
                     for photo in photos {
                         let indexData = GalleryItemIndexData(position: index, totalCount: Int32(photos.count))
                         if result.isEmpty, let first = initialEntries.first {

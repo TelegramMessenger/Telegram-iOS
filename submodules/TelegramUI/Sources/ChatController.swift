@@ -971,8 +971,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             transitionCompletion()
                         }, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
-                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                                    if let (fileReference, view, rect) = result {
+                                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                    }
                                     return true
                                 })
                                 strongSelf.present(controller, in: .window(.root))
@@ -3764,8 +3766,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     if let mediaReference = mediaReference, let peer = message.peers[message.id.peerId] {
                         legacyMediaEditor(context: strongSelf.context, peer: peer, threadTitle: strongSelf.threadInfo?.title, media: mediaReference, initialCaption: NSAttributedString(string: message.text), snapshots: [], transitionCompletion: nil, presentStickers: { [weak self] completion in
                             if let strongSelf = self {
-                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                                    if let (fileReference, view, rect) = result {
+                                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                    }
                                     return true
                                 })
                                 strongSelf.present(controller, in: .window(.root))
@@ -11878,8 +11882,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, presentStickers: { [weak self] completion in
                 if let strongSelf = self {
-                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                        if let (fileReference, view, rect) = result {
+                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                        }
                         return true
                     })
                     strongSelf.present(controller, in: .window(.root))
@@ -12519,8 +12525,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                                if let (fileReference, view, rect) = result {
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                }
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
@@ -12617,8 +12625,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }
             }, presentStickers: { [weak self] completion in
                 if let strongSelf = self {
-                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                        if let (fileReference, view, rect) = result {
+                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                        }
                         return true
                     })
                     strongSelf.present(controller, in: .window(.root))
@@ -12734,7 +12744,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     let mimeType = guessMimeTypeByFileExtension((item.fileName as NSString).pathExtension)
                                     var previewRepresentations: [TelegramMediaImageRepresentation] = []
                                     if mimeType.hasPrefix("image/") || mimeType == "application/pdf" {
-                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false))
+                                        previewRepresentations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 320, height: 320), resource: ICloudFileResource(urlData: item.urlData, thumbnail: true), progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                                     }
                                     var attributes: [TelegramMediaFileAttribute] = []
                                     attributes.append(.FileName(fileName: item.fileName))
@@ -12829,8 +12839,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         controller.presentStickers = { [weak self] completion in
             if let strongSelf = self {
-                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                    if let (fileReference, view, rect) = result {
+                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                    }
                     return true
                 })
                 strongSelf.present(controller, in: .window(.root))
@@ -12926,8 +12938,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             }))
                             controller.presentStickers = { [weak self] completion in
                                 if let strongSelf = self {
-                                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                        completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                    let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                                        if let (fileReference, view, rect) = result {
+                                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                        }
                                         return true
                                     })
                                     strongSelf.present(controller, in: .window(.root))
@@ -12973,8 +12987,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         }
                     }, presentStickers: { [weak self] completion in
                         if let strongSelf = self {
-                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                            let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                                if let (fileReference, view, rect) = result {
+                                    completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                                }
                                 return true
                             })
                             strongSelf.present(controller, in: .window(.root))
@@ -13030,8 +13046,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 }))
                 controller.presentStickers = { [weak self] completion in
                     if let strongSelf = self {
-                        let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { fileReference, view, rect in
-                            completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                        let controller = DrawingStickersScreen(context: strongSelf.context, selectSticker: { result in
+                            if let (fileReference, view, rect) = result {
+                                completion(fileReference.media, fileReference.media.isAnimatedSticker || fileReference.media.isVideoSticker, view, rect)
+                            }
                             return true
                         })
                         strongSelf.present(controller, in: .window(.root))
@@ -13937,8 +13955,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         }
         |> deliverOnMainQueue).start(next: { [weak self] settings in
             if let strongSelf = self, let peer = strongSelf.presentationInterfaceState.renderedPeer?.peer {
-                strongSelf.chatDisplayNode.dismissInput()
-                
+                strongSelf.chatDisplayNode.dismissInput()                
                 let controller = mediaPasteboardScreen(
                     context: strongSelf.context,
                     updatedPresentationData: strongSelf.updatedPresentationData,

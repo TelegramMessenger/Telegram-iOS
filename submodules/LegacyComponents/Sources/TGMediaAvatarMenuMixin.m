@@ -27,6 +27,7 @@
     bool _signup;
     bool _isVideo;
     bool _forum;
+    NSString *_title;
 }
 @end
 
@@ -39,10 +40,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false forum: false];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false forum:false title:nil];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum title:(NSString *)title
 {
     self = [super init];
     if (self != nil)
@@ -58,6 +59,7 @@
         _isVideo = isVideo;
         _signup = signup;
         _forum = forum;
+        _title = title;
     }
     return self;
 }
@@ -92,6 +94,10 @@
     
     NSMutableArray *itemViews = [[NSMutableArray alloc] init];
     
+    if (_title.length > 0) {
+        [itemViews addObject:[[TGMenuSheetTitleItemView alloc] initWithTitle:nil subtitle:_title solidSubtitle:false]];
+    }
+    
     TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:_signup ? TGMediaAssetPhotoType : TGMediaAssetAnyType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
     carouselItem.forum = _forum;
     carouselItem.stickersContext = _stickersContext;
@@ -112,7 +118,7 @@
         
         [strongSelf _displayCameraWithView:cameraView menuController:strongController];
     };
-    carouselItem.avatarCompletionBlock = ^(UIImage *resultImage)
+    carouselItem.avatarCompletionBlock = ^(UIImage *resultImage, void(^commit)(void))
     {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
@@ -122,12 +128,25 @@
         if (strongController == nil)
             return;
         
-        if (strongSelf.didFinishWithImage != nil)
-            strongSelf.didFinishWithImage(resultImage);
-        
-        [strongController dismissAnimated:false];
+        if (strongSelf.willFinishWithImage != nil) {
+            strongSelf.willFinishWithImage(resultImage, ^{
+                if (strongSelf.didFinishWithImage != nil)
+                    strongSelf.didFinishWithImage(resultImage);
+                
+                commit();
+                
+                [strongController dismissAnimated:false];
+            });
+        } else {
+            if (strongSelf.didFinishWithImage != nil)
+                strongSelf.didFinishWithImage(resultImage);
+            
+            commit();
+            
+            [strongController dismissAnimated:false];
+        }
     };
-    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
+    carouselItem.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments, void(^commit)(void)) {
         __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
         if (strongSelf == nil)
             return;
@@ -138,6 +157,8 @@
         
         if (strongSelf.didFinishWithVideo != nil)
             strongSelf.didFinishWithVideo(image, asset, adjustments);
+        
+        commit();
         
         [strongController dismissAnimated:false];
     };
@@ -314,10 +335,19 @@
             if (strongSelf == nil)
                 return;
             
-            if (strongSelf.didFinishWithImage != nil)
-                strongSelf.didFinishWithImage(resultImage);
-            
-            [menuController dismissAnimated:false];
+            if (strongSelf.willFinishWithImage != nil) {
+                strongSelf.willFinishWithImage(resultImage, ^{
+                    if (strongSelf.didFinishWithImage != nil)
+                        strongSelf.didFinishWithImage(resultImage);
+                    
+                    [menuController dismissAnimated:false];
+                });
+            } else {
+                if (strongSelf.didFinishWithImage != nil)
+                    strongSelf.didFinishWithImage(resultImage);
+                
+                [menuController dismissAnimated:false];
+            }
         };
         
         controller.finishedWithVideo = ^(__unused TGOverlayController *controller, NSURL *url, UIImage *previewImage, __unused NSTimeInterval duration, __unused CGSize dimensions, TGVideoEditAdjustments *adjustments, __unused NSAttributedString *caption, __unused NSArray *stickers, __unused NSNumber *timer){
@@ -431,13 +461,24 @@
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
-                
-                if (strongSelf.didFinishWithImage != nil)
-                    strongSelf.didFinishWithImage(resultImage);
-                
-                __strong TGMediaAssetsController *strongController = weakController;
-                if (strongController != nil && strongController.dismissalBlock != nil)
-                    strongController.dismissalBlock();
+                                
+                if (strongSelf.willFinishWithImage != nil) {
+                    strongSelf.willFinishWithImage(resultImage, ^{
+                        if (strongSelf.didFinishWithImage != nil)
+                            strongSelf.didFinishWithImage(resultImage);
+                        
+                        __strong TGMediaAssetsController *strongController = weakController;
+                        if (strongController != nil && strongController.dismissalBlock != nil)
+                            strongController.dismissalBlock();
+                    });
+                } else {
+                    if (strongSelf.didFinishWithImage != nil)
+                        strongSelf.didFinishWithImage(resultImage);
+                    
+                    __strong TGMediaAssetsController *strongController = weakController;
+                    if (strongController != nil && strongController.dismissalBlock != nil)
+                        strongController.dismissalBlock();
+                }
             };
             controller.avatarVideoCompletionBlock = ^(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments) {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;

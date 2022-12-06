@@ -15,7 +15,7 @@ import AppBundle
 import DatePickerNode
 import DebugSettingsUI
 import TabBarUI
-import PremiumUI
+import DrawingUI
 
 public final class TelegramRootController: NavigationController {
     private let context: AccountContext
