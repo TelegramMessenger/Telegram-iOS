@@ -37,6 +37,8 @@ public final class AnimatedCountView: UIView {
         countLabel.clipsToBounds = false
         subtitleLabel.textAlignment = .center
         self.clipsToBounds = false
+        
+        subtitleLabel.textColor = .white
 //        self.backgroundColor = UIColor.white.withAlphaComponent(0.1)
     }
     

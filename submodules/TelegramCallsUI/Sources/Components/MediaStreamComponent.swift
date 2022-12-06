@@ -743,6 +743,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         var videoSize: CGSize?
         
         private(set) var canManageCall: Bool = false
+        // TODO: also handle pictureInPicturePossible
         let isPictureInPictureSupported: Bool
         
         private(set) var callTitle: String?
@@ -756,6 +757,10 @@ public final class _MediaStreamComponent: CombinedComponent {
         
         private var scheduledDismissUITimer: SwiftSignalKit.Timer?
         var videoStalled: Bool = false
+        
+        var videoIsPlayable: Bool {
+            !videoStalled && hasVideo
+        }
         
         let deactivatePictureInPictureIfVisible = StoredActionSlot(Void.self)
         
@@ -1036,7 +1041,7 @@ public final class _MediaStreamComponent: CombinedComponent {
 //            let height = context.availableSize.height
             var navigationRightItems: [AnyComponentWithIdentity<Empty>] = []
 //            let contextView = context.view
-            if context.state.isPictureInPictureSupported, context.state.hasVideo {
+            if context.state.isPictureInPictureSupported, context.state.videoIsPlayable {
                 navigationRightItems.append(AnyComponentWithIdentity(id: "pip", component: AnyComponent(Button(
                     content: AnyComponent(ZStack([
                             AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
@@ -1305,7 +1310,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                     })
                 )*/,
                 rightItems: navigationRightItems,
-                centerItem: AnyComponent(StreamTitleComponent(text: state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isActive: context.state.hasVideo))
+                centerItem: AnyComponent(StreamTitleComponent(text: state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isActive: context.state.videoIsPlayable))
             )
             
 //            let navigationBar = navigationBar.update(
@@ -1476,7 +1481,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                             title: "expand"
                         )),
                         action: {
-                            guard state.hasVideo else {
+                            guard state.videoIsPlayable else {
                                 state.isFullscreen = false 
                                 return
                             }

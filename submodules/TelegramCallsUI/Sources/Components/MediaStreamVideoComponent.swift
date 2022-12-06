@@ -207,6 +207,9 @@ final class _MediaStreamVideoComponent: Component {
                             videoView.alpha = 1
                         }
                         if let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
+                            sampleBufferVideoView.sampleBufferLayer.masksToBounds = true
+                            sampleBufferVideoView.sampleBufferLayer.cornerRadius = 20
+                            
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
                             }
@@ -249,6 +252,8 @@ final class _MediaStreamVideoComponent: Component {
                                     }
                                     return delegate
                                 }()))
+                                pictureInPictureController?.playerLayer.masksToBounds = false
+                                pictureInPictureController?.playerLayer.cornerRadius = 30
                             } else if AVPictureInPictureController.isPictureInPictureSupported() {
                                 // TODO: support PiP for iOS < 15.0
                                 // sampleBufferVideoView.sampleBufferLayer
@@ -473,8 +478,15 @@ final class _MediaStreamVideoComponent: Component {
         }
         
         func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-            videoView?.alpha = 0
-            videoBlurView?.alpha = 0
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                self.videoView?.alpha = 0
+            }
+            UIView.animate(withDuration: 0.3) { [self] in
+                videoBlurView?.alpha = 0
+            }
+            // TODO: make safe
+            UIApplication.shared.windows.first?/*(where: { $0.layer !== (UIApplication.shared.connectedScenes.first as? UIWindowScene)?.keyWindow?.layer })?*/.layer.cornerRadius = 10// (where: { !($0 is NativeWindow)*/ })
+            UIApplication.shared.windows.first?.layer.masksToBounds = true
         }
         
         public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
@@ -498,11 +510,17 @@ final class _MediaStreamVideoComponent: Component {
             } else {
                 self.component?.pictureInPictureClosed()
             }
+            // TODO: extract precise animation or observe window changes
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                self.videoView?.alpha = 1
+            }
+            UIView.animate(withDuration: 0.3) { [self] in
+                self.videoBlurView?.alpha = 1
+            }
         }
         
         func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
             self.videoView?.alpha = 1
-            self.videoBlurView?.alpha = 1
             self.state?.updated(transition: .immediate)
         }
     }
