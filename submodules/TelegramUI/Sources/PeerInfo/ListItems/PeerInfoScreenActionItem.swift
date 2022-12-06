@@ -1,6 +1,8 @@
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramPresentationData
+import AvatarNode
 
 enum PeerInfoScreenActionColor {
     case accent
@@ -18,14 +20,16 @@ final class PeerInfoScreenActionItem: PeerInfoScreenItem {
     let text: String
     let color: PeerInfoScreenActionColor
     let icon: UIImage?
+    let iconSignal: Signal<UIImage?, NoError>?
     let alignment: PeerInfoScreenActionAligmnent
     let action: (() -> Void)?
     
-    init(id: AnyHashable, text: String, color: PeerInfoScreenActionColor = .accent, icon: UIImage? = nil, alignment: PeerInfoScreenActionAligmnent = .natural, action: (() -> Void)?) {
+    init(id: AnyHashable, text: String, color: PeerInfoScreenActionColor = .accent, icon: UIImage? = nil, iconSignal: Signal<UIImage?, NoError>? = nil, alignment: PeerInfoScreenActionAligmnent = .natural, action: (() -> Void)?) {
         self.id = id
         self.text = text
         self.color = color
         self.icon = icon
+        self.iconSignal = iconSignal
         self.alignment = alignment
         self.action = action
     }
@@ -44,6 +48,8 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
     private let activateArea: AccessibilityAreaNode
     
     private var item: PeerInfoScreenActionItem?
+    
+    private let iconDisposable = MetaDisposable()
     
     override init() {
         var bringToFrontForHighlightImpl: (() -> Void)?
@@ -79,17 +85,21 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
         self.addSubnode(self.activateArea)
     }
     
+    deinit {
+        self.iconDisposable.dispose()
+    }
+    
     override func update(width: CGFloat, safeInsets: UIEdgeInsets, presentationData: PresentationData, item: PeerInfoScreenItem, topItem: PeerInfoScreenItem?, bottomItem: PeerInfoScreenItem?, hasCorners: Bool, transition: ContainedViewLayoutTransition) -> CGFloat {
         guard let item = item as? PeerInfoScreenActionItem else {
             return 10.0
         }
         
         self.item = item
-        
+                
         self.selectionNode.pressed = item.action
         
         let sideInset: CGFloat = 16.0 + safeInsets.left
-        var leftInset = (item.icon == nil ? sideInset : sideInset + 29.0 + 16.0)
+        var leftInset = (item.icon == nil && item.iconSignal == nil ? sideInset : sideInset + 29.0 + 16.0)
         var iconInset = sideInset
         if case .peerList = item.alignment {
             leftInset += 5.0
@@ -126,6 +136,19 @@ private final class PeerInfoScreenActionItemNode: PeerInfoScreenItemNode {
             self.iconNode.image = generateTintedImage(image: icon, color: textColorValue)
             let iconFrame = CGRect(origin: CGPoint(x: iconInset, y: floorToScreenPixels((height - icon.size.height) / 2.0)), size: icon.size)
             transition.updateFrame(node: self.iconNode, frame: iconFrame)
+        } else if let iconSignal = item.iconSignal {
+            self.iconDisposable.set((iconSignal
+            |> deliverOnMainQueue).start(next: { [weak self] image in
+                if let strongSelf = self, let image {
+                    strongSelf.iconNode.image = image
+                    let iconFrame = CGRect(origin: CGPoint(x: iconInset, y: floorToScreenPixels((height - image.size.height) / 2.0)), size: image.size)
+                    transition.updateFrame(node: strongSelf.iconNode, frame: iconFrame)
+                }
+            }))
+            if self.iconNode.supernode == nil {
+                self.addSubnode(self.iconNode)
+            }
+
         } else if self.iconNode.supernode != nil {
             self.iconNode.image = nil
             self.iconNode.removeFromSupernode()

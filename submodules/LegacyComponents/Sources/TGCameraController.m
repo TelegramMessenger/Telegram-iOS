@@ -2014,7 +2014,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
         return strongSelf->_previewView;
     };
     
-    controller.didFinishEditing = ^(PGPhotoEditorValues *editorValues, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges)
+    controller.didFinishEditing = ^(PGPhotoEditorValues *editorValues, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges, void(^commit)(void))
     {
         if (!hasChanges)
             return;
@@ -2064,10 +2064,12 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [strongController updateStatusBarAppearanceForDismiss];
                 [strongSelf _dismissTransitionForResultController:(TGOverlayController *)strongController];
             }
+            
+            commit();
         });
     };
     
-    controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+    controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
         if (!hasChanges)
             return;
         
@@ -2086,6 +2088,8 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 [strongController updateStatusBarAppearanceForDismiss];
                 [strongSelf _dismissTransitionForResultController:(TGOverlayController *)strongController];
             }
+            
+            commit();
         });
     };
     

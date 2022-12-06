@@ -133,7 +133,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             if setup {
                 text.referenceDrawingSize = self.size
                 text.width = floor(self.size.width * 0.9)
-                text.fontSize = 0.4
+                text.fontSize = 0.3
             }
         }
     }

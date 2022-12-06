@@ -38,12 +38,12 @@
         //    controller.stickersContext = _stickersContext;
         controller.skipInitialTransition = true;
         controller.dontHideStatusBar = true;
-        controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
+        controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges, void(^commit)(void))
         {
             if (didFinishWithImage != nil)
                 didFinishWithImage(resultImage);
         };
-        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
             if (didFinishWithVideo != nil) {
                 if ([asset isKindOfClass:[AVURLAsset class]]) {
                     didFinishWithVideo(resultImage, [(AVURLAsset *)asset URL], adjustments);

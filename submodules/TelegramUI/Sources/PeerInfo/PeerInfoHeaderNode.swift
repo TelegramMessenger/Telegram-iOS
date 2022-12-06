@@ -668,7 +668,14 @@ final class PeerInfoEditingAvatarOverlayNode: ASDisplayNode {
             clipStyle = .round
         }
         
-        if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData) {
+        var isPersonal = false
+        if let updatingAvatar, case let .image(image) = updatingAvatar, image.isPersonal {
+            isPersonal = true
+        }
+        
+        if canEditPeerInfo(context: self.context, peer: peer, chatLocation: chatLocation, threadData: threadData)
+            || isPersonal
+            || self.currentRepresentation != nil && updatingAvatar == nil  {
             var overlayHidden = true
             if let updatingAvatar = updatingAvatar {
                 overlayHidden = false

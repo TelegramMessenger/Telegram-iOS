@@ -15,6 +15,9 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 
 @property (nonatomic, assign) bool forceDark;
 
+@property (nonatomic, copy) void (^willFinishWithImage)(UIImage *image, void (^)(void));
+@property (nonatomic, copy) void (^willFinishWithVideo)(UIImage *image, void (^)(void));
+
 @property (nonatomic, copy) void (^didFinishWithImage)(UIImage *image);
 @property (nonatomic, copy) void (^didFinishWithVideo)(UIImage *image, AVAsset *asset, TGVideoEditAdjustments *adjustments);
 @property (nonatomic, copy) void (^didFinishWithDelete)(void);
@@ -27,7 +30,7 @@ typedef void (^TGMediaAvatarPresentImpl)(id<LegacyComponentsContext>, void (^)(U
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia;
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum title:(NSString *)title;
 - (TGMenuSheetController *)present;
 
 @end

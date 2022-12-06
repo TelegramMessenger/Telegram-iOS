@@ -952,7 +952,7 @@
                 self.willFinishEditing(nil, [_currentTabController currentResultRepresentation], true);
             
             if (self.didFinishEditing != nil)
-                self.didFinishEditing(nil, nil, nil, true);
+                self.didFinishEditing(nil, nil, nil, true, ^{});
 
             if (completion != nil)
                 completion(nil);
@@ -1059,7 +1059,7 @@
     else
     {
         void (^didFinishRenderingFullSizeImage)(UIImage *) = self.didFinishRenderingFullSizeImage;
-        void (^didFinishEditing)(id<TGMediaEditAdjustments>, UIImage *, UIImage *, bool ) = self.didFinishEditing;
+        void (^didFinishEditing)(id<TGMediaEditAdjustments>, UIImage *, UIImage *, bool , void(^)(void)) = self.didFinishEditing;
         
         [[[[renderedImageSignal map:^id(UIImage *image)
         {
@@ -1119,7 +1119,7 @@
             }
             
             if (!saveOnly && didFinishEditing != nil)
-                didFinishEditing(editorValues, image, thumbnailImage, true);
+                didFinishEditing(editorValues, image, thumbnailImage, true, ^{});
         } error:^(__unused id error)
         {
             TGLegacyLog(@"renderedImageSignal error");
@@ -1899,7 +1899,7 @@
             strongSelf.willFinishEditing(nil, nil, false);
         
         if (strongSelf.didFinishEditing != nil)
-            strongSelf.didFinishEditing(nil, nil, nil, false);
+            strongSelf.didFinishEditing(nil, nil, nil, false, ^{});
     };
     
     TGPaintingData *paintingData = nil;
@@ -2088,7 +2088,7 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true);
+                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true, ^{});
                     
                     [self dismissAnimated:true];
                 });
@@ -2196,16 +2196,16 @@
         if (self.willFinishEditing != nil)
             self.willFinishEditing(hasChanges ? adjustments : nil, nil, hasChanges);
         
-        if (self.didFinishEditing != nil)
-            self.didFinishEditing(hasChanges ? adjustments : nil, nil, nil, hasChanges);
-        
-        if ([self presentedForAvatarCreation]) {
-            [self dismissAnimated:true];
-        } else {
-            [self transitionOutSaving:saving completion:^
-            {
-                [self dismiss];
-            }];
+        if (self.didFinishEditing != nil) {
+            self.didFinishEditing(hasChanges ? adjustments : nil, nil, nil, hasChanges, ^{
+                if ([self presentedForAvatarCreation]) {
+                    [self dismissAnimated:true];
+                } else {
+                    [self transitionOutSaving:saving completion:^{
+                        [self dismiss];
+                    }];
+                }
+            });
         }
     }
 }

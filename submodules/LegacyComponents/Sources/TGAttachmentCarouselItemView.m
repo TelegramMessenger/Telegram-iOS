@@ -933,11 +933,10 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         };
         
         __weak TGPhotoEditorController *weakController = controller;
-        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges, void(^commit)(void))
         {
             if (!hasChanges)
                 return;
-            
             __strong TGAttachmentCarouselItemView *strongSelf = weakSelf;
             if (strongSelf == nil)
                 return;
@@ -970,13 +969,13 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                     }
                 }
                 if (strongSelf.avatarVideoCompletionBlock != nil)
-                    strongSelf.avatarVideoCompletionBlock(previewImage, [NSURL fileURLWithPath:filePath], videoAdjustments);
+                    strongSelf.avatarVideoCompletionBlock(previewImage, [NSURL fileURLWithPath:filePath], videoAdjustments, commit);
             } else {
                 if (strongSelf.avatarCompletionBlock != nil)
-                    strongSelf.avatarCompletionBlock(resultImage);
+                    strongSelf.avatarCompletionBlock(resultImage, commit);
             }
         };
-        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
             if (!hasChanges)
                 return;
             
@@ -989,7 +988,7 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
                 return;
             
             if (strongSelf.avatarVideoCompletionBlock != nil)
-                strongSelf.avatarVideoCompletionBlock(resultImage, asset, adjustments);
+                strongSelf.avatarVideoCompletionBlock(resultImage, asset, adjustments, commit);
         };
         controller.requestThumbnailImage = ^(id<TGMediaEditableItem> editableItem)
         {

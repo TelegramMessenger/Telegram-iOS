@@ -279,7 +279,7 @@ struct DrawingState: Equatable {
         return DrawingState(
             selectedTool: .pen,
             tools: [
-                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffffff), size: 0.5, mode: .round)),
+                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffffff), size: 0.3, mode: .round)),
                 .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xfee21b), size: 0.5, mode: .round)),
                 .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.5, mode: .round)),
                 .pencil(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x2570f0), size: 0.5, mode: .round)),

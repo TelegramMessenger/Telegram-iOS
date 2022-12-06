@@ -8446,3 +8446,26 @@ Sorry for the inconvenience.";
 
 "Channel.AdminLog.AntiSpamEnabled" = "%1$@ enabled anti-spam";
 "Channel.AdminLog.AntiSpamDisabled" = "%1$@ disabled anti-spam";
+
+"UserInfo.SuggestPhoto" = "Suggest Photo for %@";
+"UserInfo.SetCustomPhoto" = "Set Photo for %@";
+"UserInfo.ResetCustomPhoto" = "Reset to Original Photo";
+
+"UserInfo.SuggestPhotoTitle" = "Do you want to suggest a profile picture for %@?";
+"UserInfo.SetCustomPhotoTitle" = "Do you want to set a custom profile picture for %@?";
+
+"UserInfo.SuggestPhoto.AlertPhotoText" = "Do you want to suggest %@ to set this photo for his/her profile?";
+"UserInfo.SuggestPhoto.AlertVideoText" = "Do you want to suggest %@ to set this video for his/her profile?";
+"UserInfo.SuggestPhoto.AlertSuggest" = "Suggest";
+
+"UserInfo.SetCustomPhoto.AlertPhotoText" = "Do you want to set this photo for %@? Only you will see this photo and it will replace any photo %@ sets for themselves.";
+"UserInfo.SetCustomPhoto.AlertVideoText" = "Do you want to set this video for %@? Only you will see this video and it will replace any photo %@ sets for themselves.";
+"UserInfo.SetCustomPhoto.AlertSet" = "Set";
+"UserInfo.SetCustomPhoto.SuccessPhotoText" = "You will now always see this photo for **%@** account.";
+"UserInfo.SetCustomPhoto.SuccessVideoText" = "You will now always see this video for **%@** account.";
+
+"UserInfo.CustomPhoto" = "photo set by you";
+"UserInfo.CustomVideo" = "video set by you";
+
+"UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to %@ original photo?";
+"UserInfo.ResetToOriginalAlertReset" = "Reset";

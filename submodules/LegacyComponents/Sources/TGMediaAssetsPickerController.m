@@ -451,7 +451,7 @@
             
             [[strongSelf->_assetsLibrary saveAssetWithImage:resultImage] startWithNext:nil];
         };
-        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges)
+        controller.didFinishEditing = ^(id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, bool hasChanges, void(^commit)(void))
         {
             if (!hasChanges)
                 return;
@@ -488,7 +488,7 @@
                 [(TGMediaAssetsController *)strongSelf.navigationController completeWithAvatarImage:resultImage];
             }
         };
-        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges) {
+        controller.didFinishEditingVideo = ^(AVAsset *asset, id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, UIImage *thumbnailImage, bool hasChanges, void(^commit)(void)) {
             if (!hasChanges)
                 return;
             

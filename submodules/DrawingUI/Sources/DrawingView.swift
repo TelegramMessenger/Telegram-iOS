@@ -71,7 +71,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
     var tool: Tool = .pen
     var toolColor: DrawingColor = DrawingColor(color: .white)
-    var toolBrushSize: CGFloat = 0.15
+    var toolBrushSize: CGFloat = 0.35
     var toolHasArrow: Bool = false
     
     var stateUpdated: (NavigationState) -> Void = { _ in }

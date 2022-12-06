@@ -19,7 +19,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
     
     present(legacyController, nil)
         
-    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup, forum: false)!
+    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup, forum: false, title: nil)!
     let _ = holder.swap(mixin)
     mixin.didFinishWithImage = { image in
         guard let image = image else {

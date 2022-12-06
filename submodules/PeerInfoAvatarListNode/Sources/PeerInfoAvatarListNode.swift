@@ -522,6 +522,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     var highlightedSide: Bool?
     public let stripContainerNode: ASDisplayNode
     public let highlightContainerNode: ASDisplayNode
+    private let setByYouNode: ImmediateTextNode
     public private(set) var galleryEntries: [AvatarGalleryEntry] = []
     private var items: [PeerInfoAvatarListItem] = []
     private var itemNodes: [MediaResourceId: PeerInfoAvatarListItemNode] = [:]
@@ -689,6 +690,10 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.highlightContainerNode.addSubnode(self.leftHighlightNode)
         self.highlightContainerNode.addSubnode(self.rightHighlightNode)
         
+        self.setByYouNode = ImmediateTextNode()
+        self.setByYouNode.alpha = 0.0
+        self.setByYouNode.isUserInteractionEnabled = false
+        
         self.controlsContainerNode = ASDisplayNode()
         self.controlsContainerNode.isUserInteractionEnabled = false
         
@@ -758,6 +763,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.controlsContainerNode.addSubnode(self.stripContainerNode)
         self.controlsClippingNode.addSubnode(self.controlsContainerNode)
         self.controlsClippingOffsetNode.addSubnode(self.controlsClippingNode)
+        self.stripContainerNode.addSubnode(self.setByYouNode)
         
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             guard let strongSelf = self else {
@@ -1254,6 +1260,20 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
                 }
             }
         }
+        
+        if !self.items.isEmpty, self.currentIndex >= 0 && self.currentIndex < self.items.count {
+            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }
+            let currentItem = self.items[self.currentIndex]
+            if let representation = currentItem.representations.first?.representation, representation.isPersonal {
+                transition.updateAlpha(node: self.setByYouNode, alpha: 0.7)
+                self.setByYouNode.attributedText = NSAttributedString(string: representation.hasVideo ? presentationData.strings.UserInfo_CustomVideo : presentationData.strings.UserInfo_CustomPhoto, font: Font.regular(12.0), textColor: UIColor.white)
+                let setByYouSize = self.setByYouNode.updateLayout(size)
+                self.setByYouNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - setByYouSize.width) / 2.0), y: 17.0), size: setByYouSize)
+            } else {
+                transition.updateAlpha(node: self.setByYouNode, alpha: 0.0)
+            }
+        }
+        
         for itemNode in addedItemNodesForAdditiveTransition {
             transition.animatePositionAdditive(node: itemNode, offset: CGPoint(x: additiveTransitionOffset, y: 0.0))
         }
