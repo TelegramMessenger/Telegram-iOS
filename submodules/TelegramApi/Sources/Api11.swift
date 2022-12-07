@@ -1019,6 +1019,7 @@ public extension Api {
         case messageActionSecureValuesSentMe(values: [Api.SecureValue], credentials: Api.SecureCredentialsEncrypted)
         case messageActionSetChatTheme(emoticon: String)
         case messageActionSetMessagesTTL(flags: Int32, period: Int32, autoSettingFrom: Int64?)
+        case messageActionSuggestProfilePhoto(photo: Api.Photo)
         case messageActionTopicCreate(flags: Int32, title: String, iconColor: Int32, iconEmojiId: Int64?)
         case messageActionTopicEdit(flags: Int32, title: String?, iconEmojiId: Int64?, closed: Api.Bool?, hidden: Api.Bool?)
         case messageActionWebViewDataSent(text: String)
@@ -1258,6 +1259,12 @@ public extension Api {
                     serializeInt32(period, buffer: buffer, boxed: false)
                     if Int(flags) & Int(1 << 0) != 0 {serializeInt64(autoSettingFrom!, buffer: buffer, boxed: false)}
                     break
+                case .messageActionSuggestProfilePhoto(let photo):
+                    if boxed {
+                        buffer.appendInt32(1474192222)
+                    }
+                    photo.serialize(buffer, true)
+                    break
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                     if boxed {
                         buffer.appendInt32(228168278)
@@ -1357,6 +1364,8 @@ public extension Api {
                 return ("messageActionSetChatTheme", [("emoticon", String(describing: emoticon))])
                 case .messageActionSetMessagesTTL(let flags, let period, let autoSettingFrom):
                 return ("messageActionSetMessagesTTL", [("flags", String(describing: flags)), ("period", String(describing: period)), ("autoSettingFrom", String(describing: autoSettingFrom))])
+                case .messageActionSuggestProfilePhoto(let photo):
+                return ("messageActionSuggestProfilePhoto", [("photo", String(describing: photo))])
                 case .messageActionTopicCreate(let flags, let title, let iconColor, let iconEmojiId):
                 return ("messageActionTopicCreate", [("flags", String(describing: flags)), ("title", String(describing: title)), ("iconColor", String(describing: iconColor)), ("iconEmojiId", String(describing: iconEmojiId))])
                 case .messageActionTopicEdit(let flags, let title, let iconEmojiId, let closed, let hidden):
@@ -1756,6 +1765,19 @@ public extension Api {
             let _c3 = (Int(_1!) & Int(1 << 0) == 0) || _3 != nil
             if _c1 && _c2 && _c3 {
                 return Api.MessageAction.messageActionSetMessagesTTL(flags: _1!, period: _2!, autoSettingFrom: _3)
+            }
+            else {
+                return nil
+            }
+        }
+        public static func parse_messageActionSuggestProfilePhoto(_ reader: BufferReader) -> MessageAction? {
+            var _1: Api.Photo?
+            if let signature = reader.readInt32() {
+                _1 = Api.parse(reader, signature: signature) as? Api.Photo
+            }
+            let _c1 = _1 != nil
+            if _c1 {
+                return Api.MessageAction.messageActionSuggestProfilePhoto(photo: _1!)
             }
             else {
                 return nil
