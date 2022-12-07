@@ -1114,12 +1114,13 @@
                 image = TGScaleImageToPixelSize(image, CGSizeMake(150.0, 150.0));
             }
             
-            if (avatar && completion != nil) {
-                completion(image);
+            if (!saveOnly && didFinishEditing != nil) {
+                didFinishEditing(editorValues, image, thumbnailImage, true, ^{
+                    if (avatar && completion != nil) {
+                        completion(image);
+                    }
+                });
             }
-            
-            if (!saveOnly && didFinishEditing != nil)
-                didFinishEditing(editorValues, image, thumbnailImage, true, ^{});
         } error:^(__unused id error)
         {
             TGLegacyLog(@"renderedImageSignal error");
@@ -1985,7 +1986,11 @@
     if (![_currentTabController isDismissAllowed])
         return;
     
-    self.view.userInteractionEnabled = false;
+    bool forAvatar = [self presentedForAvatarCreation];
+    
+    if (!forAvatar) {
+        self.view.userInteractionEnabled = false;
+    }
     [_currentTabController prepareTransitionOutSaving:true];
     
     bool saving = true;
@@ -2088,9 +2093,9 @@
                 
                 TGDispatchOnMainThread(^{
                     if (self.didFinishEditingVideo != nil)
-                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true, ^{});
-                    
-                    [self dismissAnimated:true];
+                        self.didFinishEditingVideo(asset, [adjustments editAdjustmentsWithPreset:preset videoStartValue:videoStartValue trimStartValue:trimStartValue trimEndValue:trimEndValue], fullImage, nil, true, ^{
+                            [self dismissAnimated:true];
+                        });
                 });
             }];
         }];
@@ -2098,11 +2103,13 @@
     }
     else if (_intent != TGPhotoEditorControllerVideoIntent)
     {
-        TGProgressWindow *progressWindow = [[TGProgressWindow alloc] init];
-        progressWindow.windowLevel = self.view.window.windowLevel + 0.001f;
-        [progressWindow performSelector:@selector(showAnimated) withObject:nil afterDelay:0.5];
+        TGProgressWindow *progressWindow;
+        if (!forAvatar) {
+            progressWindow = [[TGProgressWindow alloc] init];
+            progressWindow.windowLevel = self.view.window.windowLevel + 0.001f;
+            [progressWindow performSelector:@selector(showAnimated) withObject:nil afterDelay:0.5];
+        }
         
-        bool forAvatar = [self presentedForAvatarCreation];
         [self createEditedImageWithEditorValues:adjustments createThumbnail:!forAvatar saveOnly:false completion:^(__unused UIImage *image)
         {
             [NSObject cancelPreviousPerformRequestsWithTarget:progressWindow selector:@selector(showAnimated) object:nil];

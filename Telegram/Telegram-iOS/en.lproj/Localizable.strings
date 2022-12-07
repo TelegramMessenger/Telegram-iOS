@@ -8469,3 +8469,10 @@ Sorry for the inconvenience.";
 
 "UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to %@ original photo?";
 "UserInfo.ResetToOriginalAlertReset" = "Reset";
+
+"Conversation.SuggestedPhotoTitle" = "Suggested Photo";
+"Conversation.SuggestedPhotoText" = "%@ suggests you to use this photo for your Telegram account.";
+"Conversation.SuggestedPhotoTextYou" = "You suggested %@ to use this photo for their Telegram account.";
+"Conversation.SuggestedVideo" = "Suggested Video";
+"Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
+"Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";

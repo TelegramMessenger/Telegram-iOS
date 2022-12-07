@@ -7514,7 +7514,7 @@ public final class EmojiPagerContentComponent: Component {
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
-                displaySearchWithPlaceholder: nil,
+                displaySearchWithPlaceholder: strings.StickersSearch_SearchStickersPlaceholder,
                 searchInitiallyHidden: false,
                 searchIsPlaceholderOnly: true,
                 emptySearchResults: nil,

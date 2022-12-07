@@ -888,6 +888,10 @@ public final class PresentationCallImpl: PresentationCall {
         return self.debugInfoValue.get()
     }
     
+    func video(isIncoming: Bool) -> Signal<OngoingGroupCallContext.VideoFrameData, NoError>? {
+        return self.ongoingContext?.video(isIncoming: isIncoming)
+    }
+    
     public func makeIncomingVideoView(completion: @escaping (PresentationCallVideoView?) -> Void) {
         self.ongoingContext?.makeIncomingVideoView(completion: { view in
             if let view = view {
