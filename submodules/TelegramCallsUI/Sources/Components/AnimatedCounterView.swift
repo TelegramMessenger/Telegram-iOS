@@ -391,82 +391,101 @@ class AnimatedCountLabel: UILabel {
 //        layer.add(animation, forKey: "opacity")
 //
 //
-        let beginTimeOffset: CFTimeInterval = /*beginTime == .zero ? 0 :*/ /*CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)*/ layer.convertTime(CACurrentMediaTime(), to: nil)
-        
-        let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
-        opacityInAnimation.fromValue = 1
-        opacityInAnimation.toValue = 0
-//        opacityInAnimation.duration = duration
-//        opacityInAnimation.beginTime = beginTimeOffset + beginTime
-//        opacityInAnimation.completion = { _ in
-//            layer.removeFromSuperlayer()
-//        }
-//        layer.add(opacityInAnimation, forKey: "opacity")
-        
-//        let timer = Timer.scheduledTimer(withTimeInterval: duration + beginTime, repeats: false) { timer in
-        DispatchQueue.main.asyncAfter(deadline: .now() + duration * 0.95 + beginTime) {
-//            DispatchQueue.main.async {
-//                layer.backgroundColor = UIColor.red.withAlphaComponent(0.3).cgColor
-//            }
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            layer.removeFromSuperlayer()
-//            }
-//            timer.invalidate()
-         }
-//        RunLoop.current.add(timer, forMode: .common)
-        
-        let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
-        scaleOutAnimation.fromValue = 1 // layer.presentation()?.value(forKey: "transform.scale") ?? 1
-        scaleOutAnimation.toValue = 0.0
-//        scaleOutAnimation.duration = duration
-//        scaleOutAnimation.beginTime = beginTimeOffset + beginTime
-//        layer.add(scaleOutAnimation, forKey: "scaleout")
-        
-        let translate = CABasicAnimation(keyPath: "transform.translation")
-        translate.fromValue = CGPoint.zero
-        translate.toValue = CGPoint(x: 0, y: -layer.bounds.height * 0.3)// -layer.bounds.height + 3.0)
-//        translate.duration = duration
-//        translate.beginTime = beginTimeOffset + beginTime
-//        layer.add(translate, forKey: "translate")
-        
-        let group = CAAnimationGroup()
-        group.animations = [opacityInAnimation, scaleOutAnimation, translate]
-        group.duration = duration
-        group.beginTime = beginTimeOffset + beginTime
-        layer.add(group, forKey: "out")
+        let beginTimeOffset: CFTimeInterval = 0/*beginTime == .zero ? 0 :*/ // CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000) /*layer.convertTime(*/// CACurrentMediaTime()//, to: nil)
+        DispatchQueue.main.asyncAfter(deadline: .now() + beginTime) {
+            let currentTime = CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)
+            let beginTime: CFTimeInterval = 0
+            print("[DIFF-out] \(currentTime - beginTimeOffset)")
+            let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
+            opacityInAnimation.fromValue = 1
+            opacityInAnimation.toValue = 0
+            opacityInAnimation.fillMode = .forwards
+            opacityInAnimation.isRemovedOnCompletion = false
+            //        opacityInAnimation.duration = duration
+            //        opacityInAnimation.beginTime = beginTimeOffset + beginTime
+            //        opacityInAnimation.completion = { _ in
+            //            layer.removeFromSuperlayer()
+            //        }
+            //        layer.add(opacityInAnimation, forKey: "opacity")
+            
+            //        let timer = Timer.scheduledTimer(withTimeInterval: duration + beginTime, repeats: false) { timer in
+            //        DispatchQueue.main.asyncAfter(deadline: .now() + duration + beginTime) {
+            //            DispatchQueue.main.async {
+            //                layer.backgroundColor = UIColor.red.withAlphaComponent(0.3).cgColor
+            //            }
+            //            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            //            layer.removeFromSuperlayer()
+            //            }
+            //            timer.invalidate()
+            //         }
+            //        RunLoop.current.add(timer, forMode: .common)
+            
+            let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
+            scaleOutAnimation.fromValue = 1 // layer.presentation()?.value(forKey: "transform.scale") ?? 1
+            scaleOutAnimation.toValue = 0.0
+            //        scaleOutAnimation.duration = duration
+            //        scaleOutAnimation.beginTime = beginTimeOffset + beginTime
+            //        layer.add(scaleOutAnimation, forKey: "scaleout")
+            
+            let translate = CABasicAnimation(keyPath: "transform.translation")
+            translate.fromValue = CGPoint.zero
+            translate.toValue = CGPoint(x: 0, y: -layer.bounds.height * 0.3)// -layer.bounds.height + 3.0)
+            //        translate.duration = duration
+            //        translate.beginTime = beginTimeOffset + beginTime
+            //        layer.add(translate, forKey: "translate")
+            
+            let group = CAAnimationGroup()
+            group.animations = [opacityInAnimation, scaleOutAnimation, translate]
+            group.duration = duration
+            group.beginTime = beginTimeOffset + beginTime
+            group.fillMode = .forwards
+            group.isRemovedOnCompletion = false
+            group.completion = { _ in
+                layer.removeFromSuperlayer()
+            }
+            //        layer.opacity = 0
+            layer.add(group, forKey: "out")
+        }
     }
     
     func animateIn(for newLayer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
-        newLayer.opacity = 0
-     //   newLayer.backgroundColor = UIColor.red.cgColor
         
-        let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
-        opacityInAnimation.fromValue = 0
-        opacityInAnimation.toValue = 1
-        opacityInAnimation.duration = duration
-        opacityInAnimation.beginTime = CACurrentMediaTime() + beginTime
-//        opacityInAnimation.isAdditive = true
-        opacityInAnimation.fillMode = .backwards
-        newLayer.opacity = 1
-        newLayer.add(opacityInAnimation, forKey: "opacity")
-//        newLayer.opacity = 1
-        
-        let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
-        scaleOutAnimation.fromValue = 0
-        scaleOutAnimation.toValue = 1
-        scaleOutAnimation.duration = duration
-        scaleOutAnimation.beginTime = CACurrentMediaTime() + beginTime
-//        scaleOutAnimation.isAdditive = true
-        newLayer.add(scaleOutAnimation, forKey: "scalein")
-        
-        let animation = CAKeyframeAnimation()
-        animation.keyPath = "position.y"
-        animation.values = [20, -6, 0]
-        animation.keyTimes = [0, 0.64, 1]
-        animation.timingFunction = CAMediaTimingFunction.init(name: .easeInEaseOut)
-        animation.duration = duration / 0.64
-        animation.beginTime = CACurrentMediaTime() + beginTime
-        animation.isAdditive = true
-        newLayer.add(animation, forKey: "pos")
+        let beginTimeOffset: CFTimeInterval = 0// CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)// CACurrentMediaTime()
+        DispatchQueue.main.asyncAfter(deadline: .now() + beginTime) {
+            let currentTime = CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)
+            let beginTime: CFTimeInterval = 0
+            print("[DIFF-in] \(currentTime - beginTimeOffset)")
+            newLayer.opacity = 0
+            //   newLayer.backgroundColor = UIColor.red.cgColor
+            
+            let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
+            opacityInAnimation.fromValue = 0
+            opacityInAnimation.toValue = 1
+            opacityInAnimation.duration = duration
+            opacityInAnimation.beginTime = beginTimeOffset + beginTime
+            //        opacityInAnimation.isAdditive = true
+            opacityInAnimation.fillMode = .backwards
+            newLayer.opacity = 1
+            newLayer.add(opacityInAnimation, forKey: "opacity")
+            //        newLayer.opacity = 1
+            
+            let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
+            scaleOutAnimation.fromValue = 0
+            scaleOutAnimation.toValue = 1
+            scaleOutAnimation.duration = duration
+            scaleOutAnimation.beginTime = beginTimeOffset + beginTime
+            //        scaleOutAnimation.isAdditive = true
+            newLayer.add(scaleOutAnimation, forKey: "scalein")
+            
+            let animation = CAKeyframeAnimation()
+            animation.keyPath = "position.y"
+            animation.values = [20, -6, 0]
+            animation.keyTimes = [0, 0.64, 1]
+            animation.timingFunction = CAMediaTimingFunction.init(name: .easeInEaseOut)
+            animation.duration = duration / 0.64
+            animation.beginTime = beginTimeOffset + beginTime
+            animation.isAdditive = true
+            newLayer.add(animation, forKey: "pos")
+        }
     }
 }

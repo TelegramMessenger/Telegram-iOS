@@ -11,6 +11,28 @@ import ShimmerEffect
 import TelegramCore
 typealias MediaStreamVideoComponent = _MediaStreamVideoComponent
 
+class CustomIntensityVisualEffectView: UIVisualEffectView {
+
+    /// Create visual effect view with given effect and its intensity
+    ///
+    /// - Parameters:
+    ///   - effect: visual effect, eg UIBlurEffect(style: .dark)
+    ///   - intensity: custom intensity from 0.0 (no effect) to 1.0 (full effect) using linear scale
+    init(effect: UIVisualEffect, intensity: CGFloat) {
+        super.init(effect: nil)
+        animator = UIViewPropertyAnimator(duration: 1, curve: .linear) { [unowned self] in self.effect = effect }
+        animator.fractionComplete = intensity
+    }
+
+    required init?(coder aDecoder: NSCoder) {
+        fatalError()
+    }
+
+    // MARK: Private
+    private var animator: UIViewPropertyAnimator!
+
+}
+
 final class _MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
     let hasVideo: Bool
@@ -103,7 +125,7 @@ final class _MediaStreamVideoComponent: Component {
         
         private var videoPlaceholderView: UIView?
         private var noSignalView: ComponentHostView<Empty>?
-        private let loadingBlurView = UIVisualEffectView(effect: UIBlurEffect(style: .light))
+        private let loadingBlurView = CustomIntensityVisualEffectView(effect: UIBlurEffect(style: .light), intensity: 0.4)
         private let shimmerOverlayView = CALayer()
         private var pictureInPictureController: AVPictureInPictureController?
         
@@ -155,23 +177,24 @@ final class _MediaStreamVideoComponent: Component {
         
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
-            if component.videoLoading && placeholderView.superview == nil {
-                addSubview(placeholderView)
-            }
-            placeholderView.alpha = 0.7
+//            placeholderView.alpha = 0.7
 //            placeholderView.image = lastFrame[component.call.peerId.id.description]
             if let frame = lastFrame[component.call.peerId.id.description] {
+                placeholderView.subviews.forEach { $0.removeFromSuperview() }
                 placeholderView.addSubview(frame)
                 frame.frame = placeholderView.bounds
-                placeholderView.backgroundColor = .green
+//                placeholderView.backgroundColor = .green
             } else {
-                placeholderView.subviews.forEach { $0.removeFromSuperview() }
-                placeholderView.backgroundColor = .red
+//                placeholderView.subviews.forEach { $0.removeFromSuperview() }
+//                placeholderView.backgroundColor = .red
             }
             placeholderView.backgroundColor = .red
             if component.videoLoading {
+                if placeholderView.superview == nil {
+                    addSubview(placeholderView)
+                }
                 if loadingBlurView.superview == nil {
-//                    addSubview(loadingBlurView)
+                    addSubview(loadingBlurView)
                 }
                 if shimmerOverlayLayer.superlayer == nil {
                     loadingBlurView.layer.addSublayer(shimmerOverlayLayer)
@@ -194,8 +217,14 @@ final class _MediaStreamVideoComponent: Component {
                 shimmerBorderLayer.mask = borderMask
                 borderShimmer.layer = borderMask
                 borderShimmer.testUpdate(background: .clear, foreground: .white)
+                loadingBlurView.alpha = 1
             } else {
-                loadingBlurView.removeFromSuperview()
+                UIView.animate(withDuration: 0.2, animations: {
+                    self.loadingBlurView.alpha = 0
+                }, completion: { _ in
+                    self.loadingBlurView.removeFromSuperview()
+                })
+                placeholderView.removeFromSuperview()
             }
             
             if component.hasVideo, self.videoView == nil {
@@ -216,7 +245,6 @@ final class _MediaStreamVideoComponent: Component {
 
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
-                        self.placeholderView.removeFromSuperview()
                         self.addSubview(videoView)
                         videoView.alpha = 0
                         UIView.animate(withDuration: 0.3) {
