@@ -94,11 +94,12 @@ final class _MediaStreamVideoComponent: Component {
         if lhs.peerTitle != rhs.peerTitle {
             return false
         }
-        
         if lhs.isFullscreen != rhs.isFullscreen {
             return false
         }
-        
+        if lhs.videoLoading != rhs.videoLoading {
+            return false
+        }
         return true
     }
     
@@ -169,8 +170,8 @@ final class _MediaStreamVideoComponent: Component {
         }
         let maskGradientLayer = CAGradientLayer()
         private var wasVisible = true
-        let shimmer = StandaloneShimmerEffect()
-        let borderShimmer = StandaloneShimmerEffect()
+        var shimmer = StandaloneShimmerEffect()
+        var borderShimmer = StandaloneShimmerEffect()
         let shimmerOverlayLayer = CALayer()
         let shimmerBorderLayer = CALayer()
         let placeholderView = UIImageView()
@@ -191,7 +192,7 @@ final class _MediaStreamVideoComponent: Component {
     //                placeholderView.backgroundColor = .red
                 }
                 
-                if placeholderView.superview == nil {
+                if !hadVideo && placeholderView.superview == nil {
                     addSubview(placeholderView)
                 }
                 if loadingBlurView.superview == nil {
@@ -202,6 +203,7 @@ final class _MediaStreamVideoComponent: Component {
                     loadingBlurView.layer.addSublayer(shimmerBorderLayer)
                 }
                 loadingBlurView.clipsToBounds = true
+                shimmer = .init()
                 shimmer.layer = shimmerOverlayLayer
                 shimmerOverlayView.compositingFilter = "softLightBlendMode"
                 shimmer.testUpdate(background: .clear, foreground: .white.withAlphaComponent(0.4))
@@ -219,16 +221,25 @@ final class _MediaStreamVideoComponent: Component {
                 borderMask.lineWidth = 4
 //                let borderMask = CALayer()
                 shimmerBorderLayer.mask = borderMask
+                borderShimmer = .init()
                 borderShimmer.layer = shimmerBorderLayer
                 borderShimmer.testUpdate(background: .clear, foreground: .white)
                 loadingBlurView.alpha = 1
             } else {
-                UIView.animate(withDuration: 0.2, animations: {
-                    self.loadingBlurView.alpha = 0
-                }, completion: { _ in
+                if hadVideo {
                     self.loadingBlurView.removeFromSuperview()
-                })
-                placeholderView.removeFromSuperview()
+                    placeholderView.removeFromSuperview()
+                } else {
+                    // Accounting for delay in first frame received
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in
+                        UIView.transition(with: self.loadingBlurView, duration: 0.2, animations: {
+                            self.loadingBlurView.alpha = 0
+                        }, completion: { _ in
+                            self.loadingBlurView.removeFromSuperview()
+                        })
+                        placeholderView.removeFromSuperview()
+                    }
+                }
             }
             
             if component.hasVideo, self.videoView == nil {

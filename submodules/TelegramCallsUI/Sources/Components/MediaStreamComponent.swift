@@ -731,6 +731,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         private var stateDisposable: Disposable?
         private var infoDisposable: Disposable?
         private var connectionDisposable: Disposable?
+        private var networkStateDisposable: Disposable?
         
         private(set) var originInfo: OriginInfo?
         
@@ -768,7 +769,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         /// To update videoHiddenForPip
         var onExpandedFromPictureInPicture: ((State) -> Void)?
         private let infoThrottler = Throttler<Int>.init(duration: 5, queue: .main)
-        
+
         init(call: PresentationGroupCallImpl) {
             self.call = call
             
@@ -798,12 +799,28 @@ public final class _MediaStreamComponent: CombinedComponent {
                 strongSelf.updated(transition: .immediate)
             })
             
+            self.networkStateDisposable = (call.account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
+                guard let strongSelf = self else { return }
+                switch state {
+                case .waitingForNetwork, .connecting:
+                    print("[NEW] videoStalled")
+                    strongSelf.videoStalled = true
+                default:
+                    strongSelf.videoStalled = !strongSelf.hasVideo
+                }
+                strongSelf.updated(transition: .immediate)
+//                if let strongSelf = self, case .standard(previewing: false) = strongSelf.presentationInterfaceState.mode {
+//                    strongSelf.chatTitleView?.networkState = state
+//                }
+            })
+            
             self.connectionDisposable = call.state.start(next: { [weak self] state in
                 let prev = self?.videoStalled
                 switch state.networkState {
                 case .connected:
                     self?.videoStalled = false
                 default:
+                    print("[ALERT] video stalled")
                     self?.videoStalled = true
                 }
                 if prev != self?.videoStalled {
@@ -821,8 +838,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                 
                 var updated = false
 //                 TODO: remove debug timer
-                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(/*members.totalCount*/ Int.random(in: 0..<10000000)) { [weak strongSelf] latestCount in
+//                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                    strongSelf.infoThrottler.publish(members.totalCount /*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
                         print(members.totalCount)
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
@@ -835,7 +852,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                             strongSelf.updated(transition: .immediate)
                         }
                     }
-                }.fire()
+//                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
