@@ -969,7 +969,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         let moreAnimationTag = GenericComponentViewTag()
         
         return { context in
-            var forceFullScreenInLandscape: Bool { false }
+            var forceFullScreenInLandscape: Bool { true }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             if environment.isVisible {
             } else {
@@ -1000,24 +1000,36 @@ public final class _MediaStreamComponent: CombinedComponent {
                 state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
-            var isFullscreen = state.isFullscreen
+            let isFullscreen: Bool // = state.isFullscreen
             let isLandscape = context.availableSize.width > context.availableSize.height
             
 //            if let videoSize = context.state.videoSize {
                 // Always fullscreen in landscape
             // TODO: support landscape sheet (wrap in scrollview, video size same as portrait)
-                if forceFullScreenInLandscape && /*videoSize.width > videoSize.height &&*/ isLandscape && !isFullscreen {
-                    state.isFullscreen = true
-                    isFullscreen = true
-                } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && isFullscreen {
-                    state.isFullscreen = false
-                    isFullscreen = false
-                }
-//            }
+            if forceFullScreenInLandscape && /*videoSize.width > videoSize.height &&*/ isLandscape && !state.isFullscreen {
+                state.isFullscreen = true
+                isFullscreen = true
+            } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && state.isFullscreen {
+                state.isFullscreen = false
+                isFullscreen = false
+            } else {
+                isFullscreen = state.isFullscreen
+            }
+            //            }
+            let videoInset: CGFloat
+            if !isFullscreen {
+                videoInset = 16
+            } else {
+                videoInset = 0
+            }
             
-            let videoHeight: CGFloat = context.availableSize.width / 16 * 9
+            let videoHeight: CGFloat = forceFullScreenInLandscape
+                ? (context.availableSize.width - videoInset * 2) / 16 * 9
+                : context.state.videoSize?.height ?? (context.availableSize.width - videoInset * 2) / 16 * 9
             let bottomPadding = 40 + environment.safeInsets.bottom
-            let sheetHeight: CGFloat = isFullscreen ? context.availableSize.height : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
+            let sheetHeight: CGFloat = isFullscreen
+                ? context.availableSize.height
+                : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
             let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset - context.view.safeAreaInsets.top < 30
             
             var dragOffset = context.state.dismissOffset
@@ -1054,6 +1066,10 @@ public final class _MediaStreamComponent: CombinedComponent {
                     },
                     onVideoSizeRetrieved: { [weak state] size in
                         state?.videoSize = size
+                    },
+                    onVideoPlaybackLiveChange: { [weak state] isLive in
+                        state?.videoStalled = !isLive
+                        state?.updated()
                     }
                 ),
                 availableSize: context.availableSize,
@@ -1538,7 +1554,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                         participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
                            //
                         isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: deviceCornerRadius ?? 0
+                        deviceCornerRadius: deviceCornerRadius ?? 0,
+                        videoHeight: videoHeight
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition
@@ -1559,7 +1576,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 if isFullscreen {
                     videoPos = context.availableSize.height / 2 + dragOffset
                 } else {
-                    videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50
+                    videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50 + 12
                 }
                 context.add(video
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos)/*sheetPosition + videoHeight / 2 + 50 - context.availableSize.height / 2*/)// context.availableSize.height / 2.0 + context.state.dismissOffset))
@@ -1623,7 +1640,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                         bottomPadding: 12,
                         participantsCount: -1, // context.state.originInfo?.memberCount ?? 0
                         isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: deviceCornerRadius ?? 0
+                        deviceCornerRadius: deviceCornerRadius ?? 0,
+                        videoHeight: videoHeight
                     ),
                     availableSize: context.availableSize,
                     transition: context.transition

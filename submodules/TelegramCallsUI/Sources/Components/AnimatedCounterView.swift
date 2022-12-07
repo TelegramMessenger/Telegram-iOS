@@ -50,7 +50,7 @@ public final class AnimatedCountView: UIView {
         self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
         self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
         countLabel.frame = CGRect(origin: .zero, size: bounds.size)
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 6, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
+        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 10, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
     }
     
     func update(countString: String, subtitle: String) {

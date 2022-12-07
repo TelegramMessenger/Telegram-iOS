@@ -80,6 +80,7 @@ final class _MediaStreamVideoComponent: Component {
     let onVideoSizeRetrieved: (CGSize) -> Void
     let videoLoading: Bool
     let callPeer: Peer?
+    let onVideoPlaybackLiveChange: (Bool) -> Void
     
     init(
         call: PresentationGroupCallImpl,
@@ -95,7 +96,8 @@ final class _MediaStreamVideoComponent: Component {
         deactivatePictureInPicture: ActionSlot<Void>,
         bringBackControllerForPictureInPictureDeactivation: @escaping (@escaping () -> Void) -> Void,
         pictureInPictureClosed: @escaping () -> Void,
-        onVideoSizeRetrieved: @escaping (CGSize) -> Void
+        onVideoSizeRetrieved: @escaping (CGSize) -> Void,
+        onVideoPlaybackLiveChange: @escaping (Bool) -> Void
     ) {
         self.call = call
         self.hasVideo = hasVideo
@@ -107,6 +109,7 @@ final class _MediaStreamVideoComponent: Component {
         self.deactivatePictureInPicture = deactivatePictureInPicture
         self.bringBackControllerForPictureInPictureDeactivation = bringBackControllerForPictureInPictureDeactivation
         self.pictureInPictureClosed = pictureInPictureClosed
+        self.onVideoPlaybackLiveChange = onVideoPlaybackLiveChange
         
         self.callPeer = callPeer
         self.peerImage = peerImage
@@ -220,6 +223,8 @@ final class _MediaStreamVideoComponent: Component {
                 }
             }
         }
+        var onVideoPlaybackChange: ((Bool) -> Void) = { _ in }
+        
         private var frameInputDisposable: Disposable?
         
         private func updateVideoStalled(isStalled: Bool) {
@@ -268,15 +273,15 @@ final class _MediaStreamVideoComponent: Component {
                     shimmerOverlayView.compositingFilter = "softLightBlendMode"
                     shimmer.testUpdate(background: .clear, foreground: .white.withAlphaComponent(0.4))
                 }
-                loadingBlurView.layer.cornerRadius = 10
+//                loadingBlurView.layer.cornerRadius = 10
                 shimmerOverlayLayer.opacity = 0.6
-                
-                shimmerBorderLayer.cornerRadius = 10
+                let cornerRadius = loadingBlurView.layer.cornerRadius
+                shimmerBorderLayer.cornerRadius = cornerRadius // TODO: check isFullScreeen
                 shimmerBorderLayer.masksToBounds = true
                 shimmerBorderLayer.compositingFilter = "softLightBlendMode"
                 shimmerBorderLayer.frame = loadingBlurView.bounds
                 let borderMask = CAShapeLayer()
-                borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: 10, cornerHeight: 10, transform: nil)
+                borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
                 borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
                 borderMask.strokeColor = UIColor.white.withAlphaComponent(0.8).cgColor
                 borderMask.lineWidth = 2
@@ -353,12 +358,17 @@ final class _MediaStreamVideoComponent: Component {
         var avatarDisposable: Disposable?
         var didBeginLoadingAvatar = false
 //        let avatarPlaceholderView = UIImageView()
+        var timeLastFrameReceived: CFAbsoluteTime?
+        
+        var isFullscreen: Bool = false
         
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
 //            placeholderView.alpha = 0.7
 //            placeholderView.image = lastFrame[component.call.peerId.id.description]
             self.component = component
+            self.onVideoPlaybackChange = component.onVideoPlaybackLiveChange
+            self.isFullscreen = component.isFullscreen
             
             if let peer = component.callPeer, !didBeginLoadingAvatar {
                 didBeginLoadingAvatar = true
@@ -373,96 +383,46 @@ final class _MediaStreamVideoComponent: Component {
             
             if component.videoLoading || self.videoStalled {
                 updateVideoStalled(isStalled: true)
-                /*if let frame = lastFrame[component.call.peerId.id.description] {
-                    placeholderView.subviews.forEach { $0.removeFromSuperview() }
-                    placeholderView.addSubview(frame)
-                    frame.frame = placeholderView.bounds
-    //                placeholderView.backgroundColor = .green
-                } else {
-    //                placeholderView.subviews.forEach { $0.removeFromSuperview() }
-    //                placeholderView.backgroundColor = .red
-                }
-                
-                if !hadVideo && placeholderView.superview == nil {
-                    addSubview(placeholderView)
-                }
-                if loadingBlurView.superview == nil {
-                    addSubview(loadingBlurView)
-                }
-                if shimmerOverlayLayer.superlayer == nil {
-                    loadingBlurView.layer.addSublayer(shimmerOverlayLayer)
-                    loadingBlurView.layer.addSublayer(shimmerBorderLayer)
-                }
-                loadingBlurView.clipsToBounds = true
-                shimmer = .init()
-                shimmer.layer = shimmerOverlayLayer
-                shimmerOverlayView.compositingFilter = "softLightBlendMode"
-                shimmer.testUpdate(background: .clear, foreground: .white.withAlphaComponent(0.4))
-                loadingBlurView.layer.cornerRadius = 10
-                shimmerOverlayLayer.opacity = 0.6
-                
-                shimmerBorderLayer.cornerRadius = 10
-                shimmerBorderLayer.masksToBounds = true
-                shimmerBorderLayer.compositingFilter = "softLightBlendMode"
-                
-                let borderMask = CAShapeLayer()
-                borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: loadingBlurView.bounds.width, height: loadingBlurView.bounds.height), cornerWidth: 10, cornerHeight: 10, transform: nil)
-                borderMask.fillColor = UIColor.clear.cgColor
-                borderMask.strokeColor = UIColor.white.cgColor
-                borderMask.lineWidth = 4
-//                let borderMask = CALayer()
-                borderShimmer = .init()
-                shimmerBorderLayer.mask = borderMask
-                borderShimmer.layer = shimmerBorderLayer
-                borderShimmer.testUpdate(background: .clear, foreground: .white)
-                loadingBlurView.alpha = 1*/
             } else {
                 updateVideoStalled(isStalled: false)
-                /*if hadVideo {
-                    self.loadingBlurView.removeFromSuperview()
-                    placeholderView.removeFromSuperview()
-                } else {
-                    // Accounting for delay in first frame received
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in
-                        UIView.transition(with: self.loadingBlurView, duration: 0.2, animations: {
-                            self.loadingBlurView.alpha = 0
-                        }, completion: { _ in
-                            self.loadingBlurView.removeFromSuperview()
-                        })
-                        placeholderView.removeFromSuperview()
-                    }
-                }*/
             }
             
             if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
                     var _stallTimer: Foundation.Timer { Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
                         guard let strongSelf = self else { return timer.invalidate() }
-                            print("Timer emitting \(timer)")
+                        
+//                        print("Timer emitting \(timer)")
+                        let currentTime = CFAbsoluteTimeGetCurrent()
+                        if let lastFrameTime = strongSelf.timeLastFrameReceived,
+                           currentTime - lastFrameTime > 0.5 {
                             DispatchQueue.main.async {
                                 strongSelf.videoStalled = true
+                                strongSelf.onVideoPlaybackChange(false)
                             }
                         }
-                    }
+                    } }
                     // TODO: use mapToThrottled (?)
                     frameInputDisposable = input.start(next: { [weak self] input in
                         guard let strongSelf = self else { return }
-                        print("input")
-                        strongSelf.stallTimer?.invalidate()
+//                        print("input")
+                        //                        strongSelf.stallTimer?.invalidate()
                         // TODO: optimize with throttle
+                        strongSelf.timeLastFrameReceived = CFAbsoluteTimeGetCurrent()
                         DispatchQueue.main.async {
-                            strongSelf.stallTimer = _stallTimer
-//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-//                                print(strongSelf.videoStalled)
-//                                if strongSelf.videoStalled {
-//                                strongSelf.stallTimer?.fire()
-//                            }
-                            RunLoop.main.add(strongSelf.stallTimer!, forMode: .common)
+                            //                            strongSelf.stallTimer = _stallTimer
+                            //                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            //                                print(strongSelf.videoStalled)
+                            //                                if strongSelf.videoStalled {
+                            //                                strongSelf.stallTimer?.fire()
+                            //                            }
+                            //                            RunLoop.main.add(strongSelf.stallTimer!, forMode: .common)
                             strongSelf.videoStalled = false
+                            strongSelf.onVideoPlaybackChange(true)
                         }
                     })
                     stallTimer = _stallTimer
-//                    RunLoop.main.add(stallTimer!, forMode: .common)
+                    //                    RunLoop.main.add(stallTimer!, forMode: .common)
                     
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
@@ -487,7 +447,7 @@ final class _MediaStreamVideoComponent: Component {
                         }
                         if let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             sampleBufferVideoView.sampleBufferLayer.masksToBounds = true
-                            sampleBufferVideoView.sampleBufferLayer.cornerRadius = 20
+//                            sampleBufferVideoView.sampleBufferLayer.cornerRadius = 10
                             
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
@@ -532,7 +492,7 @@ final class _MediaStreamVideoComponent: Component {
                                     return delegate
                                 }()))
                                 pictureInPictureController?.playerLayer.masksToBounds = false
-                                pictureInPictureController?.playerLayer.cornerRadius = 30
+                                pictureInPictureController?.playerLayer.cornerRadius = 10
                             } else if AVPictureInPictureController.isPictureInPictureSupported() {
                                 // TODO: support PiP for iOS < 15.0
                                 // sampleBufferVideoView.sampleBufferLayer
@@ -577,9 +537,11 @@ final class _MediaStreamVideoComponent: Component {
                 fullScreenBackgroundPlaceholder.removeFromSuperview()
             } else if component.isFullscreen {
                 if fullScreenBackgroundPlaceholder.superview == nil {
-//                    insertSubview(fullScreenBackgroundPlaceholder, at: 0)
+                    insertSubview(fullScreenBackgroundPlaceholder, at: 0)
                 }
                 fullScreenBackgroundPlaceholder.frame = self.bounds
+            } else {
+                fullScreenBackgroundPlaceholder.removeFromSuperview()
             }
             
 //            sheetView.frame = .init(x: 0, y: sheetTop, width: availableSize.width, height: sheetHeight)
@@ -595,6 +557,8 @@ final class _MediaStreamVideoComponent: Component {
                 videoInset = 0
             }
             
+            let videoSize: CGSize
+            let videoCornerRadius: CGFloat = component.isFullscreen ? 0 : 10
             if let videoView = self.videoView {
                 // TODO: REMOVE FROM HERE and move to call end (or at least to background)
 //                if let presentation = videoView.snapshotView(afterScreenUpdates: false) {
@@ -608,13 +572,17 @@ final class _MediaStreamVideoComponent: Component {
                 // saveAspect(aspect)
                 if component.isFullscreen {
                     if aspect <= 0.01 {
-                        aspect = 3.0 / 4.0
+                        aspect = 16.0 / 9 // 3.0 / 4.0
                     }
                 } else {
                     aspect = 16.0 / 9
                 }
                 
-                let videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
+                if component.isFullscreen {
+                    videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
+                } else {
+                    videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: min(availableSize.width, availableSize.height) - videoInset * 2, height: max(availableSize.height, availableSize.width)))
+                }
                 let blurredVideoSize = videoSize.aspectFilled(availableSize)
                 
                 component.onVideoSizeRetrieved(videoSize)
@@ -635,7 +603,7 @@ final class _MediaStreamVideoComponent: Component {
                 
                 videoView.updateIsEnabled(isVideoVisible)
                 videoView.clipsToBounds = true
-                videoView.layer.cornerRadius = component.isFullscreen ? 0 : 10
+                videoView.layer.cornerRadius = videoCornerRadius
               //  var aspect = videoView.getAspect()
 //                if aspect <= 0.01 {
                 // TODO: remove debug
@@ -664,21 +632,21 @@ final class _MediaStreamVideoComponent: Component {
                     
                     self.maskGradientLayer.frame = videoBlurView.bounds
                 }
+            } else {
+                videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
             }
-            
-            let videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
             loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
-            loadingBlurView.layer.cornerRadius = 10
+            loadingBlurView.layer.cornerRadius = videoCornerRadius
             
             placeholderView.frame = loadingBlurView.frame
-            placeholderView.layer.cornerRadius = 10
+            placeholderView.layer.cornerRadius = videoCornerRadius
             placeholderView.clipsToBounds = true
-//            avatarPlaceholderView.frame = placeholderView.bounds
+            
             shimmerOverlayLayer.frame = loadingBlurView.bounds
             shimmerBorderLayer.frame = loadingBlurView.bounds
-//            shimmerBorderLayer.mask?.frame = loadingBlurView.bounds
+            
             if component.isFullscreen {
-                loadingBlurView.removeFromSuperview()
+//                loadingBlurView.removeFromSuperview()
             }
             if !self.hadVideo {
                 // TODO: hide fullscreen button without video

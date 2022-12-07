@@ -21,6 +21,7 @@ final class StreamSheetComponent: CombinedComponent {
     let bottomPadding: CGFloat
     let isFullyExtended: Bool
     let deviceCornerRadius: CGFloat
+    let videoHeight: CGFloat
     
     init(
 //        color: UIColor,
@@ -32,7 +33,8 @@ final class StreamSheetComponent: CombinedComponent {
         bottomPadding: CGFloat,
         participantsCount: Int,
         isFullyExtended: Bool,
-        deviceCornerRadius: CGFloat
+        deviceCornerRadius: CGFloat,
+        videoHeight: CGFloat
     ) {
 //        self.leftItem = leftItem
         self.topComponent = topComponent
@@ -45,6 +47,7 @@ final class StreamSheetComponent: CombinedComponent {
         self.participantsCount = participantsCount
         self.isFullyExtended = isFullyExtended
         self.deviceCornerRadius = deviceCornerRadius
+        self.videoHeight = videoHeight
     }
     
     static func ==(lhs: StreamSheetComponent, rhs: StreamSheetComponent) -> Bool {
@@ -75,6 +78,9 @@ final class StreamSheetComponent: CombinedComponent {
         if lhs.isFullyExtended != rhs.isFullyExtended {
             return false
         }
+        if lhs.videoHeight != rhs.videoHeight {
+            return false
+        }
         return true
     }
 //
@@ -95,7 +101,7 @@ final class StreamSheetComponent: CombinedComponent {
         
         override func draw(_ rect: CGRect) {
             super.draw(rect)
-            
+            // Debug interactive area
 //            guard let context = UIGraphicsGetCurrentContext() else { return }
 //            context.setFillColor(UIColor.red.cgColor)
 //            overlayComponentsFrames.forEach { frame in
@@ -193,7 +199,7 @@ final class StreamSheetComponent: CombinedComponent {
                 )
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
-            let videoHeight = (availableWidth - 32) / 16 * 9
+            let videoHeight = context.component.videoHeight // ?? (min(availableWidth, context.availableSize.height) - 32) / 16 * 9
             let sheetHeight = context.component.sheetHeight
             let animatedParticipantsVisible = context.component.participantsCount != -1
             if true {
