@@ -19,6 +19,8 @@ import CreateExternalMediaStreamScreen
 import HierarchyTrackingLayer
 import UndoPanelComponent
 
+import AvatarNode
+
 final class StreamTitleComponent: Component {
     let text: String
     let isRecording: Bool
@@ -1034,6 +1036,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                     peerImage: nil,
                     isFullscreen: isFullscreen,
                     videoLoading: context.state.videoStalled,
+                    callPeer: context.state.chatPeer,
                     activatePictureInPicture: activatePictureInPicture,
                     deactivatePictureInPicture: deactivatePictureInPicture,
                     bringBackControllerForPictureInPictureDeactivation: { [weak call] completed in

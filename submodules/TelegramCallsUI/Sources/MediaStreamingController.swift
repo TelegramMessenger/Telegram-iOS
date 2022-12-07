@@ -36,12 +36,12 @@ import DeviceAccess
 //let panelBackgroundColor = UIColor(rgb: 0x1c1c1e)
 //let secondaryPanelBackgroundColor = UIColor(rgb: 0x2c2c2e)
 //let fullscreenBackgroundColor = UIColor(rgb: 0x000000)
-private let smallButtonSize = CGSize(width: 36.0, height: 36.0)
-private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
-private let topPanelHeight: CGFloat = 63.0
+//private let smallButtonSize = CGSize(width: 36.0, height: 36.0)
+//private let sideButtonSize = CGSize(width: 56.0, height: 56.0)
+//private let topPanelHeight: CGFloat = 63.0
 //let bottomAreaHeight: CGFloat = 206.0
-private let fullscreenBottomAreaHeight: CGFloat = 80.0
-private let bottomGradientHeight: CGFloat = 70.0
+//private let fullscreenBottomAreaHeight: CGFloat = 80.0
+//private let bottomGradientHeight: CGFloat = 70.0
 
 /*func decorationCornersImage(top: Bool, bottom: Bool, dark: Bool) -> UIImage? {
     if !top && !bottom {
@@ -1853,16 +1853,16 @@ public final class MediaStreamingControllerImpl: ViewController, VoiceChatContro
             
             self.contentContainer.addSubnode(self.backgroundNode)
             
-            self.contentContainer.addSubnode(self.listContainer)
-            self.contentContainer.addSubnode(self.topPanelNode)
-            self.listContainer.addSubnode(self.listNode)
-            self.listContainer.addSubnode(self.leftBorderNode)
-            self.listContainer.addSubnode(self.rightBorderNode)
-            self.listContainer.addSubnode(self.bottomCornersNode)
+//            self.contentContainer.addSubnode(self.listContainer)
+//            self.contentContainer.addSubnode(self.topPanelNode)
+//            self.listContainer.addSubnode(self.listNode)
+//            self.listContainer.addSubnode(self.leftBorderNode)
+//            self.listContainer.addSubnode(self.rightBorderNode)
+//            self.listContainer.addSubnode(self.bottomCornersNode)
             self.listContainer.addSubnode(self.topCornersNode)
             self.contentContainer.addSubnode(self.bottomGradientNode)
-            self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
-//            self.contentContainer.addSubnode(self.participantsNode)
+//            self.contentContainer.addSubnode(self.bottomPanelBackgroundNode)
+            self.contentContainer.addSubnode(self.participantsNode)
             self.contentContainer.addSubnode(self.tileGridNode)
             self.contentContainer.addSubnode(self.mainStageContainerNode)
             self.contentContainer.addSubnode(self.transitionContainerNode)
@@ -4010,7 +4010,7 @@ public final class MediaStreamingControllerImpl: ViewController, VoiceChatContro
             
             let participantsFrame = CGRect(x: 0.0, y: bottomCornersFrame.maxY - 100.0, width: size.width, height: 216.0)
             transition.updateFrame(node: self.participantsNode, frame: participantsFrame)
-            self.participantsNode.update(size: participantsFrame.size, participants: self.currentTotalCount, groupingSeparator: self.presentationData.dateTimeFormat.groupingSeparator, transition: .immediate)
+            self.participantsNode.update(size: participantsFrame.size, participants: Int32.random(in: 0..<999999999)/*self.currentTotalCount*/, groupingSeparator: self.presentationData.dateTimeFormat.groupingSeparator, transition: .immediate)
         }
         
         private var decorationsAreDark: Bool?
