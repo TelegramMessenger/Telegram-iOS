@@ -252,7 +252,7 @@ class AnimatedCountLabel: UILabel {
         
         let currentChars = chars.map { $0.attributedText ?? .init() }
         
-        let maxAnimationDuration: TimeInterval = 0.5
+        let maxAnimationDuration: TimeInterval = 1.2
         var numberOfChanges = abs(newChars.count - currentChars.count)
         for index in 0..<min(newChars.count, currentChars.count) {
             let newCharIndex = newChars.count - 1 - index
@@ -262,7 +262,7 @@ class AnimatedCountLabel: UILabel {
             }
         }
         
-        let initialDuration: TimeInterval = min(maxAnimationDuration / 2, maxAnimationDuration / Double(numberOfChanges)) /// 0.25
+        let initialDuration: TimeInterval = min(0.25, maxAnimationDuration / Double(numberOfChanges)) /// 0.25
         
 //        let currentWidth = itemWidth * CGFloat(currentChars.count)
 //        let newWidth = itemWidth * CGFloat(newChars.count)
@@ -271,7 +271,7 @@ class AnimatedCountLabel: UILabel {
         var changeIndex = 0
         
         var newLayers = [AnimatedCharLayer]()
-        
+        let isInitialSet = currentChars.isEmpty
         for index in 0..<min(newChars.count, currentChars.count) {
             let newCharIndex = newChars.count - 1 - index
             let currCharIndex = currentChars.count - 1 - index
@@ -283,7 +283,7 @@ class AnimatedCountLabel: UILabel {
                 
                let initialDuration = newChars[newCharIndex] != currentChars[currCharIndex] ? initialDuration : 0
                 
-                if newChars[newCharIndex] != currentChars[currCharIndex] {
+                if !isInitialSet && newChars[newCharIndex] != currentChars[currCharIndex] {
                     animateOut(for: chars[currCharIndex].layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
                 } else {
                     chars[currCharIndex].layer.removeFromSuperlayer()
@@ -304,7 +304,7 @@ class AnimatedCountLabel: UILabel {
                 )
                 // newLayer.frame = .init(x: CGFloat(chars.count - 1 - index) * (40 + interItemSpacing), y: 0, width: itemWidth, height: itemWidth * 1.8)
                 containerView.layer.addSublayer(newLayer)
-                if newChars[newCharIndex] != currentChars[currCharIndex] {
+                if !isInitialSet && newChars[newCharIndex] != currentChars[currCharIndex] {
                     newLayer.layer.opacity = 0
                     animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
                     changeIndex += 1
@@ -344,7 +344,9 @@ class AnimatedCountLabel: UILabel {
             }*/
             newLayer.frame = .init(x: offset/*CGFloat(newCharIndex) * (40 + interItemSpacing)*/, y: 0, width: newChars[newCharIndex].string == "," ? commaFrameWidth : itemWidth, height: itemWidth * 1.8 + (newChars[newCharIndex].string == "," ? 4 : 0))
             containerView.layer.addSublayer(newLayer)
-            animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
+            if !isInitialSet {
+                animateIn(for: newLayer.layer, duration: initialDuration, beginTime: TimeInterval(changeIndex) * interItemDelay)
+            }
             newLayers.append(newLayer)
             changeIndex += 1
         }
@@ -368,7 +370,7 @@ class AnimatedCountLabel: UILabel {
                 }
                 //            containerView.backgroundColor = .red.withAlphaComponent(0.3)
             }
-        } else {
+        } else if countWidth > 0 {
             containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
             didBegin = true
         }
@@ -389,32 +391,49 @@ class AnimatedCountLabel: UILabel {
 //        layer.add(animation, forKey: "opacity")
 //
 //
+        let beginTimeOffset: CFTimeInterval = /*beginTime == .zero ? 0 :*/ /*CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)*/ layer.convertTime(CACurrentMediaTime(), to: nil)
+        
         let opacityInAnimation = CABasicAnimation(keyPath: "opacity")
         opacityInAnimation.fromValue = 1
         opacityInAnimation.toValue = 0
-        opacityInAnimation.duration = duration
-        opacityInAnimation.beginTime = CACurrentMediaTime() + beginTime
-        layer.add(opacityInAnimation, forKey: "opacity")
+//        opacityInAnimation.duration = duration
+//        opacityInAnimation.beginTime = beginTimeOffset + beginTime
+//        opacityInAnimation.completion = { _ in
+//            layer.removeFromSuperlayer()
+//        }
+//        layer.add(opacityInAnimation, forKey: "opacity")
         
-        Timer.scheduledTimer(withTimeInterval: duration + beginTime, repeats: false) { timer in
-            DispatchQueue.main.async { // After(deadline: .now() + duration + beginTime) {
-                layer.removeFromSuperlayer()
-            }
-        }
+//        let timer = Timer.scheduledTimer(withTimeInterval: duration + beginTime, repeats: false) { timer in
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration * 0.95 + beginTime) {
+//            DispatchQueue.main.async {
+//                layer.backgroundColor = UIColor.red.withAlphaComponent(0.3).cgColor
+//            }
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+            layer.removeFromSuperlayer()
+//            }
+//            timer.invalidate()
+         }
+//        RunLoop.current.add(timer, forMode: .common)
         
         let scaleOutAnimation = CABasicAnimation(keyPath: "transform.scale")
         scaleOutAnimation.fromValue = 1 // layer.presentation()?.value(forKey: "transform.scale") ?? 1
-        scaleOutAnimation.toValue = 0.1
-        scaleOutAnimation.duration = duration
-        scaleOutAnimation.beginTime = CACurrentMediaTime() + beginTime
-        layer.add(scaleOutAnimation, forKey: "scaleout")
+        scaleOutAnimation.toValue = 0.0
+//        scaleOutAnimation.duration = duration
+//        scaleOutAnimation.beginTime = beginTimeOffset + beginTime
+//        layer.add(scaleOutAnimation, forKey: "scaleout")
         
         let translate = CABasicAnimation(keyPath: "transform.translation")
         translate.fromValue = CGPoint.zero
         translate.toValue = CGPoint(x: 0, y: -layer.bounds.height * 0.3)// -layer.bounds.height + 3.0)
-        translate.duration = duration
-        translate.beginTime = CACurrentMediaTime() + beginTime
-        layer.add(translate, forKey: "translate")
+//        translate.duration = duration
+//        translate.beginTime = beginTimeOffset + beginTime
+//        layer.add(translate, forKey: "translate")
+        
+        let group = CAAnimationGroup()
+        group.animations = [opacityInAnimation, scaleOutAnimation, translate]
+        group.duration = duration
+        group.beginTime = beginTimeOffset + beginTime
+        layer.add(group, forKey: "out")
     }
     
     func animateIn(for newLayer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
@@ -442,7 +461,7 @@ class AnimatedCountLabel: UILabel {
         
         let animation = CAKeyframeAnimation()
         animation.keyPath = "position.y"
-        animation.values = [18, -6, 0]
+        animation.values = [20, -6, 0]
         animation.keyTimes = [0, 0.64, 1]
         animation.timingFunction = CAMediaTimingFunction.init(name: .easeInEaseOut)
         animation.duration = duration / 0.64

@@ -1760,7 +1760,7 @@ public final class _MediaStreamComponentController: ViewControllerComponentConta
             //     self.view.layer.cornerCurve = .continuous
             // }
             
-        self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 1.3, timingFunction: kCAMediaTimingFunctionSpring, completion: { _ in
+        self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 0.4, /*timingFunction: kCAMediaTimingFunctionSpring, */completion: { _ in
              })
             // self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
         // }

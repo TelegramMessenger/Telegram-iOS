@@ -151,12 +151,27 @@ final class _MediaStreamVideoComponent: Component {
         let borderShimmer = StandaloneShimmerEffect()
         let shimmerOverlayLayer = CALayer()
         let shimmerBorderLayer = CALayer()
+        let placeholderView = UIImageView()
         
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
+            if component.videoLoading && placeholderView.superview == nil {
+                addSubview(placeholderView)
+            }
+            placeholderView.alpha = 0.7
+//            placeholderView.image = lastFrame[component.call.peerId.id.description]
+            if let frame = lastFrame[component.call.peerId.id.description] {
+                placeholderView.addSubview(frame)
+                frame.frame = placeholderView.bounds
+                placeholderView.backgroundColor = .green
+            } else {
+                placeholderView.subviews.forEach { $0.removeFromSuperview() }
+                placeholderView.backgroundColor = .red
+            }
+            placeholderView.backgroundColor = .red
             if component.videoLoading {
                 if loadingBlurView.superview == nil {
-                    addSubview(loadingBlurView)
+//                    addSubview(loadingBlurView)
                 }
                 if shimmerOverlayLayer.superlayer == nil {
                     loadingBlurView.layer.addSublayer(shimmerOverlayLayer)
@@ -201,6 +216,7 @@ final class _MediaStreamVideoComponent: Component {
 
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
+                        self.placeholderView.removeFromSuperview()
                         self.addSubview(videoView)
                         videoView.alpha = 0
                         UIView.animate(withDuration: 0.3) {
@@ -313,6 +329,12 @@ final class _MediaStreamVideoComponent: Component {
             }
             
             if let videoView = self.videoView {
+                // TODO: REMOVE FROM HERE and move to call end (or at least to background)
+//                if let presentation = videoView.snapshotView(afterScreenUpdates: false) {
+                if videoView.bounds.size.width > 0, let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
+                    lastFrame[component.call.peerId.id.description] = snapshot// ()!
+                }
+//                }
                 var aspect = videoView.getAspect()
                 // saveAspect(aspect)
                 if component.isFullscreen {
@@ -378,6 +400,10 @@ final class _MediaStreamVideoComponent: Component {
             let videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
             loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
             loadingBlurView.layer.cornerRadius = 10
+            
+            placeholderView.frame = loadingBlurView.frame
+            placeholderView.layer.cornerRadius = 10
+            placeholderView.clipsToBounds = true
             
             shimmerOverlayLayer.frame = loadingBlurView.bounds
             shimmerBorderLayer.frame = loadingBlurView.bounds
@@ -478,10 +504,26 @@ final class _MediaStreamVideoComponent: Component {
         }
         
         func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                self.videoView?.alpha = 0
-            }
-            UIView.animate(withDuration: 0.3) { [self] in
+            // Fading to make
+            let presentation = self.videoView!.snapshotView(afterScreenUpdates: false)! // (self.videoView?.layer.presentation())!
+            self.addSubview(presentation)
+            presentation.frame = self.videoView!.frame
+//            let image = UIGraphicsImageRenderer(size: presentation.bounds.size).image { context in
+//                presentation.render(in: context.cgContext)
+//            }
+//            print(image)
+            self.videoView?.alpha = 0
+//            self.videoView?.alpha = 0.5
+//            presentation.animateAlpha(from: 1, to: 0, duration: 0.1, completion: { _ in presentation.removeFromSuperlayer() })
+            UIView.animate(withDuration: 0.1, animations: {
+                presentation.alpha = 0
+            }, completion: { _ in
+                presentation.removeFromSuperview()
+            })
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+//                presentation.removeFromSuperlayer()
+//            }
+            UIView.animate(withDuration: 0.1) { [self] in
                 videoBlurView?.alpha = 0
             }
             // TODO: make safe
@@ -531,5 +573,27 @@ final class _MediaStreamVideoComponent: Component {
     
     public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
         return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
+    }
+}
+
+// TODO: move to appropriate place
+var lastFrame: [String: UIView] = [:]
+
+extension UIView {
+    func snapshot() -> UIImage? {
+        UIGraphicsBeginImageContextWithOptions(bounds.size, true, UIScreen.main.scale)
+
+        guard let currentContext = UIGraphicsGetCurrentContext() else {
+            UIGraphicsEndImageContext()
+            return nil
+        }
+
+        layer.render(in: currentContext)
+
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+
+        UIGraphicsEndImageContext()
+
+        return image
     }
 }
