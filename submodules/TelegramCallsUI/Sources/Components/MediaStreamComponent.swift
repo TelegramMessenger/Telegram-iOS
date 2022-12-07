@@ -801,7 +801,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                 strongSelf.updated(transition: .immediate)
             })
             
-            self.networkStateDisposable = (call.account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
+            // TODO: retest to uncomment or delete. Relying only on video frames
+            /*self.networkStateDisposable = (call.account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
                 guard let strongSelf = self else { return }
                 switch state {
                 case .waitingForNetwork, .connecting:
@@ -828,7 +829,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                 if prev != self?.videoStalled {
                     self?.updated(transition: .immediate)
                 }
-            })
+            })*/
             
             let callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))
             
@@ -956,6 +957,7 @@ public final class _MediaStreamComponent: CombinedComponent {
     
     public static var body: Body {
         let background = Child(Rectangle.self)
+        let dismissTapComponent = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
 //        let navigationBar = Child(NavigationBarComponent.self)
 //        let toolbar = Child(ToolbarComponent.self)
@@ -1037,6 +1039,14 @@ public final class _MediaStreamComponent: CombinedComponent {
                 dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + context.view.safeAreaInsets.top)// sheetHeight - UIScreen.main.bounds.height
             }
             
+            let dismissTapAreaHeight = isFullscreen ? 0 : (context.availableSize.height - sheetHeight + dragOffset)
+            let dismissTapComponent = dismissTapComponent.update(
+                component: Rectangle(color: .red.withAlphaComponent(0)),
+                availableSize: CGSize(width: context.availableSize.width, height: dismissTapAreaHeight),
+                transition: context.transition
+            )
+            
+            
             let video = video.update(
                 component: MediaStreamVideoComponent(
                     call: context.component.call,
@@ -1044,7 +1054,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                     isVisible: environment.isVisible && context.state.isVisibleInHierarchy,
                     isAdmin: context.state.canManageCall,
                     peerTitle: context.state.peerTitle,
-                    // TODO: find out how to get image
+                    // TODO: remove // find out how to get image
                     peerImage: nil,
                     isFullscreen: isFullscreen,
                     videoLoading: context.state.videoStalled,
@@ -1068,8 +1078,12 @@ public final class _MediaStreamComponent: CombinedComponent {
                         state?.videoSize = size
                     },
                     onVideoPlaybackLiveChange: { [weak state] isLive in
-                        state?.videoStalled = !isLive
-                        state?.updated()
+                        guard let state else { return }
+                        let wasLive = !state.videoStalled
+                        if isLive != wasLive {
+                            state.videoStalled = !isLive
+                            state.updated()
+                        }
                     }
                 ),
                 availableSize: context.availableSize,
@@ -1381,63 +1395,76 @@ public final class _MediaStreamComponent: CombinedComponent {
             }
             let availableSize = context.availableSize
             let safeAreaTop = context.view.safeAreaInsets.top
+            
+            let onPanGesture: ((Gesture.PanGestureState) -> Void) = { [weak state] panState in
+                guard let state = state else {
+                    return
+                }
+                switch panState {
+                case .began:
+                    state.initialOffset = state.dismissOffset
+                case let .updated(offset):
+                    state.updateDismissOffset(value: state.initialOffset + offset.y, interactive: true)
+                case let .ended(velocity):
+                    // TODO: Dismiss sheet depending on velocity
+                    if velocity.y > 200.0 {
+                        if state.isFullscreen {
+                            state.isFullscreen = false
+                            state.updateDismissOffset(value: 0.0, interactive: false)
+                            if let controller = controller() as? MediaStreamComponentController {
+                                controller.updateOrientation(orientation: .portrait)
+                            }
+                        } else {
+                            if isFullyDragged || state.initialOffset != 0 {
+                                state.updateDismissOffset(value: 0.0, interactive: false)
+                            } else {
+                                let _ = call.leave(terminateIfPossible: false)
+                            }
+                        }
+                        /*activatePictureInPicture.invoke(Action { [weak state] in
+                            guard let state = state, let controller = controller() as? MediaStreamComponentController else {
+                                return
+                            }
+                            state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
+                            controller.dismiss(closing: false, manual: true)
+                        })*/
+                    } else {
+                        if isFullyDragged {
+                            state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                        } else {
+                            if velocity.y < -200 {
+                                // Expand
+                                state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
+                            } else {
+                                state.updateDismissOffset(value: 0.0, interactive: false)
+                            }
+                        }
+                    }
+                }
+            }
+            
             context.add(background
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2.0))
                 .gesture(.tap { [weak state] in
-                    guard let state = state else {
+                    guard let state = state, state.isFullscreen else {
                         return
                     }
                     state.toggleDisplayUI()
                 })
-                .gesture(.pan { [weak state] panState in
-                    guard let state = state else {
-                        return
-                    }
-                    switch panState {
-                    case .began:
-                        state.initialOffset = state.dismissOffset
-                    case let .updated(offset):
-                        state.updateDismissOffset(value: state.initialOffset + offset.y, interactive: true)
-                    case let .ended(velocity):
-                        // TODO: Dismiss sheet depending on velocity
-                        if velocity.y > 200.0 {
-                            if state.isFullscreen {
-                                state.isFullscreen = false
-                                state.updateDismissOffset(value: 0.0, interactive: false)
-                                if let controller = controller() as? MediaStreamComponentController {
-                                    controller.updateOrientation(orientation: .portrait)
-                                }
-                            } else {
-                                if isFullyDragged || state.initialOffset != 0 {
-                                    state.updateDismissOffset(value: 0.0, interactive: false)
-                                } else {
-                                    let _ = call.leave(terminateIfPossible: false)
-                                }
-                            }
-                            /*activatePictureInPicture.invoke(Action { [weak state] in
-                                guard let state = state, let controller = controller() as? MediaStreamComponentController else {
-                                    return
-                                }
-                                state.updateDismissOffset(value: velocity.y < 0 ? -height : height, interactive: false)
-                                controller.dismiss(closing: false, manual: true)
-                            })*/
-                        } else {
-                            if isFullyDragged {
-                                state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
-                            } else {
-                                if velocity.y < -200 {
-                                    // Expand
-                                    state.updateDismissOffset(value: sheetHeight - availableSize.height + safeAreaTop, interactive: false)
-                                } else {
-                                    state.updateDismissOffset(value: 0.0, interactive: false)
-                                }
-                            }
-                        }
-                    }
+                .gesture(.pan { panState in
+                    onPanGesture(panState)
                 })
             )
 //            var bottomComponent: AnyComponent<Empty>?
 //            var fullScreenToolbarComponent: AnyComponent<Empty>?
+            
+            context.add(dismissTapComponent
+                .position(CGPoint(x: context.availableSize.width / 2, y: dismissTapAreaHeight / 2))
+                .gesture(.tap {
+                    _ = call.leave(terminateIfPossible: false)
+                })
+                .gesture(.pan(onPanGesture))
+            )
             
             if !isFullscreen {
                 let bottomComponent = AnyComponent(ButtonsRowComponent(
