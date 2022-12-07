@@ -9,15 +9,11 @@ import Display
 import ShimmerEffect
 
 import TelegramCore
+import SwiftSignalKit
+
 typealias MediaStreamVideoComponent = _MediaStreamVideoComponent
 
 class CustomIntensityVisualEffectView: UIVisualEffectView {
-
-    /// Create visual effect view with given effect and its intensity
-    ///
-    /// - Parameters:
-    ///   - effect: visual effect, eg UIBlurEffect(style: .dark)
-    ///   - intensity: custom intensity from 0.0 (no effect) to 1.0 (full effect) using linear scale
     init(effect: UIVisualEffect, intensity: CGFloat) {
         super.init(effect: nil)
         animator = UIViewPropertyAnimator(duration: 1, curve: .linear) { [unowned self] in self.effect = effect }
@@ -27,10 +23,27 @@ class CustomIntensityVisualEffectView: UIVisualEffectView {
     required init?(coder aDecoder: NSCoder) {
         fatalError()
     }
-
-    // MARK: Private
-    private var animator: UIViewPropertyAnimator!
-
+    
+    var animator: UIViewPropertyAnimator!
+    
+    private var displayLink: CADisplayLink?
+    
+    func setIntensity(_ intensity: CGFloat, animated: Bool) {
+        self.displayLink?.invalidate()
+        let displaylink = CADisplayLink(
+            target: self,
+            selector: #selector(displayLinkStep)
+        )
+        self.displayLink = displaylink
+        displaylink.add(
+            to: .current,
+            forMode: RunLoop.Mode.default
+        )
+    }
+    
+    @objc func displayLinkStep() {
+        
+    }
 }
 
 final class _MediaStreamVideoComponent: Component {
@@ -135,7 +148,7 @@ final class _MediaStreamVideoComponent: Component {
         
         private var requestedExpansion: Bool = false
         
-        private var noSignalTimer: Timer?
+        private var noSignalTimer: Foundation.Timer?
         private var noSignalTimeout: Bool = false
         
         private weak var state: State?
@@ -176,12 +189,27 @@ final class _MediaStreamVideoComponent: Component {
         let shimmerBorderLayer = CALayer()
         let placeholderView = UIImageView()
         
-        func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
-            self.state = state
-//            placeholderView.alpha = 0.7
-//            placeholderView.image = lastFrame[component.call.peerId.id.description]
-            
-            if component.videoLoading {
+        var videoStalled = false {
+            didSet {
+                if videoStalled != oldValue {
+                    self.updateVideoStalled(isStalled: self.videoStalled)
+//                    state?.updated()
+                }
+            }
+        }
+        private var frameInputDisposable: Disposable?
+        
+        private func updateVideoStalled(isStalled: Bool) {
+            if isStalled {
+                guard let component = self.component else { return }
+//                let effect = UIBlurEffect(style: .light)
+//                let intensity: CGFloat = 0.4
+//                self.loadingBlurView.effect = nil
+//                self.loadingBlurView.animator.stopAnimation(true)
+//                self.loadingBlurView.animator = UIViewPropertyAnimator(duration: 1, curve: .linear) { [unowned loadingBlurView] in loadingBlurView.effect = effect }
+//                self.loadingBlurView.animator.fractionComplete = intensity
+//                self.loadingBlurView.animator.fractionComplete = 0.4
+//                self.loadingBlurView.effect = UIBlurEffect(style: .light)
                 if let frame = lastFrame[component.call.peerId.id.description] {
                     placeholderView.subviews.forEach { $0.removeFromSuperview() }
                     placeholderView.addSubview(frame)
@@ -220,13 +248,88 @@ final class _MediaStreamVideoComponent: Component {
                 borderMask.strokeColor = UIColor.white.cgColor
                 borderMask.lineWidth = 4
 //                let borderMask = CALayer()
-                shimmerBorderLayer.mask = borderMask
                 borderShimmer = .init()
+                shimmerBorderLayer.mask = borderMask
                 borderShimmer.layer = shimmerBorderLayer
                 borderShimmer.testUpdate(background: .clear, foreground: .white)
                 loadingBlurView.alpha = 1
             } else {
                 if hadVideo {
+                    self.loadingBlurView.removeFromSuperview()
+                    placeholderView.removeFromSuperview()
+                } else {
+                    // Accounting for delay in first frame received
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [self] in
+                        guard !self.videoStalled else { return }
+                        UIView.transition(with: self, duration: 0.2, animations: {
+//                            self.loadingBlurView.animator.fractionComplete = 0
+//                            self.loadingBlurView.effect = nil
+                            self.loadingBlurView.alpha = 0
+                        }, completion: { _ in
+                            self.loadingBlurView.removeFromSuperview()
+                        })
+                        placeholderView.removeFromSuperview()
+                    }
+                }
+            }
+        }
+        
+        var stallTimer: Foundation.Timer?
+        let fullScreenBackgroundPlaceholder = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+        func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
+            self.state = state
+//            placeholderView.alpha = 0.7
+//            placeholderView.image = lastFrame[component.call.peerId.id.description]
+            self.component = component
+            
+            if component.videoLoading || self.videoStalled {
+                updateVideoStalled(isStalled: true)
+                /*if let frame = lastFrame[component.call.peerId.id.description] {
+                    placeholderView.subviews.forEach { $0.removeFromSuperview() }
+                    placeholderView.addSubview(frame)
+                    frame.frame = placeholderView.bounds
+    //                placeholderView.backgroundColor = .green
+                } else {
+    //                placeholderView.subviews.forEach { $0.removeFromSuperview() }
+    //                placeholderView.backgroundColor = .red
+                }
+                
+                if !hadVideo && placeholderView.superview == nil {
+                    addSubview(placeholderView)
+                }
+                if loadingBlurView.superview == nil {
+                    addSubview(loadingBlurView)
+                }
+                if shimmerOverlayLayer.superlayer == nil {
+                    loadingBlurView.layer.addSublayer(shimmerOverlayLayer)
+                    loadingBlurView.layer.addSublayer(shimmerBorderLayer)
+                }
+                loadingBlurView.clipsToBounds = true
+                shimmer = .init()
+                shimmer.layer = shimmerOverlayLayer
+                shimmerOverlayView.compositingFilter = "softLightBlendMode"
+                shimmer.testUpdate(background: .clear, foreground: .white.withAlphaComponent(0.4))
+                loadingBlurView.layer.cornerRadius = 10
+                shimmerOverlayLayer.opacity = 0.6
+                
+                shimmerBorderLayer.cornerRadius = 10
+                shimmerBorderLayer.masksToBounds = true
+                shimmerBorderLayer.compositingFilter = "softLightBlendMode"
+                
+                let borderMask = CAShapeLayer()
+                borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: loadingBlurView.bounds.width, height: loadingBlurView.bounds.height), cornerWidth: 10, cornerHeight: 10, transform: nil)
+                borderMask.fillColor = UIColor.clear.cgColor
+                borderMask.strokeColor = UIColor.white.cgColor
+                borderMask.lineWidth = 4
+//                let borderMask = CALayer()
+                borderShimmer = .init()
+                shimmerBorderLayer.mask = borderMask
+                borderShimmer.layer = shimmerBorderLayer
+                borderShimmer.testUpdate(background: .clear, foreground: .white)
+                loadingBlurView.alpha = 1*/
+            } else {
+                updateVideoStalled(isStalled: false)
+                /*if hadVideo {
                     self.loadingBlurView.removeFromSuperview()
                     placeholderView.removeFromSuperview()
                 } else {
@@ -239,11 +342,39 @@ final class _MediaStreamVideoComponent: Component {
                         })
                         placeholderView.removeFromSuperview()
                     }
-                }
+                }*/
             }
             
             if component.hasVideo, self.videoView == nil {
                 if let input = component.call.video(endpointId: "unified") {
+                    var _stallTimer: Foundation.Timer { Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
+                        guard let strongSelf = self else { return timer.invalidate() }
+                            print("Timer emitting \(timer)")
+                            DispatchQueue.main.async {
+                                strongSelf.videoStalled = true
+                            }
+                        }
+                    }
+                    // TODO: use mapToThrottled (?)
+                    frameInputDisposable = input.start(next: { [weak self] input in
+                        guard let strongSelf = self else { return }
+                        print("input")
+                        // TODO: optimize with throttle
+                        DispatchQueue.main.async {
+                            strongSelf.stallTimer?.invalidate()
+                            strongSelf.stallTimer = _stallTimer
+//                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+//                                print(strongSelf.videoStalled)
+//                                if strongSelf.videoStalled {
+//                                strongSelf.stallTimer?.fire()
+//                            }
+                            RunLoop.main.add(strongSelf.stallTimer!, forMode: .common)
+                            strongSelf.videoStalled = false
+                        }
+                    })
+                    stallTimer = _stallTimer
+//                    RunLoop.main.add(stallTimer!, forMode: .common)
+                    
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
                         self.insertSubview(videoBlurView, belowSubview: self.blurTintView)
@@ -354,6 +485,12 @@ final class _MediaStreamVideoComponent: Component {
                         }
                     }
                 }
+                fullScreenBackgroundPlaceholder.removeFromSuperview()
+            } else if component.isFullscreen {
+                if fullScreenBackgroundPlaceholder.superview == nil {
+                    insertSubview(fullScreenBackgroundPlaceholder, at: 0)
+                }
+                fullScreenBackgroundPlaceholder.frame = self.bounds
             }
             
 //            sheetView.frame = .init(x: 0, y: sheetTop, width: availableSize.width, height: sheetHeight)

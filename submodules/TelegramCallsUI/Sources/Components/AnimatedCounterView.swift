@@ -16,6 +16,7 @@ public final class AnimatedCountView: UIView {
     private let foregroundView = UIView()
     private let foregroundGradientLayer = CAGradientLayer()
     private let maskingView = UIView()
+    private var scaleFactor: CGFloat { 0.7 }
     
     override init(frame: CGRect = .zero) {
         super.init(frame: frame)
@@ -49,7 +50,7 @@ public final class AnimatedCountView: UIView {
         self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
         self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
         countLabel.frame = CGRect(origin: .zero, size: bounds.size)
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 10 : bounds.height - 6, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
+        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 6, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
     }
     
     func update(countString: String, subtitle: String) {
@@ -64,8 +65,9 @@ public final class AnimatedCountView: UIView {
 //            self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 60, weight: .semibold)])
 //        } else {
 //            self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 54, weight: .semibold)])
-//        }
-        self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: 60.0, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
+//
+        self.countLabel.fontSize = 48
+        self.countLabel.attributedText = NSAttributedString(string: text, font: Font.with(size: 48, design: .round, weight: .semibold, traits: [.monospacedNumbers]), textColor: .white)
 //        self.countLabel.attributedText = NSAttributedString(string: text, attributes: [.font: UIFont.systemFont(ofSize: 60, weight: .semibold)])
 //        var timerSize = self.timerNode.updateLayout(CGSize(width: size.width + 100.0, height: size.height))
 //        if timerSize.width > size.width - 32.0 {
@@ -176,6 +178,14 @@ class AnimatedCountLabel: UILabel {
     private var chars = [AnimatedCharLayer]()
     private let containerView = UIView()
     
+    var itemWidth: CGFloat { 36 * fontSize / 60 }
+    var commaWidthForSpacing: CGFloat { 8 * fontSize / 60 }
+    var commaFrameWidth: CGFloat { 36 * fontSize / 60 }
+    var interItemSpacing: CGFloat { 0 * fontSize / 60 }
+    var didBegin = false
+    var fontSize: CGFloat = 60
+    var scaleFactor: CGFloat { 1 }
+    
     override init(frame: CGRect = .zero) {
         super.init(frame: frame)
         containerView.clipsToBounds = false
@@ -186,11 +196,6 @@ class AnimatedCountLabel: UILabel {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-    var itemWidth: CGFloat { 36 }
-    var commaWidthForSpacing: CGFloat { 8 }
-    var commaFrameWidth: CGFloat { 36 }
-    var interItemSpacing: CGFloat { 0 }
-    var didBegin = false
     
     private func offsetForChar(at index: Int, within characters: [NSAttributedString]? = nil) -> CGFloat {
         if let characters {
@@ -201,7 +206,7 @@ class AnimatedCountLabel: UILabel {
                 return $0 + itemWidth + interItemSpacing
             }
             if characters.count > index && characters[index].string == "," {
-                offset -= 4
+                offset -= commaWidthForSpacing / 2 // 4
             }
             return offset
         } else {
@@ -212,7 +217,7 @@ class AnimatedCountLabel: UILabel {
                 return $0 + itemWidth + interItemSpacing
             }
             if self.chars.count > index && self.chars[index].attributedText?.string == "," {
-                offset -= 4
+                offset -= commaWidthForSpacing / 2
             }
             return offset
         }
@@ -226,8 +231,7 @@ class AnimatedCountLabel: UILabel {
             }
             return $0 + itemWidth + interItemSpacing
         }*/ - interItemSpacing
-        
-        containerView.frame = .init(x: bounds.midX - countWidth / 2, y: 0, width: countWidth, height: bounds.height)
+        containerView.frame = .init(x: bounds.midX - countWidth / 2 * scaleFactor, y: 0, width: countWidth * scaleFactor, height: bounds.height)
         chars.enumerated().forEach { (index, char) in
             let offset = offsetForChar(at: index)
 //            char.frame.size.width = char.attributedText?.string == "," ? commaFrameWidth : itemWidth
@@ -362,16 +366,16 @@ class AnimatedCountLabel: UILabel {
         if didBegin && prevCount != chars.count {
             UIView.animate(withDuration: Double(changeIndex) * initialDuration/*, delay: initialDuration * Double(changeIndex)*/) { [self] in
                 containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
-                if countWidth > self.bounds.width {
-                    let scale = countWidth / self.bounds.width
-                    self.transform = .init(scaleX: scale, y: scale)
+                if countWidth * scaleFactor > self.bounds.width {
+                    let scale = (self.bounds.width - 32) / (countWidth * scaleFactor)
+                    containerView.transform = .init(scaleX: scale, y: scale)
                 } else {
-                    self.transform = .identity
+                    containerView.transform = .init(scaleX: scaleFactor, y: scaleFactor)
                 }
                 //            containerView.backgroundColor = .red.withAlphaComponent(0.3)
             }
         } else if countWidth > 0 {
-            containerView.frame = .init(x: self.bounds.midX - countWidth / 2, y: 0, width: countWidth, height: self.bounds.height)
+            containerView.frame = .init(x: self.bounds.midX - countWidth / 2 * scaleFactor, y: 0, width: countWidth * scaleFactor, height: self.bounds.height)
             didBegin = true
         }
 //        self.backgroundColor = .green.withAlphaComponent(0.2)
@@ -451,7 +455,7 @@ class AnimatedCountLabel: UILabel {
     func animateIn(for newLayer: CALayer, duration: CFTimeInterval, beginTime: CFTimeInterval) {
         
         let beginTimeOffset: CFTimeInterval = 0// CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)// CACurrentMediaTime()
-        DispatchQueue.main.asyncAfter(deadline: .now() + beginTime) {
+        DispatchQueue.main.asyncAfter(deadline: .now() + beginTime) { [self] in
             let currentTime = CFTimeInterval(DispatchTime.now().uptimeNanoseconds / 1000000000)
             let beginTime: CFTimeInterval = 0
             print("[DIFF-in] \(currentTime - beginTimeOffset)")
@@ -479,7 +483,7 @@ class AnimatedCountLabel: UILabel {
             
             let animation = CAKeyframeAnimation()
             animation.keyPath = "position.y"
-            animation.values = [20, -6, 0]
+            animation.values = [20 * fontSize / 60, -6 * fontSize / 60, 0]
             animation.keyTimes = [0, 0.64, 1]
             animation.timingFunction = CAMediaTimingFunction.init(name: .easeInEaseOut)
             animation.duration = duration / 0.64

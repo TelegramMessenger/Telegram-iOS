@@ -967,6 +967,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         let moreAnimationTag = GenericComponentViewTag()
         
         return { context in
+            var forceFullScreenInLandscape: Bool { false }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             if environment.isVisible {
             } else {
@@ -1000,16 +1001,17 @@ public final class _MediaStreamComponent: CombinedComponent {
             var isFullscreen = state.isFullscreen
             let isLandscape = context.availableSize.width > context.availableSize.height
             
-            if let videoSize = context.state.videoSize {
+//            if let videoSize = context.state.videoSize {
                 // Always fullscreen in landscape
-                if /*videoSize.width > videoSize.height &&*/ isLandscape && !isFullscreen {
+            // TODO: support landscape sheet (wrap in scrollview, video size same as portrait)
+                if forceFullScreenInLandscape && /*videoSize.width > videoSize.height &&*/ isLandscape && !isFullscreen {
                     state.isFullscreen = true
                     isFullscreen = true
-                } else if videoSize.width > videoSize.height && !isLandscape && isFullscreen {
+                } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && isFullscreen {
                     state.isFullscreen = false
                     isFullscreen = false
                 }
-            }
+//            }
             
             let videoHeight: CGFloat = context.availableSize.width / 16 * 9
             let bottomPadding = 40 + environment.safeInsets.bottom
