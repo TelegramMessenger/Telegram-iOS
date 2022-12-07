@@ -448,10 +448,20 @@ extension StoreMessage {
                         
                         let replyPeerId = replyToPeerId?.peerId ?? peerId
                         if let replyToTopId = replyToTopId {
-                            let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
-                            threadMessageId = threadIdValue
-                            if replyPeerId == peerId {
-                                threadId = makeMessageThreadId(threadIdValue)
+                            if peerIsForum {
+                                if isForumTopic {
+                                    let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                    threadMessageId = threadIdValue
+                                    if replyPeerId == peerId {
+                                        threadId = makeMessageThreadId(threadIdValue)
+                                    }
+                                }
+                            } else {
+                                let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToTopId)
+                                threadMessageId = threadIdValue
+                                if replyPeerId == peerId {
+                                    threadId = makeMessageThreadId(threadIdValue)
+                                }
                             }
                         } else if peerId.namespace == Namespaces.Peer.CloudChannel {
                             let threadIdValue = MessageId(peerId: replyPeerId, namespace: Namespaces.Message.Cloud, id: replyToMsgId)
