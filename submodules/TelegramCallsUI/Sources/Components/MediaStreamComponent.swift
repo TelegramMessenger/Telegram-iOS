@@ -1013,7 +1013,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             if forceFullScreenInLandscape && /*videoSize.width > videoSize.height &&*/ isLandscape && !state.isFullscreen {
                 state.isFullscreen = true
                 isFullscreen = true
-            } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && state.isFullscreen && canEnforceOrientation {
+            } else if /*let videoSize = context.state.videoSize, videoSize.width > videoSize.height &&*/ !isLandscape && state.isFullscreen && canEnforceOrientation {
                 state.isFullscreen = false
                 isFullscreen = false
             } else {
@@ -1991,36 +1991,36 @@ public final class Throttler<T: Hashable> {
     }
     
     public func publish(_ value: T, includingLatest: Bool = false, using completion: ((T) -> Void)?) {
-        accumulator.insert(value)
-        
-        if !isThrottling {
-            isThrottling = true
-            lastValue = nil
-            queue.async {
+        queue.async { [self] in
+            accumulator.insert(value)
+            
+            if !isThrottling {
+                isThrottling = true
+                lastValue = nil
                 completion?(value)
                 self.lastCompletedValue = value
+            } else {
+                lastValue = value
             }
-        } else {
-            lastValue = value
-        }
-        
-        if lastValue == nil {
-            queue.asyncAfter(deadline: .now() + duration) { [self] in
-                accumulator.removeAll()
-                // TODO: quick fix, replace with timer
+            
+            if lastValue == nil {
                 queue.asyncAfter(deadline: .now() + duration) { [self] in
-                    isThrottling = false
+                    accumulator.removeAll()
+                    // TODO: quick fix, replace with timer
+                    queue.asyncAfter(deadline: .now() + duration) { [self] in
+                        isThrottling = false
+                    }
+                    
+                    guard
+                        let lastValue = lastValue,
+                        lastCompletedValue != lastValue || includingLatest
+                    else { return }
+                    
+                    accumulator.insert(lastValue)
+                    self.lastValue = nil
+                    completion?(lastValue)
+                    lastCompletedValue = lastValue
                 }
-                
-                guard
-                    let lastValue = lastValue,
-                    lastCompletedValue != lastValue || includingLatest
-                else { return }
-                
-                accumulator.insert(lastValue)
-                self.lastValue = nil
-                completion?(lastValue)
-                lastCompletedValue = lastValue
             }
         }
     }

@@ -595,8 +595,10 @@ final class _MediaStreamVideoComponent: Component {
                 // aspect == 1 the first run
                 if component.isFullscreen && self.hadVideo {
                     if aspect <= 0.01 {
-                        aspect = 16.0 / 9 // 3.0 / 4.0
+                        aspect = 16.0 / 9
                     }
+                } else if self.hadVideo {
+                    // aspect = aspect
                 } else {
                     aspect = 16.0 / 9
                 }
@@ -604,7 +606,10 @@ final class _MediaStreamVideoComponent: Component {
                 if component.isFullscreen {
                     videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
                 } else {
-                    videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: min(availableSize.width, availableSize.height) - videoInset * 2, height: max(availableSize.height, availableSize.width)))
+                    let availableVideoWidth = availableSize.width - videoInset * 2
+                    let availableVideoHeight = availableVideoWidth * 9.0 / 16
+                    
+                    videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableVideoWidth, height: availableVideoHeight))
                 }
                 let blurredVideoSize = videoSize.aspectFilled(availableSize)
                 
