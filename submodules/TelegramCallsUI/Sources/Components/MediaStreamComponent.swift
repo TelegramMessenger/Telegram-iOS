@@ -914,6 +914,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             self.infoDisposable?.dispose()
             self.isVisibleInHierarchyDisposable?.dispose()
             self.connectionDisposable?.dispose()
+            self.networkStateDisposable?.dispose()
         }
         
         func toggleDisplayUI() {

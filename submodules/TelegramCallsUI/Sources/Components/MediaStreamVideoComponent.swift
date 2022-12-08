@@ -239,6 +239,7 @@ final class _MediaStreamVideoComponent: Component {
 //                self.loadingBlurView.animator.fractionComplete = 0.4
 //                self.loadingBlurView.effect = UIBlurEffect(style: .light)
                 if let frameView = lastFrame[component.call.peerId.id.description] {
+                    frameView.removeFromSuperview()
                     placeholderView.subviews.forEach { $0.removeFromSuperview() }
                     placeholderView.addSubview(frameView)
                     frameView.frame = placeholderView.bounds
@@ -369,6 +370,11 @@ final class _MediaStreamVideoComponent: Component {
         
         var isFullscreen: Bool = false
         let videoLoadingThrottler = Throttler<Bool>(duration: 1, queue: .main)
+        
+        deinit {
+            avatarDisposable?.dispose()
+            frameInputDisposable?.dispose()
+        }
         
         func update(component: _MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
@@ -580,6 +586,7 @@ final class _MediaStreamVideoComponent: Component {
 //                if let presentation = videoView.snapshotView(afterScreenUpdates: false) {
                 if videoView.bounds.size.width > 0,
                     videoView.alpha > 0,
+                    self.hadVideo,
                     let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
                     lastFrame[component.call.peerId.id.description] = snapshot// ()!
                 }
@@ -766,20 +773,16 @@ final class _MediaStreamVideoComponent: Component {
         }
         
         func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
-            // Fading to make
-            if let presentation = self.videoView!.snapshotView(afterScreenUpdates: false) {
+            if let videoView = self.videoView, let presentation = videoView.snapshotView(afterScreenUpdates: false) {
                 self.addSubview(presentation)
-                presentation.frame = self.videoView!.frame
-                lastFrame[self.component!.call.peerId.id.description] = presentation
+                presentation.frame = videoView.frame
+                if let callId = self.component?.call.peerId.id.description {
+                    lastFrame[callId] = presentation
+                }
                 
-                //            let image = UIGraphicsImageRenderer(size: presentation.bounds.size).image { context in
-                //                presentation.render(in: context.cgContext)
-                //            }
-                //            print(image)
-                self.videoView?.alpha = 0
-                //            self.videoView?.alpha = 0.5
-                //            presentation.animateAlpha(from: 1, to: 0, duration: 0.1, completion: { _ in presentation.removeFromSuperlayer() })
-                UIView.animate(withDuration: 0.1, animations: {
+                videoView.alpha = 0
+                
+                UIView.animate(withDuration: 0.07, delay: 0.07, animations: {
                     presentation.alpha = 0
                 }, completion: { _ in
                     presentation.removeFromSuperview()
