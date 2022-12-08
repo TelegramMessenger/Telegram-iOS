@@ -1822,11 +1822,23 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             let mutableString = NSMutableAttributedString(string: messageText, font: textFont, textColor: theme.messageTextColor)
                             if let spoilers = spoilers {
                                 for range in spoilers {
+                                    var range = range
+                                    if range.location > mutableString.length {
+                                        continue
+                                    } else if range.location + range.length > mutableString.length {
+                                        range.length = mutableString.length - range.location
+                                    }
                                     mutableString.addAttribute(NSAttributedString.Key(rawValue: TelegramTextAttributes.Spoiler), value: true, range: range)
                                 }
                             }
                             if let customEmojiRanges = customEmojiRanges {
                                 for (range, attribute) in customEmojiRanges {
+                                    var range = range
+                                    if range.location > mutableString.length {
+                                        continue
+                                    } else if range.location + range.length > mutableString.length {
+                                        range.length = mutableString.length - range.location
+                                    }
                                     mutableString.addAttribute(ChatTextInputAttributes.customEmoji, value: attribute, range: range)
                                 }
                             }
@@ -1857,6 +1869,12 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                             for range in chatListSearchResult.resultRanges {
                                 let stringRange = NSRange(range, in: chatListSearchResult.text)
                                 if stringRange.location >= 0 && stringRange.location + stringRange.length <= composedString.length {
+                                    var stringRange = stringRange
+                                    if stringRange.location > composedString.length {
+                                        continue
+                                    } else if stringRange.location + stringRange.length > composedString.length {
+                                        stringRange.length = composedString.length - stringRange.location
+                                    }
                                     composedString.addAttribute(.foregroundColor, value: theme.messageHighlightedTextColor, range: stringRange)
                                 }
                             }

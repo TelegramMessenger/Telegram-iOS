@@ -18,8 +18,10 @@ public func chatInputStateStringWithAppliedEntities(_ text: String, entities: [M
         if nsString == nil {
             nsString = text as NSString
         }
+        if range.location >= stringLength {
+            continue
+        }
         if range.location + range.length > stringLength {
-            range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
         switch entity.type {
@@ -75,7 +77,6 @@ public func stringWithAppliedEntities(_ text: String, entities: [MessageTextEnti
         if range.location > stringLength {
             continue
         } else if range.location + range.length > stringLength {
-            range.location = max(0, stringLength - range.length)
             range.length = stringLength - range.location
         }
         switch entity.type {
