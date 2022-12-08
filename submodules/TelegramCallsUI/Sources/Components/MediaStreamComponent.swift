@@ -841,8 +841,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                 
                 var updated = false
 //                 TODO: remove debug timer
-                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(/*members.totalCount */Int.random(in: 0..<10000000)) { [weak strongSelf] latestCount in
+//                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                    strongSelf.infoThrottler.publish(members.totalCount/*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
                         print(members.totalCount)
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
@@ -855,7 +855,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                             strongSelf.updated(transition: .immediate)
                         }
                     }
-                }.fire()
+//                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
