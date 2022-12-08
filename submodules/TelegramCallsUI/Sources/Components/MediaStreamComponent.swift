@@ -841,8 +841,8 @@ public final class _MediaStreamComponent: CombinedComponent {
                 
                 var updated = false
 //                 TODO: remove debug timer
-//                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(members.totalCount /*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
+                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                    strongSelf.infoThrottler.publish(/*members.totalCount */Int.random(in: 0..<10000000)) { [weak strongSelf] latestCount in
                         print(members.totalCount)
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
@@ -855,7 +855,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                             strongSelf.updated(transition: .immediate)
                         }
                     }
-//                }.fire()
+                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
@@ -971,7 +971,8 @@ public final class _MediaStreamComponent: CombinedComponent {
         let moreAnimationTag = GenericComponentViewTag()
         
         return { context in
-            var forceFullScreenInLandscape: Bool { true }
+            let canEnforceOrientation = UIDevice.current.model != "iPad"
+            var forceFullScreenInLandscape: Bool { canEnforceOrientation && true }
             let environment = context.environment[ViewControllerComponentContainer.Environment.self].value
             if environment.isVisible {
             } else {
@@ -1011,7 +1012,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             if forceFullScreenInLandscape && /*videoSize.width > videoSize.height &&*/ isLandscape && !state.isFullscreen {
                 state.isFullscreen = true
                 isFullscreen = true
-            } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && state.isFullscreen {
+            } else if let videoSize = context.state.videoSize, videoSize.width > videoSize.height && !isLandscape && state.isFullscreen && canEnforceOrientation {
                 state.isFullscreen = false
                 isFullscreen = false
             } else {
@@ -1027,7 +1028,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             
             let videoHeight: CGFloat = forceFullScreenInLandscape
                 ? (context.availableSize.width - videoInset * 2) / 16 * 9
-                : context.state.videoSize?.height ?? (context.availableSize.width - videoInset * 2) / 16 * 9
+            : context.state.videoSize?.height ?? (min(context.availableSize.width, context.availableSize.height) - videoInset * 2) / 16 * 9
             let bottomPadding = 40 + environment.safeInsets.bottom
             let sheetHeight: CGFloat = isFullscreen
                 ? context.availableSize.height
@@ -1467,6 +1468,7 @@ public final class _MediaStreamComponent: CombinedComponent {
             )
             
             if !isFullscreen {
+                let imageRenderScale = UIScreen.main.scale
                 let bottomComponent = AnyComponent(ButtonsRowComponent(
                     bottomInset: environment.safeInsets.bottom,
                     sideInset: environment.safeInsets.left,
@@ -1487,7 +1489,7 @@ public final class _MediaStreamComponent: CombinedComponent {
                     rightItem: AnyComponent(Button(
                         content: AnyComponent(RoundGradientButtonComponent(
                             gradientColors: [UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor, UIColor(red: 0.44, green: 0.18, blue: 0.22, alpha: 1).cgColor],
-                            image: generateImage(CGSize(width: 44.0, height: 44), opaque: false, rotatedContext: { size, context in
+                            image: generateImage(CGSize(width: 44.0 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
                                 context.translateBy(x: size.width / 2, y: size.height / 2)
                                 context.scaleBy(x: 0.4, y: 0.4)
                                 context.translateBy(x: -size.width / 2, y: -size.height / 2)
@@ -1516,13 +1518,13 @@ public final class _MediaStreamComponent: CombinedComponent {
                     centerItem: AnyComponent(Button(
                         content: AnyComponent(RoundGradientButtonComponent(
                             gradientColors: [UIColor(red: 0.23, green: 0.17, blue: 0.29, alpha: 1).cgColor, UIColor(red: 0.21, green: 0.16, blue: 0.29, alpha: 1).cgColor],
-                            image: generateImage(CGSize(width: 44, height: 44), opaque: false, rotatedContext: { size, context in
+                            image: generateImage(CGSize(width: 44 * imageRenderScale, height: 44 * imageRenderScale), opaque: false, rotatedContext: { size, context in
                                 
                                 let imageColor = UIColor.white
                                 let bounds = CGRect(origin: CGPoint(), size: size)
                                 context.clear(bounds)
                                 
-                                context.setLineWidth(2.4 - UIScreenPixel)
+                                context.setLineWidth(2.4 * imageRenderScale - UIScreenPixel)
                                 context.setLineCap(.round)
                                 context.setStrokeColor(imageColor.cgColor)
 //                                context.setLineJoin(.round)
@@ -1563,6 +1565,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                                 } else {
                                     // TODO: Check and respect current device orientation
                                     controller.updateOrientation(orientation: .portrait)
+                                }
+                                if !canEnforceOrientation {
+                                    state.updated() // updated(.easeInOut(duration: 0.3))
                                 }
                                 //                            controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
                             }
@@ -1637,9 +1642,9 @@ public final class _MediaStreamComponent: CombinedComponent {
                             tintColor: .white
                         )),
                         action: {
-                            if let controller = controller() as? MediaStreamComponentController {
+                            /*if let controller = controller() as? MediaStreamComponentController {
                                 guard let size = state.videoSize else { return }
-                                state.isFullscreen.toggle()
+                                state.isFullscreen = false
                                 if state.isFullscreen {
                                     if size.width > size.height {
                                         controller.updateOrientation(orientation: .landscapeRight)
@@ -1652,6 +1657,14 @@ public final class _MediaStreamComponent: CombinedComponent {
                                     controller.updateOrientation(orientation: .portrait)
                                 }
     //                            controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
+                            }*/
+                            state.isFullscreen = false
+                            if let controller = controller() as? MediaStreamComponentController {
+                                if canEnforceOrientation {
+                                    controller.updateOrientation(orientation: .portrait)
+                                } else {
+                                    state.updated() // updated(.easeInOut(duration: 0.3))
+                                }
                             }
                         }
                     ).minSize(CGSize(width: 64.0, height: 80))) : nil,

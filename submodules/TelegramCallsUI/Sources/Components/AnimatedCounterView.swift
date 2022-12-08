@@ -50,7 +50,7 @@ public final class AnimatedCountView: UIView {
         self.foregroundGradientLayer.frame = CGRect(origin: .zero, size: bounds.size).insetBy(dx: -60, dy: -60)
         self.maskingView.frame = CGRect(origin: .zero, size: bounds.size)
         countLabel.frame = CGRect(origin: .zero, size: bounds.size)
-        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 10, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
+        subtitleLabel.frame = .init(x: bounds.midX - subtitleLabel.intrinsicContentSize.width / 2 - 10, y: subtitleLabel.text == "No viewers" ? bounds.midY - 8 : bounds.height - 12, width: subtitleLabel.intrinsicContentSize.width + 20, height: 20)
     }
     
     func update(countString: String, subtitle: String) {
@@ -206,7 +206,11 @@ class AnimatedCountLabel: UILabel {
                 return $0 + itemWidth + interItemSpacing
             }
             if characters.count > index && characters[index].string == "," {
-                offset -= commaWidthForSpacing / 2 // 4
+                if index > 0, ["1", "7"].contains(characters[index - 1].string) {
+                    offset -= commaWidthForSpacing / 2
+                } else {
+                    offset -= commaWidthForSpacing / 3
+                }
             }
             return offset
         } else {
@@ -217,7 +221,11 @@ class AnimatedCountLabel: UILabel {
                 return $0 + itemWidth + interItemSpacing
             }
             if self.chars.count > index && self.chars[index].attributedText?.string == "," {
-                offset -= commaWidthForSpacing / 2
+                if index > 0, let prevChar = self.chars[index - 1].attributedText?.string, ["1", "7"].contains(prevChar) {
+                    offset -= commaWidthForSpacing / 2
+                } else {
+                    offset -= commaWidthForSpacing / 3
+                }
             }
             return offset
         }
