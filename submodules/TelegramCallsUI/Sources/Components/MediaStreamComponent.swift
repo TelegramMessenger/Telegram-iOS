@@ -48,8 +48,6 @@ public final class MediaStreamComponent: CombinedComponent {
         private(set) var hasVideo: Bool = false
         private var stateDisposable: Disposable?
         private var infoDisposable: Disposable?
-        private var connectionDisposable: Disposable?
-        private var networkStateDisposable: Disposable?
         
         private(set) var originInfo: OriginInfo?
         
@@ -113,36 +111,6 @@ public final class MediaStreamComponent: CombinedComponent {
                 strongSelf.updated(transition: .immediate)
             })
             
-            // TODO: retest to uncomment or delete. Relying only on video frames
-            /*self.networkStateDisposable = (call.account.networkState |> deliverOnMainQueue).start(next: { [weak self] state in
-                guard let strongSelf = self else { return }
-                switch state {
-                case .waitingForNetwork, .connecting:
-                    print("[NEW] videoStalled")
-                    strongSelf.videoStalled = true
-                default:
-                    strongSelf.videoStalled = !strongSelf.hasVideo
-                }
-                strongSelf.updated(transition: .immediate)
-//                if let strongSelf = self, case .standard(previewing: false) = strongSelf.presentationInterfaceState.mode {
-//                    strongSelf.chatTitleView?.networkState = state
-//                }
-            })
-            
-            self.connectionDisposable = call.state.start(next: { [weak self] state in
-                let prev = self?.videoStalled
-                switch state.networkState {
-                case .connected:
-                    self?.videoStalled = false
-                default:
-                    print("[ALERT] video stalled")
-                    self?.videoStalled = true
-                }
-                if prev != self?.videoStalled {
-                    self?.updated(transition: .immediate)
-                }
-            })*/
-            
             let callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))
             
             self.infoDisposable = (combineLatest(queue: .mainQueue(), call.state, call.members, callPeer)
@@ -153,8 +121,8 @@ public final class MediaStreamComponent: CombinedComponent {
                 
                 var updated = false
 //                 TODO: remove debug timer
-//                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
-                    strongSelf.infoThrottler.publish(members.totalCount/*Int.random(in: 0..<10000000)*/) { [weak strongSelf] latestCount in
+                Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { _ in
+                    strongSelf.infoThrottler.publish(/*members.totalCount*/Int.random(in: 0..<1000000000)) { [weak strongSelf] latestCount in
                         print(members.totalCount)
                         guard let strongSelf = strongSelf else { return }
                         var updated = false
@@ -167,7 +135,7 @@ public final class MediaStreamComponent: CombinedComponent {
                             strongSelf.updated(transition: .immediate)
                         }
                     }
-//                }.fire()
+                }.fire()
                 if state.canManageCall != strongSelf.canManageCall {
                     strongSelf.canManageCall = state.canManageCall
                     updated = true
@@ -188,12 +156,6 @@ public final class MediaStreamComponent: CombinedComponent {
                     updated = true
                 }
                 
-//                let originInfo = OriginInfo(title: callPeer.debugDisplayTitle, memberCount: members.totalCount)
-//                if strongSelf.originInfo != originInfo {
-//                    strongSelf.originInfo = originInfo
-//                    updated = true
-//                }
-//
                 if updated {
                     strongSelf.updated(transition: .immediate)
                 }
@@ -225,8 +187,6 @@ public final class MediaStreamComponent: CombinedComponent {
             self.stateDisposable?.dispose()
             self.infoDisposable?.dispose()
             self.isVisibleInHierarchyDisposable?.dispose()
-            self.connectionDisposable?.dispose()
-            self.networkStateDisposable?.dispose()
         }
         
         func toggleDisplayUI() {
@@ -272,9 +232,6 @@ public final class MediaStreamComponent: CombinedComponent {
         let background = Child(Rectangle.self)
         let dismissTapComponent = Child(Rectangle.self)
         let video = Child(MediaStreamVideoComponent.self)
-//        let navigationBar = Child(NavigationBarComponent.self)
-//        let toolbar = Child(ToolbarComponent.self)
-        
         let sheet = Child(StreamSheetComponent.self)
         let fullscreenOverlay = Child(StreamSheetComponent.self)
         
@@ -312,11 +269,10 @@ public final class MediaStreamComponent: CombinedComponent {
                 state.updated(transition: .easeInOut(duration: 3))
                 deactivatePictureInPicture.invoke(Void())
             }
-            let isFullscreen: Bool // = state.isFullscreen
+            let isFullscreen: Bool
             let isLandscape = context.availableSize.width > context.availableSize.height
             
-//            if let videoSize = context.state.videoSize {
-                // Always fullscreen in landscape
+            // Always fullscreen in landscape
             // TODO: support landscape sheet (wrap in scrollview, video size same as portrait)
             if forceFullScreenInLandscape && isLandscape && !state.isFullscreen {
                 state.isFullscreen = true
@@ -327,7 +283,7 @@ public final class MediaStreamComponent: CombinedComponent {
             } else {
                 isFullscreen = state.isFullscreen
             }
-            //            }
+            
             let videoInset: CGFloat
             if !isFullscreen {
                 videoInset = 16
@@ -346,7 +302,7 @@ public final class MediaStreamComponent: CombinedComponent {
             
             var dragOffset = context.state.dismissOffset
             if isFullyDragged {
-                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + context.view.safeAreaInsets.top)// sheetHeight - UIScreen.main.bounds.height
+                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + context.view.safeAreaInsets.top)
             }
             
             let dismissTapAreaHeight = isFullscreen ? 0 : (context.availableSize.height - sheetHeight + dragOffset)
@@ -355,7 +311,6 @@ public final class MediaStreamComponent: CombinedComponent {
                 availableSize: CGSize(width: context.availableSize.width, height: dismissTapAreaHeight),
                 transition: context.transition
             )
-            
             
             let video = video.update(
                 component: MediaStreamVideoComponent(
@@ -425,8 +380,7 @@ public final class MediaStreamComponent: CombinedComponent {
             var topLeftButton: AnyComponent<Empty>?
             if context.state.canManageCall {
                 let whiteColor = UIColor(white: 1.0, alpha: 1.0)
-                /*navigationRightItems.append(*/ topLeftButton = //AnyComponentWithIdentity(id: "more", component:
-                AnyComponent(Button(
+                topLeftButton = AnyComponent(Button(
                     content: AnyComponent(ZStack([
                         AnyComponentWithIdentity(id: "b", component: AnyComponent(Circle(
                             fillColor: .white.withAlphaComponent(0.08),
@@ -562,7 +516,6 @@ public final class MediaStreamComponent: CombinedComponent {
                                         return
                                     }
                                     
-                                    
                                     let presentationData = call.accountContext.sharedContext.currentPresentationData.with { $0 }
                                     
                                     if let title = title {
@@ -659,21 +612,10 @@ public final class MediaStreamComponent: CombinedComponent {
             let navigationComponent = NavigationBarComponent(
                 topInset: environment.statusBarHeight,
                 sideInset: environment.safeInsets.left,
-                leftItem: topLeftButton/*AnyComponent(Button(
-                    content: AnyComponent(Text(text: environment.strings.Common_Close, font: Font.regular(17.0), color: .white)),
-                    action: { [weak call] in
-                        let _ = call?.leave(terminateIfPossible: false)
-                    })
-                )*/,
+                leftItem: topLeftButton,
                 rightItems: navigationRightItems,
                 centerItem: AnyComponent(StreamTitleComponent(text: state.peerTitle, isRecording: state.recordingStartTimestamp != nil, isActive: context.state.videoIsPlayable))
             )
-            
-//            let navigationBar = navigationBar.update(
-//                component: navigationComponent,
-//                availableSize: CGSize(width: context.availableSize.width, height: context.availableSize.height),
-//                transition: context.transition
-//            )
             
             if context.state.storedIsFullscreen != isFullscreen {
                 context.state.storedIsFullscreen = isFullscreen
@@ -751,8 +693,6 @@ public final class MediaStreamComponent: CombinedComponent {
                     onPanGesture(panState)
                 })
             )
-//            var bottomComponent: AnyComponent<Empty>?
-//            var fullScreenToolbarComponent: AnyComponent<Empty>?
             
             context.add(dismissTapComponent
                 .position(CGPoint(x: context.availableSize.width / 2, y: dismissTapAreaHeight / 2))
@@ -821,7 +761,6 @@ public final class MediaStreamComponent: CombinedComponent {
                                 context.setLineWidth(2.4 * imageRenderScale - UIScreenPixel)
                                 context.setLineCap(.round)
                                 context.setStrokeColor(imageColor.cgColor)
-//                                context.setLineJoin(.round)
                                 
                                 let lineSide = size.width / 5
                                 let centerOffset = size.width / 20
@@ -860,9 +799,8 @@ public final class MediaStreamComponent: CombinedComponent {
                                     controller.updateOrientation(orientation: .portrait)
                                 }
                                 if !canEnforceOrientation {
-                                    state.updated() // updated(.easeInOut(duration: 0.3))
+                                    state.updated()
                                 }
-                                //                            controller.updateOrientation(orientation: isLandscape ? .portrait : .landscapeRight)
                             }
                         }
                     ).minSize(CGSize(width: 44.0, height: 44.0)))
@@ -877,7 +815,6 @@ public final class MediaStreamComponent: CombinedComponent {
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: bottomPadding,
                         participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
-                           //
                         isFullyExtended: isFullyDragged,
                         deviceCornerRadius: (controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 0,
                         videoHeight: videoHeight
@@ -888,7 +825,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 
                 let sheetOffset: CGFloat = context.availableSize.height - sheetHeight + dragOffset
                 let sheetPosition = sheetOffset + sheetHeight / 2
-                // Sheet underneath the video when in sheet
+                // Sheet underneath the video when in modal sheet
                 context.add(sheet
                     .position(.init(x: context.availableSize.width / 2.0, y: context.availableSize.height / 2))
                 )
@@ -900,7 +837,7 @@ public final class MediaStreamComponent: CombinedComponent {
                     videoPos = sheetPosition - sheetHeight / 2 + videoHeight / 2 + 50 + 12
                 }
                 context.add(video
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos)/*sheetPosition + videoHeight / 2 + 50 - context.availableSize.height / 2*/)// context.availableSize.height / 2.0 + context.state.dismissOffset))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: videoPos))
                 )
             } else {
                 context.add(video
@@ -950,7 +887,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         sheetHeight: max(sheetHeight - context.state.dismissOffset, sheetHeight),
                         backgroundColor: isFullscreen ? .clear : (isFullyDragged ? fullscreenBackgroundColor : panelBackgroundColor),
                         bottomPadding: 12,
-                        participantsCount: -1, // context.state.originInfo?.memberCount ?? 0
+                        participantsCount: -1,
                         isFullyExtended: isFullyDragged,
                         deviceCornerRadius: (controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 0,
                         videoHeight: videoHeight
@@ -964,23 +901,10 @@ public final class MediaStreamComponent: CombinedComponent {
                 )
             }
             
-//            context.add(navigationBar
-//                .position(CGPoint(x: context.availableSize.width / 2.0, y: navigationBar.size.height / 2.0))
-//                .opacity(context.state.displayUI ? 1.0 : 0.0)
-//            )
-            
-//            context.add(toolbar
-//                .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - toolbar.size.height / 2.0))
-//                .opacity(context.state.displayUI ? 1.0 : 0.0)
-//            )
-            
             return context.availableSize
         }
     }
 }
-
-// TODO: pass to component properly
-//internal var deviceCornerRadius: CGFloat? = nil
 
 public final class MediaStreamComponentController: ViewControllerComponentContainer, VoiceChatController {
     private let context: AccountContext
@@ -1048,11 +972,6 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
         DispatchQueue.main.async {
             self.onViewDidDisappear?()
         }
-        
-//        if let initialOrientation = self.initialOrientation {
-//            self.initialOrientation = nil
-//            self.call.accountContext.sharedContext.applicationBindings.forceOrientation(initialOrientation)
-//        }
     }
     
     override public func viewDidLoad() {
@@ -1088,17 +1007,8 @@ public final class MediaStreamComponentController: ViewControllerComponentContai
             strongSelf.dismissImpl(completion: completion)
         })
         self.backgroundDimView.layer.animateAlpha(from: 1.0, to: 0, duration: 0.3, removeOnCompletion: false)
-        // if let validLayout = self.validLayout {
-          //  self.view.clipsToBounds = true
-            // self.view.layer.cornerRadius = validLayout.deviceMetrics.screenCornerRadius
-            // if #available(iOS 13.0, *) {
-            //     self.view.layer.cornerCurve = .continuous
-            // }
-            
-        self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 0.4, /*timingFunction: kCAMediaTimingFunctionSpring, */completion: { _ in
+        self.view.layer.animatePosition(from: self.view.center, to: CGPoint(x: self.view.center.x, y: self.view.bounds.maxY + self.view.bounds.height / 2), duration: 0.4, completion: { _ in
              })
-            // self.view.layer.animateScale(from: 1.0, to: 0.001, duration: 0.3, timingFunction: kCAMediaTimingFunctionSpring)
-        // }
     }
     
     private func dismissImpl(completion: (() -> Void)? = nil) {
@@ -1505,21 +1415,18 @@ private final class NavigationBarComponent: CombinedComponent {
                 centerLeftInset += leftItem.size.width + 4.0
             }
             
-//            var centerRightInset = sideInset
             var rightItemX = context.availableSize.width - sideInset
             for item in rightItemList.reversed() {
                 context.add(item
                     .position(CGPoint(x: rightItemX - item.size.width / 2.0, y: context.component.topInset + contentHeight / 2.0))
                 )
                 rightItemX -= item.size.width + 8.0
-//                centerRightInset += item.size.width + 8.0
             }
             
-//            let maxCenterInset = max(centerLeftInset, centerRightInset)
             let someUndesiredOffset: CGFloat = 16
             if let centerItem = centerItem {
                 context.add(centerItem
-                    .position(CGPoint(x: context.availableSize.width / 2 - someUndesiredOffset /*maxCenterInset + (context.availableSize.width - maxCenterInset - maxCenterInset) / 2.0*/, y: context.component.topInset + contentHeight / 2.0))
+                    .position(CGPoint(x: context.availableSize.width / 2 - someUndesiredOffset, y: context.component.topInset + contentHeight / 2.0))
                 )
             }
             

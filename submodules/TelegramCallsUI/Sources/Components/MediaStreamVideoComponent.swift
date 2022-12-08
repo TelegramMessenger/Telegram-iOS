@@ -12,23 +12,6 @@ import SwiftSignalKit
 import AvatarNode
 import Postbox
 
-class CustomIntensityVisualEffectView: UIVisualEffectView {
-    init(effect: UIVisualEffect, intensity: CGFloat) {
-        super.init(effect: nil)
-        animator = UIViewPropertyAnimator(duration: 1, curve: .linear) { [unowned self] in self.effect = effect }
-        animator.startAnimation()
-        animator.pauseAnimation()
-        animator.fractionComplete = intensity
-        animator.pausesOnCompletion = true
-    }
-    
-    required init?(coder aDecoder: NSCoder) {
-        fatalError()
-    }
-    
-    var animator: UIViewPropertyAnimator!
-}
-
 final class MediaStreamVideoComponent: Component {
     let call: PresentationGroupCallImpl
     let hasVideo: Bool
@@ -137,6 +120,34 @@ final class MediaStreamVideoComponent: Component {
         private var noSignalTimer: Foundation.Timer?
         private var noSignalTimeout: Bool = false
         
+        private let maskGradientLayer = CAGradientLayer()
+        private var wasVisible = true
+        private var borderShimmer = StandaloneShimmerEffect()
+        private let shimmerBorderLayer = CALayer()
+        private let placeholderView = UIImageView()
+        
+        private var videoStalled = false {
+            didSet {
+                if videoStalled != oldValue {
+                    self.updateVideoStalled(isStalled: self.videoStalled)
+//                    state?.updated()
+                }
+            }
+        }
+        var onVideoPlaybackChange: ((Bool) -> Void) = { _ in }
+        
+        private var frameInputDisposable: Disposable?
+        
+        private var stallTimer: Foundation.Timer?
+        private let fullScreenBackgroundPlaceholder = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
+        
+        private var avatarDisposable: Disposable?
+        private var didBeginLoadingAvatar = false
+        private var timeLastFrameReceived: CFAbsoluteTime?
+        
+        private var isFullscreen: Bool = false
+        private let videoLoadingThrottler = Throttler<Bool>(duration: 1, queue: .main)
+        
         private weak var state: State?
         
         override init(frame: CGRect) {
@@ -154,6 +165,11 @@ final class MediaStreamVideoComponent: Component {
             fatalError("init(coder:) has not been implemented")
         }
         
+        deinit {
+            avatarDisposable?.dispose()
+            frameInputDisposable?.dispose()
+        }
+        
         public func matches(tag: Any) -> Bool {
             if let _ = tag as? Tag {
                 return true
@@ -167,23 +183,6 @@ final class MediaStreamVideoComponent: Component {
                 self.pictureInPictureController?.stopPictureInPicture()
             }
         }
-        let maskGradientLayer = CAGradientLayer()
-        private var wasVisible = true
-        var borderShimmer = StandaloneShimmerEffect()
-        let shimmerBorderLayer = CALayer()
-        let placeholderView = UIImageView()
-        
-        var videoStalled = false {
-            didSet {
-                if videoStalled != oldValue {
-                    self.updateVideoStalled(isStalled: self.videoStalled)
-//                    state?.updated()
-                }
-            }
-        }
-        var onVideoPlaybackChange: ((Bool) -> Void) = { _ in }
-        
-        private var frameInputDisposable: Disposable?
         
         private func updateVideoStalled(isStalled: Bool) {
             if isStalled {
@@ -215,7 +214,6 @@ final class MediaStreamVideoComponent: Component {
                     }
                 }
                 if shimmerBorderLayer.superlayer == nil {
-//                    loadingBlurView.contentView.layer.addSublayer(shimmerOverlayLayer)
                     loadingBlurView.contentView.layer.addSublayer(shimmerBorderLayer)
                 }
                 loadingBlurView.clipsToBounds = true
@@ -234,7 +232,7 @@ final class MediaStreamVideoComponent: Component {
                 
                 borderShimmer = .init()
                 borderShimmer.layer = shimmerBorderLayer
-                borderShimmer.testUpdate(background: .clear, foreground: .white)
+                borderShimmer.updateHorizontal(background: .clear, foreground: .white)
                 loadingBlurView.alpha = 1
             } else {
                 if hadVideo {
@@ -251,60 +249,12 @@ final class MediaStreamVideoComponent: Component {
                         self?.loadingBlurView.layer.removeAllAnimations()
                     }
                     loadingBlurView.layer.add(anim, forKey: "opacity")
-                } else {
-                    // Wait for state to update with first frame
-                    // Accounting for delay in first frame received
-                    /*DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
-                        guard self?.videoStalled == false else { return }
-                        
-                        // TODO: animate blur intesity with UIPropertyAnimator
-                        self?.loadingBlurView.layer.removeAllAnimations()
-                        let anim = CABasicAnimation(keyPath: "opacity")
-                        anim.duration = 0.5
-                        anim.fromValue = 1
-                        anim.toValue = 0
-                        anim.fillMode = .forwards
-                        anim.isRemovedOnCompletion = false
-                        anim.completion = { [weak self] _ in
-                            guard self?.videoStalled == false else { return }
-//                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [self] in
-                            self?.loadingBlurView.removeFromSuperview()
-                            self?.placeholderView.removeFromSuperview()
-                        }
-                        self?.loadingBlurView.layer.add(anim, forKey: "opacity")
-//                        UIView.transition(with: self, duration: 0.2, animations: {
-////                            self.loadingBlurView.animator.fractionComplete = 0
-////                            self.loadingBlurView.effect = nil
-////                            self.loadingBlurView.alpha = 0
-//                        }, completion: { _ in
-//                            self.loadingBlurView = .init(effect: UIBlurEffect(style: .light), intensity: 0.4)
-//                        })
-                    }*/
                 }
-//                loadingBlurView.backgroundColor = .yellow.withAlphaComponent(0.4)
             }
-        }
-        
-        var stallTimer: Foundation.Timer?
-        let fullScreenBackgroundPlaceholder = UIVisualEffectView(effect: UIBlurEffect(style: .regular))
-        
-        var avatarDisposable: Disposable?
-        var didBeginLoadingAvatar = false
-//        let avatarPlaceholderView = UIImageView()
-        var timeLastFrameReceived: CFAbsoluteTime?
-        
-        var isFullscreen: Bool = false
-        let videoLoadingThrottler = Throttler<Bool>(duration: 1, queue: .main)
-        
-        deinit {
-            avatarDisposable?.dispose()
-            frameInputDisposable?.dispose()
         }
         
         func update(component: MediaStreamVideoComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
             self.state = state
-//            placeholderView.alpha = 0.7
-//            placeholderView.image = lastFrame[component.call.peerId.id.description]
             self.component = component
             self.onVideoPlaybackChange = component.onVideoPlaybackLiveChange
             self.isFullscreen = component.isFullscreen
@@ -331,19 +281,16 @@ final class MediaStreamVideoComponent: Component {
                     var _stallTimer: Foundation.Timer { Foundation.Timer.scheduledTimer(withTimeInterval: 0.5, repeats: true) { [weak self] timer in
                         guard let strongSelf = self else { return timer.invalidate() }
                         
-//                        print("Timer emitting \(timer)")
                         let currentTime = CFAbsoluteTimeGetCurrent()
                         if let lastFrameTime = strongSelf.timeLastFrameReceived,
                            currentTime - lastFrameTime > 0.5 {
-//                            DispatchQueue.main.async {
                             strongSelf.videoLoadingThrottler.publish(true, includingLatest: true) { isStalled in
                                 strongSelf.videoStalled = isStalled
                                 strongSelf.onVideoPlaybackChange(!isStalled)
                             }
-                            
-                            //                            }
                         }
                     } }
+                    
                     // TODO: use mapToThrottled (?)
                     frameInputDisposable = input.start(next: { [weak self] input in
                         guard let strongSelf = self else { return }
@@ -355,7 +302,6 @@ final class MediaStreamVideoComponent: Component {
                         }
                     })
                     stallTimer = _stallTimer
-                    //                    RunLoop.main.add(stallTimer!, forMode: .common)
                     
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
@@ -373,75 +319,68 @@ final class MediaStreamVideoComponent: Component {
 
                     if let videoView = self.videoRenderingContext.makeView(input: input, blur: false, forceSampleBufferDisplayLayer: true) {
                         self.videoView = videoView
-                        self/*.insertSubview(videoView, belowSubview: loadingBlurView)*/.addSubview(videoView)
+                        self.addSubview(videoView)
                         videoView.alpha = 0
                         UIView.animate(withDuration: 0.3) {
                             videoView.alpha = 1
                         }
                         if let sampleBufferVideoView = videoView as? SampleBufferVideoRenderingView {
                             sampleBufferVideoView.sampleBufferLayer.masksToBounds = true
-//                            sampleBufferVideoView.sampleBufferLayer.cornerRadius = 10
                             
                             if #available(iOS 13.0, *) {
                                 sampleBufferVideoView.sampleBufferLayer.preventsDisplaySleepDuringVideoPlayback = true
                             }
-//                            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
-                                final class PlaybackDelegateImpl: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
-                                    var onTransitionFinished: (() -> Void)?
-                                    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
-                                        
-                                    }
-
-                                    func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
-                                        return CMTimeRange(start: .zero, duration: .positiveInfinity)
-                                    }
-
-                                    func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
-                                        return false
-                                    }
-
-                                    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
-                                        onTransitionFinished?()
-                                        print("pip finished")
-                                    }
-
-                                    func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
-                                        completionHandler()
-                                    }
-
-                                    public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
-                                        return false
-                                    }
+                            //                            if #available(iOSApplicationExtension 15.0, iOS 15.0, *), AVPictureInPictureController.isPictureInPictureSupported() {
+                            final class PlaybackDelegateImpl: NSObject, AVPictureInPictureSampleBufferPlaybackDelegate {
+                                var onTransitionFinished: (() -> Void)?
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
+                                    
                                 }
+                                
+                                func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+                                    return CMTimeRange(start: .zero, duration: .positiveInfinity)
+                                }
+                                
+                                func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+                                    return false
+                                }
+                                
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+                                    onTransitionFinished?()
+                                }
+                                
+                                func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
+                                    completionHandler()
+                                }
+                                
+                                public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+                                    return false
+                                }
+                            }
                             var pictureInPictureController: AVPictureInPictureController? = nil
                             if #available(iOS 15.0, *) {
                                 pictureInPictureController = AVPictureInPictureController(contentSource: AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: sampleBufferVideoView.sampleBufferLayer, playbackDelegate: {
                                     let delegate = PlaybackDelegateImpl()
-                                    delegate.onTransitionFinished = { [weak self] in
-                                        if self?.videoView?.alpha == 0 {
-//                                            self?.videoView?.alpha = 1
-                                        }
+                                    delegate.onTransitionFinished = {
                                     }
                                     return delegate
                                 }()))
                                 pictureInPictureController?.playerLayer.masksToBounds = false
                                 pictureInPictureController?.playerLayer.cornerRadius = 10
                             } else if AVPictureInPictureController.isPictureInPictureSupported() {
-                                // TODO: support PiP for iOS < 15.0
-                                // sampleBufferVideoView.sampleBufferLayer
                                 pictureInPictureController = AVPictureInPictureController.init(playerLayer: AVPlayerLayer(player: AVPlayer()))
                             }
-                                
-                                pictureInPictureController?.delegate = self
+                            
+                            pictureInPictureController?.delegate = self
                             if #available(iOS 14.2, *) {
                                 pictureInPictureController?.canStartPictureInPictureAutomaticallyFromInline = true
                             }
                             if #available(iOS 14.0, *) {
                                 pictureInPictureController?.requiresLinearPlayback = true
                             }
-                                
-                                self.pictureInPictureController = pictureInPictureController
-//                            }
+                            
+                            self.pictureInPictureController = pictureInPictureController
+                            //                            }
                         }
                         
                         videoView.setOnOrientationUpdated { [weak state] _, _ in
@@ -464,7 +403,6 @@ final class MediaStreamVideoComponent: Component {
                         }
                     }
                 }
-//                fullScreenBackgroundPlaceholder.removeFromSuperview()
             } else if component.isFullscreen {
                 if fullScreenBackgroundPlaceholder.superview == nil {
                     insertSubview(fullScreenBackgroundPlaceholder, at: 0)
@@ -474,12 +412,6 @@ final class MediaStreamVideoComponent: Component {
                 fullScreenBackgroundPlaceholder.removeFromSuperview()
             }
             fullScreenBackgroundPlaceholder.frame = .init(origin: .zero, size: availableSize)
-            
-//            sheetView.frame = .init(x: 0, y: sheetTop, width: availableSize.width, height: sheetHeight)
-           // var aspect = videoView.getAspect()
-//                if aspect <= 0.01 {
-            // let aspect = !component.isFullscreen ? 16.0 / 9.0 : // 3.0 / 4.0
-//                }
             
             let videoInset: CGFloat
             if !component.isFullscreen {
@@ -498,9 +430,8 @@ final class MediaStreamVideoComponent: Component {
                     let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
                     lastFrame[component.call.peerId.id.description] = snapshot// ()!
                 }
-//                }
+                
                 var aspect = videoView.getAspect()
-                // aspect == 1 the first run
                 if component.isFullscreen && self.hadVideo {
                     if aspect <= 0.01 {
                         aspect = 16.0 / 9
@@ -545,7 +476,6 @@ final class MediaStreamVideoComponent: Component {
                 
                 if let videoBlurView = self.videoBlurView {
                     videoBlurView.updateIsEnabled(component.isVisible)
-//                    videoBlurView.isHidden = component.isFullscreen
                     if component.isFullscreen {
                         transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
                     } else {
@@ -564,15 +494,15 @@ final class MediaStreamVideoComponent: Component {
                 videoSize = CGSize(width: 16 / 9 * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
             }
             loadingBlurView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize)
-            print("[LBVFrame] \(loadingBlurView.frame)")
+            
             loadingBlurView.layer.cornerRadius = videoCornerRadius
             
             placeholderView.frame = loadingBlurView.frame
             placeholderView.layer.cornerRadius = videoCornerRadius
             placeholderView.clipsToBounds = true
             
-//            shimmerOverlayLayer.frame = loadingBlurView.bounds
             shimmerBorderLayer.frame = loadingBlurView.bounds
+            
             let borderMask = CAShapeLayer()
             borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
             borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
@@ -581,9 +511,6 @@ final class MediaStreamVideoComponent: Component {
             shimmerBorderLayer.mask = borderMask
             shimmerBorderLayer.cornerRadius = videoCornerRadius
             
-            if component.isFullscreen {
-//                loadingBlurView.removeFromSuperview()
-            }
             if !self.hadVideo {
                 
                 if self.noSignalTimer == nil {
@@ -668,9 +595,6 @@ final class MediaStreamVideoComponent: Component {
                     presentation.removeFromSuperview()
                 })
             }
-//            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-//                presentation.removeFromSuperlayer()
-//            }
             UIView.animate(withDuration: 0.1) { [self] in
                 videoBlurView?.alpha = 0
             }
@@ -726,3 +650,24 @@ final class MediaStreamVideoComponent: Component {
 
 // TODO: move to appropriate place
 fileprivate var lastFrame: [String: UIView] = [:]
+
+class CustomIntensityVisualEffectView: UIVisualEffectView {
+    private var animator: UIViewPropertyAnimator!
+    
+    init(effect: UIVisualEffect, intensity: CGFloat) {
+        super.init(effect: nil)
+        animator = UIViewPropertyAnimator(duration: 1, curve: .linear) { [weak self] in self?.effect = effect }
+        animator.startAnimation()
+        animator.pauseAnimation()
+        animator.fractionComplete = intensity
+        animator.pausesOnCompletion = true
+    }
+    
+    required init?(coder aDecoder: NSCoder) {
+        fatalError()
+    }
+    
+    deinit {
+        animator.stopAnimation(true)
+    }
+}

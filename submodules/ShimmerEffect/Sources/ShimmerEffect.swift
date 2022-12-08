@@ -477,7 +477,7 @@ public final class StandaloneShimmerEffect {
         self.updateLayer()
     }
     
-    public func testUpdate(background: UIColor, foreground: UIColor) {
+    public func updateHorizontal(background: UIColor, foreground: UIColor) {
         if self.background == background && self.foreground == foreground {
             return
         }
@@ -503,7 +503,7 @@ public final class StandaloneShimmerEffect {
             context.drawLinearGradient(gradient, start: CGPoint(x: 0.0, y: 0.0), end: CGPoint(x: size.width, y: 0.3), options: CGGradientDrawingOptions())
         })
         
-        self.testUpdateLayer()
+        self.updateHorizontalLayer()
     }
     
     public func updateLayer() {
@@ -525,7 +525,7 @@ public final class StandaloneShimmerEffect {
         }
     }
     
-    private func testUpdateLayer() {
+    private func updateHorizontalLayer() {
         guard let layer = self.layer, let image = self.image else {
             return
         }
