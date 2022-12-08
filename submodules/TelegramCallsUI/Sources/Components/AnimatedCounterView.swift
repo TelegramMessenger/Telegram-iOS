@@ -207,7 +207,7 @@ class AnimatedCountLabel: UILabel {
             }
             if characters.count > index && characters[index].string == "," {
                 if index > 0, ["1", "7"].contains(characters[index - 1].string) {
-                    offset -= commaWidthForSpacing / 2
+                    offset -= commaWidthForSpacing * 0.7
                 } else {
                     offset -= commaWidthForSpacing / 3
                 }
@@ -222,7 +222,7 @@ class AnimatedCountLabel: UILabel {
             }
             if self.chars.count > index && self.chars[index].attributedText?.string == "," {
                 if index > 0, let prevChar = self.chars[index - 1].attributedText?.string, ["1", "7"].contains(prevChar) {
-                    offset -= commaWidthForSpacing / 2
+                    offset -= commaWidthForSpacing * 0.7
                 } else {
                     offset -= commaWidthForSpacing / 3
                 }
