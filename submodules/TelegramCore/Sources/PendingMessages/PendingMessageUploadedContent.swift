@@ -435,7 +435,8 @@ private func uploadedMediaImageContent(network: Network, postbox: Postbox, trans
                                         stickers = stickersValue
                                         flags |= 1 << 0
                                     }
-                                    break
+                                } else if let _ = attribute as? MediaSpoilerMessageAttribute {
+                                    flags |= 1 << 2
                                 }
                             }
                             return postbox.transaction { transaction -> Api.InputPeer? in
@@ -740,6 +741,8 @@ private func uploadedMediaFileContent(network: Network, postbox: Postbox, auxili
                             if let attribute = attribute as? AutoclearTimeoutMessageAttribute {
                                 flags |= 1 << 1
                                 ttlSeconds = attribute.timeout
+                            } else if let _ = attribute as? MediaSpoilerMessageAttribute {
+                                flags |= 1 << 5
                             }
                         }
                         
