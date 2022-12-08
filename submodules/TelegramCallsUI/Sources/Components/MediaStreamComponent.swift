@@ -816,7 +816,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         bottomPadding: bottomPadding,
                         participantsCount: context.state.originInfo?.memberCount ?? 0, // Int.random(in: 0...999998)// [0, 5, 15, 16, 95, 100, 16042, 942539].randomElement()!
                         isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: (controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 0,
+                        deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
                         videoHeight: videoHeight
                     ),
                     availableSize: context.availableSize,
@@ -889,7 +889,7 @@ public final class MediaStreamComponent: CombinedComponent {
                         bottomPadding: 12,
                         participantsCount: -1,
                         isFullyExtended: isFullyDragged,
-                        deviceCornerRadius: (controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 0,
+                        deviceCornerRadius: ((controller() as? MediaStreamComponentController)?.validLayout?.deviceMetrics.screenCornerRadius ?? 1) - 1,
                         videoHeight: videoHeight
                     ),
                     availableSize: context.availableSize,
