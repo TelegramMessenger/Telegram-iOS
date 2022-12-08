@@ -284,14 +284,15 @@ final class _MediaStreamVideoComponent: Component {
 //                shimmerOverlayLayer.opacity = 0.6
                 shimmerBorderLayer.cornerRadius = cornerRadius // TODO: check isFullScreeen
                 shimmerBorderLayer.masksToBounds = true
-                shimmerBorderLayer.compositingFilter = "softLightBlendMode"
+                shimmerBorderLayer.compositingFilter = "overlayBlendMode"// "softLightBlendMode"
                 shimmerBorderLayer.frame = loadingBlurView.bounds
                 let borderMask = CAShapeLayer()
                 borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: cornerRadius, cornerHeight: cornerRadius, transform: nil)
                 borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
-                borderMask.strokeColor = UIColor.white.withAlphaComponent(0.8).cgColor
-                borderMask.lineWidth = 2
-                borderMask.frame = shimmerBorderLayer.bounds
+                borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
+                borderMask.lineWidth = 3
+                shimmerBorderLayer.mask = borderMask
+//                borderMask.frame = shimmerBorderLayer.bounds
                 
 //                let testBorder = CAShapeLayer()
 //                testBorder.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: 10, cornerHeight: 10, transform: nil)
@@ -303,9 +304,8 @@ final class _MediaStreamVideoComponent: Component {
 //                shimmerBorderLayer.removeAllAnimations()
                 //                if shimmerBorderLayer.mask == nil {
                 borderShimmer = .init()
-                shimmerBorderLayer.mask = borderMask
                 borderShimmer.layer = shimmerBorderLayer
-                shimmerBorderLayer.backgroundColor = UIColor.clear.cgColor
+//                shimmerBorderLayer.backgroundColor = UIColor.clear.cgColor
                 //                shimmerBorderLayer.backgroundColor = UIColor.green.withAlphaComponent(0.4).cgColor
                 borderShimmer.testUpdate(background: .clear, foreground: .white)
                 //                }
@@ -326,8 +326,9 @@ final class _MediaStreamVideoComponent: Component {
                     }
                     loadingBlurView.layer.add(anim, forKey: "opacity")
                 } else {
+                    // Wait for state to update with first frame
                     // Accounting for delay in first frame received
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
+                    /*DispatchQueue.main.asyncAfter(deadline: .now() + 2) { [weak self] in
                         guard self?.videoStalled == false else { return }
                         
                         // TODO: animate blur intesity with UIPropertyAnimator
@@ -352,7 +353,7 @@ final class _MediaStreamVideoComponent: Component {
 //                        }, completion: { _ in
 //                            self.loadingBlurView = .init(effect: UIBlurEffect(style: .light), intensity: 0.4)
 //                        })
-                    }
+                    }*/
                 }
 //                loadingBlurView.backgroundColor = .yellow.withAlphaComponent(0.4)
             }
@@ -553,10 +554,11 @@ final class _MediaStreamVideoComponent: Component {
                 if fullScreenBackgroundPlaceholder.superview == nil {
                     insertSubview(fullScreenBackgroundPlaceholder, at: 0)
                 }
-                fullScreenBackgroundPlaceholder.frame = self.bounds
+                fullScreenBackgroundPlaceholder.backgroundColor = UIColor.black.withAlphaComponent(0.5)
             } else {
                 fullScreenBackgroundPlaceholder.removeFromSuperview()
             }
+            fullScreenBackgroundPlaceholder.frame = .init(origin: .zero, size: availableSize)
             
 //            sheetView.frame = .init(x: 0, y: sheetTop, width: availableSize.width, height: sheetHeight)
            // var aspect = videoView.getAspect()
@@ -657,8 +659,15 @@ final class _MediaStreamVideoComponent: Component {
             placeholderView.layer.cornerRadius = videoCornerRadius
             placeholderView.clipsToBounds = true
             
-            shimmerOverlayLayer.frame = loadingBlurView.bounds
+//            shimmerOverlayLayer.frame = loadingBlurView.bounds
             shimmerBorderLayer.frame = loadingBlurView.bounds
+            let borderMask = CAShapeLayer()
+            borderMask.path = CGPath(roundedRect: .init(x: 0, y: 0, width: shimmerBorderLayer.bounds.width, height: shimmerBorderLayer.bounds.height), cornerWidth: videoCornerRadius, cornerHeight: videoCornerRadius, transform: nil)
+            borderMask.fillColor = UIColor.white.withAlphaComponent(0.4).cgColor
+            borderMask.strokeColor = UIColor.white.withAlphaComponent(0.7).cgColor
+            borderMask.lineWidth = 3
+            shimmerBorderLayer.mask = borderMask
+            shimmerBorderLayer.cornerRadius = videoCornerRadius
             
             if component.isFullscreen {
 //                loadingBlurView.removeFromSuperview()
@@ -729,7 +738,7 @@ final class _MediaStreamVideoComponent: Component {
                         environment: {},
                         containerSize: CGSize(width: availableSize.width - 16.0 * 2.0, height: 1000.0)
                     )
-                    noSignalTransition.setFrame(view: noSignalView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - noSignalSize.width) / 2.0), y: activityIndicatorFrame.maxY + 24.0), size: noSignalSize), completion: nil)
+                    noSignalTransition.setFrame(view: noSignalView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - noSignalSize.width) / 2.0), y: (availableSize.height - noSignalSize.height) / 2.0/*activityIndicatorFrame.maxY + 24.0*/), size: noSignalSize), completion: nil)
                 }
             }
             

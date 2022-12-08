@@ -759,7 +759,7 @@ public final class _MediaStreamComponent: CombinedComponent {
         private var isVisibleInHierarchyDisposable: Disposable?
         
         private var scheduledDismissUITimer: SwiftSignalKit.Timer?
-        var videoStalled: Bool = false
+        var videoStalled: Bool = true
         
         var videoIsPlayable: Bool {
             !videoStalled && hasVideo
