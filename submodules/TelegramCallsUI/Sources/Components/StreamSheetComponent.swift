@@ -119,29 +119,17 @@ final class StreamSheetComponent: CombinedComponent {
     }
     
     private weak var state: State?
-//    func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
-//        view.isUserInteractionEnabled = false
-//        return availableSize
-//    }
-    /*public func update(view: View, availableSize: CGSize, state: State, environment: Environment<Empty>, transition: Transition) -> CGSize {
-        return view.update(component: self, availableSize: availableSize, state: state, transition: transition)
-    }*/
     
     static var body: Body {
         let background = Child(SheetBackgroundComponent.self)
-//        let leftItem = Child(environment: Empty.self)
         let topItem = Child(environment: Empty.self)
         let viewerCounter = Child(ParticipantsComponent.self)
         let bottomButtonsRow = Child(environment: Empty.self)
-//        let bottomButtons = Child(environment: Empty.self)
-//        let rightItems = ChildMap(environment: Empty.self, keyedBy: AnyHashable.self)
-//        let centerItem = Child(environment: Empty.self)
         
         return { context in
             let availableWidth = context.availableSize.width
-//            let sideInset: CGFloat = 16.0 + context.component.sideInset
             let contentHeight: CGFloat = 44.0
-            let size = context.availableSize// CGSize(width: context.availableSize.width, height:44)// context.component.topInset + contentHeight)
+            let size = context.availableSize
             
             let topOffset = context.component.topOffset
             let backgroundExtraOffset = context.component.isFullyExtended ? -context.view.safeAreaInsets.top : 0
@@ -180,7 +168,6 @@ final class StreamSheetComponent: CombinedComponent {
             
             context.add(background
                 .position(CGPoint(x: size.width / 2.0, y: topOffset + context.component.sheetHeight / 2))
-                // .position(CGPoint(x: size.width / 2.0, y: context.component.topOffset + context.component.sheetHeight / 2 + backgroundExtraOffset))
             )
             
             (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames = []
@@ -192,7 +179,7 @@ final class StreamSheetComponent: CombinedComponent {
                 )
                 (context.view as? StreamSheetComponent.View)?.overlayComponentsFrames.append(.init(x: 0, y: topOffset, width: topItem.size.width, height: topItem.size.height))
             }
-            let videoHeight = context.component.videoHeight // ?? (min(availableWidth, context.availableSize.height) - 32) / 16 * 9
+            let videoHeight = context.component.videoHeight
             let sheetHeight = context.component.sheetHeight
             let animatedParticipantsVisible = context.component.participantsCount != -1
             if true {
@@ -239,12 +226,9 @@ final class SheetBackgroundComponent: Component {
             let extraBottom: CGFloat = 500
             
             if backgroundView.backgroundColor != color && backgroundView.backgroundColor != nil {
-//                let initialVelocity: CGFloat = 0
-//                let xtransition = ComponentFlow.Transition(animation: .curve(duration: 0.45, curve: .spring))// .animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
-                
                 UIView.animate(withDuration: 0.4) { [self] in
                     backgroundView.backgroundColor = color
-                    // TODO: determine if animation is needed (with facts and logic, not color)
+                    // TODO: determine if animation is needed (with logic, not color)
                     backgroundView.frame = .init(origin: .init(x: 0, y: offset), size: .init(width: availableSize.width, height: availableSize.height + extraBottom))
                 }
                 
@@ -261,9 +245,6 @@ final class SheetBackgroundComponent: Component {
             }
             backgroundView.isUserInteractionEnabled = false
             backgroundView.layer.maskedCorners = [.layerMinXMinYCorner, .layerMaxXMinYCorner]
-//            let currentRadius = backgroundView.layer.cornerRadius
-//            backgroundView.layer.cornerRadius = cornerRadius
-//            transition.animateCornerRadius(layer: backgroundView.layer, from: currentRadius, to: cornerRadius)
             backgroundView.clipsToBounds = true
             backgroundView.layer.masksToBounds = true
         }
@@ -283,12 +264,6 @@ final class SheetBackgroundComponent: Component {
         if lhs.offset != rhs.offset {
             return false
         }
-//        if lhs.width != rhs.width {
-//            return false
-//        }
-//        if lhs.height != rhs.height {
-//            return false
-//        }
         return true
     }
     
@@ -328,7 +303,7 @@ final class ParticipantsComponent: Component {
     }
     
     final class View: UIView {
-        let counter = AnimatedCountView()// VoiceChatTimerNode.init(strings: .init(), dateTimeFormat: .init())
+        let counter = AnimatedCountView()
         
         override init(frame: CGRect) {
             super.init(frame: frame)

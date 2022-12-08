@@ -428,7 +428,7 @@ final class MediaStreamVideoComponent: Component {
                     self.hadVideo,
                    // TODO: remove from here and move to call end (or at least to background)
                     let snapshot = videoView.snapshotView(afterScreenUpdates: false) ?? videoView.snapshotView(afterScreenUpdates: true) {
-                    lastFrame[component.call.peerId.id.description] = snapshot// ()!
+                    lastFrame[component.call.peerId.id.description] = snapshot
                 }
                 
                 var aspect = videoView.getAspect()
@@ -500,6 +500,7 @@ final class MediaStreamVideoComponent: Component {
             placeholderView.frame = loadingBlurView.frame
             placeholderView.layer.cornerRadius = videoCornerRadius
             placeholderView.clipsToBounds = true
+            placeholderView.subviews.forEach { $0.frame = placeholderView.bounds }
             
             shimmerBorderLayer.frame = loadingBlurView.bounds
             

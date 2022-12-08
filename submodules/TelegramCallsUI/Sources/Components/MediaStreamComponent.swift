@@ -1200,8 +1200,9 @@ final class StreamTitleComponent: Component {
                 if !wasLive {
                     wasLive = true
                     let anim = CAKeyframeAnimation(keyPath: "transform.scale")
-                    anim.values = [1.0, 1.4, 1.0]
-                    anim.keyTimes = [0, 0.5, 1]
+                    anim.values = [1.0, 1.4, 0.9, 1.0]
+                    anim.keyTimes = [0, 0.5, 0.8, 1]
+                    anim.duration = 0.4
                     self.layer.add(anim, forKey: "transform")
                     
                     UIView.animate(withDuration: 0.15, animations: {
