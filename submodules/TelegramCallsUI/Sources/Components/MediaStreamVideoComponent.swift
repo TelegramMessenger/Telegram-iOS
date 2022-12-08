@@ -445,7 +445,8 @@ final class MediaStreamVideoComponent: Component {
                 if component.isFullscreen {
                     videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableSize.width - videoInset * 2, height: availableSize.height))
                 } else {
-                    let availableVideoWidth = availableSize.width - videoInset * 2
+                    // Limiting by smallest side -- redundant if passing precalculated availableSize
+                    let availableVideoWidth = min(availableSize.width, availableSize.height) - videoInset * 2
                     let availableVideoHeight = availableVideoWidth * 9.0 / 16
                     
                     videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableVideoWidth, height: availableVideoHeight))
