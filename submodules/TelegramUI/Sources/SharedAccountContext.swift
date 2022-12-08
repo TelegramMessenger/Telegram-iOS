@@ -665,8 +665,7 @@ public final class SharedAccountContextImpl: SharedAccountContext {
                             
                             if call.isStream {
                                 strongSelf.hasGroupCallOnScreenPromise.set(true)
-                                // TODO: remove sharedContext and accountContext from init
-                                let groupCallController = _MediaStreamComponentController(sharedContext: strongSelf, accountContext: call.accountContext, call: call) // MediaStreamComponentController(call: call)ue
+                                let groupCallController = MediaStreamComponentController(call: call)
                                 groupCallController.onViewDidAppear = { [weak self] in
                                     if let strongSelf = self {
                                         strongSelf.hasGroupCallOnScreenPromise.set(true)

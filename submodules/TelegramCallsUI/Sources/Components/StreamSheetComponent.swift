@@ -8,10 +8,7 @@ import MultilineTextComponent
 import Display
 
 final class StreamSheetComponent: CombinedComponent {
-//    let color: UIColor
-//    let leftItem: AnyComponent<Empty>?
     let topComponent: AnyComponent<Empty>?
-//    let viewerCounter: AnyComponent<Empty>?
     let bottomButtonsRow: AnyComponent<Empty>?
     // TODO: sync
     let sheetHeight: CGFloat
@@ -24,7 +21,6 @@ final class StreamSheetComponent: CombinedComponent {
     let videoHeight: CGFloat
     
     init(
-//        color: UIColor,
         topComponent: AnyComponent<Empty>,
         bottomButtonsRow: AnyComponent<Empty>,
         topOffset: CGFloat,
@@ -36,9 +32,7 @@ final class StreamSheetComponent: CombinedComponent {
         deviceCornerRadius: CGFloat,
         videoHeight: CGFloat
     ) {
-//        self.leftItem = leftItem
         self.topComponent = topComponent
-//        self.viewerCounter = AnyComponent(ViewerCountComponent(count: 0))
         self.bottomButtonsRow = bottomButtonsRow
         self.topOffset = topOffset
         self.sheetHeight = sheetHeight
@@ -83,7 +77,7 @@ final class StreamSheetComponent: CombinedComponent {
         }
         return true
     }
-//
+    
     final class View: UIView {
         var overlayComponentsFrames = [CGRect]()
         
@@ -95,7 +89,6 @@ final class StreamSheetComponent: CombinedComponent {
         }
         
         func update(component: StreamSheetComponent, availableSize: CGSize, state: State, transition: Transition) -> CGSize {
-//            self.backgroundColor = .purple.withAlphaComponent(0.6)
             return availableSize
         }
         
