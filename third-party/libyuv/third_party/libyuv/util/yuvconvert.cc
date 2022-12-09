@@ -42,9 +42,9 @@ static __inline uint32_t Abs(int32_t v) {
 }
 
 // Parse PYUV format. ie name.1920x800_24Hz_P420.yuv
-bool ExtractResolutionFromFilename(const char* name,
-                                   int* width_ptr,
-                                   int* height_ptr) {
+static bool ExtractResolutionFromFilename(const char* name,
+                                          int* width_ptr,
+                                          int* height_ptr) {
   // Isolate the .width_height. section of the filename by searching for a
   // dot or underscore followed by a digit.
   for (int i = 0; name[i]; ++i) {
@@ -59,7 +59,7 @@ bool ExtractResolutionFromFilename(const char* name,
   return false;
 }
 
-void PrintHelp(const char* program) {
+static void PrintHelp(const char* program) {
   printf("%s [-options] src_argb.raw dst_yuv.raw\n", program);
   printf(
       " -s <width> <height> .... specify source resolution.  "
@@ -78,7 +78,7 @@ void PrintHelp(const char* program) {
   exit(0);
 }
 
-void ParseOptions(int argc, const char* argv[]) {
+static void ParseOptions(int argc, const char* argv[]) {
   if (argc <= 1) {
     PrintHelp(argv[0]);
   }
@@ -165,23 +165,23 @@ static int TileARGBScale(const uint8_t* src_argb,
                          int src_height,
                          uint8_t* dst_argb,
                          int dst_stride_argb,
-                         int dst_width,
-                         int dst_height,
+                         int destination_width,
+                         int destination_height,
                          libyuv::FilterMode filtering) {
-  for (int y = 0; y < dst_height; y += kTileY) {
-    for (int x = 0; x < dst_width; x += kTileX) {
+  for (int y = 0; y < destination_height; y += kTileY) {
+    for (int x = 0; x < destination_width; x += kTileX) {
       int clip_width = kTileX;
-      if (x + clip_width > dst_width) {
-        clip_width = dst_width - x;
+      if (x + clip_width > destination_width) {
+        clip_width = destination_width - x;
       }
       int clip_height = kTileY;
-      if (y + clip_height > dst_height) {
-        clip_height = dst_height - y;
+      if (y + clip_height > destination_height) {
+        clip_height = destination_height - y;
       }
       int r = libyuv::ARGBScaleClip(src_argb, src_stride_argb, src_width,
                                     src_height, dst_argb, dst_stride_argb,
-                                    dst_width, dst_height, x, y, clip_width,
-                                    clip_height, filtering);
+                                    destination_width, destination_height, x, y,
+                                    clip_width, clip_height, filtering);
       if (r) {
         return r;
       }

@@ -13,7 +13,7 @@ public enum CreateGroupError {
     case serverProvided(String)
 }
 
-func _internal_createGroup(account: Account, title: String, peerIds: [PeerId]) -> Signal<PeerId?, CreateGroupError> {
+func _internal_createGroup(account: Account, title: String, peerIds: [PeerId], ttlPeriod: Int32?) -> Signal<PeerId?, CreateGroupError> {
     return account.postbox.transaction { transaction -> Signal<PeerId?, CreateGroupError> in
         var inputUsers: [Api.InputUser] = []
         for peerId in peerIds {
@@ -23,7 +23,13 @@ func _internal_createGroup(account: Account, title: String, peerIds: [PeerId]) -
                 return .single(nil)
             }
         }
-        return account.network.request(Api.functions.messages.createChat(users: inputUsers, title: title))
+        
+        var flags: Int32 = 0
+        if let _ = ttlPeriod {
+            flags |= 1 << 0
+        }
+        
+        return account.network.request(Api.functions.messages.createChat(flags: flags, users: inputUsers, title: title, ttlPeriod: ttlPeriod))
         |> mapError { error -> CreateGroupError in
             if error.errorDescription == "USERS_TOO_FEW" {
                 return .privacy

@@ -54,7 +54,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
         }
     }
     
-    public func updateListVisibleContentOffset(_ offset: ListViewVisibleContentOffset) {
+    public func updateListVisibleContentOffset(_ offset: ListViewVisibleContentOffset, transition: ContainedViewLayoutTransition = .immediate) {
         var progress: CGFloat = 0.0
         switch offset {
             case let .known(offset):
@@ -64,7 +64,7 @@ public class NavigationBarSearchContentNode: NavigationBarContentNode {
             default:
                 break
         }
-        self.updateExpansionProgress(progress)
+        self.updateExpansionProgress(progress, animated: transition.isAnimated)
     }
     
     public func updateGridVisibleContentOffset(_ offset: GridNodeVisibleContentOffset) {

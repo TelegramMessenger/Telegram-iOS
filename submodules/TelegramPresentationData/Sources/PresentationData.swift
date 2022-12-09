@@ -444,7 +444,7 @@ private func serviceColor(for data: Signal<MediaResourceData, NoError>) -> Signa
 }
 
 public func averageColor(from image: UIImage) -> UIColor {
-    let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)
+    let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, clear: false)!
     context.withFlippedContext({ context in
         if let cgImage = image.cgImage {
             context.draw(cgImage, in: CGRect(x: 0.0, y: 0.0, width: 1.0, height: 1.0))

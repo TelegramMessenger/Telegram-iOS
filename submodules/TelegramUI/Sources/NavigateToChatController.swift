@@ -17,12 +17,28 @@ import ForumCreateTopicScreen
 public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParams) {
     if case let .peer(peer) = params.chatLocation, case let .channel(channel) = peer, channel.flags.contains(.isForum) {
         for controller in params.navigationController.viewControllers.reversed() {
-            if let controller = controller as? ChatListControllerImpl, case let .forum(peerId) = controller.location, peer.id == peerId {
-                let _ = params.navigationController.popToViewController(controller, animated: params.animated)
-                if let activateMessageSearch = params.activateMessageSearch {
-                    controller.activateSearch(query: activateMessageSearch.1)
+            var chatListController: ChatListControllerImpl?
+            if let controller = controller as? ChatListControllerImpl {
+                chatListController = controller
+            } else if let controller = controller as? TabBarController {
+                chatListController = controller.currentController as? ChatListControllerImpl
+            }
+            
+            if let chatListController = chatListController {
+                var matches = false
+                if case let .forum(peerId) = chatListController.location, peer.id == peerId {
+                    matches = true
+                } else if case let .forum(peerId) = chatListController.effectiveLocation, peer.id == peerId {
+                    matches = true
                 }
-                return
+                
+                if matches {
+                    let _ = params.navigationController.popToViewController(controller, animated: params.animated)
+                    if let activateMessageSearch = params.activateMessageSearch {
+                        chatListController.activateSearch(query: activateMessageSearch.1)
+                    }
+                    return
+                }
             }
         }
         
@@ -43,7 +59,11 @@ public func navigateToChatControllerImpl(_ params: NavigateToChatControllerParam
     var isFirst = true
     if params.useExisting {
         for controller in params.navigationController.viewControllers.reversed() {
-            if let controller = controller as? ChatControllerImpl, controller.chatLocation == params.chatLocation.asChatLocation && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
+            guard let controller = controller as? ChatControllerImpl else {
+                isFirst = false
+                continue
+            }
+            if controller.chatLocation.peerId == params.chatLocation.asChatLocation.peerId && controller.chatLocation.threadId == params.chatLocation.asChatLocation.threadId && (controller.subject != .scheduledMessages || controller.subject == params.subject) {
                 if let updateTextInputState = params.updateTextInputState {
                     controller.updateTextInputState(updateTextInputState)
                 }

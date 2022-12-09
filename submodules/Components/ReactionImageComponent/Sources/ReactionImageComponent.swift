@@ -45,16 +45,17 @@ public func reactionStaticImage(context: AccountContext, animation: TelegramMedi
                 }
                 
                 func add(with drawingBlock: (AnimationCacheItemDrawingSurface) -> Double?, proposedWidth: Int, proposedHeight: Int, insertKeyframe: Bool) {
-                    let renderContext = DrawingContext(size: CGSize(width: proposedWidth, height: proposedHeight), scale: 1.0, clear: true)
-                    let _ = drawingBlock(AnimationCacheItemDrawingSurface(
-                        argb: renderContext.bytes.assumingMemoryBound(to: UInt8.self),
-                        width: Int(renderContext.scaledSize.width),
-                        height: Int(renderContext.scaledSize.height),
-                        bytesPerRow: renderContext.bytesPerRow,
-                        length: renderContext.length
-                    ))
-                    if let image = renderContext.generateImage() {
-                        self.frameReceived(image)
+                    if let renderContext = DrawingContext(size: CGSize(width: proposedWidth, height: proposedHeight), scale: 1.0, clear: true) {
+                        let _ = drawingBlock(AnimationCacheItemDrawingSurface(
+                            argb: renderContext.bytes.assumingMemoryBound(to: UInt8.self),
+                            width: Int(renderContext.scaledSize.width),
+                            height: Int(renderContext.scaledSize.height),
+                            bytesPerRow: renderContext.bytesPerRow,
+                            length: renderContext.length
+                        ))
+                        if let image = renderContext.generateImage() {
+                            self.frameReceived(image)
+                        }
                     }
                 }
                 

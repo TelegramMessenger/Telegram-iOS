@@ -65,6 +65,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         case maxKnownMessageId
         case maxOutgoingReadId
         case isClosed
+        case isHidden
         case notificationSettings
     }
     
@@ -77,6 +78,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
     public var maxKnownMessageId: Int32
     public var maxOutgoingReadId: Int32
     public var isClosed: Bool
+    public var isHidden: Bool
     public var notificationSettings: TelegramPeerNotificationSettings
     
     public init(
@@ -89,6 +91,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         maxKnownMessageId: Int32,
         maxOutgoingReadId: Int32,
         isClosed: Bool,
+        isHidden: Bool,
         notificationSettings: TelegramPeerNotificationSettings
     ) {
         self.creationDate = creationDate
@@ -100,6 +103,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.maxKnownMessageId = maxKnownMessageId
         self.maxOutgoingReadId = maxOutgoingReadId
         self.isClosed = isClosed
+        self.isHidden = isHidden
         self.notificationSettings = notificationSettings
     }
     
@@ -115,6 +119,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         self.maxKnownMessageId = try container.decode(Int32.self, forKey: .maxKnownMessageId)
         self.maxOutgoingReadId = try container.decode(Int32.self, forKey: .maxOutgoingReadId)
         self.isClosed = try container.decodeIfPresent(Bool.self, forKey: .isClosed) ?? false
+        self.isHidden = try container.decodeIfPresent(Bool.self, forKey: .isHidden) ?? false
         self.notificationSettings = try container.decode(TelegramPeerNotificationSettings.self, forKey: .notificationSettings)
     }
     
@@ -130,6 +135,7 @@ public struct MessageHistoryThreadData: Codable, Equatable {
         try container.encode(self.maxKnownMessageId, forKey: .maxKnownMessageId)
         try container.encode(self.maxOutgoingReadId, forKey: .maxOutgoingReadId)
         try container.encode(self.isClosed, forKey: .isClosed)
+        try container.encode(self.isHidden, forKey: .isHidden)
         try container.encode(self.notificationSettings, forKey: .notificationSettings)
     }
 }
@@ -182,12 +188,15 @@ public enum CreateForumChannelTopicError {
 }
 
 func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: String, iconColor: Int32, iconFileId: Int64?) -> Signal<Int64, CreateForumChannelTopicError> {
-    return account.postbox.transaction { transaction -> Api.InputChannel? in
-        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+    return account.postbox.transaction { transaction -> Peer? in
+        return transaction.getPeer(peerId)
     }
     |> castError(CreateForumChannelTopicError.self)
-    |> mapToSignal { inputChannel -> Signal<Int64, CreateForumChannelTopicError> in
-        guard let inputChannel = inputChannel else {
+    |> mapToSignal { peer -> Signal<Int64, CreateForumChannelTopicError> in
+        guard let peer = peer else {
+            return .fail(.generic)
+        }
+        guard let inputChannel = apiInputChannel(peer) else {
             return .fail(.generic)
         }
         var flags: Int32 = 0
@@ -215,7 +224,7 @@ func _internal_createForumChannelTopic(account: Account, peerId: PeerId, title: 
             for update in result.allUpdates {
                 switch update {
                 case let .updateNewChannelMessage(message, _, _):
-                    if let message = StoreMessage(apiMessage: message) {
+                    if let message = StoreMessage(apiMessage: message, peerIsForum: peer.isForum) {
                         if case let .Id(id) = message.id {
                             topicId = Int64(id.id)
                         }
@@ -285,15 +294,18 @@ func _internal_editForumChannelTopic(account: Account, peerId: PeerId, threadId:
         }
         var flags: Int32 = 0
         flags |= (1 << 0)
-        flags |= (1 << 1)
+        if threadId != 1 {
+            flags |= (1 << 1)
+        }
         
         return account.network.request(Api.functions.channels.editForumTopic(
             flags: flags,
             channel: inputChannel,
             topicId: Int32(clamping: threadId),
             title: title,
-            iconEmojiId: iconFileId ?? 0,
-            closed: nil
+            iconEmojiId: threadId == 1 ? nil : iconFileId ?? 0,
+            closed: nil,
+            hidden: nil
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic
@@ -331,14 +343,15 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
         }
         var flags: Int32 = 0
         flags |= (1 << 2)
-        
+
         return account.network.request(Api.functions.channels.editForumTopic(
             flags: flags,
             channel: inputChannel,
             topicId: Int32(clamping: threadId),
             title: nil,
             iconEmojiId: nil,
-            closed: isClosed ? .boolTrue : .boolFalse
+            closed: isClosed ? .boolTrue : .boolFalse,
+            hidden: nil
         ))
         |> mapError { _ -> EditForumChannelTopicError in
             return .generic
@@ -351,6 +364,75 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
                     var data = initialData
                     
                     data.isClosed = isClosed
+                    if !isClosed && threadId == 1 {
+                        data.isHidden = false
+                    }
+                    
+                    if data != initialData {
+                        if let entry = StoredMessageHistoryThreadInfo(data) {
+                            transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                        }
+                    }
+                }
+            }
+            |> castError(EditForumChannelTopicError.self)
+            |> ignoreValues
+        }
+    }
+}
+
+func _internal_setForumChannelTopicHidden(account: Account, id: EnginePeer.Id, threadId: Int64, isHidden: Bool) -> Signal<Never, EditForumChannelTopicError> {
+    guard threadId == 1 else {
+        return .fail(.generic)
+    }
+    return account.postbox.transaction { transaction -> Api.InputChannel? in
+        if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+            var data = initialData
+            
+            data.isHidden = isHidden
+            
+            if data != initialData {
+                if let entry = StoredMessageHistoryThreadInfo(data) {
+                    transaction.setMessageHistoryThreadInfo(peerId: id, threadId: threadId, info: entry)
+                }
+            }
+        }
+        
+        return transaction.getPeer(id).flatMap(apiInputChannel)
+    }
+    |> castError(EditForumChannelTopicError.self)
+    |> mapToSignal { inputChannel -> Signal<Never, EditForumChannelTopicError> in
+        guard let inputChannel = inputChannel else {
+            return .fail(.generic)
+        }
+        var flags: Int32 = 0
+        flags |= (1 << 3)
+        
+        return account.network.request(Api.functions.channels.editForumTopic(
+            flags: flags,
+            channel: inputChannel,
+            topicId: Int32(clamping: threadId),
+            title: nil,
+            iconEmojiId: nil,
+            closed: nil,
+            hidden: isHidden ? .boolTrue : .boolFalse
+        ))
+        |> map(Optional.init)
+        |> `catch` { _ -> Signal<Api.Updates?, NoError> in
+            return .single(nil)
+        }
+        |> mapError { _ -> EditForumChannelTopicError in
+        }
+        |> mapToSignal { result -> Signal<Never, EditForumChannelTopicError> in
+            if let result = result {
+                account.stateManager.addUpdates(result)
+            }
+            
+            return account.postbox.transaction { transaction -> Void in
+                if let initialData = transaction.getMessageHistoryThreadInfo(peerId: id, threadId: threadId)?.data.get(MessageHistoryThreadData.self) {
+                    var data = initialData
+                    
+                    data.isHidden = isHidden
                     
                     if data != initialData {
                         if let entry = StoredMessageHistoryThreadInfo(data) {
@@ -367,21 +449,16 @@ func _internal_setForumChannelTopicClosed(account: Account, id: EnginePeer.Id, t
 
 public enum SetForumChannelTopicPinnedError {
     case generic
+    case limitReached(Int)
 }
 
-func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, threadId: Int64, isPinned: Bool) -> Signal<Never, SetForumChannelTopicPinnedError> {
+func _internal_setForumChannelPinnedTopics(account: Account, id: EnginePeer.Id, threadIds: [Int64]) -> Signal<Never, SetForumChannelTopicPinnedError> {
     return account.postbox.transaction { transaction -> Api.InputChannel? in
         guard let inputChannel = transaction.getPeer(id).flatMap(apiInputChannel) else {
             return nil
         }
         
-        if isPinned {
-            transaction.setPeerPinnedThreads(peerId: id, threadIds: [threadId])
-        } else {
-            if transaction.getPeerPinnedThreads(peerId: id).contains(threadId) {
-                transaction.setPeerPinnedThreads(peerId: id, threadIds: [])
-            }
-        }
+        transaction.setPeerPinnedThreads(peerId: id, threadIds: threadIds)
         
         return inputChannel
     }
@@ -390,13 +467,11 @@ func _internal_setForumChannelTopicPinned(account: Account, id: EnginePeer.Id, t
         guard let inputChannel = inputChannel else {
             return .fail(.generic)
         }
-        var flags: Int32 = 0
-        flags |= (1 << 2)
         
-        return account.network.request(Api.functions.channels.updatePinnedForumTopic(
+        return account.network.request(Api.functions.channels.reorderPinnedForumTopics(
+            flags: 1 << 0,
             channel: inputChannel,
-            topicId: Int32(clamping: threadId),
-            pinned: isPinned ? .boolTrue : .boolFalse
+            order: threadIds.map(Int32.init(clamping:))
         ))
         |> mapError { _ -> SetForumChannelTopicPinnedError in
             return .generic
@@ -492,7 +567,13 @@ enum LoadMessageHistoryThreadsError {
 
 func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Postbox, network: Network, peerId: PeerId, offsetIndex: StoredPeerThreadCombinedState.Index?, limit: Int) -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> {
     let signal: Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> = postbox.transaction { transaction -> Api.InputChannel? in
-        return transaction.getPeer(peerId).flatMap(apiInputChannel)
+        guard let channel = transaction.getPeer(peerId) as? TelegramChannel else {
+            return nil
+        }
+        if !channel.flags.contains(.isForum) {
+            return nil
+        }
+        return apiInputChannel(channel)
     }
     |> castError(LoadMessageHistoryThreadsError.self)
     |> mapToSignal { inputChannel -> Signal<LoadMessageHistoryThreadsResult, LoadMessageHistoryThreadsError> in
@@ -524,10 +605,10 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
             switch result {
             case let .forumTopics(_, _, topics, messages, chats, users, pts):
                 var items: [LoadMessageHistoryThreadsResult.Item] = []
-                var pinnedId: Int64?
+                var pinnedIds: [Int64] = []
                 
                 let addedMessages = messages.compactMap { message -> StoreMessage? in
-                    return StoreMessage(apiMessage: message)
+                    return StoreMessage(apiMessage: message, peerIsForum: true)
                 }
                 
                 let _ = pts
@@ -539,7 +620,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                         let _ = draft
                         
                         if (flags & (1 << 3)) != 0 {
-                            pinnedId = Int64(id)
+                            pinnedIds.append(Int64(id))
                         }
                         
                         let data = MessageHistoryThreadData(
@@ -556,6 +637,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                             maxKnownMessageId: topMessage,
                             maxOutgoingReadId: readOutboxMaxId,
                             isClosed: (flags & (1 << 2)) != 0,
+                            isHidden: (flags & (1 << 6)) != 0,
                             notificationSettings: TelegramPeerNotificationSettings(apiSettings: notifySettings)
                         )
                         
@@ -590,11 +672,7 @@ func _internal_requestMessageHistoryThreads(accountPeerId: PeerId, postbox: Post
                 
                 var pinnedThreadIds: [Int64]?
                 if offsetIndex == nil {
-                    if let pinnedId = pinnedId {
-                        pinnedThreadIds = [pinnedId]
-                    } else {
-                        pinnedThreadIds = []
-                    }
+                    pinnedThreadIds = pinnedIds
                 }
                 
                 var nextIndex: StoredPeerThreadCombinedState.Index

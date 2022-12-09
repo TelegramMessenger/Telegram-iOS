@@ -23,7 +23,7 @@
 @property (nonatomic, weak) TGPhotoEntitiesContainerView *fullEntitiesView;
 @property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

@@ -1066,9 +1066,9 @@ public final class Transaction {
         return view!
     }
     
-    public func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
+    public func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
         assert(!self.disposed)
-        self.postbox?.invalidateMessageHistoryTagsSummary(peerId: peerId, namespace: namespace, tagMask: tagMask)
+        self.postbox?.invalidateMessageHistoryTagsSummary(peerId: peerId, threadId: threadId, namespace: namespace, tagMask: tagMask)
     }
     
     public func removeInvalidatedMessageHistoryTagsSummaryEntry(_ entry: InvalidatedMessageHistoryTagsSummaryEntry) {
@@ -1210,7 +1210,7 @@ public enum PostboxResult {
     case error
 }
 
-func debugSaveState(basePath:String, name: String) {
+func debugSaveState(basePath: String, name: String) {
     let path = basePath + name
     let _ = try? FileManager.default.removeItem(atPath: path)
     do {
@@ -1220,7 +1220,7 @@ func debugSaveState(basePath:String, name: String) {
     }
 }
 
-func debugRestoreState(basePath:String, name: String) {
+func debugRestoreState(basePath: String, name: String) {
     let path = basePath + name
     if FileManager.default.fileExists(atPath: path) {
         let _ = try? FileManager.default.removeItem(atPath: basePath)
@@ -1272,8 +1272,8 @@ public func openPostbox(basePath: String, seedConfiguration: SeedConfiguration, 
             }
 
             #if DEBUG
-            //debugSaveState(basePath: basePath, name: "previous1")
-            //debugRestoreState(basePath: basePath, name: "previous1")
+            //debugSaveState(basePath: basePath + "/db", name: "previous2")
+            //debugRestoreState(basePath: basePath + "/db", name: "previous2")
             #endif
             
             let startTime = CFAbsoluteTimeGetCurrent()
@@ -1560,7 +1560,7 @@ final class PostboxImpl {
         self.pendingMessageActionsTable = PendingMessageActionsTable(valueBox: self.valueBox, table: PendingMessageActionsTable.tableSpec(46), useCaches: useCaches, metadataTable: self.pendingMessageActionsMetadataTable)
         self.messageHistoryTagsTable = MessageHistoryTagsTable(valueBox: self.valueBox, table: MessageHistoryTagsTable.tableSpec(12), useCaches: useCaches, seedConfiguration: self.seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable)
         self.messageHistoryThreadsTable = MessageHistoryThreadsTable(valueBox: self.valueBox, table: MessageHistoryThreadsTable.tableSpec(62), useCaches: useCaches)
-        self.peerThreadCombinedStateTable = PeerThreadCombinedStateTable(valueBox: self.valueBox, table: PeerThreadCombinedStateTable.tableSpec(74), useCaches: useCaches)
+        self.peerThreadCombinedStateTable = PeerThreadCombinedStateTable(valueBox: self.valueBox, table: PeerThreadCombinedStateTable.tableSpec(77), useCaches: useCaches)
         self.peerThreadsSummaryTable = PeerThreadsSummaryTable(valueBox: self.valueBox, table: PeerThreadsSummaryTable.tableSpec(75), useCaches: useCaches, seedConfiguration: self.seedConfiguration)
         self.messageHistoryThreadTagsTable = MessageHistoryThreadTagsTable(valueBox: self.valueBox, table: MessageHistoryThreadTagsTable.tableSpec(71), useCaches: useCaches, seedConfiguration: self.seedConfiguration, summaryTable: self.messageHistoryTagsSummaryTable)
         self.messageHistoryThreadHoleIndexTable = MessageHistoryThreadHoleIndexTable(valueBox: self.valueBox, table: MessageHistoryThreadHoleIndexTable.tableSpec(63), useCaches: useCaches, metadataTable: self.messageHistoryMetadataTable, seedConfiguration: self.seedConfiguration)
@@ -2438,6 +2438,8 @@ final class PostboxImpl {
         for id in messageIds {
             if self.messageHistoryIndexTable.exists(id) {
                 filteredIds.insert(id)
+            } else {
+                assert(true)
             }
         }
         
@@ -2953,7 +2955,7 @@ final class PostboxImpl {
         return ActionDisposable { [weak self] in
             disposable.dispose()
             if let strongSelf = self {
-                strongSelf.queue.async {
+                strongSelf.queue.justDispatch {
                     strongSelf.viewTracker.removeMessageHistoryView(index: index)
                 }
             }
@@ -3632,8 +3634,8 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func invalidateMessageHistoryTagsSummary(peerId: PeerId, namespace: MessageId.Namespace, tagMask: MessageTags) {
-        self.invalidatedMessageHistoryTagsSummaryTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask), operations: &self.currentInvalidateMessageTagSummaries)
+    fileprivate func invalidateMessageHistoryTagsSummary(peerId: PeerId, threadId: Int64?, namespace: MessageId.Namespace, tagMask: MessageTags) {
+        self.invalidatedMessageHistoryTagsSummaryTable.insert(InvalidatedMessageHistoryTagsSummaryKey(peerId: peerId, namespace: namespace, tagMask: tagMask, threadId: threadId), operations: &self.currentInvalidateMessageTagSummaries)
     }
     
     fileprivate func removeInvalidatedMessageHistoryTagsSummaryEntry(_ entry: InvalidatedMessageHistoryTagsSummaryEntry) {

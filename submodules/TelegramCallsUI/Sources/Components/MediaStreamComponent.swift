@@ -109,6 +109,53 @@ public final class MediaStreamComponent: CombinedComponent {
                 }
                 strongSelf.hasVideo = true
                 strongSelf.updated(transition: .immediate)
+                
+                /*let engine = strongSelf.call.accountContext.engine
+                guard let info = strongSelf.call.initialCall else {
+                    return
+                }
+                let _ = (engine.calls.getAudioBroadcastDataSource(callId: info.id, accessHash: info.accessHash)
+                |> mapToSignal { source -> Signal<Data?, NoError> in
+                    guard let source else {
+                        return .single(nil)
+                    }
+                    
+                    let time = engine.calls.requestStreamState(dataSource: source, callId: info.id, accessHash: info.accessHash)
+                    |> map { state -> Int64? in
+                        guard let state else {
+                            return nil
+                        }
+                        return state.channels.first?.latestTimestamp
+                    }
+                    
+                    return time
+                    |> mapToSignal { latestTimestamp -> Signal<Data?, NoError> in
+                        guard let latestTimestamp else {
+                            return .single(nil)
+                        }
+                        
+                        let durationMilliseconds: Int64 = 32000
+                        let bufferOffset: Int64 = 1 * durationMilliseconds
+                        let timestampId = latestTimestamp - bufferOffset
+                        
+                        return engine.calls.getVideoBroadcastPart(dataSource: source, callId: info.id, accessHash: info.accessHash, timestampIdMilliseconds: timestampId, durationMilliseconds: durationMilliseconds, channelId: 2, quality: 0)
+                        |> mapToSignal { result -> Signal<Data?, NoError> in
+                            switch result.status {
+                            case let .data(data):
+                                return .single(data)
+                            case .notReady, .resyncNeeded, .rejoinNeeded:
+                                return .single(nil)
+                            }
+                        }
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let self, let data else {
+                        return
+                    }
+                    let _ = self
+                    let _ = data
+                })*/
             })
             
             let callPeer = call.accountContext.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: call.peerId))

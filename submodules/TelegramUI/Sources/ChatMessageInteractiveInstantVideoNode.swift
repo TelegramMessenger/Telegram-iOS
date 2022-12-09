@@ -141,6 +141,8 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
     }
     private var isWaitingForCollapse: Bool = false
     
+    private var hapticFeedback: HapticFeedback?
+    
     var requestUpdateLayout: (Bool) -> Void = { _ in }
     
     override init() {
@@ -228,6 +230,11 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             var secretVideoPlaceholderBackgroundImage: UIImage?
             var updatedInfoBackgroundImage: UIImage?
             var updatedMuteIconImage: UIImage?
+            
+            var incoming = item.message.effectivelyIncoming(item.context.account.peerId)
+            if case .forwardedMessages = item.associatedData.subject {
+                incoming = false
+            }
             
             var viaBotApply: (TextNodeLayout, () -> TextNode)?
             var replyInfoApply: (CGSize, (Bool) -> ChatMessageReplyInfoNode)?
@@ -428,7 +435,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             let arguments = TransformImageArguments(corners: ImageCorners(radius: videoFrame.size.width / 2.0), imageSize: videoFrame.size, boundingSize: videoFrame.size, intrinsicInsets: UIEdgeInsets())
             
             let statusType: ChatMessageDateAndStatusType
-            if item.message.effectivelyIncoming(item.context.account.peerId) {
+            if incoming {
                 switch statusDisplayType {
                     case .free:
                         statusType = .FreeIncoming
@@ -620,7 +627,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             durationBlurColor = (selectDateFillStaticColor(theme: theme.theme, wallpaper: theme.wallpaper), dateFillNeedsBlur(theme: theme.theme, wallpaper: theme.wallpaper))
                         case .bubble:
                             durationBlurColor = nil
-                            if item.message.effectivelyIncoming(item.context.account.peerId) {
+                            if incoming {
                                 durationTextColor = theme.theme.chat.message.incoming.secondaryTextColor
                             } else {
                                 durationTextColor = theme.theme.chat.message.outgoing.secondaryTextColor
@@ -731,9 +738,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                             }
                         }))
                     }
-                    
-                    let incoming = item.message.effectivelyIncoming(item.context.account.peerId)
-                                 
+                                        
                     var displayTranscribe: Bool
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free {
                         if item.associatedData.isPremium {
@@ -765,7 +770,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         let audioTranscriptionButtonSize = audioTranscriptionButton.update(
                             transition: animation.isAnimated ? .easeInOut(duration: 0.3) : .immediate,
                             component: AnyComponent(AudioTranscriptionButtonComponent(
-                                theme: .freeform(durationBlurColor),
+                                theme: .freeform(durationBlurColor, durationTextColor),
                                 transcriptionState: effectiveAudioTranscriptionState,
                                 pressed: {
                                     guard let strongSelf = self else {
@@ -1245,7 +1250,7 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                                         item.controllerInteraction.navigateToMessage(item.message.id, sourceMessageId)
                                         return
                                     } else if let peer = forwardInfo.source ?? forwardInfo.author {
-                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, false)
+                                        item.controllerInteraction.openPeer(EnginePeer(peer), peer is TelegramUser ? .info : .chat(textInputState: nil, subject: nil, peekData: nil), nil, .default)
                                         return
                                     } else if let _ = forwardInfo.authorSignature {
                                         item.controllerInteraction.displayMessageTooltip(item.message.id, item.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, forwardInfoNode, nil)
@@ -1486,11 +1491,24 @@ class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         }
                 
         guard item.associatedData.isPremium else {
+            if self.hapticFeedback == nil {
+                self.hapticFeedback = HapticFeedback()
+            }
+            self.hapticFeedback?.impact(.medium)
+            
             let presentationData = item.context.sharedContext.currentPresentationData.with { $0 }
             let tipController = UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_voiceToText", scale: 0.065, colors: [:], title: nil, text: presentationData.strings.Message_AudioTranscription_SubscribeToPremium, customUndoText: presentationData.strings.Message_AudioTranscription_SubscribeToPremiumAction), elevatedLayout: false, position: .top, animateInAsReplacement: false, action: { action in
                 if case .undo = action {
-                    let introController = item.context.sharedContext.makePremiumIntroController(context: item.context, source: .settings)
-                    item.controllerInteraction.navigationController()?.pushViewController(introController, animated: true)
+                    let context = item.context
+                    var replaceImpl: ((ViewController) -> Void)?
+                    let controller = context.sharedContext.makePremiumDemoController(context: context, subject: .voiceToText, action: {
+                        let controller = context.sharedContext.makePremiumIntroController(context: context, source: .settings)
+                        replaceImpl?(controller)
+                    })
+                    replaceImpl = { [weak controller] c in
+                        controller?.replace(with: c)
+                    }
+                    item.controllerInteraction.navigationController()?.pushViewController(controller, animated: true)
                     
                     let _ = ApplicationSpecificNotice.incrementAudioTranscriptionSuggestion(accountManager: item.context.sharedContext.accountManager).start()
                 }

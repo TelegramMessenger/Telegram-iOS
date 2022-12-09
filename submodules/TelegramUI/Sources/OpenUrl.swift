@@ -141,6 +141,13 @@ func formattedConfirmationCode(_ code: Int) -> String {
 
 func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, url: String, forceExternal: Bool, presentationData: PresentationData, navigationController: NavigationController?, dismissInput: @escaping () -> Void) {
     if forceExternal || url.lowercased().hasPrefix("tel:") || url.lowercased().hasPrefix("calshow:") {
+        if url.lowercased().hasPrefix("tel:+888") {
+            context.sharedContext.presentGlobalController(textAlertController(context: context, title: nil, text: presentationData.strings.Conversation_CantPhoneCallAnonymousNumberError, actions: [
+                TextAlertAction(type: .genericAction, title: presentationData.strings.Common_OK, action: {
+                }),
+            ], parseMarkdown: true), nil)
+            return
+        }
         context.sharedContext.applicationBindings.openUrl(url)
         return
     }
@@ -549,6 +556,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/login/\(code)"
                         }
                     }
+                } else if parsedUrl.host == "contact" {
+                    if let components = URLComponents(string: "/?" + query) {
+                        var token: String?
+                        if let queryItems = components.queryItems {
+                            for queryItem in queryItems {
+                                if let value = queryItem.value {
+                                    if queryItem.name == "token" {
+                                        token = value
+                                    }
+                                }
+                            }
+                        }
+                        if let token = token {
+                            convertedUrl = "https://t.me/contact/\(token)"
+                        }
+                    }
                 } else if parsedUrl.host == "confirmphone" {
                     if let components = URLComponents(string: "/?" + query) {
                         var phone: String?
@@ -621,6 +644,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let components = URLComponents(string: "/?" + query) {
                         var channelId: Int64?
                         var postId: Int32?
+                        var threadId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -628,12 +652,22 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         channelId = Int64(value)
                                     } else if queryItem.name == "post" {
                                         postId = Int32(value)
+                                    } else if queryItem.name == "thread" {
+                                        threadId = Int64(value)
                                     }
                                 }
                             }
                         }
-                        if let channelId = channelId, let postId = postId {
-                            convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                        if let channelId = channelId {
+                            if let postId = postId {
+                                if let threadId = threadId {
+                                    convertedUrl = "https://t.me/c/\(channelId)/\(threadId)/\(postId)"
+                                } else {
+                                    convertedUrl = "https://t.me/c/\(channelId)/\(postId)"
+                                }
+                            } else if let threadId = threadId {
+                                convertedUrl = "https://t.me/c/\(channelId)/\(threadId)"
+                            }
                         }
                     }
                 }
@@ -652,6 +686,7 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                         var attach: String?
                         var startAttach: String?
                         var choose: String?
+                        var threadId: Int64?
                         if let queryItems = components.queryItems {
                             for queryItem in queryItems {
                                 if let value = queryItem.value {
@@ -677,6 +712,8 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                                         startAttach = value
                                     } else if queryItem.name == "choose" {
                                         choose = value
+                                    } else if queryItem.name == "thread" {
+                                        threadId = Int64(value)
                                     }
                                 } else if ["voicechat", "videochat", "livestream"].contains(queryItem.name) {
                                     voiceChat = ""
@@ -694,8 +731,15 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                             convertedUrl = "https://t.me/+\(phone)"
                         } else if let domain = domain {
                             var result = "https://t.me/\(domain)"
-                            if let post = post, let postValue = Int(post) {
-                                result += "/\(postValue)"
+                            if let threadId = threadId {
+                                result += "/\(threadId)"
+                                if let post = post, let postValue = Int(post) {
+                                    result += "/\(postValue)"
+                                }
+                            } else {
+                                if let post = post, let postValue = Int(post) {
+                                    result += "/\(postValue)"
+                                }
                             }
                             if let start = start {
                                 result += "?start=\(start)"
@@ -789,12 +833,14 @@ func openExternalUrlImpl(context: AccountContext, urlContext: OpenURLContext, ur
                     if let path = parsedUrl.pathComponents.last {
                         var section: ResolvedUrlSettingsSection?
                         switch path {
-                            case "themes":
-                                section = .theme
-                            case "devices":
-                                section = .devices
-                            default:
-                                break
+                        case "themes":
+                            section = .theme
+                        case "devices":
+                            section = .devices
+                        case "password":
+                            section = .twoStepAuth
+                        default:
+                            break
                         }
                         if let section = section {
                             handleResolvedUrl(.settings(section))

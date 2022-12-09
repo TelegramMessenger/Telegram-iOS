@@ -50,7 +50,9 @@ public func cacheStillSticker(path: String, width: Int, height: Int, writer: Ani
     let work: () -> Void = {
         if let data = try? Data(contentsOf: URL(fileURLWithPath: path)), let image = WebP.convert(fromWebP: data) {
             writer.add(with: { surface in
-                let context = DrawingContext(size: CGSize(width: CGFloat(surface.width), height: CGFloat(surface.height)), scale: 1.0, opaque: false, clear: true, bytesPerRow: surface.bytesPerRow)
+                guard let context = DrawingContext(size: CGSize(width: CGFloat(surface.width), height: CGFloat(surface.height)), scale: 1.0, opaque: false, clear: true, bytesPerRow: surface.bytesPerRow) else {
+                    return 1.0
+                }
                 context.withFlippedContext { c in
                     UIGraphicsPushContext(c)
                     c.draw(image.cgImage!, in: CGRect(origin: CGPoint(), size: context.size))

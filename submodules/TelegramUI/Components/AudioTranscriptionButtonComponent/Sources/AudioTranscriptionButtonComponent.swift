@@ -16,8 +16,8 @@ public final class AudioTranscriptionButtonComponent: Component {
                 } else {
                     return false
                 }
-            case let .freeform(lhsFreeform):
-                if case let .freeform(rhsFreeform) = rhs, lhsFreeform == rhsFreeform {
+            case let .freeform(lhsFreeform, lhsForeground):
+                if case let .freeform(rhsFreeform, rhsForeground) = rhs, lhsFreeform == rhsFreeform, lhsForeground == rhsForeground {
                     return true
                 } else {
                     return false
@@ -26,7 +26,7 @@ public final class AudioTranscriptionButtonComponent: Component {
         }
         
         case bubble(PresentationThemePartedColors)
-        case freeform((UIColor, Bool))
+        case freeform((UIColor, Bool), UIColor)
     }
     
     public enum TranscriptionState {
@@ -103,8 +103,8 @@ public final class AudioTranscriptionButtonComponent: Component {
             case let .bubble(theme):
                 foregroundColor = theme.bubble.withWallpaper.reactionActiveBackground
                 backgroundColor = theme.bubble.withWallpaper.reactionInactiveBackground
-            case let .freeform(colorAndBlur):
-                foregroundColor = UIColor.white
+            case let .freeform(colorAndBlur, color):
+                foregroundColor = color
                 backgroundColor = .clear
                 if self.blurredBackgroundNode.view.superview == nil {
                     self.insertSubview(self.blurredBackgroundNode.view, at: 0)

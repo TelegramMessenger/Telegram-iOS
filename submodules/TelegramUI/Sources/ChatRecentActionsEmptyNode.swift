@@ -5,6 +5,7 @@ import AsyncDisplayKit
 import TelegramCore
 import TelegramPresentationData
 import WallpaperBackgroundNode
+import ChatPresentationInterfaceState
 
 private let titleFont = Font.medium(16.0)
 private let textFont = Font.regular(15.0)
@@ -12,8 +13,8 @@ private let textFont = Font.regular(15.0)
 final class ChatRecentActionsEmptyNode: ASDisplayNode {
     private var theme: PresentationTheme
     private var chatWallpaper: TelegramWallpaper
-    
-    private let backgroundNode: ASImageNode
+        
+    private let backgroundNode: NavigationBackgroundNode
     private let titleNode: TextNode
     private let textNode: TextNode
     
@@ -22,7 +23,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
     
     private var absolutePosition: (CGRect, CGSize)?
     
-    private var layoutParams: CGSize?
+    private var layoutParams: (CGSize, ChatPresentationData)?
     
     private var title: String = ""
     private var text: String = ""
@@ -31,8 +32,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         self.theme = theme
         self.chatWallpaper = chatWallpaper
         
-        self.backgroundNode = ASImageNode()
-        self.backgroundNode.isLayerBacked = true
+        self.backgroundNode = NavigationBackgroundNode(color: .clear)
         
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
@@ -43,10 +43,7 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         super.init()
         
         self.allowsGroupOpacity = true
-        
-        let graphics = PresentationResourcesChat.additionalGraphics(theme, wallpaper: chatWallpaper, bubbleCorners: chatBubbleCorners)
-        self.backgroundNode.image = graphics.chatEmptyItemBackgroundImage
-        
+                
         self.addSubnode(self.backgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.textNode)
@@ -62,9 +59,14 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         }
     }
     
-    func updateLayout(backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
+    func updateLayout(presentationData: ChatPresentationData, backgroundNode: WallpaperBackgroundNode, size: CGSize, transition: ContainedViewLayoutTransition) {
         self.wallpaperBackgroundNode = backgroundNode
-        self.layoutParams = size
+        self.layoutParams = (size, presentationData)
+        
+        self.theme = presentationData.theme.theme
+        self.chatWallpaper = presentationData.theme.wallpaper
+    
+        self.backgroundNode.updateColor(color: selectDateFillStaticColor(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: presentationData.theme.theme, wallpaper: presentationData.theme.wallpaper), transition: .immediate)
         
         let insets = UIEdgeInsets(top: 10.0, left: 10.0, bottom: 10.0, right: 10.0)
         
@@ -82,6 +84,8 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         let contentSize = CGSize(width: max(titleLayout.size.width, textLayout.size.width) + insets.left + insets.right, height: insets.top + insets.bottom + titleLayout.size.height + spacing + textLayout.size.height)
         let backgroundFrame = CGRect(origin: CGPoint(x: floor((size.width - contentSize.width) / 2.0), y: floor((size.height - contentSize.height) / 2.0)), size: contentSize)
         transition.updateFrame(node: self.backgroundNode, frame: backgroundFrame)
+        self.backgroundNode.update(size: self.backgroundNode.bounds.size, cornerRadius: min(14.0, self.backgroundNode.bounds.height / 2.0), transition: transition)
+        
         transition.updateFrame(node: self.titleNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((contentSize.width - titleLayout.size.width) / 2.0), y: backgroundFrame.minY + insets.top), size: titleLayout.size))
         transition.updateFrame(node: self.textNode, frame: CGRect(origin: CGPoint(x: backgroundFrame.minX + floor((contentSize.width - textLayout.size.width) / 2.0), y: backgroundFrame.minY + insets.top + titleLayout.size.height + spacing), size: textLayout.size))
         
@@ -119,8 +123,8 @@ final class ChatRecentActionsEmptyNode: ASDisplayNode {
         if self.title != title || self.text != text {
             self.title = title
             self.text = text
-            if let size = self.layoutParams, let wallpaperBackgroundNode = self.wallpaperBackgroundNode {
-                self.updateLayout(backgroundNode: wallpaperBackgroundNode, size: size, transition: .immediate)
+            if let (size, presentationData) = self.layoutParams, let wallpaperBackgroundNode = self.wallpaperBackgroundNode {
+                self.updateLayout(presentationData: presentationData, backgroundNode: wallpaperBackgroundNode, size: size, transition: .immediate)
             }
         }
     }

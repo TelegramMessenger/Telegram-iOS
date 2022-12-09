@@ -282,7 +282,9 @@ public func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, 
                 
                 let arguments = TransformImageArguments(corners: preArguments.corners, imageSize: contextSize, boundingSize: contextSize, intrinsicInsets: preArguments.intrinsicInsets)
                 
-                let context = DrawingContext(size: arguments.drawingSize, clear: true)
+                guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+                    return nil
+                }
                 
                 let thumbnailImage: CGImage? = nil
                 
@@ -290,14 +292,15 @@ public func chatMessageLegacySticker(account: Account, file: TelegramMediaFile, 
                 if let thumbnailImage = thumbnailImage {
                     let thumbnailSize = CGSize(width: thumbnailImage.width, height: thumbnailImage.height)
                     let thumbnailContextSize = thumbnailSize.aspectFitted(CGSize(width: 150.0, height: 150.0))
-                    let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0)
-                    thumbnailContext.withFlippedContext { c in
-                        c.interpolationQuality = .none
-                        c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                    if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
+                        thumbnailContext.withFlippedContext { c in
+                            c.interpolationQuality = .none
+                            c.draw(thumbnailImage, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+                        }
+                        imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                        
+                        blurredThumbnailImage = thumbnailContext.generateImage()
                     }
-                    imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                    
-                    blurredThumbnailImage = thumbnailContext.generateImage()
                 }
                 
                 context.withFlippedContext { c in
@@ -341,7 +344,9 @@ public func chatMessageStickerPackThumbnail(postbox: Postbox, resource: MediaRes
                 }
             }
             
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil) else {
+                return nil
+            }
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
@@ -403,7 +408,9 @@ public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small:
                 return nil
             }
             
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: arguments.emptyColor == nil) else {
+                return nil
+            }
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
@@ -432,20 +439,21 @@ public func chatMessageSticker(postbox: Postbox, file: TelegramMediaFile, small:
                 let thumbnailDrawingSize = thumbnailContextSize
                 thumbnailContextSize.width += thumbnailInset * 2.0
                 thumbnailContextSize.height += thumbnailInset * 2.0
-                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0, clear: true)
-                thumbnailContext.withFlippedContext { c in
-                    if let cgImage = thumbnailImage.0.cgImage, let cgImageAlpha = thumbnailImage.1.cgImage {
-                        c.setBlendMode(.normal)
-                        c.interpolationQuality = .medium
-                        
-                        let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
-                        
-                        c.draw(cgImage.masking(mask!)!, in: CGRect(origin: CGPoint(x: thumbnailInset, y: thumbnailInset), size: thumbnailDrawingSize))
+                if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0, clear: true) {
+                    thumbnailContext.withFlippedContext { c in
+                        if let cgImage = thumbnailImage.0.cgImage, let cgImageAlpha = thumbnailImage.1.cgImage {
+                            c.setBlendMode(.normal)
+                            c.interpolationQuality = .medium
+                            
+                            let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
+                            
+                            c.draw(cgImage.masking(mask!)!, in: CGRect(origin: CGPoint(x: thumbnailInset, y: thumbnailInset), size: thumbnailDrawingSize))
+                        }
                     }
+                    stickerThumbnailAlphaBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    blurredThumbnailImage = thumbnailContext.generateImage()
                 }
-                stickerThumbnailAlphaBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                
-                blurredThumbnailImage = thumbnailContext.generateImage()
             }
             
             context.withFlippedContext { c in
@@ -498,7 +506,9 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
                 return nil
             }
             
-            let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true)
+            guard let context = DrawingContext(size: arguments.drawingSize, scale: arguments.scale ?? 0.0, clear: true) else {
+                return nil
+            }
             
             let drawingRect = arguments.drawingRect
             let fittedSize = arguments.imageSize
@@ -526,20 +536,21 @@ public func chatMessageAnimatedSticker(postbox: Postbox, file: TelegramMediaFile
                 let thumbnailDrawingSize = thumbnailContextSize
                 thumbnailContextSize.width += thumbnailInset * 2.0
                 thumbnailContextSize.height += thumbnailInset * 2.0
-                let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0, clear: true)
-                thumbnailContext.withFlippedContext { c in
-                    if let cgImage = thumbnailImage.0.cgImage, let cgImageAlpha = thumbnailImage.1.cgImage {
-                        c.setBlendMode(.normal)
-                        c.interpolationQuality = .medium
-                        
-                        let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
-                        
-                        c.draw(cgImage.masking(mask!)!, in: CGRect(origin: CGPoint(x: thumbnailInset, y: thumbnailInset), size: thumbnailDrawingSize))
+                if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0, clear: true) {
+                    thumbnailContext.withFlippedContext { c in
+                        if let cgImage = thumbnailImage.0.cgImage, let cgImageAlpha = thumbnailImage.1.cgImage {
+                            c.setBlendMode(.normal)
+                            c.interpolationQuality = .medium
+                            
+                            let mask = CGImage(maskWidth: cgImageAlpha.width, height: cgImageAlpha.height, bitsPerComponent: cgImageAlpha.bitsPerComponent, bitsPerPixel: cgImageAlpha.bitsPerPixel, bytesPerRow: cgImageAlpha.bytesPerRow, provider: cgImageAlpha.dataProvider!, decode: nil, shouldInterpolate: true)
+                            
+                            c.draw(cgImage.masking(mask!)!, in: CGRect(origin: CGPoint(x: thumbnailInset, y: thumbnailInset), size: thumbnailDrawingSize))
+                        }
                     }
+                    stickerThumbnailAlphaBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+                    
+                    blurredThumbnailImage = thumbnailContext.generateImage()
                 }
-                stickerThumbnailAlphaBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
-                
-                blurredThumbnailImage = thumbnailContext.generateImage()
             }
             
             context.withFlippedContext { c in

@@ -304,17 +304,18 @@ public final class DirectAnimatedStickerNode: ASDisplayNode, AnimatedStickerNode
             
             if !task.isCancelled {
                 if let lottieInstance = lottieInstance {
-                    let drawingContext = DrawingContext(size: playbackSize, scale: 1.0, opaque: false, clear: false)
-                    lottieInstance.renderFrame(with: Int32(frameIndex), into: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(drawingContext.scaledSize.width), height: Int32(drawingContext.scaledSize.height), bytesPerRow: Int32(drawingContext.bytesPerRow))
-                    
-                    image = drawingContext.generateImage()
-                } else if let videoSource = videoSource {
-                    if let frame = videoSource.takeFrame(draw: true) {
-                        let drawingContext = DrawingContext(size: CGSize(width: frame.width, height: frame.height), scale: 1.0, opaque: false, clear: false, bytesPerRow: frame.bytesPerRow)
-                        
-                        frame.data.copyBytes(to: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), from: 0 ..< min(frame.data.count, drawingContext.length))
+                    if let drawingContext = DrawingContext(size: playbackSize, scale: 1.0, opaque: false, clear: false) {
+                        lottieInstance.renderFrame(with: Int32(frameIndex), into: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), width: Int32(drawingContext.scaledSize.width), height: Int32(drawingContext.scaledSize.height), bytesPerRow: Int32(drawingContext.bytesPerRow))
                         
                         image = drawingContext.generateImage()
+                    }
+                } else if let videoSource = videoSource {
+                    if let frame = videoSource.takeFrame(draw: true) {
+                        if let drawingContext = DrawingContext(size: CGSize(width: frame.width, height: frame.height), scale: 1.0, opaque: false, clear: false, bytesPerRow: frame.bytesPerRow) {   
+                            frame.data.copyBytes(to: drawingContext.bytes.assumingMemoryBound(to: UInt8.self), from: 0 ..< min(frame.data.count, drawingContext.length))
+                            
+                            image = drawingContext.generateImage()
+                        }
                     }
                 }
             }

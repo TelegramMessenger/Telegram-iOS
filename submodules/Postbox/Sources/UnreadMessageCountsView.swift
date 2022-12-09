@@ -67,7 +67,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                 if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
                     var count: Int32 = 0
                     if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
-                        count = summary.effectiveUnreadCount
+                        count = summary.totalUnreadCount
                     }
                     return .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
                 } else {
@@ -117,7 +117,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                         if transaction.updatedPeerThreadsSummaries.contains(peerId) {
                             var count: Int32 = 0
                             if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
-                                count = summary.effectiveUnreadCount
+                                count = summary.totalUnreadCount
                             }
                             self.entries[i] = .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
                             updated = true
@@ -146,7 +146,7 @@ final class MutableUnreadMessageCountsView: MutablePostboxView {
                 if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
                     var count: Int32 = 0
                     if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
-                        count = summary.effectiveUnreadCount
+                        count = summary.totalUnreadCount
                     }
                     return .peer(peerId, handleThreads, CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))]))
                 } else {
@@ -212,21 +212,32 @@ public final class UnreadMessageCountsView: PostboxView {
 
 final class MutableCombinedReadStateView: MutablePostboxView {
     private let peerId: PeerId
+    private let handleThreads: Bool
     fileprivate var state: CombinedPeerReadState?
     
-    init(postbox: PostboxImpl, peerId: PeerId) {
+    init(postbox: PostboxImpl, peerId: PeerId, handleThreads: Bool) {
         self.peerId = peerId
-        self.state = postbox.readStateTable.getCombinedState(peerId)
+        self.handleThreads = handleThreads
+        
+        let _ = self.refreshDueToExternalTransaction(postbox: postbox)
     }
     
     func replay(postbox: PostboxImpl, transaction: PostboxTransaction) -> Bool {
         var updated = false
         
-        if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil {
-            let state = postbox.readStateTable.getCombinedState(peerId)
-            if state != self.state {
-                self.state = state
-                updated = true
+        if transaction.alteredInitialPeerCombinedReadStates[self.peerId] != nil || transaction.updatedPeerThreadCombinedStates.contains(self.peerId) {
+            if self.handleThreads, let peer = postbox.peerTable.get(self.peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+                var count: Int32 = 0
+                if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                    count = summary.totalUnreadCount
+                }
+                self.state = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))])
+            } else {
+                let state = postbox.readStateTable.getCombinedState(peerId)
+                if state != self.state {
+                    self.state = state
+                    updated = true
+                }
             }
         }
         
@@ -234,7 +245,17 @@ final class MutableCombinedReadStateView: MutablePostboxView {
     }
 
     func refreshDueToExternalTransaction(postbox: PostboxImpl) -> Bool {
-        let state = postbox.readStateTable.getCombinedState(self.peerId)
+        let state: CombinedPeerReadState?
+        if handleThreads, let peer = postbox.peerTable.get(peerId), postbox.seedConfiguration.peerSummaryIsThreadBased(peer) {
+            var count: Int32 = 0
+            if let summary = postbox.peerThreadsSummaryTable.get(peerId: peerId) {
+                count = summary.totalUnreadCount
+            }
+            state = CombinedPeerReadState(states: [(0, .idBased(maxIncomingReadId: 1, maxOutgoingReadId: 1, maxKnownId: 1, count: count, markedUnread: false))])
+        } else {
+            state = postbox.readStateTable.getCombinedState(peerId)
+        }
+        
         if state != self.state {
             self.state = state
             return true

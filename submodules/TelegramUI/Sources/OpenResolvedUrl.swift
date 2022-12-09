@@ -28,6 +28,7 @@ import Markdown
 import WebUI
 import BotPaymentsUI
 import PremiumUI
+import AuthorizationUI
 
 private func defaultNavigationForPeerId(_ peerId: PeerId?, navigation: ChatControllerInteractionNavigateToPeer) -> ChatControllerInteractionNavigateToPeer {
     if case .default = navigation {
@@ -223,7 +224,9 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             dismissInput()
             present(ProxyServerActionSheetController(context: context, server: server), nil)
         case let .confirmationCode(code):
-            if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
+            if let topController = navigationController?.topViewController as? AuthorizationSequenceCodeEntryController {
+                topController.applyConfirmationCode(code)
+            } else if let topController = navigationController?.topViewController as? ChangePhoneNumberCodeController {
                 topController.applyCode(code)
             } else {
                 var found = false
@@ -459,47 +462,55 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
         case let .settings(section):
             dismissInput()
             switch section {
-                case .theme:
-                    if let navigationController = navigationController {
-                        let controller = themeSettingsController(context: context)
+            case .theme:
+                if let navigationController = navigationController {
+                    let controller = themeSettingsController(context: context)
+                    controller.navigationPresentation = .modal
+                    
+                    var controllers = navigationController.viewControllers
+                    controllers = controllers.filter { !($0 is ThemeSettingsController) }
+                    controllers.append(controller)
+                    
+                    navigationController.setViewControllers(controllers, animated: true)
+                }
+            case .devices:
+                if let navigationController = navigationController {
+                    let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
+                        let activeSessionsContext = context.engine.privacy.activeSessions()
+                        let webSessionsContext = context.engine.privacy.webSessions()
+                        let otherSessionCount = activeSessionsContext.state
+                        |> map { state -> Int in
+                            return state.sessions.filter({ !$0.isCurrent }).count
+                        }
+                        |> distinctUntilChanged
+                        
+                        return otherSessionCount
+                        |> map { value in
+                            return (activeSessionsContext, value, webSessionsContext)
+                        }
+                    }
+                    
+                    let _ = (activeSessions
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { activeSessionsContext, count, webSessionsContext in
+                        let controller = recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false)
                         controller.navigationPresentation = .modal
                         
                         var controllers = navigationController.viewControllers
-                        controllers = controllers.filter { !($0 is ThemeSettingsController) }
+                        controllers = controllers.filter { !($0 is RecentSessionsController) }
                         controllers.append(controller)
                         
                         navigationController.setViewControllers(controllers, animated: true)
-                    }
-                case .devices:
-                    if let navigationController = navigationController {
-                        let activeSessions = deferred { () -> Signal<(ActiveSessionsContext, Int, WebSessionsContext), NoError> in
-                            let activeSessionsContext = context.engine.privacy.activeSessions()
-                            let webSessionsContext = context.engine.privacy.webSessions()
-                            let otherSessionCount = activeSessionsContext.state
-                            |> map { state -> Int in
-                                return state.sessions.filter({ !$0.isCurrent }).count
-                            }
-                            |> distinctUntilChanged
-                            
-                            return otherSessionCount
-                            |> map { value in
-                                return (activeSessionsContext, value, webSessionsContext)
-                            }
-                        }
-                        
-                        let _ = (activeSessions
-                        |> take(1)
-                        |> deliverOnMainQueue).start(next: { activeSessionsContext, count, webSessionsContext in
-                            let controller = recentSessionsController(context: context, activeSessionsContext: activeSessionsContext, webSessionsContext: webSessionsContext, websitesOnly: false)
-                            controller.navigationPresentation = .modal
-                            
-                            var controllers = navigationController.viewControllers
-                            controllers = controllers.filter { !($0 is RecentSessionsController) }
-                            controllers.append(controller)
-                            
-                            navigationController.setViewControllers(controllers, animated: true)
-                        })
-                    }
+                    })
+                }
+            case .autoremoveMessages:
+                let _ = (context.engine.privacy.requestAccountPrivacySettings()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { settings in
+                    navigationController?.pushViewController(globalAutoremoveScreen(context: context, initialValue: settings.messageAutoremoveTimeout ?? 0, updated: { _ in }), animated: true)
+                })
+            case .twoStepAuth:
+                break
             }
         case let .premiumOffer(reference):
             dismissInput()

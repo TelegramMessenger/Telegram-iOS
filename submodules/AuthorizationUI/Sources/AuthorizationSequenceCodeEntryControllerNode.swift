@@ -31,6 +31,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     private let dividerNode: AuthorizationDividerNode
     private var signInWithAppleButton: UIControl?
+    private let proceedNode: SolidRoundedButtonNode
     
     private let codeInputView: CodeInputView
     private let errorTextNode: ImmediateTextNode
@@ -62,6 +63,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     var loginWithCode: ((String) -> Void)?
     var signInWithApple: (() -> Void)?
+    var openFragment: ((String) -> Void)?
     
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
@@ -72,6 +74,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.codeInputView.alpha = self.inProgress ? 0.6 : 1.0
         }
     }
+    
+    private let appearanceTimestamp = CACurrentMediaTime()
         
     init(strings: PresentationStrings, theme: PresentationTheme) {
         self.strings = strings
@@ -134,6 +138,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.signInWithAppleButton?.isHidden = true
             (self.signInWithAppleButton as? ASAuthorizationAppleIDButton)?.cornerRadius = 11
         }
+        self.proceedNode = SolidRoundedButtonNode(title: self.strings.Login_OpenFragment, theme: SolidRoundedButtonTheme(backgroundColor: UIColor(rgb: 0x37475a), foregroundColor: .white), height: 50.0, cornerRadius: 11.0, gloss: false)
+        self.proceedNode.progressType = .embedded
+        self.proceedNode.isHidden = true
+        self.proceedNode.iconSpacing = 4.0
+        self.proceedNode.animationSize = CGSize(width: 36.0, height: 36.0)
         
         super.init()
         
@@ -152,6 +161,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         self.addSubnode(self.animationNode)
         self.addSubnode(self.dividerNode)
         self.addSubnode(self.errorTextNode)
+        self.addSubnode(self.proceedNode)
         
         self.codeInputView.updated = { [weak self] in
             guard let strongSelf = self else {
@@ -161,6 +171,9 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         }
         
         self.nextOptionButtonNode.addTarget(self, action: #selector(self.nextOptionNodePressed), forControlEvents: .touchUpInside)
+        self.proceedNode.pressed = { [weak self] in
+            self?.proceedPressed()
+        }
         self.signInWithAppleButton?.addTarget(self, action: #selector(self.signInWithApplePressed), for: .touchUpInside)
     }
     
@@ -259,12 +272,24 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
+        
+        let maximumWidth: CGFloat = min(430.0, layout.size.width)
+        let inset: CGFloat = 24.0
         
         var insets = layout.insets(options: [])
         insets.top = layout.statusBarHeight ?? 20.0
                 
         var animationName = "IntroMessage"
+        var animationPlaybackMode: AnimatedStickerPlaybackMode = .once
         if let codeType = self.codeType {
             switch codeType {
             case .missedCall:
@@ -274,6 +299,11 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 animationName = "IntroLetter"
             case .sms:
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeSMSTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+            case .fragment:
+                self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeFragmentTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
+                animationName = "IntroFragment"
+                animationPlaybackMode = .count(3)
+                self.proceedNode.animation = "anim_fragment"
             default:
                 self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_EnterCodeTelegramTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
             }
@@ -284,22 +314,27 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
         if let inputHeight = layout.inputHeight {
             if let codeType = self.codeType, case .email = codeType {
                 insets.bottom = max(inputHeight, insets.bottom)
+            } else if let codeType = self.codeType, case .fragment = codeType {
+                insets.bottom = max(inputHeight, insets.bottom)
             } else {
                 insets.bottom = max(inputHeight, layout.standardInputHeight)
             }
         }
         
         if !self.animationNode.visibility {
-            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 256, height: 256, playbackMode: .once, mode: .direct(cachePathPrefix: nil))
+            self.animationNode.setup(source: AnimatedStickerNodeLocalFileSource(name: animationName), width: 256, height: 256, playbackMode: animationPlaybackMode, mode: .direct(cachePathPrefix: nil))
             self.animationNode.visibility = true
         }
         
         let animationSize = CGSize(width: 100.0, height: 100.0)
-        let titleSize = self.titleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
         
-        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
-        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: layout.size.width - 48.0, height: CGFloat.greatestFiniteMagnitude))
-        let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionSize = self.currentOptionNode.updateLayout(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
+        let currentOptionInfoSize = self.currentOptionInfoNode.measure(CGSize(width: maximumWidth - 48.0, height: CGFloat.greatestFiniteMagnitude))
+        let nextOptionSize = self.nextOptionTitleNode.updateLayout(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
+        
+        let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - inset * 2.0, transition: transition)
+        let proceedSize = CGSize(width: maximumWidth - inset * 2.0, height: proceedHeight)
         
         let codeLength: Int
         var codePrefix: String = ""
@@ -321,6 +356,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             codeLength = Int(length)
         case let .email(_, length, _, _, _):
             codeLength = Int(length)
+        case let .fragment(_, length):
+            codeLength = Int(length)
         case .emailSetupRequired:
             codeLength = 6
         case .none:
@@ -338,7 +375,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             ),
             prefix: codePrefix,
             count: codeLength,
-            width: layout.size.width - 28.0,
+            width: maximumWidth - 28.0,
             compact: layout.size.width <= 320.0
         )
         
@@ -390,13 +427,18 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 
                 items.append(AuthorizationLayoutItem(node: self.codeInputView, size: codeFieldSize, spacingBefore: AuthorizationLayoutItemSpacing(weight: 30.0, maxValue: 30.0), spacingAfter: AuthorizationLayoutItemSpacing(weight: 104.0, maxValue: 104.0)))
 
-                if self.appleSignInAllowed, let signInWithAppleButton = self.signInWithAppleButton {
+                let inset: CGFloat = 24.0
+                if case .fragment = codeType {
+                    self.proceedNode.isHidden = false
+                    let buttonFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize)
+                    transition.updateFrame(node: self.proceedNode, frame: buttonFrame)
+                } else if self.appleSignInAllowed, let signInWithAppleButton = self.signInWithAppleButton {
                     additionalBottomInset = 80.0
                     
                     self.nextOptionButtonNode.isHidden = true
                     signInWithAppleButton.isHidden = false
+                    self.proceedNode.isHidden = true
 
-                    let inset: CGFloat = 24.0
                     let buttonSize = CGSize(width: layout.size.width - inset * 2.0, height: 50.0)
                     transition.updateFrame(view: signInWithAppleButton, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - buttonSize.width) / 2.0), y: layout.size.height - insets.bottom - buttonSize.height - inset), size: buttonSize))
                     
@@ -405,6 +447,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                 } else {
                     self.signInWithAppleButton?.isHidden = true
                     self.dividerNode.isHidden = true
+                    self.proceedNode.isHidden = true
                     
                     if case .email = codeType {
                         self.nextOptionButtonNode.isHidden = true
@@ -501,6 +544,8 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
                     codeLength = length
                 case let .email(_, length, _, _, _):
                     codeLength = length
+                case let .fragment(_, length):
+                    codeLength = length
                 default:
                     break
             }
@@ -533,6 +578,12 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     
     @objc func nextOptionNodePressed() {
         self.requestAnotherOption?()
+    }
+    
+    @objc func proceedPressed() {
+        if case let .fragment(url, _) = self.codeType {
+            self.openFragment?(url)
+        }
     }
     
     @objc func signInWithApplePressed() {

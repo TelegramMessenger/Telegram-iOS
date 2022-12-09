@@ -226,7 +226,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
                 bottomController.viewWillAppear(true)
                 let bottomNode = bottomController.displayNode
                 
-                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, isFlat: self.isFlat, container: self, topNode: topNode, topNavigationBar: topController.navigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
+                let navigationTransitionCoordinator = NavigationTransitionCoordinator(transition: .Pop, isInteractive: true, isFlat: self.isFlat, container: self, topNode: topNode, topNavigationBar: topController.transitionNavigationBar, bottomNode: bottomNode, bottomNavigationBar: bottomController.transitionNavigationBar, didUpdateProgress: { [weak self, weak bottomController] progress, transition, topFrame, bottomFrame in
                     if let strongSelf = self {
                         if let top = strongSelf.state.top {
                             strongSelf.syncKeyboard(leftEdge: top.value.displayNode.frame.minX, transition: transition)
@@ -315,12 +315,12 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
             for i in 0 ..< controllers.count {
                 if i == 0 {
                     if canBeClosed {
-                        controllers[i].navigationBar?.previousItem = .close
+                        controllers[i].transitionNavigationBar?.previousItem = .close
                     } else {
-                        controllers[i].navigationBar?.previousItem = nil
+                        controllers[i].transitionNavigationBar?.previousItem = nil
                     }
                 } else {
-                    controllers[i].navigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
+                    controllers[i].transitionNavigationBar?.previousItem = .item(controllers[i - 1].navigationItem)
                 }
             }
         
@@ -461,7 +461,7 @@ public final class NavigationContainer: ASDisplayNode, UIGestureRecognizerDelega
             }
             toValue.value.setIgnoreAppearanceMethodInvocations(false)
             
-            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, isInteractive: false, isFlat: self.isFlat, container: self, topNode: topController.displayNode, topNavigationBar: topController.navigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.navigationBar, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
+            let topTransition = TopTransition(type: transitionType, previous: fromValue, coordinator: NavigationTransitionCoordinator(transition: mappedTransitionType, isInteractive: false, isFlat: self.isFlat, container: self, topNode: topController.displayNode, topNavigationBar: topController.transitionNavigationBar, bottomNode: bottomController.displayNode, bottomNavigationBar: bottomController.transitionNavigationBar, didUpdateProgress: { [weak self] _, transition, topFrame, bottomFrame in
                 guard let strongSelf = self else {
                     return
                 }

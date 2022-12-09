@@ -13,7 +13,9 @@ import GradientBackground
 
 private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError> {
     return .single({ arguments in
-        let context = DrawingContext(size: arguments.drawingSize, clear: true)
+        guard let context = DrawingContext(size: arguments.drawingSize, clear: true) else {
+            return nil
+        }
         
         context.withFlippedContext { c in
             c.setFillColor(color.cgColor)
@@ -30,7 +32,9 @@ private func whiteColorImage(theme: PresentationTheme, color: UIColor) -> Signal
 }
 
 private let blackColorImage: UIImage? = {
-    let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, opaque: true, clear: false)
+    guard let context = DrawingContext(size: CGSize(width: 1.0, height: 1.0), scale: 1.0, opaque: true, clear: false) else {
+        return nil
+    }
     context.withContext { c in
         c.setFillColor(UIColor.black.cgColor)
         c.fill(CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))

@@ -86,7 +86,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
     case enableDebugDataDisplay(Bool)
     case acceleratedStickers(Bool)
     case experimentalBackground(Bool)
-    case inlineStickers(Bool)
+    case inlineForums(Bool)
     case localTranscription(Bool)
     case enableReactionOverrides(Bool)
     case playerEmbedding(Bool)
@@ -111,7 +111,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return DebugControllerSection.logging.rawValue
         case .enableRaiseToSpeak, .keepChatNavigationStack, .skipReadHistory, .crashOnSlowQueries:
             return DebugControllerSection.experiments.rawValue
-        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineStickers, .localTranscription, . enableReactionOverrides, .restorePurchases:
+        case .clearTips, .crash, .resetData, .resetDatabase, .resetDatabaseAndCache, .resetHoles, .reindexUnread, .resetBiometricsData, .resetWebViewCache, .optimizeDatabase, .photoPreview, .knockoutWallpaper, .playerEmbedding, .playlistPlayback, .voiceConference, .experimentalCompatibility, .enableDebugDataDisplay, .acceleratedStickers, .experimentalBackground, .inlineForums, .localTranscription, . enableReactionOverrides, .restorePurchases:
             return DebugControllerSection.experiments.rawValue
         case .preferredVideoCodec:
             return DebugControllerSection.videoExperiments.rawValue
@@ -188,7 +188,7 @@ private enum DebugControllerEntry: ItemListNodeEntry {
             return 30
         case .experimentalBackground:
             return 31
-        case .inlineStickers:
+        case .inlineForums:
             return 32
         case .localTranscription:
             return 33
@@ -1053,12 +1053,12 @@ private enum DebugControllerEntry: ItemListNodeEntry {
                     })
                 }).start()
             })
-        case let .inlineStickers(value):
-            return ItemListSwitchItem(presentationData: presentationData, title: "Inline Stickers", value: value, sectionId: self.section, style: .blocks, updated: { value in
+        case let .inlineForums(value):
+            return ItemListSwitchItem(presentationData: presentationData, title: "Inline Forums", value: value, sectionId: self.section, style: .blocks, updated: { value in
                 let _ = arguments.sharedContext.accountManager.transaction ({ transaction in
                     transaction.updateSharedData(ApplicationSpecificSharedDataKeys.experimentalUISettings, { settings in
                         var settings = settings?.get(ExperimentalUISettings.self) ?? ExperimentalUISettings.defaultSettings
-                        settings.inlineStickers = value
+                        settings.inlineForums = value
                         return PreferencesEntry(settings)
                     })
                 }).start()
@@ -1219,7 +1219,7 @@ private func debugControllerEntries(sharedContext: SharedAccountContext, present
         entries.append(.enableDebugDataDisplay(experimentalSettings.enableDebugDataDisplay))
         entries.append(.acceleratedStickers(experimentalSettings.acceleratedStickers))
         entries.append(.experimentalBackground(experimentalSettings.experimentalBackground))
-        entries.append(.inlineStickers(experimentalSettings.inlineStickers))
+        entries.append(.inlineForums(experimentalSettings.inlineForums))
         entries.append(.localTranscription(experimentalSettings.localTranscription))
         if case .internal = sharedContext.applicationBindings.appBuildType {
             entries.append(.enableReactionOverrides(experimentalSettings.enableReactionOverrides))

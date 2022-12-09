@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import AsyncDisplayKit
 import Display
+import SwiftSignalKit
 import TelegramPresentationData
 import TextFormat
 import Markdown
@@ -39,6 +40,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     private let proceedNode: SolidRoundedButtonNode
     
     private var layoutArguments: (ContainerViewLayout, CGFloat)?
+    
+    private let appearanceTimestamp = CACurrentMediaTime()
     
     var currentName: (String, String) {
         return (self.firstNameField.textField.text ?? "", self.lastNameField.textField.text ?? "")
@@ -209,7 +212,17 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
     }
     
     func containerLayoutUpdated(_ layout: ContainerViewLayout, navigationBarHeight: CGFloat, transition: ContainedViewLayoutTransition) {
+        let previousInputHeight = self.layoutArguments?.0.inputHeight ?? 0.0
+        let newInputHeight = layout.inputHeight ?? 0.0
+        
         self.layoutArguments = (layout, navigationBarHeight)
+        
+        var layout = layout
+        if CACurrentMediaTime() - self.appearanceTimestamp < 2.0, newInputHeight < previousInputHeight {
+            layout = layout.withUpdatedInputHeight(previousInputHeight)
+        }
+        
+        let maximumWidth: CGFloat = min(430.0, layout.size.width)
         
         var insets = layout.insets(options: [.statusBar])
         if let inputHeight = layout.inputHeight {
@@ -219,15 +232,15 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
         let additionalBottomInset: CGFloat = layout.size.width > 320.0 ? 90.0 : 10.0
                 
         self.titleNode.attributedText = NSAttributedString(string: self.strings.Login_InfoTitle, font: Font.semibold(28.0), textColor: self.theme.list.itemPrimaryTextColor)
-        let titleSize = self.titleNode.measure(CGSize(width: layout.size.width, height: CGFloat.greatestFiniteMagnitude))
+        let titleSize = self.titleNode.measure(CGSize(width: maximumWidth, height: CGFloat.greatestFiniteMagnitude))
         
         let fieldHeight: CGFloat = 54.0
         
         let sideInset: CGFloat = 24.0
         let innerInset: CGFloat = 16.0
         
-        let noticeSize = self.currentOptionNode.measure(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
-        let termsSize = self.termsNode.updateLayout(CGSize(width: layout.size.width - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let noticeSize = self.currentOptionNode.measure(CGSize(width: maximumWidth - 28.0, height: CGFloat.greatestFiniteMagnitude))
+        let termsSize = self.termsNode.updateLayout(CGSize(width: maximumWidth - 28.0, height: CGFloat.greatestFiniteMagnitude))
         
         let avatarSize: CGSize = CGSize(width: 110.0, height: 110.0)
         var items: [AuthorizationLayoutItem] = []
@@ -249,8 +262,8 @@ final class AuthorizationSequenceSignUpControllerNode: ASDisplayNode, UITextFiel
             self.proceedNode.isHidden = false
             
             let inset: CGFloat = 24.0
-            let proceedHeight = self.proceedNode.updateLayout(width: layout.size.width - 48.0, transition: transition)
-            let proceedSize = CGSize(width: layout.size.width - 48.0, height: proceedHeight)
+            let proceedHeight = self.proceedNode.updateLayout(width: maximumWidth - 48.0, transition: transition)
+            let proceedSize = CGSize(width: maximumWidth - 48.0, height: proceedHeight)
             transition.updateFrame(node: self.proceedNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((layout.size.width - proceedSize.width) / 2.0), y: layout.size.height - insets.bottom - proceedSize.height - inset), size: proceedSize))
         } else {
             insets.top = navigationBarHeight

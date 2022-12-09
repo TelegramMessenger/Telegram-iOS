@@ -239,7 +239,6 @@ private enum PreferencesKeyValues: Int32 {
     case appConfiguration = 14
     case searchBotsConfiguration = 15
     case contactsSettings = 16
-    case walletCollection = 18
     case contentSettings = 19
     case chatListFilters = 20
     case peersNearby = 21
@@ -247,6 +246,7 @@ private enum PreferencesKeyValues: Int32 {
     case secretChatSettings = 23
     case reactionSettings = 24
     case premiumPromo = 26
+    case globalMessageAutoremoveTimeoutSettings = 27
 }
 
 public func applicationSpecificPreferencesKey(_ value: Int32) -> ValueBoxKey {
@@ -339,13 +339,7 @@ public struct PreferencesKeys {
         key.setInt32(0, value: PreferencesKeyValues.secretChatSettings.rawValue)
         return key
     }()
-    
-    public static let walletCollection: ValueBoxKey = {
-        let key = ValueBoxKey(length: 4)
-        key.setInt32(0, value: PreferencesKeyValues.walletCollection.rawValue)
-        return key
-    }()
-    
+        
     public static let contentSettings: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.contentSettings.rawValue)
@@ -379,6 +373,12 @@ public struct PreferencesKeys {
     public static let premiumPromo: ValueBoxKey = {
         let key = ValueBoxKey(length: 4)
         key.setInt32(0, value: PreferencesKeyValues.premiumPromo.rawValue)
+        return key
+    }()
+    
+    public static let globalMessageAutoremoveTimeoutSettings: ValueBoxKey = {
+        let key = ValueBoxKey(length: 4)
+        key.setInt32(0, value: PreferencesKeyValues.globalMessageAutoremoveTimeoutSettings.rawValue)
         return key
     }()
 }

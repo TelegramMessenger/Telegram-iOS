@@ -495,7 +495,7 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                 return
             }
             var messageId: MessageId?
-            if let messageReference = messageReference, case let .message(_, id, _, _, _) = messageReference.content {
+            if let messageReference = messageReference, case let .message(_, _, id, _, _, _) = messageReference.content {
                 messageId = id
             }
             strongSelf.controllerInteraction.openPeerContextMenu(peer, messageId, strongSelf.containerNode, strongSelf.containerNode.bounds, gesture)
@@ -531,8 +531,8 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
                     return
                 }
                 let cachedPeerData = peerView.cachedData
-                if let cachedPeerData = cachedPeerData as? CachedUserData {
-                    if let photo = cachedPeerData.photo, let video = photo.videoRepresentations.last, let peerReference = PeerReference(peer) {
+                if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
+                    if let photo = maybePhoto, let video = photo.videoRepresentations.last, let peerReference = PeerReference(peer) {
                         let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                         let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
                         let videoContent = NativeVideoContent(id: .profileVideo(videoId, "\(Int32.random(in: 0 ..< Int32.max))"), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
@@ -641,16 +641,16 @@ final class ChatMessageAvatarHeaderNode: ListViewItemHeaderNode {
 
     @objc func tapGesture(_ recognizer: ListViewTapGestureRecognizer) {
         if case .ended = recognizer.state {
-            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, id, _, _, _) = self.messageReference?.content {
+            if self.peerId.namespace == Namespaces.Peer.Empty, case let .message(_, _, id, _, _, _) = self.messageReference?.content {
                 self.controllerInteraction.displayMessageTooltip(id, self.presentationData.strings.Conversation_ForwardAuthorHiddenTooltip, self, self.avatarNode.frame)
             } else if let peer = self.peer {
                 if let adMessageId = self.adMessageId {
                     self.controllerInteraction.activateAdAction(adMessageId)
                 } else {
                     if let channel = peer as? TelegramChannel, case .broadcast = channel.info {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, false)
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .chat(textInputState: nil, subject: nil, peekData: nil), self.messageReference, .default)
                     } else {
-                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, false)
+                        self.controllerInteraction.openPeer(EnginePeer(peer), .info, self.messageReference, .groupParticipant)
                     }
                 }
             }

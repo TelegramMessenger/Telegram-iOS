@@ -4351,6 +4351,27 @@ Unused sets are archived when you add more.";
 "SettingsSearch.Synonyms.Support" = "Support";
 "SettingsSearch.Synonyms.FAQ" = " ";
 
+"SettingsSearch.Synonyms.Devices.TerminateOtherSessions" = " ";
+"SettingsSearch.Synonyms.Devices.LinkDesktopDevice" = " ";
+
+"SettingsSearch.Synonyms.Language.ShowTranslateButton" = " ";
+"SettingsSearch.Synonyms.Language.DoNotTranslate" = " ";
+
+"SettingsSearch.Synonyms.Premium" = " ";
+"SettingsSearch.Synonyms.Premium.DoubledLimits" = " ";
+"SettingsSearch.Synonyms.Premium.UploadSize" = " ";
+"SettingsSearch.Synonyms.Premium.FasterSpeed" = " ";
+"SettingsSearch.Synonyms.Premium.VoiceToText" = "Transcribe";
+"SettingsSearch.Synonyms.Premium.NoAds" = " ";
+"SettingsSearch.Synonyms.Premium.EmojiStatus" = " ";
+"SettingsSearch.Synonyms.Premium.Reactions" = " ";
+"SettingsSearch.Synonyms.Premium.Stickers" = " ";
+"SettingsSearch.Synonyms.Premium.AnimatedEmoji" = " ";
+"SettingsSearch.Synonyms.Premium.ChatManagement" = " ";
+"SettingsSearch.Synonyms.Premium.Badge" = "Star";
+"SettingsSearch.Synonyms.Premium.Avatar" = "Video Avatar";
+"SettingsSearch.Synonyms.Premium.AppIcon" = " ";
+
 "ChatList.DeleteForCurrentUser" = "Delete just for me";
 "ChatList.DeleteForEveryone" = "Delete for me and %@";
 "ChatList.DeleteForEveryoneConfirmationTitle" = "Warning!";
@@ -6228,6 +6249,10 @@ Sorry for the inconvenience.";
 
 "Conversation.AutoremoveTimerSetUserYou" = "You set messages to automatically delete after %1$@";
 "Conversation.AutoremoveTimerSetUser" = "%1$@ set messages to automatically delete after %2$@";
+
+"Conversation.AutoremoveTimerSetUserGlobalYou" = "You set a self-destruct timer for all chats.\nAll new messages in this chat will be automatically deleted after %1$@ they're sent.";
+"Conversation.AutoremoveTimerSetUserGlobal" = "%1$@ set a self-destruct timer for all chats.\nAll new messages in this chat will be automatically deleted after %2$@ they're sent.";
+
 "Conversation.AutoremoveTimerRemovedUserYou" = "You disabled the auto-delete timer";
 "Conversation.AutoremoveTimerRemovedUser" = "%1$@ disabled the auto-delete timer";
 "Conversation.AutoremoveTimerSetGroup" = "A group admin set messages to automatically delete after %1$@";
@@ -7564,9 +7589,7 @@ Sorry for the inconvenience.";
 "Premium.Stickers.Proceed" = "Unlock Premium Stickers";
 
 "Premium.Reactions.Proceed" = "Unlock Premium Reactions";
-
 "Premium.AppIcons.Proceed" = "Unlock Premium Icons";
-
 "Premium.NoAds.Proceed" = "About Telegram Premium";
 
 "AccessDenied.LocationPreciseDenied" = "To share your specific location in this chat, please go to Settings > Privacy > Location Services > Telegram and set Precise Location to On.";
@@ -7645,13 +7668,14 @@ Sorry for the inconvenience.";
 
 "Premium.FasterSpeed" = "Faster Download Speed";
 "Premium.FasterSpeedInfo" = "No more limits on the speed with which media and documents are downloaded.";
+"Premium.FasterSpeedStandaloneInfo" = "Subscribe to **Telegram Premium** to download media and files at the fastest possible speed.";
 
 "Premium.VoiceToText" = "Voice-to-Text Conversion";
 "Premium.VoiceToTextInfo" = "Ability to read the transcript of any incoming voice message.";
+"Premium.VoiceToTextStandaloneInfo" = "Subscribe to **Telegram Premium** to be able to convert voice and video messages to text.";
 
 "Premium.NoAds" = "No Ads";
 "Premium.NoAdsInfo" = "No more ads in public channels where Telegram sometimes shows ads.";
-
 "Premium.NoAdsStandaloneInfo" = "Remove ads such as this one by subscribing to **Telegram Premium**.";
 
 "Premium.Reactions" = "Unique Reactions";
@@ -7665,6 +7689,7 @@ Sorry for the inconvenience.";
 
 "Premium.ChatManagement" = "Advanced Chat Management";
 "Premium.ChatManagementInfo" = "Tools to set the default folder, auto-archive and hide new chats from non-contacts.";
+"Premium.ChatManagementStandaloneInfo" = "Subscribers of **Telegram Premium** can set the default folder, auto-archive and hide new chats from non-contacts.";
 
 "Premium.Badge" = "Profile Badge";
 "Premium.BadgeInfo" = "A badge next to your name showing that you are helping support Telegram.";
@@ -8161,7 +8186,7 @@ Sorry for the inconvenience.";
 "ChatList.SelectedTopics_any" = "%@ Topics Selected";
 
 "ChatList.EmptyTopicsTitle" = "No topics here yet";
-"ChatList.EmptyTopicsCreate" = "Create New Topic";
+"ChatList.EmptyTopicsCreate" = "Create Topic";
 "ChatList.EmptyTopicsShowAsMessages" = "Show as Messages";
 
 "Message.AudioTranscription.SubscribeToPremium" = "Subscribe to **Telegram Premium** to convert voice to text.";
@@ -8236,8 +8261,185 @@ Sorry for the inconvenience.";
 "Channel.AdminLog.TopicRenamedWithRemovedIcon" = "%1$@ renamed topic %2$@ to %3$@ and removed icon";
 "Channel.AdminLog.TopicChangedIcon" = "%1$@ changed topic %2$@ icon to %3$@";
 "Channel.AdminLog.TopicRemovedIcon" = "%1$@ removed topic %2$@ icon";
+"Channel.AdminLog.TopicUnhidden" = "%1$@ unhid topic %2$@";
+"Channel.AdminLog.TopicHidden" = "%1$@ hid topic %2$@";
 
 "Attachment.Pasteboard" = "Clipboard";
 "Attachment.DiscardPasteboardAlertText" = "Discard pasted items?";
 
 "Undo.DeletedTopic" = "Topic Deleted";
+
+"ChatList.MaxThreadPinsFinalText_1" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
+"ChatList.MaxThreadPinsFinalText_any" = "Sorry, you can't pin more than %@ topics to the top. Unpin some that are currently pinned.";
+
+"EmojiSearch.SearchTopicIconsPlaceholder" = "Search Topic Icons";
+"EmojiSearch.SearchTopicIconsEmptyResult" = "No emoji found";
+
+"Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is currently available for purchase. [Learn more...]()";
+"Channel.Username.UsernamePurchaseAvailable" = "**This username is already taken.** However, it is currently available for purchase. [Learn more...]()";
+
+"DownloadList.IncreaseSpeed" = "Increase Speed";
+"Conversation.IncreaseSpeed" = "Increase Speed";
+
+"Premium.ChatManagement.Proceed" = "About Telegram Premium";
+"Premium.FasterSpeed.Proceed" = "About Telegram Premium";
+
+"OwnershipTransfer.EnterPassword" = "Enter Password";
+"OwnershipTransfer.EnterPasswordText" = "Please enter your 2-Step Verification password to confirm the action.";
+
+"Navigation.AllChats" = "All Chats";
+
+"Group.Management.AntiSpam" = "Aggressive Anti-Spam";
+"Group.Management.AntiSpamInfo" = "Telegram will filter more spam but may occasionally affect ordinary messages. You can report false positives in Recent Actions.";
+
+"Group.Management.AntiSpamMagic" = "magic";
+"Group.AdminLog.AntiSpamTitle" = "Telegram Anti-Spam";
+"Group.AdminLog.AntiSpamText" = "You can manage anti-spam settings in Group Info > [Administrators]().";
+
+"ChatList.ThreadHideAction" = "Hide";
+"ChatList.ThreadUnhideAction" = "Unhide";
+
+"Notification.ForumTopicHidden" = "Topic hidden";
+"Notification.ForumTopicUnhidden" = "Topic unhidden";
+"Notification.ForumTopicHiddenAuthor" = "%1$@ hid the topic";
+"Notification.ForumTopicUnhiddenAuthor" = "%1$@ unhid the topic";
+"Notification.OverviewTopicHidden" = "%1$@ hid %2$@ %3$@";
+"Notification.OverviewTopicUnhidden" = "%1$@ unhid %2$@ %3$@";
+
+"CreateTopic.ShowGeneral" = "Show in Topics";
+"CreateTopic.ShowGeneralInfo" = "If the \"General\" topic is hidden, group members can pull down in the topic list to view it.";
+
+"ChatList.DeleteThreadsConfirmation_1" = "Delete";
+"ChatList.DeleteThreadsConfirmation_any" = "Delete %@ Threads";
+"ChatList.DeletedThreads_1" = "Deleted 1 thread";
+"ChatList.DeletedThreads_any" = "Deleted %@ threads";
+
+"DialogList.SearchSectionMessagesIn" = "Messages in %@";
+
+"Conversation.ContextMenuReportFalsePositive" = "Report False Positive";
+"Group.AdminLog.AntiSpamFalsePositiveReportedText" = "Telegram moderators will review your report. Thank you!";
+
+"ChatList.EmptyTopicsDescription" = "Older messages from this group have been moved to \"General\".";
+
+"Stickers.EmojiPackInfoText" = "This message contains **%@** emoji.";
+"PeerInfo.TopicIconInfoText" = "This topic's icon is from **%@**.";
+
+"AutoremoveSetup.AdditionalGlobalSettingsInfo" = "You can also set your default [self-destruct timer]() for all chats in Settings.";
+
+"Login.EnterCodeFragmentTitle" = "Enter Code";
+"Login.EnterCodeFragmentText" = "Get the code for **%@** in the Anonymous Numbers section on **Fragment**.";
+
+"Login.OpenFragment" = "Open Fragment";
+
+"Login.AnonymousNumbers" = "Anonymous Numbers";
+
+"Conversation.CantPhoneCallAnonymousNumberError" = "You can't call this phone number.";
+
+"UserInfo.AnonymousNumberLabel" = "anonymous number";
+"UserInfo.AnonymousNumberInfo" = "This number is not tied to a SIM card and was acquired on [Fragment]().";
+
+"Login.NewNumber" = "New Number";
+
+"ChatList.GeneralHidden" = "General hidden";
+"ChatList.GeneralHiddenInfo" = "Pull down to see the general topic.";
+"ChatList.GeneralUnhidden" = "General unhidden";
+"ChatList.GeneralUnhiddenInfo" = "Swipe left on the general topic to hide it.";
+
+"Autoremove.OptionOff" = "Off";
+"Autoremove.SetCustomTime" = "Set Custom Time...";
+"CreateGroup.AutoDeleteTitle" = "Auto-Delete Messages";
+"CreateGroup.AutoDeleteText" = "Automatically delete messages sent in this group for everyone after a period of time.";
+
+"Settings.AutoDeleteTitle" = "Auto-Delete Messages";
+"Settings.AutoDeleteInfo" = "Automatically delete messages for everyone after a period of time in all new chats you start.";
+
+"Time.AfterSeconds_1" = "%@ second";
+"Time.AfterSeconds_any" = "%@ seconds";
+"Time.AfterMinutes_1" = "%@ minute";
+"Time.AfterMinutes_any" = "%@ minutes";
+"Time.AfterHours_1" = "%@ hour";
+"Time.AfterHours_any" = "%@ hours";
+"Time.AfterDays_1" = "%@ day";
+"Time.AfterDays_any" = "%@ days";
+"Time.AfterWeeks_1" = "%@ week";
+"Time.AfterWeeks_any" = "%@ weeks";
+"Time.AfterMonths_1" = "%@ month";
+"Time.AfterMonths_any" = "%@ months";
+"Time.AfterYears_1" = "%@ years";
+"Time.AfterYears_any" = "%@ years";
+
+"Time.TimerSeconds_1" = "%@-second";
+"Time.TimerSeconds_any" = "%@-second";
+"Time.TimerMinutes_1" = "%@-minute";
+"Time.TimerMinutes_any" = "%@-minute";
+"Time.TimerHours_1" = "%@-hour";
+"Time.TimerHours_any" = "%@-hour";
+"Time.TimerDays_1" = "%@-day";
+"Time.TimerDays_any" = "%@-day";
+"Time.TimerWeeks_1" = "%@-week";
+"Time.TimerWeeks_any" = "%@-week";
+"Time.TimerMonths_1" = "%@-month";
+"Time.TimerMonths_any" = "%@-month";
+"Time.TimerYears_1" = "%@-year";
+"Time.TimerYears_any" = "%@-year";
+
+"ChatList.LabelAutodeleteAfter" = "auto-delete after %@";
+"ChatList.LabelAutodeleteDisabled" = "auto-deletion disabled";
+
+"GlobalAutodeleteSettings.Title" = "Auto-Delete Messages";
+"GlobalAutodeleteSettings.OptionsHeader" = "SELF-DESTRUCT TIMER";
+"GlobalAutodeleteSettings.OptionTitle" = "After %@";
+"GlobalAutodeleteSettings.SetCustomTime" = "Set Custom Time...";
+"GlobalAutodeleteSettings.InfoDisabled" = "If enabled, all new messages in chats you start will be automatically deleted for everyone at some point after they have been sent. This will not affect your existing chats.";
+"GlobalAutodeleteSettings.InfoEnabled" = "All new messages in chats you started will be automatically deleted for everyone %@ after they have been sent. You can also [apply this setting for your existing chats]().";
+"GlobalAutodeleteSettings.SetConfirmTitle" = "Self-Destruct Timer";
+"GlobalAutodeleteSettings.SetConfirmText" = "Are you sure you want all messages in your new private chats and in new groups you create to be automatically deleted for everyone %@ after they have been sent?";
+"GlobalAutodeleteSettings.SetConfirmAction" = "Enable Auto-Deletion";
+"GlobalAutodeleteSettings.SetConfirmToastEnabled" = "Messages in all new chats you start will be automatically deleted after %@.";
+"GlobalAutodeleteSettings.SetConfirmToastDisabled" = "Messages in all new chats you start will not be automatically deleted.";
+"GlobalAutodeleteSettings.ApplyChatsTitle" = "Select Chats";
+"GlobalAutodeleteSettings.ApplyChatsPlaceholder" = "Select chats to apply a %@ self-destruct timer";
+"GlobalAutodeleteSettings.ApplyChatsToast" = "You applied the %1$@ self-destruct timer to %2$@.";
+"GlobalAutodeleteSettings.ApplyChatsSubject_1" = "%@ chat";
+"GlobalAutodeleteSettings.ApplyChatsSubject_any" = "%@ chats";
+"GlobalAutodeleteSettings.AttemptDisabledGroupSelection" = "You need admin rights in this group to enable auto-delete.";
+"GlobalAutodeleteSettings.AttemptDisabledChannelSelection" = "You need admin rights in this channel to enable auto-delete.";
+"GlobalAutodeleteSettings.AttemptDisabledGenericSelection" = "You can't enable auto-delete in this chat.";
+
+"EmojiSearch.SearchEmojiPlaceholder" = "Search Emoji";
+"StickersSearch.SearchStickersPlaceholder" = "Search Stickers";
+"GifSearch.SearchGifPlaceholder" = "Search GIFs";
+
+"MessageTimer.LargeShortSeconds_1" = "%@s";
+"MessageTimer.LargeShortSeconds_2" = "%@s";
+"MessageTimer.LargeShortSeconds_3_10" = "%@s";
+"MessageTimer.LargeShortSeconds_any" = "%@s";
+"MessageTimer.LargeShortSeconds_many" = "%@s";
+"MessageTimer.LargeShortSeconds_0" = "%@s";
+"MessageTimer.LargeShortMinutes_1" = "%@m";
+"MessageTimer.LargeShortMinutes_2" = "%@m";
+"MessageTimer.LargeShortMinutes_3_10" = "%@m";
+"MessageTimer.LargeShortMinutes_any" = "%@m";
+"MessageTimer.LargeShortMinutes_many" = "%@m";
+"MessageTimer.LargeShortMinutes_0" = "%@m";
+"MessageTimer.LargeShortHours_1" = "%@h";
+"MessageTimer.LargeShortHours_2" = "%@h";
+"MessageTimer.LargeShortHours_3_10" = "%@h";
+"MessageTimer.LargeShortHours_any" = "%@h";
+"MessageTimer.LargeShortHours_many" = "%@h";
+"MessageTimer.LargeShortHours_0" = "%@h";
+"MessageTimer.LargeShortDays_1" = "%@d";
+"MessageTimer.LargeShortDays_2" = "%@d";
+"MessageTimer.LargeShortDays_3_10" = "%@d";
+"MessageTimer.LargeShortDays_any" = "%@d";
+"MessageTimer.LargeShortDays_many" = "%@d";
+"MessageTimer.LargeShortDays_0" = "%@d";
+"MessageTimer.LargeShortWeeks_1" = "%@w";
+"MessageTimer.LargeShortWeeks_2" = "%@w";
+"MessageTimer.LargeShortWeeks_3_10" = "%@w";
+"MessageTimer.LargeShortWeeks_any" = "%@w";
+"MessageTimer.LargeShortWeeks_many" = "%@w";
+"MessageTimer.LargeShortMonths_1" = "%@m";
+"MessageTimer.LargeShortMonths_any" = "%@m";
+"MessageTimer.LargeShortYears_1" = "%@y";
+"MessageTimer.LargeShortYears_any" = "%@y";

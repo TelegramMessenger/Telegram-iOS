@@ -105,7 +105,7 @@ private func fixListNodeScrolling(_ listNode: ListView, searchNode: NavigationBa
         } else {
             offset = 0.0
         }
-        let _ = listNode.scrollToOffsetFromTop(offset)
+        let _ = listNode.scrollToOffsetFromTop(offset, animated: true)
         return true
     } else if searchNode.expansionProgress == 1.0 {
         var sortItemNode: ListViewItemNode?

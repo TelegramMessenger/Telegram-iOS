@@ -2532,6 +2532,8 @@ func _internal_getVideoBroadcastPart(dataSource: AudioBroadcastDataSource, callI
         scale = 0
     case 500:
         scale = 1
+    case 32000:
+        scale = -5
     default:
         return .single(GetAudioBroadcastPartResult(status: .notReady, responseTimestamp: Double(timestampIdMilliseconds) / 1000.0))
     }

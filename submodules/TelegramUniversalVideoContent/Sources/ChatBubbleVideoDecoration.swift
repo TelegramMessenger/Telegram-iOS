@@ -47,7 +47,9 @@ public final class ChatBubbleVideoDecoration: UniversalVideoDecoration {
             let boundingSize: CGSize = CGSize(width: max(corners.topLeft.radius, corners.bottomLeft.radius) + max(corners.topRight.radius, corners.bottomRight.radius), height: max(corners.topLeft.radius, corners.topRight.radius) + max(corners.bottomLeft.radius, corners.bottomRight.radius))
             let size: CGSize = CGSize(width: boundingSize.width + corners.extendedEdges.left + corners.extendedEdges.right, height: boundingSize.height + corners.extendedEdges.top + corners.extendedEdges.bottom)
             let arguments = TransformImageArguments(corners: corners, imageSize: size, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets())
-            let context = DrawingContext(size: size, clear: true)
+            guard let context = DrawingContext(size: size, clear: true) else {
+                return
+            }
             context.withContext { ctx in
                 ctx.setFillColor(UIColor.black.cgColor)
                 ctx.fill(arguments.drawingRect)

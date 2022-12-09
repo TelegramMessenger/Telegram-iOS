@@ -72,8 +72,8 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
                 PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value(userId))
             }))
         }
-    case let .messageActionSetMessagesTTL(period):
-        return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period))
+    case let .messageActionSetMessagesTTL(_, period, autoSettingFrom):
+        return TelegramMediaAction(action: .messageAutoremoveTimeoutUpdated(period: period, autoSettingSource: autoSettingFrom.flatMap { PeerId(namespace: Namespaces.Peer.CloudUser, id: PeerId.Id._internalFromInt64Value($0)) }))
     case let .messageActionGroupCallScheduled(call, scheduleDate):
         switch call {
         case let .inputGroupCall(id, accessHash):
@@ -89,7 +89,7 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         return TelegramMediaAction(action: .giftPremium(currency: currency, amount: amount, months: months))
     case let .messageActionTopicCreate(_, title, iconColor, iconEmojiId):
         return TelegramMediaAction(action: .topicCreated(title: title, iconColor: iconColor, iconFileId: iconEmojiId))
-    case let .messageActionTopicEdit(flags, title, iconEmojiId, closed):
+    case let .messageActionTopicEdit(flags, title, iconEmojiId, closed, hidden):
         var components: [TelegramMediaActionType.ForumTopicEditComponent] = []
         if let title = title {
             components.append(.title(title))
@@ -99,6 +99,9 @@ func telegramMediaActionFromApiAction(_ action: Api.MessageAction) -> TelegramMe
         }
         if let closed = closed {
             components.append(.isClosed(closed == .boolTrue))
+        }
+        if let hidden = hidden {
+            components.append(.isHidden(hidden == .boolTrue))
         }
         return TelegramMediaAction(action: .topicEdited(components: components))
     }

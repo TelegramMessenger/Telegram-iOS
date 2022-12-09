@@ -1711,6 +1711,7 @@ extension PresentationThemeInputButtonPanel: Codable {
         case panelBg
         case panelSeparator
         case buttonBg
+        case buttonHighlight
         case buttonStroke
         case buttonHighlightedBg
         case buttonHighlightedStroke
@@ -1722,6 +1723,7 @@ extension PresentationThemeInputButtonPanel: Codable {
         self.init(panelSeparatorColor: try decodeColor(values, .panelSeparator),
                   panelBackgroundColor: try decodeColor(values, .panelBg),
                   buttonFillColor: try decodeColor(values, .buttonBg),
+                  buttonHighlightColor: try decodeColor(values, .buttonHighlight),
                   buttonStrokeColor: try decodeColor(values, .buttonStroke),
                   buttonHighlightedFillColor: try decodeColor(values, .buttonHighlightedBg),
                   buttonHighlightedStrokeColor: try decodeColor(values, .buttonHighlightedStroke),
@@ -1733,6 +1735,7 @@ extension PresentationThemeInputButtonPanel: Codable {
         try encodeColor(&values, self.panelBackgroundColor, .panelBg)
         try encodeColor(&values, self.panelSeparatorColor, .panelSeparator)
         try encodeColor(&values, self.buttonFillColor, .buttonBg)
+        try encodeColor(&values, self.buttonHighlightColor, .buttonHighlight)
         try encodeColor(&values, self.buttonStrokeColor, .buttonStroke)
         try encodeColor(&values, self.buttonHighlightedFillColor, .buttonHighlightedBg)
         try encodeColor(&values, self.buttonHighlightedStrokeColor, .buttonHighlightedStroke)

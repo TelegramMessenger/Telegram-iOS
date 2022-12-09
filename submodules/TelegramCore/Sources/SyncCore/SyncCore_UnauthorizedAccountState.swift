@@ -8,6 +8,7 @@ private enum SentAuthorizationCodeTypeValue: Int32 {
     case missedCall = 4
     case email = 5
     case emailSetupRequired = 6
+    case fragment = 7
 }
 
 public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
@@ -18,6 +19,7 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     case missedCall(numberPrefix: String, length: Int32)
     case email(emailPattern: String, length: Int32, nextPhoneLoginDate: Int32?, appleSignInAllowed: Bool, setup: Bool)
     case emailSetupRequired(appleSignInAllowed: Bool)
+    case fragment(url: String, length: Int32)
     
     public init(decoder: PostboxDecoder) {
         switch decoder.decodeInt32ForKey("v", orElse: 0) {
@@ -35,6 +37,8 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
                 self = .email(emailPattern: decoder.decodeStringForKey("e", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0), nextPhoneLoginDate: decoder.decodeOptionalInt32ForKey("d"), appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0, setup: decoder.decodeInt32ForKey("s", orElse: 0) != 0)
             case SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue:
                 self = .emailSetupRequired(appleSignInAllowed: decoder.decodeInt32ForKey("a", orElse: 0) != 0)
+            case SentAuthorizationCodeTypeValue.fragment.rawValue:
+                self = .fragment(url: decoder.decodeStringForKey("u", orElse: ""), length: decoder.decodeInt32ForKey("l", orElse: 0))
             default:
                 preconditionFailure()
         }
@@ -42,36 +46,40 @@ public enum SentAuthorizationCodeType: PostboxCoding, Equatable {
     
     public func encode(_ encoder: PostboxEncoder) {
         switch self {
-            case let .otherSession(length):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.otherSession.rawValue, forKey: "v")
-                encoder.encodeInt32(length, forKey: "l")
-            case let .sms(length):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.sms.rawValue, forKey: "v")
-                encoder.encodeInt32(length, forKey: "l")
-            case let .call(length):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.call.rawValue, forKey: "v")
-                encoder.encodeInt32(length, forKey: "l")
-            case let .flashCall(pattern):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.flashCall.rawValue, forKey: "v")
-                encoder.encodeString(pattern, forKey: "p")
-            case let .missedCall(numberPrefix, length):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.missedCall.rawValue, forKey: "v")
-                encoder.encodeString(numberPrefix, forKey: "n")
-                encoder.encodeInt32(length, forKey: "l")
-            case let .email(emailPattern, length, nextPhoneLoginDate, appleSignInAllowed, setup):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.email.rawValue, forKey: "v")
-                encoder.encodeString(emailPattern, forKey: "e")
-                encoder.encodeInt32(length, forKey: "l")
-                if let nextPhoneLoginDate = nextPhoneLoginDate {
-                    encoder.encodeInt32(nextPhoneLoginDate, forKey: "d")
-                } else {
-                    encoder.encodeNil(forKey: "d")
-                }
-                encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
-                encoder.encodeInt32(setup ? 1 : 0, forKey: "s")
-            case let .emailSetupRequired(appleSignInAllowed):
-                encoder.encodeInt32(SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue, forKey: "v")
-                encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
+        case let .otherSession(length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.otherSession.rawValue, forKey: "v")
+            encoder.encodeInt32(length, forKey: "l")
+        case let .sms(length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.sms.rawValue, forKey: "v")
+            encoder.encodeInt32(length, forKey: "l")
+        case let .call(length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.call.rawValue, forKey: "v")
+            encoder.encodeInt32(length, forKey: "l")
+        case let .flashCall(pattern):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.flashCall.rawValue, forKey: "v")
+            encoder.encodeString(pattern, forKey: "p")
+        case let .missedCall(numberPrefix, length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.missedCall.rawValue, forKey: "v")
+            encoder.encodeString(numberPrefix, forKey: "n")
+            encoder.encodeInt32(length, forKey: "l")
+        case let .email(emailPattern, length, nextPhoneLoginDate, appleSignInAllowed, setup):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.email.rawValue, forKey: "v")
+            encoder.encodeString(emailPattern, forKey: "e")
+            encoder.encodeInt32(length, forKey: "l")
+            if let nextPhoneLoginDate = nextPhoneLoginDate {
+                encoder.encodeInt32(nextPhoneLoginDate, forKey: "d")
+            } else {
+                encoder.encodeNil(forKey: "d")
+            }
+            encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
+            encoder.encodeInt32(setup ? 1 : 0, forKey: "s")
+        case let .emailSetupRequired(appleSignInAllowed):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.emailSetupRequired.rawValue, forKey: "v")
+            encoder.encodeInt32(appleSignInAllowed ? 1 : 0, forKey: "a")
+        case let .fragment(url, length):
+            encoder.encodeInt32(SentAuthorizationCodeTypeValue.fragment.rawValue, forKey: "v")
+            encoder.encodeString(url, forKey: "u")
+            encoder.encodeInt32(length, forKey: "l")
         }
     }
 }
@@ -81,6 +89,7 @@ public enum AuthorizationCodeNextType: Int32 {
     case call = 1
     case flashCall = 2
     case missedCall = 3
+    case fragment = 4
 }
 
 private enum UnauthorizedAccountStateContentsValue: Int32 {

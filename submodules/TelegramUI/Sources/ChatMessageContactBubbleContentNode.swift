@@ -123,11 +123,11 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         if !contactData.basicData.phoneNumbers.isEmpty {
                             for phone in contactData.basicData.phoneNumbers {
                                 if infoComponents.count < infoLineLimit {
-                                    infoComponents.append(formatPhoneNumber(phone.value))
+                                    infoComponents.append(formatPhoneNumber(context: item.context, number: phone.value))
                                 }
                             }
                         } else {
-                             infoComponents.append(formatPhoneNumber(selectedContact.phoneNumber))
+                             infoComponents.append(formatPhoneNumber(context: item.context, number: selectedContact.phoneNumber))
                         }
                         if infoComponents.count < infoLineLimit {
                             for email in contactData.emailAddresses {
@@ -143,7 +143,7 @@ class ChatMessageContactBubbleContentNode: ChatMessageBubbleContentNode {
                         }
                         info = infoComponents.joined(separator: "\n")
                     } else {
-                        info = formatPhoneNumber(selectedContact.phoneNumber)
+                        info = formatPhoneNumber(context: item.context, number: selectedContact.phoneNumber)
                     }
                 }
                 

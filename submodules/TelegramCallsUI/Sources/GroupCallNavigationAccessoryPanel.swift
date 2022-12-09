@@ -110,6 +110,9 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let joinButtonTitleNode: ImmediateTextNode
     private let joinButtonBackgroundNode: ASImageNode
     
+    private var previewImageNode: ASImageNode?
+    private var previewImage: UIImage?
+    
     private var audioLevelView: VoiceBlobView?
     
     private let micButton: HighlightTrackingButtonNode
@@ -139,6 +142,7 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
     private let membersDisposable = MetaDisposable()
     private let isMutedDisposable = MetaDisposable()
     private let audioLevelDisposable = MetaDisposable()
+    private var imageDisposable: Disposable?
     
     private var callState: PresentationGroupCallState?
     
@@ -233,6 +237,8 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         self.isMutedDisposable.dispose()
         self.audioLevelGeneratorTimer?.invalidate()
         self.updateTimer?.invalidate()
+        self.imageDisposable?.dispose()
+        self.audioLevelDisposable.dispose()
     }
     
     public override func didLoad() {
@@ -366,6 +372,11 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
                 self.avatarsContent = self.avatarsContext.update(peers: [], animated: false)
             } else {
                 self.avatarsContent = self.avatarsContext.update(peers: data.topParticipants.map { EnginePeer($0.peer) }, animated: false)
+                
+                if let imageDisposable = self.imageDisposable {
+                    self.imageDisposable = nil
+                    imageDisposable.dispose()
+                }
             }
             
             self.textNode.attributedText = NSAttributedString(string: membersText, font: Font.regular(13.0), textColor: self.theme.chat.inputPanel.secondaryTextColor)
@@ -483,6 +494,67 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
             
             updateAudioLevels = true
         }
+        
+        #if DEBUG
+        if data.info.isStream {
+            if self.imageDisposable == nil {
+                let engine = self.context.engine
+                let info = data.info
+                self.imageDisposable = (engine.calls.getAudioBroadcastDataSource(callId: info.id, accessHash: info.accessHash)
+                |> mapToSignal { source -> Signal<Data?, NoError> in
+                    guard let source else {
+                        return .single(nil)
+                    }
+                    
+                    let time = engine.calls.requestStreamState(dataSource: source, callId: info.id, accessHash: info.accessHash)
+                    |> map { state -> Int64? in
+                        guard let state else {
+                            return nil
+                        }
+                        return state.channels.first?.latestTimestamp
+                    }
+                    
+                    return time
+                    |> mapToSignal { latestTimestamp -> Signal<Data?, NoError> in
+                        guard let latestTimestamp else {
+                            return .single(nil)
+                        }
+                        
+                        let durationMilliseconds: Int64 = 32000
+                        let bufferOffset: Int64 = 1 * durationMilliseconds
+                        let timestampId = (latestTimestamp / durationMilliseconds) * durationMilliseconds - bufferOffset
+                        
+                        return engine.calls.getVideoBroadcastPart(dataSource: source, callId: info.id, accessHash: info.accessHash, timestampIdMilliseconds: timestampId, durationMilliseconds: durationMilliseconds, channelId: 2, quality: 0)
+                        |> mapToSignal { result -> Signal<Data?, NoError> in
+                            switch result.status {
+                            case let .data(data):
+                                return .single(data)
+                            case .notReady, .resyncNeeded, .rejoinNeeded:
+                                return .single(nil)
+                            }
+                        }
+                    }
+                }
+                |> deliverOnMainQueue).start(next: { [weak self] data in
+                    guard let self, let data else {
+                        return
+                    }
+                    
+                    var image: UIImage?
+                    for i in 0 ..< 100 {
+                        image = UIImage(data: data.subdata(in: i ..< data.count))
+                        if image != nil {
+                            break
+                        }
+                    }
+                    self.previewImage = image
+                    if let (size, leftInset, rightInset) = self.validLayout {
+                        self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
+                    }
+                })
+            }
+        }
+        #endif
         
         if let (size, leftInset, rightInset) = self.validLayout {
             self.updateLayout(size: size, leftInset: leftInset, rightInset: rightInset, transition: .animated(duration: 0.2, curve: .easeInOut))
@@ -608,6 +680,26 @@ public final class GroupCallNavigationAccessoryPanel: ASDisplayNode {
         staticTransition.updateFrame(node: self.joinButton, frame: joinButtonFrame)
         staticTransition.updateFrame(node: self.joinButtonBackgroundNode, frame: CGRect(origin: CGPoint(), size: joinButtonFrame.size))
         staticTransition.updateFrame(node: self.joinButtonTitleNode, frame: CGRect(origin: CGPoint(x: floorToScreenPixels((joinButtonFrame.width - joinButtonTitleSize.width) / 2.0), y: floorToScreenPixels((joinButtonFrame.height - joinButtonTitleSize.height) / 2.0)), size: joinButtonTitleSize))
+        
+        if let previewImage = self.previewImage {
+            let previewImageNode: ASImageNode
+            if let current = self.previewImageNode {
+                previewImageNode = current
+            } else {
+                previewImageNode = ASImageNode()
+                previewImageNode.clipsToBounds = true
+                previewImageNode.cornerRadius = 8.0
+                previewImageNode.contentMode = .scaleAspectFill
+                self.previewImageNode = previewImageNode
+                self.addSubnode(previewImageNode)
+            }
+            previewImageNode.image = previewImage
+            let previewSize = CGSize(width: 40.0, height: 40.0)
+            previewImageNode.frame = CGRect(origin: CGPoint(x: joinButtonFrame.minX - previewSize.width - 8.0, y: joinButtonFrame.minY + floor((joinButtonFrame.height - previewSize.height) / 2.0)), size: previewSize)
+        } else if let previewImageNode = self.previewImageNode {
+            self.previewImageNode = nil
+            previewImageNode.removeFromSupernode()
+        }
         
         let micButtonSize = CGSize(width: 36.0, height: 36.0)
         let micButtonFrame = CGRect(origin: CGPoint(x: size.width - rightInset - 7.0 - micButtonSize.width, y: floor((panelHeight - micButtonSize.height) / 2.0)), size: micButtonSize)

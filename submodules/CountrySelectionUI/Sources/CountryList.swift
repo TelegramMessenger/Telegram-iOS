@@ -6,7 +6,9 @@ public func emojiFlagForISOCountryCode(_ countryCode: String) -> String {
         return ""
     }
     
-    if countryCode == "XG" {
+    if countryCode == "FT" {
+        return "🏴‍☠️"
+    } else if countryCode == "XG" {
         return "🛰️"
     } else if countryCode == "XV" {
         return "🌍"

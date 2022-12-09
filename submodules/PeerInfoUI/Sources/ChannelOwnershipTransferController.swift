@@ -174,6 +174,7 @@ private final class ChannelOwnershipTransferPasswordFieldNode: ASDisplayNode, UI
 
 public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     private let strings: PresentationStrings
+    private let bot: Bool
     
     private let titleNode: ASTextNode
     private let textNode: ASTextNode
@@ -205,9 +206,10 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
         return self.isUserInteractionEnabled
     }
     
-    public init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, actions: [TextAlertAction]) {
+    public init(theme: AlertControllerTheme, ptheme: PresentationTheme, strings: PresentationStrings, bot: Bool = false, actions: [TextAlertAction]) {
         self.strings = strings
         self.theme = ptheme
+        self.bot = bot
         
         self.titleNode = ASTextNode()
         self.titleNode.maximumNumberOfLines = 2
@@ -277,8 +279,18 @@ public final class ChannelOwnershipTransferAlertContentNode: AlertContentNode {
     }
     
     public override func updateTheme(_ theme: AlertControllerTheme) {
-        self.titleNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPassword, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
-        self.textNode.attributedText = NSAttributedString(string: self.strings.Channel_OwnershipTransfer_EnterPasswordText, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        let title: String
+        let text: String
+        if self.bot {
+            title = self.strings.OwnershipTransfer_EnterPassword
+            text = self.strings.OwnershipTransfer_EnterPasswordText
+        } else {
+            title = self.strings.Channel_OwnershipTransfer_EnterPassword
+            text = self.strings.Channel_OwnershipTransfer_EnterPasswordText
+        }
+        
+        self.titleNode.attributedText = NSAttributedString(string: title, font: Font.bold(17.0), textColor: theme.primaryColor, paragraphAlignment: .center)
+        self.textNode.attributedText = NSAttributedString(string: text, font: Font.regular(13.0), textColor: theme.primaryColor, paragraphAlignment: .center)
         
         self.actionNodesSeparator.backgroundColor = theme.separatorColor
         for actionNode in self.actionNodes {

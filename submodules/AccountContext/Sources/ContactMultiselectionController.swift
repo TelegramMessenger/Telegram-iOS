@@ -36,10 +36,35 @@ public struct ContactMultiselectionControllerAdditionalCategories {
 }
 
 public enum ContactMultiselectionControllerMode {
+    public struct ChatSelection {
+        public var title: String
+        public var searchPlaceholder: String
+        public var selectedChats: Set<PeerId>
+        public var additionalCategories: ContactMultiselectionControllerAdditionalCategories?
+        public var chatListFilters: [ChatListFilter]?
+        public var displayAutoremoveTimeout: Bool
+        
+        public init(
+            title: String,
+            searchPlaceholder: String,
+            selectedChats: Set<PeerId>,
+            additionalCategories: ContactMultiselectionControllerAdditionalCategories?,
+            chatListFilters: [ChatListFilter]?,
+            displayAutoremoveTimeout: Bool = false
+        ) {
+            self.title = title
+            self.searchPlaceholder = searchPlaceholder
+            self.selectedChats = selectedChats
+            self.additionalCategories = additionalCategories
+            self.chatListFilters = chatListFilters
+            self.displayAutoremoveTimeout = displayAutoremoveTimeout
+        }
+    }
+    
     case groupCreation
     case peerSelection(searchChatList: Bool, searchGroups: Bool, searchChannels: Bool)
     case channelCreation
-    case chatSelection(title: String, selectedChats: Set<PeerId>, additionalCategories: ContactMultiselectionControllerAdditionalCategories?, chatListFilters: [ChatListFilter]?)
+    case chatSelection(ChatSelection)
 }
 
 public enum ContactListFilter {
@@ -54,16 +79,20 @@ public final class ContactMultiselectionControllerParams {
     public let mode: ContactMultiselectionControllerMode
     public let options: [ContactListAdditionalOption]
     public let filters: [ContactListFilter]
+    public let isPeerEnabled: ((EnginePeer) -> Bool)?
+    public let attemptDisabledItemSelection: ((EnginePeer) -> Void)?
     public let alwaysEnabled: Bool
     public let limit: Int32?
     public let reachedLimit: ((Int32) -> Void)?
 
-    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil) {
+    public init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, mode: ContactMultiselectionControllerMode, options: [ContactListAdditionalOption], filters: [ContactListFilter] = [.excludeSelf], isPeerEnabled: ((EnginePeer) -> Bool)? = nil, attemptDisabledItemSelection: ((EnginePeer) -> Void)? = nil, alwaysEnabled: Bool = false, limit: Int32? = nil, reachedLimit: ((Int32) -> Void)? = nil) {
         self.context = context
         self.updatedPresentationData = updatedPresentationData
         self.mode = mode
         self.options = options
         self.filters = filters
+        self.isPeerEnabled = isPeerEnabled
+        self.attemptDisabledItemSelection = attemptDisabledItemSelection
         self.alwaysEnabled = alwaysEnabled
         self.limit = limit
         self.reachedLimit = reachedLimit

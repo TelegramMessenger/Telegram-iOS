@@ -288,6 +288,8 @@ final class MessageHistoryTable: Table {
                     }
                     if let threadId = message.threadId {
                         self.threadsTable.add(threadId: threadId, index: message.index)
+                        
+                        self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace), id: message.id.id, isNewlyAdded: true, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                     }
                     let globalTags = message.globalTags.rawValue
                     if globalTags != 0 {
@@ -1352,6 +1354,8 @@ final class MessageHistoryTable: Table {
             }
             if let threadId = message.threadId {
                 self.threadsTable.remove(threadId: threadId, index: index)
+                
+                self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace), id: message.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
             }
             for tag in message.globalTags {
                 self.globalTagsTable.remove(tag, index: index)
@@ -1569,9 +1573,14 @@ final class MessageHistoryTable: Table {
             if previousMessage.threadId != message.threadId || index != message.index {
                 if let threadId = previousMessage.threadId {
                     self.threadsTable.remove(threadId: threadId, index: index)
+                    
+                    self.summaryTable.removeMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: index.id.peerId, threadId: threadId, namespace: index.id.namespace), id: index.id.id, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 }
+                
                 if let threadId = message.threadId {
                     self.threadsTable.add(threadId: threadId, index: message.index)
+                    
+                    self.summaryTable.addMessage(key: MessageHistoryTagsSummaryKey(tag: MessageTags(), peerId: message.id.peerId, threadId: threadId, namespace: message.id.namespace), id: message.id.id, isNewlyAdded: false, updatedSummaries: &updatedMessageTagSummaries, invalidateSummaries: &invalidateMessageTagSummaries)
                 }
             }
             

@@ -78,13 +78,7 @@ public extension TelegramChannel {
                 if let adminRights = self.adminRights, adminRights.rights.contains(.canManageTopics) {
                     return true
                 }
-                if let bannedRights = self.bannedRights, bannedRights.flags.contains(.banManageTopics) {
-                    return false
-                }
-                if let defaultBannedRights = self.defaultBannedRights, defaultBannedRights.flags.contains(.banManageTopics) {
-                    return false
-                }
-                return true
+                return false
             case .createTopics:
                 if self.flags.contains(.isCreator) {
                     return true

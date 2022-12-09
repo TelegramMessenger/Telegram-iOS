@@ -179,6 +179,8 @@ public enum WallpaperUrlParameter {
 public enum ResolvedUrlSettingsSection {
     case theme
     case devices
+    case autoremoveMessages
+    case twoStepAuth
 }
 
 public struct ResolvedBotChoosePeerTypes: OptionSet {
@@ -373,9 +375,30 @@ public enum ChatLocation: Equatable {
     case feed(id: Int32)
 }
 
+public extension ChatLocation {
+    var normalized: ChatLocation {
+        switch self {
+        case .peer, .feed:
+            return self
+        case let .replyThread(message):
+            return .replyThread(message: message.normalized)
+        }
+    }
+}
+
 public enum ChatControllerActivateInput {
     case text
     case entityInput
+}
+
+public struct ChatNavigationStackItem: Hashable {
+    public var peerId: EnginePeer.Id
+    public var threadId: Int64?
+    
+    public init(peerId: EnginePeer.Id, threadId: Int64?) {
+        self.peerId = peerId
+        self.threadId = threadId
+    }
 }
 
 public final class NavigateToChatControllerParams {
@@ -434,12 +457,12 @@ public final class NavigateToChatControllerParams {
     public let options: NavigationAnimationOptions
     public let parentGroupId: PeerGroupId?
     public let chatListFilter: Int32?
-    public let chatNavigationStack: [PeerId]
+    public let chatNavigationStack: [ChatNavigationStackItem]
     public let changeColors: Bool
     public let setupController: (ChatController) -> Void
     public let completion: (ChatController) -> Void
     
-    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: Location, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: ChatControllerActivateInput? = nil, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [PeerId] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
+    public init(navigationController: NavigationController, chatController: ChatController? = nil, context: AccountContext, chatLocation: Location, chatLocationContextHolder: Atomic<ChatLocationContextHolder?> = Atomic<ChatLocationContextHolder?>(value: nil), subject: ChatControllerSubject? = nil, botStart: ChatControllerInitialBotStart? = nil, attachBotStart: ChatControllerInitialAttachBotStart? = nil, updateTextInputState: ChatTextInputState? = nil, activateInput: ChatControllerActivateInput? = nil, keepStack: NavigateToChatKeepStack = .default, useExisting: Bool = true, useBackAnimation: Bool = false, purposefulAction: (() -> Void)? = nil, scrollToEndIfExists: Bool = false, activateMessageSearch: (ChatSearchDomain, String)? = nil, peekData: ChatPeekTimeout? = nil, peerNearbyData: ChatPeerNearbyData? = nil, reportReason: ReportReason? = nil, animated: Bool = true, options: NavigationAnimationOptions = [], parentGroupId: PeerGroupId? = nil, chatListFilter: Int32? = nil, chatNavigationStack: [ChatNavigationStackItem] = [], changeColors: Bool = false, setupController: @escaping (ChatController) -> Void = { _ in }, completion: @escaping (ChatController) -> Void = { _ in }) {
         self.navigationController = navigationController
         self.chatController = chatController
         self.chatLocationContextHolder = chatLocationContextHolder
@@ -683,13 +706,6 @@ public enum ChatListSearchFilter: Equatable {
     }
 }
 
-#if ENABLE_WALLET
-public enum OpenWalletContext {
-    case generic
-    case send(address: String, amount: Int64?, comment: String?)
-}
-#endif
-
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
 public enum CreateGroupMode {
@@ -790,6 +806,7 @@ public protocol SharedAccountContext: AnyObject {
     func makeChatQrCodeScreen(context: AccountContext, peer: Peer, threadId: Int64?) -> ViewController
     
     func makePremiumIntroController(context: AccountContext, source: PremiumIntroSource) -> ViewController
+    func makePremiumDemoController(context: AccountContext, subject: PremiumDemoSubject, action: @escaping () -> Void) -> ViewController
     
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
     
@@ -826,74 +843,24 @@ public enum PremiumIntroSource {
     case profile(PeerId)
     case emojiStatus(PeerId, Int64, TelegramMediaFile?, LoadedStickerPack?)
     case voiceToText
+    case fasterDownload
 }
 
-#if ENABLE_WALLET
-private final class TonInstanceData {
-    var config: String?
-    var blockchainName: String?
-    var instance: TonInstance?
+public enum PremiumDemoSubject {
+    case doubleLimits
+    case moreUpload
+    case fasterDownload
+    case voiceToText
+    case noAds
+    case uniqueReactions
+    case premiumStickers
+    case advancedChatManagement
+    case profileBadge
+    case animatedUserpics
+    case appIcons
+    case animatedEmoji
+    case emojiStatus
 }
-
-private final class TonNetworkProxyImpl: TonNetworkProxy {
-    private let network: Network
-    
-    init(network: Network) {
-        self.network = network
-    }
-    
-    func request(data: Data, timeout timeoutValue: Double, completion: @escaping (TonNetworkProxyResult) -> Void) -> Disposable {
-        return (walletProxyRequest(network: self.network, data: data)
-        |> timeout(timeoutValue, queue: .concurrentDefaultQueue(), alternate: .fail(.generic(500, "Local Timeout")))).start(next: { data in
-            completion(.reponse(data))
-        }, error: { error in
-            switch error {
-            case let .generic(_, text):
-                completion(.error(text))
-            }
-        })
-    }
-}
-
-public final class StoredTonContext {
-    private let basePath: String
-    private let postbox: Postbox
-    private let network: Network
-    public let keychain: TonKeychain
-    private let currentInstance = Atomic<TonInstanceData>(value: TonInstanceData())
-    
-    public init(basePath: String, postbox: Postbox, network: Network, keychain: TonKeychain) {
-        self.basePath = basePath
-        self.postbox = postbox
-        self.network = network
-        self.keychain = keychain
-    }
-    
-    public func context(config: String, blockchainName: String, enableProxy: Bool) -> TonContext {
-        return self.currentInstance.with { data -> TonContext in
-            if let instance = data.instance, data.config == config, data.blockchainName == blockchainName {
-                return TonContext(instance: instance, keychain: self.keychain)
-            } else {
-                data.config = config
-                let instance = TonInstance(basePath: self.basePath, config: config, blockchainName: blockchainName, proxy: enableProxy ? TonNetworkProxyImpl(network: self.network) : nil)
-                data.instance = instance
-                return TonContext(instance: instance, keychain: self.keychain)
-            }
-        }
-    }
-}
-
-public final class TonContext {
-    public let instance: TonInstance
-    public let keychain: TonKeychain
-    
-    fileprivate init(instance: TonInstance, keychain: TonKeychain) {
-        self.instance = instance
-        self.keychain = keychain
-    }
-}
-
-#endif
 
 public protocol ComposeController: ViewController {
 }
@@ -925,6 +892,7 @@ public protocol AccountContext: AnyObject {
     var currentLimitsConfiguration: Atomic<LimitsConfiguration> { get }
     var currentContentSettings: Atomic<ContentSettings> { get }
     var currentAppConfiguration: Atomic<AppConfiguration> { get }
+    var currentCountriesConfiguration: Atomic<CountriesConfiguration> { get }
     
     var cachedGroupCallContexts: AccountGroupCallContextCache { get }
     var meshAnimationCache: MeshAnimationCache { get }
@@ -963,6 +931,28 @@ public struct PremiumConfiguration {
     public static func with(appConfiguration: AppConfiguration) -> PremiumConfiguration {
         if let data = appConfiguration.data, let value = data["premium_purchase_blocked"] as? Bool {
             return PremiumConfiguration(isPremiumDisabled: value)
+        } else {
+            return .defaultValue
+        }
+    }
+}
+
+public struct AntiSpamBotConfiguration {
+    public static var defaultValue: AntiSpamBotConfiguration {
+        return AntiSpamBotConfiguration(antiSpamBotId: nil, minimumGroupParticipants: 100)
+    }
+    
+    public let antiSpamBotId: EnginePeer.Id?
+    public let minimumGroupParticipants: Int32
+    
+    fileprivate init(antiSpamBotId: EnginePeer.Id?, minimumGroupParticipants: Int32) {
+        self.antiSpamBotId = antiSpamBotId
+        self.minimumGroupParticipants = minimumGroupParticipants
+    }
+    
+    public static func with(appConfiguration: AppConfiguration) -> AntiSpamBotConfiguration {
+        if let data = appConfiguration.data, let botIdString = data["telegram_antispam_user_id"] as? String, let botIdValue = Int64(botIdString), let groupSize = data["telegram_antispam_group_size_min"] as? Double {
+            return AntiSpamBotConfiguration(antiSpamBotId: EnginePeer.Id(namespace: Namespaces.Peer.CloudUser, id: EnginePeer.Id.Id._internalFromInt64Value(botIdValue)), minimumGroupParticipants: Int32(groupSize))
         } else {
             return .defaultValue
         }

@@ -290,7 +290,7 @@ func optionsBackgroundImage(dark: Bool) -> UIImage? {
     })?.stretchableImage(withLeftCapWidth: 14, topCapHeight: 14)
 }
 
-private func optionsCircleImage(dark: Bool) -> UIImage? {
+func optionsCircleImage(dark: Bool) -> UIImage? {
     return generateImage(CGSize(width: 22.0, height: 22.0), contextGenerator: { size, context in
         context.clear(CGRect(origin: CGPoint(), size: size))
 
@@ -339,7 +339,7 @@ private func optionsRateImage(rate: String, isLarge: Bool, color: UIColor = .whi
     })
 }
 
-private final class MoreHeaderButton: HighlightableButtonNode {
+final class MoreHeaderButton: HighlightableButtonNode {
     enum Content {
         case image(UIImage?)
         case more(UIImage?)
@@ -517,7 +517,7 @@ private final class PictureInPictureContentImpl: NSObject, PictureInPictureConte
             guard let status = self.status else {
                 return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)))
             }
-            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
+            return CMTimeRange(start: CMTime(seconds: status.timestamp, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
         }
 
         public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
@@ -2475,6 +2475,29 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             }
 
             var items: [ContextMenuItem] = []
+            
+            if let (message, _, _) = strongSelf.contentInfo() {
+                let context = strongSelf.context
+                items.append(.action(ContextMenuActionItem(text: strongSelf.presentationData.strings.SharedMedia_ViewInChat, icon: { theme in generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/GoToMessage"), color: theme.contextMenu.primaryColor)}, action: { [weak self] _, f in
+                    
+                    let _ = (context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: message.id.peerId))
+                    |> deliverOnMainQueue).start(next: { [weak self] peer in
+                        guard let strongSelf = self, let peer = peer else {
+                            return
+                        }
+                        if let navigationController = strongSelf.baseNavigationController() {
+                            strongSelf.beginCustomDismiss(true)
+                            
+                            context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: context, chatLocation: .peer(peer), subject: .message(id: .id(message.id), highlight: true, timecode: nil)))
+                            
+                            Queue.mainQueue().after(0.3) {
+                                strongSelf.completeCustomDismiss()
+                            }
+                        }
+                        f(.default)
+                    })
+                })))
+            }
 
             var speedValue: String = strongSelf.presentationData.strings.PlaybackSpeed_Normal
             var speedIconText: String = "1x"
@@ -2804,7 +2827,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
     }
 }
 
-private final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
+final class HeaderContextReferenceContentSource: ContextReferenceContentSource {
     private let controller: ViewController
     private let sourceNode: ContextReferenceContentNode
 

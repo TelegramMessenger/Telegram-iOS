@@ -31,10 +31,14 @@ public final class ContactItemHighlighting {
 }
 
 public enum ContactsPeerItemStatus {
+    public enum Icon {
+        case autoremove
+    }
+    
     case none
     case presence(EnginePeer.Presence, PresentationDateTimeFormat)
     case addressName(String)
-    case custom(string: String, multiline: Bool)
+    case custom(string: String, multiline: Bool, isActive: Bool, icon: Icon?)
 }
 
 public enum ContactsPeerItemSelection: Equatable {
@@ -395,6 +399,7 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
     private var credibilityIconView: ComponentHostView<Empty>?
     private var credibilityIconComponent: EmojiStatusComponent?
     private let statusNode: TextNode
+    private var statusIconNode: ASImageNode?
     private var badgeBackgroundNode: ASImageNode?
     private var badgeTextNode: TextNode?
     private var selectionNode: CheckNode?
@@ -733,6 +738,8 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             var titleAttributedString: NSAttributedString?
             var statusAttributedString: NSAttributedString?
+            var statusIcon: ContactsPeerItemStatus.Icon?
+            var statusIsActive: Bool = false
             var multilineStatus: Bool = false
             var userPresence: EnginePeer.Presence?
             
@@ -801,8 +808,10 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                         } else if !suffix.isEmpty {
                             statusAttributedString = NSAttributedString(string: suffix, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
                         }
-                    case let .custom(text, multiline):
-                        statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                    case let .custom(text, multiline, isActive, icon):
+                        statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
+                        statusIcon = icon
+                        statusIsActive = isActive
                         multilineStatus = multiline
                     }
                 }
@@ -824,9 +833,11 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                 }
                 
                 switch item.status {
-                case let .custom(text, multiline):
-                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: item.presentationData.theme.list.itemSecondaryTextColor)
+                case let .custom(text, multiline, isActive, icon):
+                    statusAttributedString = NSAttributedString(string: text, font: statusFont, textColor: isActive ? item.presentationData.theme.list.itemAccentColor : item.presentationData.theme.list.itemSecondaryTextColor)
                     multilineStatus = multiline
+                    statusIsActive = isActive
+                    statusIcon = icon
                 default:
                     break
                 }
@@ -882,7 +893,20 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             
             let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: titleAttributedString, backgroundColor: nil, maximumNumberOfLines: 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - additionalTitleInset), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
             
-            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: multilineStatus ? 3 : 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, params.width - leftInset - rightInset - badgeSize), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            var maxStatusWidth: CGFloat = params.width - leftInset - rightInset - badgeSize
+            if let _ = statusIcon {
+                maxStatusWidth -= 10.0
+            }
+            
+            let (statusLayout, statusApply) = makeStatusLayout(TextNodeLayoutArguments(attributedString: statusAttributedString, backgroundColor: nil, maximumNumberOfLines: multilineStatus ? 3 : 1, truncationType: .end, constrainedSize: CGSize(width: max(0.0, maxStatusWidth), height: CGFloat.infinity), alignment: .natural, cutout: nil, insets: UIEdgeInsets()))
+            
+            var statusIconImage: UIImage?
+            if let statusIcon = statusIcon {
+                switch statusIcon {
+                case .autoremove:
+                    statusIconImage = PresentationResourcesChatList.statusAutoremoveIcon(item.presentationData.theme, isActive: statusIsActive)
+                }
+            }
             
             let titleVerticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
             let verticalInset: CGFloat = statusAttributedString == nil ? 13.0 : 6.0
@@ -1097,11 +1121,31 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
                             strongSelf.statusNode.alpha = item.enabled ? 1.0 : 1.0
                             
                             let _ = statusApply()
-                            let statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY - 1.0), size: statusLayout.size)
+                            var statusFrame = CGRect(origin: CGPoint(x: revealOffset + leftInset, y: strongSelf.titleNode.frame.maxY - 1.0), size: statusLayout.size)
+                            if let statusIconImage {
+                                statusFrame.origin.x += statusIconImage.size.width + 1.0
+                            }
                             let previousStatusFrame = strongSelf.statusNode.frame
                             
                             strongSelf.statusNode.frame = statusFrame
                             transition.animatePositionAdditive(node: strongSelf.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
+                            
+                            if let statusIconImage {
+                                let statusIconNode: ASImageNode
+                                if let current = strongSelf.statusIconNode {
+                                    statusIconNode = current
+                                } else {
+                                    statusIconNode = ASImageNode()
+                                    strongSelf.statusNode.addSubnode(statusIconNode)
+                                }
+                                statusIconNode.image = statusIconImage
+                                statusIconNode.frame = CGRect(origin: CGPoint(x: -statusIconImage.size.width - 1.0, y: floor((statusFrame.height - statusIconImage.size.height) / 2.0) + 1.0), size: statusIconImage.size)
+                            } else {
+                                if let statusIconNode = strongSelf.statusIconNode {
+                                    strongSelf.statusIconNode = nil
+                                    statusIconNode.removeFromSupernode()
+                                }
+                            }
                             
                             if let credibilityIcon = credibilityIcon {
                                 let animationCache = item.context.animationCache
@@ -1334,6 +1378,9 @@ public class ContactsPeerItemNode: ItemListRevealOptionsItemNode {
             var statusFrame = self.statusNode.frame
             let previousStatusFrame = statusFrame
             statusFrame.origin.x = leftInset + offset
+            if let statusIconImage = self.statusIconNode?.image {
+                statusFrame.origin.x += statusIconImage.size.width + 1.0
+            }
             self.statusNode.frame = statusFrame
             transition.animatePositionAdditive(node: self.statusNode, offset: CGPoint(x: previousStatusFrame.minX - statusFrame.minX, y: 0))
             

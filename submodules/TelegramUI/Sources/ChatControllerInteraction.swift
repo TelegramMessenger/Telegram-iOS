@@ -60,8 +60,14 @@ struct UnreadMessageRangeKey: Hashable {
 }
 
 public final class ChatControllerInteraction {
+    enum OpenPeerSource {
+        case `default`
+        case reaction
+        case groupParticipant
+    }
+    
     let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void
+    let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
     let openPeerMention: (String) -> Void
     let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
     let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
@@ -70,6 +76,7 @@ public final class ChatControllerInteraction {
     let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let navigateToMessage: (MessageId, MessageId) -> Void
     let navigateToMessageStandalone: (MessageId) -> Void
+    let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
     let tapMessage: ((Message) -> Void)?
     let clickThroughMessage: () -> Void
     let toggleMessagesSelection: ([MessageId], Bool) -> Void
@@ -116,7 +123,7 @@ public final class ChatControllerInteraction {
     let scheduleCurrentMessage: () -> Void
     let sendScheduledMessagesNow: ([MessageId]) -> Void
     let editScheduledMessagesTime: ([MessageId]) -> Void
-    let performTextSelectionAction: (UInt32, NSAttributedString, TextSelectionAction) -> Void
+    let performTextSelectionAction: (Bool, NSAttributedString, TextSelectionAction) -> Void
     let displayImportedMessageTooltip: (ASDisplayNode) -> Void
     let displaySwipeToReplyHint: () -> Void
     let dismissReplyMarkupMessage: (Message) -> Void
@@ -127,6 +134,7 @@ public final class ChatControllerInteraction {
     let displayDiceTooltip: (TelegramMediaDice) -> Void
     let animateDiceSuccess: (Bool, Bool) -> Void
     let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
+    let displayEmojiPackTooltip: (TelegramMediaFile, Message) -> Void
     let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
     let openMessageReplies: (MessageId, Bool, Bool) -> Void
     let openReplyThreadOriginalMessage: (Message) -> Void
@@ -169,7 +177,7 @@ public final class ChatControllerInteraction {
     
     init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
-        openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, Bool) -> Void,
+        openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void,
         openPeerMention: @escaping (String) -> Void,
         openMessageContextMenu: @escaping (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void,
         openMessageReactionContextMenu: @escaping (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void,
@@ -178,6 +186,7 @@ public final class ChatControllerInteraction {
         openMessageContextActions: @escaping (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         navigateToMessage: @escaping (MessageId, MessageId) -> Void,
         navigateToMessageStandalone: @escaping (MessageId) -> Void,
+        navigateToThreadMessage: @escaping (PeerId, Int64, MessageId?) -> Void,
         tapMessage: ((Message) -> Void)?,
         clickThroughMessage: @escaping () -> Void,
         toggleMessagesSelection: @escaping ([MessageId], Bool) -> Void,
@@ -224,7 +233,7 @@ public final class ChatControllerInteraction {
         scheduleCurrentMessage: @escaping () -> Void,
         sendScheduledMessagesNow: @escaping ([MessageId]) -> Void,
         editScheduledMessagesTime: @escaping ([MessageId]) -> Void,
-        performTextSelectionAction: @escaping (UInt32, NSAttributedString, TextSelectionAction) -> Void,
+        performTextSelectionAction: @escaping (Bool, NSAttributedString, TextSelectionAction) -> Void,
         displayImportedMessageTooltip: @escaping (ASDisplayNode) -> Void,
         displaySwipeToReplyHint: @escaping () -> Void,
         dismissReplyMarkupMessage: @escaping (Message) -> Void,
@@ -235,6 +244,7 @@ public final class ChatControllerInteraction {
         displayDiceTooltip: @escaping (TelegramMediaDice) -> Void,
         animateDiceSuccess: @escaping (Bool, Bool) -> Void,
         displayPremiumStickerTooltip: @escaping (TelegramMediaFile, Message) -> Void,
+        displayEmojiPackTooltip: @escaping (TelegramMediaFile, Message) -> Void,
         openPeerContextMenu: @escaping (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void,
         openMessageReplies: @escaping (MessageId, Bool, Bool) -> Void,
         openReplyThreadOriginalMessage: @escaping (Message) -> Void,
@@ -269,6 +279,7 @@ public final class ChatControllerInteraction {
         self.openMessageContextActions = openMessageContextActions
         self.navigateToMessage = navigateToMessage
         self.navigateToMessageStandalone = navigateToMessageStandalone
+        self.navigateToThreadMessage = navigateToThreadMessage
         self.tapMessage = tapMessage
         self.clickThroughMessage = clickThroughMessage
         self.toggleMessagesSelection = toggleMessagesSelection
@@ -326,6 +337,7 @@ public final class ChatControllerInteraction {
         self.displayDiceTooltip = displayDiceTooltip
         self.animateDiceSuccess = animateDiceSuccess
         self.displayPremiumStickerTooltip = displayPremiumStickerTooltip
+        self.displayEmojiPackTooltip = displayEmojiPackTooltip
         self.openPeerContextMenu = openPeerContextMenu
         self.openMessageReplies = openMessageReplies
         self.openReplyThreadOriginalMessage = openReplyThreadOriginalMessage

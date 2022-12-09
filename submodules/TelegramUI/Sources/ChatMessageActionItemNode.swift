@@ -208,7 +208,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 if let (currentOffset, currentImage, currentRects) = cachedMaskBackgroundImage, currentRects == labelRects {
                     backgroundMaskImage = (currentOffset, currentImage)
                 } else {
-                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects)
+                    backgroundMaskImage = LinkHighlightingNode.generateImage(color: .black, inset: 0.0, innerRadius: 10.0, outerRadius: 10.0, rects: labelRects, useModernPathCalculation: false)
                     backgroundMaskUpdated = true
                 }
             
@@ -449,6 +449,7 @@ class ChatMessageActionBubbleContentNode: ChatMessageBubbleContentNode {
                 } else {
                     let serviceColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper)
                     linkHighlightingNode = LinkHighlightingNode(color: serviceColor.linkHighlight)
+                    linkHighlightingNode.useModernPathCalculation = false
                     linkHighlightingNode.inset = 2.5
                     self.linkHighlightingNode = linkHighlightingNode
                     self.insertSubnode(linkHighlightingNode, belowSubnode: self.labelNode.textNode)
