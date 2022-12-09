@@ -1103,7 +1103,7 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         let messageText = text
                         var medias: [Media] = []
                         
-                        let (mediaValue, expirationTimer, nonPremium) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
+                        let (mediaValue, expirationTimer, nonPremium, hasSpoiler) = textMediaAndExpirationTimerFromApiMedia(media, peerId)
                         if let mediaValue = mediaValue {
                             medias.append(mediaValue)
                         }
@@ -1113,6 +1113,10 @@ private func finalStateWithUpdatesAndServerTime(accountPeerId: PeerId, postbox: 
                         
                         if let nonPremium = nonPremium, nonPremium {
                             attributes.append(NonPremiumMessageAttribute())
+                        }
+                        
+                        if let hasSpoiler = hasSpoiler, hasSpoiler {
+                            attributes.append(MediaSpoilerMessageAttribute())
                         }
                         
                         if type.hasPrefix("auth") {
@@ -4250,7 +4254,7 @@ func replayFinalState(
                             }
                             updatedExtendedMedia = .preview(dimensions: dimensions, immediateThumbnailData: immediateThumbnailData, videoDuration: videoDuration)
                         case let .messageExtendedMedia(apiMedia):
-                            let (media, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
+                            let (media, _, _, _) = textMediaAndExpirationTimerFromApiMedia(apiMedia, currentMessage.id.peerId)
                             if let media = media {
                                 updatedExtendedMedia = .full(media: media)
                             } else {
