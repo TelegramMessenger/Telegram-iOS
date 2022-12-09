@@ -415,9 +415,7 @@ public final class OngoingGroupCallContext {
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
-#if os(iOS)
         let audioDevice: SharedCallAudioDevice?
-#endif
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
         let joinPayload = Promise<(String, UInt32)>()
@@ -435,14 +433,8 @@ public final class OngoingGroupCallContext {
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String, audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, preferX264: Bool, logPath: String) {
             self.queue = queue
             
-            #if os(iOS)
             self.audioDevice = nil
-            #endif
-            /*#if DEBUG
-            self.audioDevice = SharedCallAudioDevice(disableRecording: disableAudioInput)
-            #else
-            self.audioDevice = nil
-            #endif*/
+            let audioDevice = self.audioDevice
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
@@ -549,7 +541,8 @@ public final class OngoingGroupCallContext {
                 enableNoiseSuppression: enableNoiseSuppression,
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
-                logPath: logPath
+                logPath: logPath,
+                audioDevice: audioDevice
             )
             
             let queue = self.queue
@@ -602,8 +595,8 @@ public final class OngoingGroupCallContext {
                 guard let `self` = self else {
                     return
                 }
-                #if os(iOS)
                 self.audioDevice?.setManualAudioSessionIsActive(isActive)
+                #if os(iOS)
                 self.context.setManualAudioSessionIsActive(isActive)
                 #endif
             }))
