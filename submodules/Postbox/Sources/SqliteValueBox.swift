@@ -188,6 +188,8 @@ public final class SqliteValueBox: ValueBox {
     private var updateStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertOrReplacePrimaryKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var insertOrReplaceIndexKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var insertOrIgnorePrimaryKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
+    private var insertOrIgnoreIndexKeyStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var deleteStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var moveStatements: [Int32 : SqlitePreparedStatement] = [:]
     private var copyStatements: [TablePairKey : SqlitePreparedStatement] = [:]
@@ -1220,6 +1222,59 @@ public final class SqliteValueBox: ValueBox {
         return resultStatement
     }
     
+    private func insertOrIgnoreStatement(_ table: SqliteValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) -> SqlitePreparedStatement {
+        precondition(self.queue.isCurrent())
+        checkTableKey(table.table, key)
+        
+        let resultStatement: SqlitePreparedStatement
+        
+        if table.table.keyType == .int64 || table.hasPrimaryKey {
+            if let statement = self.insertOrIgnorePrimaryKeyStatements[table.table.id] {
+                resultStatement = statement
+            } else {
+                var statement: OpaquePointer? = nil
+                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO NOTHING", -1, &statement, nil)
+                if status != SQLITE_OK {
+                    let errorText = self.database.currentError() ?? "Unknown error"
+                    preconditionFailure(errorText)
+                }
+                let preparedStatement = SqlitePreparedStatement(statement: statement)
+                self.insertOrIgnorePrimaryKeyStatements[table.table.id] = preparedStatement
+                resultStatement = preparedStatement
+            }
+        } else {
+            if let statement = self.insertOrIgnoreIndexKeyStatements[table.table.id] {
+                resultStatement = statement
+            } else {
+                var statement: OpaquePointer? = nil
+                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+                if status != SQLITE_OK {
+                    let errorText = self.database.currentError() ?? "Unknown error"
+                    preconditionFailure(errorText)
+                }
+                let preparedStatement = SqlitePreparedStatement(statement: statement)
+                self.insertOrIgnorePrimaryKeyStatements[table.table.id] = preparedStatement
+                resultStatement = preparedStatement
+            }
+        }
+        
+        resultStatement.reset()
+        
+        switch table.table.keyType {
+            case .binary:
+                resultStatement.bind(1, data: key.memory, length: key.length)
+            case .int64:
+                resultStatement.bind(1, number: key.getInt64(0))
+        }
+        if value.length == 0 {
+            resultStatement.bindNull(2)
+        } else {
+            resultStatement.bind(2, data: value.memory, length: value.length)
+        }
+        
+        return resultStatement
+    }
+    
     private func deleteStatement(_ table: ValueBoxTable, key: ValueBoxKey) -> SqlitePreparedStatement {
         precondition(self.queue.isCurrent())
         checkTableKey(table, key)
@@ -1847,6 +1902,30 @@ public final class SqliteValueBox: ValueBox {
         }
     }
     
+    public func setOrIgnore(_ table: ValueBoxTable, key: ValueBoxKey, value: MemoryBuffer) {
+        precondition(self.queue.isCurrent())
+        let sqliteTable = self.checkTable(table)
+        
+        if sqliteTable.hasPrimaryKey {
+            let statement = self.insertOrIgnoreStatement(sqliteTable, key: key, value: value)
+            while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
+            }
+            statement.reset()
+        } else {
+            if self.exists(table, key: key) {
+                let statement = self.updateStatement(table, key: key, value: value)
+                while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
+                }
+                statement.reset()
+            } else {
+                let statement = self.insertOrReplaceStatement(sqliteTable, key: key, value: value)
+                while statement.step(handle: self.database.handle, pathToRemoveOnError: self.removeDatabaseOnError ? self.databasePath : nil) {
+                }
+                statement.reset()
+            }
+        }
+    }
+    
     public func remove(_ table: ValueBoxTable, key: ValueBoxKey, secure: Bool) {
         precondition(self.queue.isCurrent())
         if let _ = self.tables[table.id] {
@@ -2107,6 +2186,16 @@ public final class SqliteValueBox: ValueBox {
             statement.destroy()
         }
         self.insertOrReplacePrimaryKeyStatements.removeAll()
+        
+        for (_, statement) in self.insertOrIgnoreIndexKeyStatements {
+            statement.destroy()
+        }
+        self.insertOrIgnoreIndexKeyStatements.removeAll()
+        
+        for (_, statement) in self.insertOrIgnorePrimaryKeyStatements {
+            statement.destroy()
+        }
+        self.insertOrIgnorePrimaryKeyStatements.removeAll()
         
         for (_, statement) in self.deleteStatements {
             statement.destroy()

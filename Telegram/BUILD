@@ -1793,6 +1793,7 @@ plist_fragment(
     <key>BGTaskSchedulerPermittedIdentifiers</key>
     <array>
         <string>{telegram_bundle_id}.refresh</string>
+        <string>{telegram_bundle_id}.cleanup</string>
     </array>
     <key>CFBundleAllowMixedLocalizations</key>
     <true/>
@@ -1893,6 +1894,7 @@ plist_fragment(
         <string>location</string>
         <string>remote-notification</string>
         <string>voip</string>
+        <string>processing</string>
     </array>
     <key>UIDeviceFamily</key>
     <array>

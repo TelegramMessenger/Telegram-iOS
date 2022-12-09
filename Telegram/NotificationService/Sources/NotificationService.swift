@@ -1169,6 +1169,12 @@ private final class NotificationServiceHandler {
                                                             parameters: MediaResourceFetchParameters(
                                                                 tag: nil,
                                                                 info: resourceFetchInfo(resource: resource),
+                                                                location: messageId.flatMap { messageId in
+                                                                    return MediaResourceStorageLocation(
+                                                                        peerId: peerId,
+                                                                        messageId: messageId
+                                                                    )
+                                                                },
                                                                 isRandomAccessAllowed: true
                                                             ),
                                                             encryptionKey: nil,
@@ -1220,6 +1226,7 @@ private final class NotificationServiceHandler {
                                                             parameters: MediaResourceFetchParameters(
                                                                 tag: nil,
                                                                 info: resourceFetchInfo(resource: resource),
+                                                                location: nil,
                                                                 isRandomAccessAllowed: true
                                                             ),
                                                             encryptionKey: nil,

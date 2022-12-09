@@ -17,6 +17,7 @@ swift_library(
         "//submodules/StringTransliteration:StringTransliteration",
         "//submodules/ManagedFile:ManagedFile",
         "//submodules/Utils/RangeSet:RangeSet",
+        "//submodules/CryptoUtils",
     ],
     visibility = [
         "//visibility:public",
