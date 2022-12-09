@@ -134,6 +134,8 @@ private func filterMessageAttributesForOutgoingMessage(_ attributes: [MessageAtt
                 return true
             case _ as SendAsMessageAttribute:
                 return true
+            case _ as MediaSpoilerMessageAttribute:
+                return true
             default:
                 return false
         }
@@ -154,6 +156,8 @@ private func filterMessageAttributesForForwardedMessage(_ attributes: [MessageAt
             case _ as ForwardOptionsMessageAttribute:
                 return true
             case _ as SendAsMessageAttribute:
+                return true
+            case _ as MediaSpoilerMessageAttribute:
                 return true
             case let attribute as ReplyMessageAttribute:
                 if let forwardedMessageIds = forwardedMessageIds {

@@ -8473,6 +8473,9 @@ Sorry for the inconvenience.";
 "Conversation.SuggestedPhotoTitle" = "Suggested Photo";
 "Conversation.SuggestedPhotoText" = "%@ suggests you to use this photo for your Telegram account.";
 "Conversation.SuggestedPhotoTextYou" = "You suggested %@ to use this photo for their Telegram account.";
-"Conversation.SuggestedVideo" = "Suggested Video";
+"Conversation.SuggestedPhotoView" = "View";
+
+"Conversation.SuggestedVideoTitle" = "Suggested Video";
 "Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
 "Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";
+"Conversation.SuggestedVideoView" = "View";

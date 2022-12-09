@@ -230,6 +230,10 @@ func findMediaResourceById(media: Media, resourceId: MediaResourceId) -> Telegra
             if let image = image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
                 return result
             }
+        case let .suggestedProfilePhoto(image):
+            if let image = image, let result = findMediaResourceById(media: image, resourceId: resourceId) {
+                return result
+            }
         default:
             break
         }
