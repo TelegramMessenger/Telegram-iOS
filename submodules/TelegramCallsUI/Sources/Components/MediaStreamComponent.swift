@@ -345,11 +345,19 @@ public final class MediaStreamComponent: CombinedComponent {
             let sheetHeight: CGFloat = isFullscreen
                 ? context.availableSize.height
                 : (44 + videoHeight + 40 + 69 + 16 + 32 + 70 + bottomPadding)
-            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset - context.view.safeAreaInsets.top < 30
+            
+            let safeAreaTopInView: CGFloat
+            if #available(iOS 16.0, *) {
+                safeAreaTopInView = context.view.window.flatMap { $0.convert(CGPoint(x: 0, y: $0.safeAreaInsets.top), to: context.view).y } ?? 0
+            } else {
+                safeAreaTopInView = context.view.safeAreaInsets.top
+            }
+            
+            let isFullyDragged = context.availableSize.height - sheetHeight + state.dismissOffset - safeAreaTopInView < 30
             
             var dragOffset = context.state.dismissOffset
             if isFullyDragged {
-                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + context.view.safeAreaInsets.top)
+                dragOffset = max(context.state.dismissOffset, sheetHeight - context.availableSize.height + safeAreaTopInView)
             }
             
             let dismissTapAreaHeight = isFullscreen ? 0 : (context.availableSize.height - sheetHeight + dragOffset)
@@ -687,7 +695,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 ))
             }
             let availableSize = context.availableSize
-            let safeAreaTop = context.view.safeAreaInsets.top
+            let safeAreaTop = safeAreaTopInView
             
             let onPanGesture: ((Gesture.PanGestureState) -> Void) = { [weak state] panState in
                 guard let state = state else {

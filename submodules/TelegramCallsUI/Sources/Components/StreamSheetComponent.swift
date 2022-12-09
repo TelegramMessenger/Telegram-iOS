@@ -132,7 +132,14 @@ final class StreamSheetComponent: CombinedComponent {
             let size = context.availableSize
             
             let topOffset = context.component.topOffset
-            let backgroundExtraOffset = context.component.isFullyExtended ? -context.view.safeAreaInsets.top : 0
+            let backgroundExtraOffset: CGFloat
+            if #available(iOS 16.0, *) {
+                // In iOS context.view does not inherit safeAreaInsets, quick fix until figure out how to deal properly:
+                let safeAreaTopInView = context.view.window.flatMap { $0.convert(CGPoint(x: 0, y: $0.safeAreaInsets.top), to: context.view).y } ?? 0
+                backgroundExtraOffset = context.component.isFullyExtended ? -safeAreaTopInView : 0
+            } else {
+                backgroundExtraOffset = context.component.isFullyExtended ? -context.view.safeAreaInsets.top : 0
+            }
             
             let background = background.update(
                 component: SheetBackgroundComponent(
