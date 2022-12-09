@@ -229,7 +229,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case hintFileIsLarge
     case hintIsValidated
     case NoPremium
-    case CustomEmoji(isPremium: Bool, alt: String, packReference: StickerPackReference?)
+    case CustomEmoji(isPremium: Bool, paintToText: Bool, alt: String, packReference: StickerPackReference?)
     
     public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -260,7 +260,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
             case typeNoPremium:
                 self = .NoPremium
             case typeCustomEmoji:
-                self = .CustomEmoji(isPremium: decoder.decodeBoolForKey("ip", orElse: true), alt: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
+            self = .CustomEmoji(isPremium: decoder.decodeBoolForKey("ip", orElse: true), paintToText: decoder.decodeBoolForKey("ptt", orElse: false), alt: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
             default:
                 preconditionFailure()
         }
@@ -317,9 +317,10 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 encoder.encodeInt32(typeHintIsValidated, forKey: "t")
             case .NoPremium:
                 encoder.encodeInt32(typeNoPremium, forKey: "t")
-            case let .CustomEmoji(isPremium, alt, packReference):
+            case let .CustomEmoji(isPremium, paintToText, alt, packReference):
                 encoder.encodeInt32(typeCustomEmoji, forKey: "t")
                 encoder.encodeBool(isPremium, forKey: "ip")
+                encoder.encodeBool(paintToText, forKey: "ptt")
                 encoder.encodeString(alt, forKey: "dt")
                 if let packReference = packReference {
                     encoder.encodeObject(packReference, forKey: "pr")
@@ -652,7 +653,7 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
     
     public var isPremiumEmoji: Bool {
         for attribute in self.attributes {
-            if case let .CustomEmoji(isPremium, _, _) = attribute {
+            if case let .CustomEmoji(isPremium, _, _, _) = attribute {
                 return isPremium
             }
         }
