@@ -222,14 +222,16 @@ public final class EntityKeyboardAnimationData: Equatable {
     public let dimensions: CGSize
     public let immediateThumbnailData: Data?
     public let isReaction: Bool
+    public let isTemplate: Bool
     
-    public init(id: Id, type: ItemType, resource: MediaResourceReference, dimensions: CGSize, immediateThumbnailData: Data?, isReaction: Bool) {
+    public init(id: Id, type: ItemType, resource: MediaResourceReference, dimensions: CGSize, immediateThumbnailData: Data?, isReaction: Bool, isTemplate: Bool) {
         self.id = id
         self.type = type
         self.resource = resource
         self.dimensions = dimensions
         self.immediateThumbnailData = immediateThumbnailData
         self.isReaction = isReaction
+        self.isTemplate = isTemplate
     }
     
     public convenience init(file: TelegramMediaFile, isReaction: Bool = false) {
@@ -241,7 +243,13 @@ public final class EntityKeyboardAnimationData: Equatable {
         } else {
             type = .still
         }
-        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction)
+        var isTemplate = false
+        for attribute in file.attributes {
+            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                isTemplate = isSingleColor
+            }
+        }
+        self.init(id: .file(file.fileId), type: type, resource: .standalone(resource: file.resource), dimensions: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), immediateThumbnailData: file.immediateThumbnailData, isReaction: isReaction, isTemplate: isTemplate)
     }
     
     public static func ==(lhs: EntityKeyboardAnimationData, rhs: EntityKeyboardAnimationData) -> Bool {
@@ -2201,12 +2209,18 @@ public final class EmojiPagerContentComponent: Component {
             case premium
         }
         
+        public enum TintMode {
+            case none
+            case accent
+            case primary
+        }
+        
         public let animationData: EntityKeyboardAnimationData?
         public let content: ItemContent
         public let itemFile: TelegramMediaFile?
         public let subgroupId: Int32?
         public let icon: Icon
-        public let accentTint: Bool
+        public let tintMode: TintMode
         
         public init(
             animationData: EntityKeyboardAnimationData?,
@@ -2214,14 +2228,14 @@ public final class EmojiPagerContentComponent: Component {
             itemFile: TelegramMediaFile?,
             subgroupId: Int32?,
             icon: Icon,
-            accentTint: Bool
+            tintMode: TintMode
         ) {
             self.animationData = animationData
             self.content = content
             self.itemFile = itemFile
             self.subgroupId = subgroupId
             self.icon = icon
-            self.accentTint = accentTint
+            self.tintMode = tintMode
         }
         
         public static func ==(lhs: Item, rhs: Item) -> Bool {
@@ -2243,7 +2257,7 @@ public final class EmojiPagerContentComponent: Component {
             if lhs.icon != rhs.icon {
                 return false
             }
-            if lhs.accentTint != rhs.accentTint {
+            if lhs.tintMode != rhs.tintMode {
                 return false
             }
             
@@ -2894,14 +2908,14 @@ public final class EmojiPagerContentComponent: Component {
                             return
                         }
                         
-                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0))
+                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0, customColor: animationData.isTemplate ? .white : nil))
                     }
                     
                     if attemptSynchronousLoad {
                         if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize) {
                             self.updateDisplayPlaceholder(displayPlaceholder: true)
                             
-                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                                 if !isFinal {
                                     if !success {
                                         Queue.mainQueue().async {
@@ -2931,7 +2945,7 @@ public final class EmojiPagerContentComponent: Component {
                             loadAnimation()
                         }
                     } else {
-                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true), completion: { [weak self] success, isFinal in
+                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                             if !isFinal {
                                 if !success {
                                     Queue.mainQueue().async {
@@ -5337,9 +5351,12 @@ public final class EmojiPagerContentComponent: Component {
                         
                         itemLayer.update(transition: transition, size: itemFrame.size, badge: badge, blurredBadgeColor: UIColor(white: 0.0, alpha: 0.1), blurredBadgeBackgroundColor: keyboardChildEnvironment.theme.list.plainBackgroundColor)
                         
-                        if item.accentTint {
+                        switch item.tintMode {
+                        case .accent:
                             itemLayer.layerTintColor = keyboardChildEnvironment.theme.list.itemAccentColor.cgColor
-                        } else {
+                        case .primary:
+                            itemLayer.layerTintColor = keyboardChildEnvironment.theme.list.itemPrimaryTextColor.cgColor
+                        case .none:
                             itemLayer.layerTintColor = nil
                         }
                         
@@ -5373,7 +5390,7 @@ public final class EmojiPagerContentComponent: Component {
                                 self.visibleItemSelectionLayers[itemId] = itemSelectionLayer
                             }
                             
-                            if item.accentTint {
+                            if case .accent = item.tintMode {
                                 itemSelectionLayer.backgroundColor = keyboardChildEnvironment.theme.list.itemAccentColor.withMultipliedAlpha(0.1).cgColor
                                 itemSelectionLayer.tintContainerLayer.backgroundColor = UIColor.clear.cgColor
                             } else {
@@ -6392,7 +6409,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemFile: nil,
                     subgroupId: nil,
                     icon: .none,
-                    accentTint: false
+                    tintMode: .none
                 )
                 
                 let groupId = "recent"
@@ -6411,13 +6428,16 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     existingIds.insert(file.fileId)
                     
-                    var accentTint = false
+                    var tintMode: Item.TintMode = .none
                     for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute {
+                        if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                            if isSingleColor {
+                                tintMode = .accent
+                            }
                             switch packReference {
                             case let .id(id, _):
                                 if id == 773947703670341676 || id == 2964141614563343 {
-                                    accentTint = true
+                                    tintMode = .accent
                                 }
                             default:
                                 break
@@ -6434,7 +6454,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: accentTint
+                        tintMode: tintMode
                     )
                     
                     if let groupIndex = itemGroupIndexById[groupId] {
@@ -6448,7 +6468,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemFile: nil,
                     subgroupId: nil,
                     icon: .none,
-                    accentTint: false
+                    tintMode: .none
                 )
                 
                 let groupId = "recent"
@@ -6467,13 +6487,16 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     existingIds.insert(file.fileId)
                     
-                    var accentTint = false
+                    var tintMode: Item.TintMode = .none
                     for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute {
+                        if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                            if isSingleColor {
+                                tintMode = .accent
+                            }
                             switch packReference {
                             case let .id(id, _):
                                 if id == 773947703670341676 || id == 2964141614563343 {
-                                    accentTint = true
+                                    tintMode = .accent
                                 }
                             default:
                                 break
@@ -6490,7 +6513,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: accentTint
+                        tintMode: tintMode
                     )
                     
                     if let groupIndex = itemGroupIndexById[groupId] {
@@ -6510,13 +6533,16 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         existingIds.insert(file.fileId)
                         
-                        var accentTint = false
+                        var tintMode: Item.TintMode = .none
                         for attribute in file.attributes {
-                            if case let .CustomEmoji(_, _, packReference) = attribute {
+                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                                if isSingleColor {
+                                    tintMode = .accent
+                                }
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
-                                        accentTint = true
+                                        tintMode = .accent
                                     }
                                 default:
                                     break
@@ -6533,7 +6559,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: file,
                             subgroupId: nil,
                             icon: .none,
-                            accentTint: accentTint
+                            tintMode: tintMode
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
@@ -6559,13 +6585,16 @@ public final class EmojiPagerContentComponent: Component {
                         
                         let resultItem: EmojiPagerContentComponent.Item
                         
-                        var accentTint = false
+                        var tintMode: Item.TintMode = .none
                         for attribute in file.attributes {
-                            if case let .CustomEmoji(_, _, packReference) = attribute {
+                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                                if isSingleColor {
+                                    tintMode = .accent
+                                }
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
-                                        accentTint = true
+                                        tintMode = .accent
                                     }
                                 default:
                                     break
@@ -6580,7 +6609,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: file,
                             subgroupId: nil,
                             icon: .none,
-                            accentTint: accentTint
+                            tintMode: tintMode
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
@@ -6637,6 +6666,15 @@ public final class EmojiPagerContentComponent: Component {
                         icon = .none
                     }
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in reactionItem.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationFile = reactionItem.file
                     let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
                     let resultItem = EmojiPagerContentComponent.Item(
@@ -6645,7 +6683,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: animationFile,
                         subgroupId: nil,
                         icon: icon,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let groupId = "recent"
@@ -6692,6 +6730,15 @@ public final class EmojiPagerContentComponent: Component {
                             icon = .none
                         }
                         
+                        var tintMode: Item.TintMode = .none
+                        for attribute in reactionItem.selectAnimation.attributes {
+                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                                if isSingleColor {
+                                    tintMode = .primary
+                                }
+                            }
+                        }
+                        
                         let animationFile = reactionItem.selectAnimation
                         let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
                         let resultItem = EmojiPagerContentComponent.Item(
@@ -6700,7 +6747,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: animationFile,
                             subgroupId: nil,
                             icon: icon,
-                            accentTint: false
+                            tintMode: tintMode
                         )
                         
                         if hasPremium {
@@ -6768,6 +6815,15 @@ public final class EmojiPagerContentComponent: Component {
                             }
                         }
                         
+                        var tintMode: Item.TintMode = .none
+                        for attribute in animationFile.attributes {
+                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                                if isSingleColor {
+                                    tintMode = .primary
+                                }
+                            }
+                        }
+                        
                         let animationData = EntityKeyboardAnimationData(file: animationFile, isReaction: true)
                         let resultItem = EmojiPagerContentComponent.Item(
                             animationData: animationData,
@@ -6775,7 +6831,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: animationFile,
                             subgroupId: nil,
                             icon: icon,
-                            accentTint: false
+                            tintMode: tintMode
                         )
                         
                         let groupId = "popular"
@@ -6811,6 +6867,15 @@ public final class EmojiPagerContentComponent: Component {
                     let resultItem: EmojiPagerContentComponent.Item
                     switch item.content {
                     case let .file(file):
+                        var tintMode: Item.TintMode = .none
+                        for attribute in file.attributes {
+                            if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                                if isSingleColor {
+                                    tintMode = .primary
+                                }
+                            }
+                        }
+                        
                         let animationData = EntityKeyboardAnimationData(file: file)
                         resultItem = EmojiPagerContentComponent.Item(
                             animationData: animationData,
@@ -6818,7 +6883,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: file,
                             subgroupId: nil,
                             icon: .none,
-                            accentTint: false
+                            tintMode: tintMode
                         )
                     case let .text(text):
                         resultItem = EmojiPagerContentComponent.Item(
@@ -6827,7 +6892,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: nil,
                             subgroupId: nil,
                             icon: .none,
-                            accentTint: false
+                            tintMode: .none
                         )
                     }
                     
@@ -6857,6 +6922,19 @@ public final class EmojiPagerContentComponent: Component {
                         icon = .locked
                     }
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                if isStatusSelection {
+                                    tintMode = .accent
+                                } else {
+                                    tintMode = .primary
+                                }
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.file)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -6864,7 +6942,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: icon,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let supergroupId = entry.index.collectionId
@@ -6900,7 +6978,8 @@ public final class EmojiPagerContentComponent: Component {
                                         resource: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource),
                                         dimensions: thumbnail.dimensions.cgSize,
                                         immediateThumbnailData: info.immediateThumbnailData,
-                                        isReaction: false
+                                        isReaction: false,
+                                        isTemplate: false
                                     )
                                 }
                                 
@@ -6918,6 +6997,19 @@ public final class EmojiPagerContentComponent: Component {
                         }
                         
                         for item in featuredEmojiPack.topItems {
+                            var tintMode: Item.TintMode = .none
+                            for attribute in item.file.attributes {
+                                if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                                    if isSingleColor {
+                                        if isStatusSelection {
+                                            tintMode = .accent
+                                        } else {
+                                            tintMode = .primary
+                                        }
+                                    }
+                                }
+                            }
+                            
                             let animationData = EntityKeyboardAnimationData(file: item.file)
                             let resultItem = EmojiPagerContentComponent.Item(
                                 animationData: animationData,
@@ -6925,7 +7017,7 @@ public final class EmojiPagerContentComponent: Component {
                                 itemFile: item.file,
                                 subgroupId: nil,
                                 icon: .none,
-                                accentTint: false
+                                tintMode: tintMode
                             )
                             
                             let supergroupId = featuredEmojiPack.info.id
@@ -6959,7 +7051,8 @@ public final class EmojiPagerContentComponent: Component {
                                         resource: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource),
                                         dimensions: thumbnail.dimensions.cgSize,
                                         immediateThumbnailData: info.immediateThumbnailData,
-                                        isReaction: false
+                                        isReaction: false,
+                                        isTemplate: false
                                     )
                                 }
                                 
@@ -6980,7 +7073,7 @@ public final class EmojiPagerContentComponent: Component {
                             itemFile: nil,
                             subgroupId: subgroupId.rawValue,
                             icon: .none,
-                            accentTint: false
+                            tintMode: .none
                         )
                         
                         if let groupIndex = itemGroupIndexById[groupId] {
@@ -7190,10 +7283,20 @@ public final class EmojiPagerContentComponent: Component {
                             resource: .stickerPackThumbnail(stickerPack: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), resource: thumbnail.resource),
                             dimensions: thumbnail.dimensions.cgSize,
                             immediateThumbnailData: featuredStickerPack.info.immediateThumbnailData,
-                            isReaction: false
+                            isReaction: false,
+                            isTemplate: false
                         )
                     } else {
                         animationData = EntityKeyboardAnimationData(file: item.file)
+                    }
+                    
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
                     }
                     
                     let resultItem = EmojiPagerContentComponent.Item(
@@ -7202,7 +7305,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let supergroupId = "featuredTop"
@@ -7233,6 +7336,15 @@ public final class EmojiPagerContentComponent: Component {
                         continue
                     }
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.file)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -7240,7 +7352,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let groupId = "saved"
@@ -7262,6 +7374,15 @@ public final class EmojiPagerContentComponent: Component {
                         continue
                     }
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.media.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.media)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -7269,7 +7390,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.media,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let groupId = "recent"
@@ -7314,6 +7435,15 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     processedIds.insert(item.file.fileId)
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.file)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -7321,7 +7451,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let groupId = "premium"
@@ -7348,6 +7478,15 @@ public final class EmojiPagerContentComponent: Component {
                     }
                     processedIds.insert(item.file.fileId)
                     
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.file)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -7355,7 +7494,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let groupId = "peerSpecific"
@@ -7372,6 +7511,16 @@ public final class EmojiPagerContentComponent: Component {
                 guard let item = entry.item as? StickerPackItem else {
                     continue
                 }
+                
+                var tintMode: Item.TintMode = .none
+                for attribute in item.file.attributes {
+                    if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                        if isSingleColor {
+                            tintMode = .primary
+                        }
+                    }
+                }
+                
                 let animationData = EntityKeyboardAnimationData(file: item.file)
                 let resultItem = EmojiPagerContentComponent.Item(
                     animationData: animationData,
@@ -7379,7 +7528,7 @@ public final class EmojiPagerContentComponent: Component {
                     itemFile: item.file,
                     subgroupId: nil,
                     icon: .none,
-                    accentTint: false
+                    tintMode: tintMode
                 )
                 let groupId = entry.index.collectionId
                 if let groupIndex = itemGroupIndexById[groupId] {
@@ -7409,7 +7558,8 @@ public final class EmojiPagerContentComponent: Component {
                                     resource: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource),
                                     dimensions: thumbnail.dimensions.cgSize,
                                     immediateThumbnailData: info.immediateThumbnailData,
-                                    isReaction: false
+                                    isReaction: false,
+                                    isTemplate: false
                                 )
                             }
                             
@@ -7426,6 +7576,15 @@ public final class EmojiPagerContentComponent: Component {
                 }
                 
                 for item in featuredStickerPack.topItems {
+                    var tintMode: Item.TintMode = .none
+                    for attribute in item.file.attributes {
+                        if case let .CustomEmoji(_, isSingleColor, _, _) = attribute {
+                            if isSingleColor {
+                                tintMode = .primary
+                            }
+                        }
+                    }
+                    
                     let animationData = EntityKeyboardAnimationData(file: item.file)
                     let resultItem = EmojiPagerContentComponent.Item(
                         animationData: animationData,
@@ -7433,7 +7592,7 @@ public final class EmojiPagerContentComponent: Component {
                         itemFile: item.file,
                         subgroupId: nil,
                         icon: .none,
-                        accentTint: false
+                        tintMode: tintMode
                     )
                     
                     let supergroupId = featuredStickerPack.info.id
@@ -7469,7 +7628,8 @@ public final class EmojiPagerContentComponent: Component {
                                 resource: .stickerPackThumbnail(stickerPack: .id(id: info.id.id, accessHash: info.accessHash), resource: thumbnail.resource),
                                 dimensions: thumbnail.dimensions.cgSize,
                                 immediateThumbnailData: info.immediateThumbnailData,
-                                isReaction: false
+                                isReaction: false,
+                                isTemplate: false
                             )
                         }
                         

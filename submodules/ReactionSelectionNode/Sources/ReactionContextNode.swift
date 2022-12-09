@@ -425,7 +425,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     for item in featuredEmojiPack.topItems {
                         for attribute in item.file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, alt, _):
+                            case let .CustomEmoji(_, _, alt, _):
                                 if filterList.contains(alt) {
                                     filteredFiles.append(item.file)
                                 }
@@ -1395,7 +1395,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                 }
                                 for attribute in item.file.attributes {
                                     switch attribute {
-                                    case let .CustomEmoji(_, alt, _):
+                                    case let .CustomEmoji(_, _, alt, _):
                                         if !item.file.isPremiumEmoji || hasPremium {
                                             if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                 result.append((alt, item.file, keyword))
@@ -1424,7 +1424,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                                         content: .animation(animationData),
                                         itemFile: itemFile, subgroupId: nil,
                                         icon: .none,
-                                        accentTint: false
+                                        tintMode: animationData.isTemplate ? .primary : .none
                                     )
                                     items.append(item)
                                 }
@@ -1742,7 +1742,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
             
             if additionalAnimation == nil && itemNode.item.isCustom {
                 outer: for attribute in itemNode.item.stillAnimation.attributes {
-                    if case let .CustomEmoji(_, alt, _) = attribute {
+                    if case let .CustomEmoji(_, _, alt, _) = attribute {
                         if let availableReactions = self.availableReactions {
                             for availableReaction in availableReactions.reactions {
                                 if availableReaction.value == .builtin(alt) {

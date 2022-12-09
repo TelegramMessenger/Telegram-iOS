@@ -473,7 +473,7 @@ final class CustomEmojiContainerView: UIView {
         preconditionFailure()
     }
     
-    func update(fontSize: CGFloat, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
+    func update(fontSize: CGFloat, textColor: UIColor, emojiRects: [(CGRect, ChatTextInputTextCustomEmojiAttribute)]) {
         var nextIndexById: [Int64: Int] = [:]
         
         var validKeys = Set<InlineStickerItemLayer.Key>()
@@ -497,6 +497,10 @@ final class CustomEmojiContainerView: UIView {
                 self.emojiLayers[key] = view
             } else {
                 continue
+            }
+            
+            if let view = view as? EmojiTextAttachmentView {
+                view.updateTextColor(textColor)
             }
             
             let itemSize: CGFloat = floor(24.0 * fontSize / 17.0)
@@ -2352,7 +2356,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 self.customEmojiContainerView = customEmojiContainerView
             }
             
-            customEmojiContainerView.update(fontSize: fontSize, emojiRects: customEmojiRects)
+            customEmojiContainerView.update(fontSize: fontSize, textColor: textColor, emojiRects: customEmojiRects)
         } else if let customEmojiContainerView = self.customEmojiContainerView {
             customEmojiContainerView.removeFromSuperview()
             self.customEmojiContainerView = nil
@@ -2599,7 +2603,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                             var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                             loop: for attribute in file.attributes {
                                 switch attribute {
-                                case let .CustomEmoji(_, displayText, _):
+                                case let .CustomEmoji(_, _, displayText, _):
                                     text = displayText
                                     emojiAttribute = ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: file.fileId.id, file: file)
                                     break loop

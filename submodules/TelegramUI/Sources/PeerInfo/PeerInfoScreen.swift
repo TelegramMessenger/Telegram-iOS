@@ -3514,7 +3514,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         if let file = files.first?.value {
                             var stickerPackReference: StickerPackReference?
                             for attribute in file.attributes {
-                                if case let .CustomEmoji(_, _, packReference) = attribute {
+                                if case let .CustomEmoji(_, _, _, packReference) = attribute {
                                     stickerPackReference = packReference
                                     break
                                 }

@@ -2505,7 +2505,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                             strongSelf.emojiStatusFileAndPackTitle.set(.never())
                             
                             for attribute in emojiFile.attributes {
-                                if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                                     strongSelf.emojiStatusPackDisposable.set((strongSelf.context.engine.stickers.loadedStickerPack(reference: packReference, forceActualized: false)
                                     |> filter { result in
                                         if case .result = result {
