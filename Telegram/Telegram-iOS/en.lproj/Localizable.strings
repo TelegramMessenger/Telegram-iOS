@@ -8479,3 +8479,9 @@ Sorry for the inconvenience.";
 "Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
 "Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";
 "Conversation.SuggestedVideoView" = "View";
+
+"Conversation.Messages_1" = "%@ message";
+"Conversation.Messages_any" = "%@ messages";
+
+"Notification.SuggestedProfilePhoto" = "Suggested Profile Photo";
+"Notification.SuggestedProfileVideo" = "Suggested Profile Video";

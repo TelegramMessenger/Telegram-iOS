@@ -225,7 +225,11 @@ func _internal_updatePeerPhotoInternal(postbox: Postbox, network: Network, state
                                             if let peer = transaction.getPeer(peer.id) {
                                                 updatePeers(transaction: transaction, peers: [peer], update: { (_, peer) -> Peer? in
                                                     if let peer = peer as? TelegramUser {
-                                                        return peer.withUpdatedPhoto(representations)
+                                                        if customPeerPhotoMode == .suggest {
+                                                            return peer
+                                                        } else {
+                                                            return peer.withUpdatedPhoto(representations)
+                                                        }
                                                     } else {
                                                         return peer
                                                     }

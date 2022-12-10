@@ -15,7 +15,7 @@ func createEmitterBehavior(type: String) -> NSObject {
     return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
 }
 
-private func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
+func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
     var size = originalSize
     var position = position
     var scale: CGFloat = 1.0
@@ -58,8 +58,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private let emitterMaskFillNode: ASDisplayNode
         
     public var isRevealed = false
-    
-    private var exploding = false
+    private var isExploding = false
     
     public init(textNode: TextNode?) {
         self.textNode = textNode
@@ -158,8 +157,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
             transition.updateAlpha(node: self, alpha: 1.0)
             transition.updateAlpha(node: textNode, alpha: 0.0)
             
-            if self.exploding {
-                self.exploding = false
+            if self.isExploding {
+                self.isExploding = false
                 self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             }
         }
@@ -171,7 +170,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         self.isRevealed = true
-        self.exploding = true
+        self.isExploding = true
         
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
@@ -227,7 +226,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
-            self.exploding = false
+            self.isExploding = false
             self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.textSpotNode.layer.removeAllAnimations()
             

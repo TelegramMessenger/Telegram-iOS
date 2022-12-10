@@ -13,18 +13,22 @@ import LocalizedPeerData
 import TelegramStringFormatting
 import WallpaperBackgroundNode
 import ReactionSelectionNode
+import PhotoResources
 
 class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let mediaBackgroundNode: NavigationBackgroundNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
+    private let imageNode: TransformImageNode
     
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
     
     private var absoluteRect: (CGRect, CGSize)?
+    
+    private let fetchDisposable = MetaDisposable()
             
     required init() {
         self.mediaBackgroundNode = NavigationBackgroundNode(color: .clear)
@@ -38,6 +42,8 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.subtitleNode = TextNode()
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
+        
+        self.imageNode = TransformImageNode()
         
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
@@ -54,6 +60,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.addSubnode(self.mediaBackgroundNode)
         self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
+        self.addSubnode(self.imageNode)
     
         self.addSubnode(self.buttonNode)
         self.buttonNode.addSubnode(self.buttonStarsNode)
@@ -82,6 +89,10 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         fatalError("init(coder:) has not been implemented")
     }
     
+    deinit {
+        self.fetchDisposable.dispose()
+    }
+    
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
@@ -91,6 +102,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                 
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
+        let makeImageLayout = self.imageNode.asyncLayout()
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
 
@@ -98,24 +110,53 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
                         
             return (contentProperties, nil, CGFloat.greatestFiniteMagnitude, { constrainedSize, position in
-                let giftSize = CGSize(width: 220.0, height: 240.0)
+                let width: CGFloat = 220.0
+                let imageSize = CGSize(width: 100.0, height: 100.0)
                             
                 let primaryTextColor = serviceMessageColorComponents(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper).primaryText
                                 
-                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_Title, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                var photo: TelegramMediaImage?
+                if let media = item.message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .suggestedProfilePhoto(image) = media.action {
+                    photo = image
+                }
+                let isVideo = !(photo?.videoRepresentations.isEmpty ?? true)
+                let fromYou = item.message.author?.id == item.context.account.peerId
                 
-                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: "Subtitle", font: Font.regular(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: isVideo ? item.presentationData.strings.Conversation_SuggestedVideoTitle : item.presentationData.strings.Conversation_SuggestedPhotoTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
-                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: item.presentationData.strings.Notification_PremiumGift_View, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: giftSize.width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
+                let text: String
+                if fromYou {
+                    text = isVideo ? item.presentationData.strings.Conversation_SuggestedVideoTextYou(peerName).string : item.presentationData.strings.Conversation_SuggestedPhotoTextYou(peerName).string
+                } else {
+                    text = isVideo ? item.presentationData.strings.Conversation_SuggestedVideoText(peerName).string : item.presentationData.strings.Conversation_SuggestedPhotoText(peerName).string
+                }
+                
+                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                
+                let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: isVideo ? item.presentationData.strings.Conversation_SuggestedVideoView : item.presentationData.strings.Conversation_SuggestedPhotoView, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                let backgroundSize = CGSize(width: giftSize.width, height: giftSize.height + 18.0)
+                let backgroundSize = CGSize(width: width, height: titleLayout.size.height + subtitleLayout.size.height + 182.0)
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
                         if let strongSelf = self {
                             strongSelf.item = item
                             
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - giftSize.width) / 2.0), y: 16.0), size: giftSize)
+                            if let photo = photo {
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                     
+                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: photo), synchronousLoad: synchronousLoads)
+                                strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
+                                
+                                let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())
+                                let apply = makeImageLayout(arguments)
+                                apply()
+                                
+                                strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
+                            }
+                            
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
                             let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
@@ -127,10 +168,10 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                             let _ = subtitleApply()
                             let _ = buttonTitleApply()
                                                         
-                            let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 151.0), size: titleLayout.size)
+                            let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 127.0), size: titleLayout.size)
                             strongSelf.titleNode.frame = titleFrame
                             
-                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY - 1.0), size: subtitleLayout.size)
+                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + 2.0), size: subtitleLayout.size)
                             strongSelf.subtitleNode.frame = subtitleFrame
                             
                             let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: subtitleFrame.maxY + 18.0), size: buttonTitleLayout.size)

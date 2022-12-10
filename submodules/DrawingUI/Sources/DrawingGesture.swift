@@ -284,7 +284,7 @@ class DrawingGesturePipeline {
         }
     }
     
-    var mode: Mode = .polyline {
+    var mode: Mode = .location {
         didSet {
             if [.location, .polyline].contains(self.mode) {
                 self.gestureRecognizer?.usePredictedTouches = false

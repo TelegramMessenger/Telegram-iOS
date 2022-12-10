@@ -600,7 +600,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                         }
                         if let node = node {
                             return (node.view, { [weak node] animateCheckNode in
-                                node?.animateFadeIn(animateCheckNode: animateCheckNode)
+                                node?.animateFadeIn(animateCheckNode: animateCheckNode, animateSpoilerNode: false)
                             })
                         } else {
                             return nil
@@ -1516,21 +1516,33 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                 let strings = self.presentationData.strings
                 let selectionCount = self.selectionCount
             
+                var hasSpoilers = false
+                if let selectionContext = self.interaction?.selectionState, let editingContext = self.interaction?.editingState {
+                    for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                        if editingContext.spoiler(for: item) {
+                            hasSpoilers = true
+                            break
+                        }
+                    }
+                }
+                        
                 let items: Signal<ContextController.Items, NoError>  = self.groupedPromise.get()
                 |> deliverOnMainQueue
                 |> map { [weak self] grouped -> ContextController.Items in
                     var items: [ContextMenuItem] = []
-                    items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
-                        return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
-                    }, action: { [weak self] _, f in
-                        f(.default)
-
-                        self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, completion: {})
-                    })))
-                
+                    if !hasSpoilers {
+                        items.append(.action(ContextMenuActionItem(text: selectionCount > 1 ? strings.Attachment_SendAsFiles : strings.Attachment_SendAsFile, icon: { theme in
+                            return generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/File"), color: theme.contextMenu.primaryColor)
+                        }, action: { [weak self] _, f in
+                            f(.default)
+                            
+                            self?.controllerNode.send(asFile: true, silently: false, scheduleTime: nil, animated: true, completion: {})
+                        })))
+                    }
                     if selectionCount > 1 {
-                        items.append(.separator)
-                        
+                        if !items.isEmpty {
+                            items.append(.separator)
+                        }
                         items.append(.action(ContextMenuActionItem(text: strings.Attachment_Grouped, icon: { theme in
                             if !grouped {
                                 return nil
@@ -1552,6 +1564,21 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             self?.groupedValue = false
                         })))
                     }
+                    if !items.isEmpty {
+                        items.append(.separator)
+                    }
+                    items.append(.action(ContextMenuActionItem(text: hasSpoilers ? "Disable Spoiler Effect" : "Spoiler Effect", icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                        f(.default)
+                        guard let strongSelf = self else {
+                            return
+                        }
+                        
+                        if let selectionContext = strongSelf.interaction?.selectionState, let editingContext = strongSelf.interaction?.editingState {
+                            for case let item as TGMediaEditableItem in selectionContext.selectedItems() {
+                                editingContext.setSpoiler(!hasSpoilers, for: item)
+                            }
+                        }
+                    })))
                     
                     return ContextController.Items(content: .list(items))
                 }

@@ -820,6 +820,24 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             let controller = PremiumIntroScreen(context: strongSelf.context, source: .gift(from: fromPeerId, to: toPeerId, duration: duration))
                             strongSelf.push(controller)
                             return true
+                        case let .suggestedProfilePhoto(image):
+                            if let image = image {
+                                legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), present: { [weak self] c, a in
+                                    self?.present(c, in: .window(.root), with: a)
+                                }, imageCompletion: { [weak self] image in
+                                    if let strongSelf = self {
+                                        if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            settingsController.updateProfilePhoto(image)
+                                        }
+                                    }
+                                }, videoCompletion: { [weak self] image, url, adjustments in
+                                    if let strongSelf = self {
+                                        if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                            settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                        }
+                                    }
+                                })
+                            }
                         default:
                             break
                     }

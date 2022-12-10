@@ -25,6 +25,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
     private var adjustmentsDisposable: Disposable?
     
+    private let spoilerDisposable = MetaDisposable()
+    private var spoilerNode: SpoilerOverlayNode?
+    
     private var theme: PresentationTheme?
     
     private var validLayout: CGSize?
@@ -68,43 +71,71 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         
         self.addSubnode(self.imageNode)
         
-        if asset.isVideo, let editingState = interaction?.editingState {
-            func adjustmentsChangedSignal(editingState: TGMediaEditingContext) -> Signal<TGMediaEditAdjustments?, NoError> {
-                return Signal { subscriber in
-                    let disposable = editingState.adjustmentsSignal(for: asset).start(next: { next in
-                        if let next = next as? TGMediaEditAdjustments {
-                            subscriber.putNext(next)
-                        } else if next == nil {
-                            subscriber.putNext(nil)
+        if let editingState = interaction?.editingState {
+            if asset.isVideo {
+                func adjustmentsChangedSignal(editingState: TGMediaEditingContext) -> Signal<TGMediaEditAdjustments?, NoError> {
+                    return Signal { subscriber in
+                        let disposable = editingState.adjustmentsSignal(for: asset).start(next: { next in
+                            if let next = next as? TGMediaEditAdjustments {
+                                subscriber.putNext(next)
+                            } else if next == nil {
+                                subscriber.putNext(nil)
+                            }
+                        }, error: nil, completed: {})
+                        return ActionDisposable {
+                            disposable?.dispose()
                         }
-                    }, error: nil, completed: {})
-                    return ActionDisposable {
-                        disposable?.dispose()
                     }
+                }
+                
+                self.adjustmentsDisposable = (adjustmentsChangedSignal(editingState: editingState)
+                                              |> deliverOnMainQueue).start(next: { [weak self] adjustments in
+                    if let strongSelf = self {
+                        let duration: Double
+                        if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
+                            duration = adjustments.trimEndValue - adjustments.trimStartValue
+                        } else {
+                            duration = asset.originalDuration ?? 0.0
+                        }
+                        strongSelf.videoDuration = duration
+                        
+                        if let size = strongSelf.validLayout {
+                            strongSelf.updateLayout(size: size, transition: .immediate)
+                        }
+                    }
+                })
+            }
+            
+            let spoilerSignal = Signal<Bool, NoError> { subscriber in
+                if let signal = editingState.spoilerSignal(forIdentifier: asset.uniqueIdentifier) {
+                    let disposable = signal.start(next: { next in
+                        if let next = next as? Bool {
+                            subscriber.putNext(next)
+                        }
+                    }, error: { _ in
+                    }, completed: nil)!
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
+                } else {
+                    return EmptyDisposable
                 }
             }
             
-            self.adjustmentsDisposable = (adjustmentsChangedSignal(editingState: editingState)
-            |> deliverOnMainQueue).start(next: { [weak self] adjustments in
-                if let strongSelf = self {
-                    let duration: Double
-                    if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
-                        duration = adjustments.trimEndValue - adjustments.trimStartValue
-                    } else {
-                        duration = asset.originalDuration ?? 0.0
-                    }
-                    strongSelf.videoDuration = duration
-                    
-                    if let size = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, transition: .immediate)
-                    }
+            self.spoilerDisposable.set((spoilerSignal
+            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler in
+                guard let strongSelf = self else {
+                    return
                 }
-            })
+                strongSelf.updateHasSpoiler(hasSpoiler)
+            }))
         }
     }
     
     deinit {
         self.adjustmentsDisposable?.dispose()
+        self.spoilerDisposable.dispose()
     }
     
     override func didLoad() {
@@ -118,6 +149,25 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             return
         }
         self.interaction?.openSelectedMedia(asset, self.imageNode.image)
+    }
+    
+    private func updateHasSpoiler(_ hasSpoiler: Bool) {
+        if hasSpoiler {
+            if self.spoilerNode == nil {
+                let spoilerNode = SpoilerOverlayNode()
+                self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
+                self.spoilerNode = spoilerNode
+                
+                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
+            self.spoilerNode?.update(size: self.bounds.size, transition: .immediate)
+            self.spoilerNode?.frame = CGRect(origin: .zero, size: self.bounds.size)
+        } else if let spoilerNode = self.spoilerNode {
+            self.spoilerNode = nil
+            spoilerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak spoilerNode] _ in
+                spoilerNode?.removeFromSupernode()
+            })
+        }
     }
     
     func setup(size: CGSize) {
@@ -229,6 +279,10 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             if let durationBackgroundNode = self.durationBackgroundNode, durationBackgroundNode.alpha > 0.0 {
                 durationBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+            
+            if let spoilerNode = self.spoilerNode, spoilerNode.alpha > 0.0 {
+                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
     }
     
@@ -248,6 +302,11 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.validLayout = size
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        if let spoilerNode = self.spoilerNode {
+            transition.updateFrame(node: spoilerNode, frame: CGRect(origin: CGPoint(), size: size))
+            spoilerNode.update(size: size, transition: transition)
+        }
         
         let checkSize = CGSize(width: 29.0, height: 29.0)
         if let checkNode = self.checkNode {

@@ -573,6 +573,17 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
+        } else if case let .action(action) = self.media, case let .suggestedProfilePhoto(image) = action.action, let image = image {
+            isRound = true
+            self.playIcon.isHidden = true
+            if let largest = largestImageRepresentation(image.representations) {
+                dimensions = largest.dimensions.cgSize
+                if !self.requestedImage {
+                    self.requestedImage = true
+                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
+                    self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
+                }
+            }
         } else if case let .file(file) = self.media {
             if file.isInstantVideo {
                 isRound = true
@@ -1294,9 +1305,25 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     guard let strongSelf = self else {
                         return
                     }
-                    let cachedPeerData = peerView.cachedData
-                    if let cachedPeerData = cachedPeerData as? CachedUserData, case let .known(maybePhoto) = cachedPeerData.photo {
-                        if let photo = maybePhoto, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
+                    let cachedPeerData = peerView.cachedData as? CachedUserData
+                    var personalPhoto: TelegramMediaImage?
+                    var profilePhoto: TelegramMediaImage?
+                    var isKnown = false
+                    
+                    if let cachedPeerData = cachedPeerData {
+                        if case let .known(maybePersonalPhoto) = cachedPeerData.personalPhoto {
+                            personalPhoto = maybePersonalPhoto
+                            isKnown = true
+                        }
+                        if case let .known(maybePhoto) = cachedPeerData.photo {
+                            profilePhoto = maybePhoto
+                            isKnown = true
+                        }
+                    }
+                    
+                    if isKnown {
+                        let photo = personalPhoto ?? profilePhoto
+                        if let photo = photo, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
                             let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
                             let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
@@ -1936,6 +1963,9 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                                             }
                                             break inner
                                         }
+                                    } else if let action = media as? TelegramMediaAction, case let .suggestedProfilePhoto(image) = action.action, let _ = image {
+                                        let fitSize = contentImageSize
+                                        contentImageSpecs.append((message, .action(action), fitSize))
                                     }
                                 }
                             }
@@ -3165,7 +3195,11 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                     var mediaPreviewOffset = textNodeFrame.origin.offsetBy(dx: 1.0, dy: floor((measureLayout.size.height - contentImageSize.height) / 2.0))
                     var validMediaIds: [EngineMedia.Id] = []
                     for (message, media, mediaSize) in contentImageSpecs {
-                        guard let mediaId = media.id else {
+                        var mediaId = media.id
+                        if mediaId == nil, case let .action(action) = media, case let .suggestedProfilePhoto(image) = action.action {
+                            mediaId = image?.id
+                        }
+                        guard let mediaId = mediaId else {
                             continue
                         }
                         validMediaIds.append(mediaId)

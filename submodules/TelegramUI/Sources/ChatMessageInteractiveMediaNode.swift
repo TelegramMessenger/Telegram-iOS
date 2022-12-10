@@ -174,6 +174,7 @@ extension UIBezierPath {
 }
 
 private class ExtendedMediaOverlayNode: ASDisplayNode {
+    private let blurredImageNode: TransformImageNode
     private let dustNode: MediaDustNode
     private let buttonNode: HighlightTrackingButtonNode
     private let highlightedBackgroundNode: ASDisplayNode
@@ -184,6 +185,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private var maskLayer: CAShapeLayer?
     
     override init() {
+        self.blurredImageNode = TransformImageNode()
+         
         self.dustNode = MediaDustNode()
         
         self.buttonNode = HighlightTrackingButtonNode()
@@ -202,10 +205,8 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.textNode = ImmediateTextNode()
                 
         super.init()
-        
-        self.clipsToBounds = true
-        self.isUserInteractionEnabled = false
-        
+                
+        self.addSubnode(self.blurredImageNode)
         self.addSubnode(self.dustNode)
         self.addSubnode(self.buttonNode)
 
@@ -250,22 +251,51 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.maskLayer = maskLayer
     }
     
-    func update(size: CGSize, text: String, corners: ImageCorners?) {
+    func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
+        
+        if let (imageSignal, drawingSize) = imageSignal {
+            self.blurredImageNode.setSignal(imageSignal)
+            
+            let imageLayout = self.blurredImageNode.asyncLayout()
+            let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
+            let apply = imageLayout(arguments)
+            apply()
+            
+            self.blurredImageNode.isHidden = false
+            self.isUserInteractionEnabled = !self.dustNode.isRevealed
+            
+            self.dustNode.revealed = { [weak self] in
+                self?.blurredImageNode.removeFromSupernode()
+                self?.isUserInteractionEnabled = false
+            }
+        } else {
+            self.blurredImageNode.isHidden = true
+            self.isUserInteractionEnabled = false
+        }
+        self.blurredImageNode.frame = imageFrame
                 
         self.dustNode.frame = CGRect(origin: .zero, size: size)
         self.dustNode.update(size: size, color: .white)
         
-        self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(14.0), textColor: .white, paragraphAlignment: .center)
-        let textSize = self.textNode.updateLayout(size)
-        if let iconSize = self.iconNode.image?.size {
-            let contentSize = CGSize(width: iconSize.width + textSize.width + spacing + padding * 2.0, height: 32.0)
-            self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
-            self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
-                        
-            self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
-            self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
+        if text.isEmpty {
+            self.buttonNode.isHidden = true
+            self.textNode.isHidden = true
+        } else {
+            self.buttonNode.isHidden = false
+            self.textNode.isHidden = false
+            
+            self.textNode.attributedText = NSAttributedString(string: text, font: Font.semibold(14.0), textColor: .white, paragraphAlignment: .center)
+            let textSize = self.textNode.updateLayout(size)
+            if let iconSize = self.iconNode.image?.size {
+                let contentSize = CGSize(width: iconSize.width + textSize.width + spacing + padding * 2.0, height: 32.0)
+                self.buttonNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - contentSize.width) / 2.0), y: floorToScreenPixels((size.height - contentSize.height) / 2.0)), size: contentSize)
+                self.highlightedBackgroundNode.frame = CGRect(origin: .zero, size: contentSize)
+                
+                self.iconNode.frame = CGRect(origin: CGPoint(x: self.buttonNode.frame.minX + padding, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - iconSize.height) / 2.0) + 1.0 - UIScreenPixel), size: iconSize)
+                self.textNode.frame = CGRect(origin: CGPoint(x: self.iconNode.frame.maxX + spacing, y: self.buttonNode.frame.minY + floorToScreenPixels((contentSize.height - textSize.height) / 2.0)), size: textSize)
+            }
         }
         
         var leftOffset: CGFloat = 0.0
@@ -290,6 +320,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
     private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
+    private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
@@ -855,6 +886,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     }
                     
                     var updateImageSignal: ((Bool, Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError>)?
+                    var updateBlurredImageSignal: ((Bool, Bool) -> Signal<(TransformImageArguments) -> DrawingContext?, NoError>)?
                     var updatedStatusSignal: Signal<(MediaResourceStatus, MediaResourceStatus?), NoError>?
                     var updatedFetchControls: FetchControls?
                     
@@ -945,6 +977,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             } else {
                                 updateImageSignal = { synchronousLoad, highQuality in
                                     return chatMessagePhoto(postbox: context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
+                                }
+                                updateBlurredImageSignal = { synchronousLoad, _ in
+                                    return chatSecretPhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             }
                             
@@ -1323,8 +1358,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
 
                                 if let imageDimensions = imageDimensions {
                                     strongSelf.currentHighQualityImageSignal = (updateImageSignal(false, true), imageDimensions)
+                                    
+                                    if let updateBlurredImageSignal = updateBlurredImageSignal {
+                                        strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), imageDimensions)
+                                    }
                                 }
                             }
+                            
+
                             
                             if let _ = secretBeginTimeAndTimeout {
                                 if updatedStatusSignal == nil, let fetchStatus = strongSelf.fetchStatus, case .Local = fetchStatus {
@@ -1842,7 +1883,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
             badgeNode.removeFromSupernode()
         }
         
+        var displaySpoiler = false
         if let invoice = invoice, let extendedMedia = invoice.extendedMedia, case .preview = extendedMedia {
+            displaySpoiler = true
+        } else if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }) {
+            displaySpoiler = true
+        }
+        
+        if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
                 let extendedMediaOverlayNode = ExtendedMediaOverlayNode()
                 self.extendedMediaOverlayNode = extendedMediaOverlayNode
@@ -1864,7 +1912,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                     break
                 }
             }
-            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: paymentText, corners: self.currentImageArguments?.corners)
+            self.extendedMediaOverlayNode?.update(size: self.imageNode.frame.size, text: paymentText, imageSignal: self.currentBlurredImageSignal, imageFrame: self.imageNode.view.convert(self.imageNode.bounds, to: self.extendedMediaOverlayNode?.view), corners: self.currentImageArguments?.corners)
         } else if let extendedMediaOverlayNode = self.extendedMediaOverlayNode {
             self.extendedMediaOverlayNode = nil
             extendedMediaOverlayNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3, removeOnCompletion: false, completion: { [weak extendedMediaOverlayNode] _ in
