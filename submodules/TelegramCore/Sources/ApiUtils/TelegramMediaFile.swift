@@ -112,8 +112,8 @@ func telegramMediaFileAttributesFromApiAttributes(_ attributes: [Api.DocumentAtt
                 result.append(.Audio(isVoice: isVoice, duration: Int(duration), title: title, performer: performer, waveform: waveformBuffer))
             case let .documentAttributeCustomEmoji(flags, alt, stickerSet):
                 let isFree = (flags & (1 << 0)) != 0
-                let paintToText = (flags & (1 << 1)) != 0
-                result.append(.CustomEmoji(isPremium: !isFree, paintToText: paintToText, alt: alt, packReference: StickerPackReference(apiInputSet: stickerSet)))
+                let isSingleColor = (flags & (1 << 1)) != 0
+                result.append(.CustomEmoji(isPremium: !isFree, isSingleColor: isSingleColor, alt: alt, packReference: StickerPackReference(apiInputSet: stickerSet)))
         }
     }
     return result

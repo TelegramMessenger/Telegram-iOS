@@ -100,7 +100,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
     var instantPageMedia: (TelegramMediaWebpage, [InstantPageGalleryEntry])?
     if message.media.isEmpty, let entities = message.textEntitiesAttribute?.entities, entities.count == 1, let firstEntity = entities.first, case let .CustomEmoji(_, fileId) = firstEntity.type, let file = message.associatedMedia[MediaId(namespace: Namespaces.Media.CloudFile, id: fileId)] as? TelegramMediaFile {
         for attribute in file.attributes {
-            if case let .CustomEmoji(_, _, reference) = attribute {
+            if case let .CustomEmoji(_, _, _, reference) = attribute {
                 if let reference = reference {
                     return .stickerPack(reference)
                 }

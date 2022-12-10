@@ -329,7 +329,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     for item in featuredEmojiPack.topItems {
                         for attribute in item.file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, alt, _):
+                            case let .CustomEmoji(_, _, alt, _):
                                 if filterList.contains(alt) {
                                     filteredFiles.append(item.file)
                                 }
@@ -487,7 +487,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                         }
                                         for attribute in item.file.attributes {
                                             switch attribute {
-                                            case let .CustomEmoji(_, alt, _):
+                                            case let .CustomEmoji(_, _, alt, _):
                                                 if !item.file.isPremiumEmoji || hasPremium {
                                                     if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                         result.append((alt, item.file, keyword))
@@ -516,7 +516,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                                 content: .animation(animationData),
                                                 itemFile: itemFile, subgroupId: nil,
                                                 icon: .none,
-                                                accentTint: false
+                                                tintMode: animationData.isTemplate ? .primary : .none
                                             )
                                             items.append(item)
                                         }
@@ -645,7 +645,10 @@ public final class EmojiStatusSelectionController: ViewController {
             } else if let itemFile = item.itemFile {
                 var useCleanEffect = false
                 for attribute in itemFile.attributes {
-                    if case let .CustomEmoji(_, _, packReference) = attribute {
+                    if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                        if isSingleColor {
+                            useCleanEffect = true
+                        }
                         switch packReference {
                         case let .id(id, _):
                             if id == 773947703670341676 || id == 2964141614563343 {
@@ -692,8 +695,13 @@ public final class EmojiStatusSelectionController: ViewController {
                                 placeholderColor: UIColor(white: 0.0, alpha: 0.0),
                                 pointSize: CGSize(width: 32.0, height: 32.0)
                             )
-                            if item.accentTint {
+                            switch item.tintMode {
+                            case .accent:
                                 baseItemLayer.contentTintColor = self.presentationData.theme.list.itemAccentColor
+                            case .primary:
+                                baseItemLayer.contentTintColor = self.presentationData.theme.list.itemPrimaryTextColor
+                            case .none:
+                                break
                             }
                             
                             if let sublayers = animationLayer.sublayers {
@@ -1001,7 +1009,7 @@ public final class EmojiStatusSelectionController: ViewController {
                                 if let itemFile = previewItem.item.itemFile {
                                     attributeLoop: for attribute in itemFile.attributes {
                                         switch attribute {
-                                        case let .CustomEmoji(_, alt, _):
+                                        case let .CustomEmoji(_, _, alt, _):
                                             emojiString = alt
                                             break attributeLoop
                                         default:
@@ -1165,7 +1173,7 @@ public final class EmojiStatusSelectionController: ViewController {
                     if let itemFile = item.itemFile {
                         attributeLoop: for attribute in itemFile.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, alt, _):
+                            case let .CustomEmoji(_, _, alt, _):
                                 emojiString = alt
                                 break attributeLoop
                             default:

@@ -190,7 +190,7 @@ public struct TelegramMediaVideoFlags: OptionSet {
     public static let supportsStreaming = TelegramMediaVideoFlags(rawValue: 1 << 1)
 }
 
-public struct StickerMaskCoords: PostboxCoding {
+public struct StickerMaskCoords: PostboxCoding, Equatable {
     public let n: Int32
     public let x: Double
     public let y: Double
@@ -218,7 +218,7 @@ public struct StickerMaskCoords: PostboxCoding {
     }
 }
 
-public enum TelegramMediaFileAttribute: PostboxCoding {
+public enum TelegramMediaFileAttribute: PostboxCoding, Equatable {
     case FileName(fileName: String)
     case Sticker(displayText: String, packReference: StickerPackReference?, maskData: StickerMaskCoords?)
     case ImageSize(size: PixelDimensions)
@@ -229,7 +229,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
     case hintFileIsLarge
     case hintIsValidated
     case NoPremium
-    case CustomEmoji(isPremium: Bool, paintToText: Bool, alt: String, packReference: StickerPackReference?)
+    case CustomEmoji(isPremium: Bool, isSingleColor: Bool, alt: String, packReference: StickerPackReference?)
     
     public init(decoder: PostboxDecoder) {
         let type: Int32 = decoder.decodeInt32ForKey("t", orElse: 0)
@@ -260,7 +260,7 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
             case typeNoPremium:
                 self = .NoPremium
             case typeCustomEmoji:
-            self = .CustomEmoji(isPremium: decoder.decodeBoolForKey("ip", orElse: true), paintToText: decoder.decodeBoolForKey("ptt", orElse: false), alt: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
+                self = .CustomEmoji(isPremium: decoder.decodeBoolForKey("ip", orElse: true), isSingleColor: decoder.decodeBoolForKey("sc", orElse: false), alt: decoder.decodeStringForKey("dt", orElse: ""), packReference: decoder.decodeObjectForKey("pr", decoder: { StickerPackReference(decoder: $0) }) as? StickerPackReference)
             default:
                 preconditionFailure()
         }
@@ -317,10 +317,10 @@ public enum TelegramMediaFileAttribute: PostboxCoding {
                 encoder.encodeInt32(typeHintIsValidated, forKey: "t")
             case .NoPremium:
                 encoder.encodeInt32(typeNoPremium, forKey: "t")
-            case let .CustomEmoji(isPremium, paintToText, alt, packReference):
+            case let .CustomEmoji(isPremium, isSingleColor, alt, packReference):
                 encoder.encodeInt32(typeCustomEmoji, forKey: "t")
                 encoder.encodeBool(isPremium, forKey: "ip")
-                encoder.encodeBool(paintToText, forKey: "ptt")
+                encoder.encodeBool(isSingleColor, forKey: "sc")
                 encoder.encodeString(alt, forKey: "dt")
                 if let packReference = packReference {
                     encoder.encodeObject(packReference, forKey: "pr")
@@ -735,6 +735,10 @@ public final class TelegramMediaFile: Media, Equatable, Codable {
         }
         
         if self.mimeType != other.mimeType {
+            return false
+        }
+        
+        if self.attributes != other.attributes {
             return false
         }
         

@@ -29,6 +29,26 @@ public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceRef
     return fetchedMediaResource(mediaBox: mediaBox, reference: reference, ranges: range.flatMap({ [$0] }), statsCategory: statsCategory, reportResultStatus: reportResultStatus, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground)
 }
 
+public extension MediaResourceStorageLocation {
+    convenience init?(reference: MediaResourceReference) {
+        switch reference {
+        case let .media(media, _):
+            switch media {
+            case let .message(message, _):
+                if let id = message.id {
+                    self.init(peerId: id.peerId, messageId: id)
+                } else {
+                    return nil
+                }
+            default:
+                return nil
+            }
+        default:
+            return nil
+        }
+    }
+}
+
 public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceReference, ranges: [(Range<Int64>, MediaBoxFetchPriority)]?, statsCategory: MediaResourceStatsCategory = .generic, reportResultStatus: Bool = false, preferBackgroundReferenceRevalidation: Bool = false, continueInBackground: Bool = false) -> Signal<FetchResourceSourceType, FetchResourceError> {
     var isRandomAccessAllowed = true
     switch reference {
@@ -44,14 +64,24 @@ public func fetchedMediaResource(mediaBox: MediaBox, reference: MediaResourceRef
     
     if let ranges = ranges {
         let signals = ranges.map { (range, priority) -> Signal<Void, FetchResourceError> in
-            return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground), isRandomAccessAllowed: isRandomAccessAllowed))
+            return mediaBox.fetchedResourceData(reference.resource, in: range, priority: priority, parameters: MediaResourceFetchParameters(
+                tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
+                info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
+                location: MediaResourceStorageLocation(reference: reference),
+                isRandomAccessAllowed: isRandomAccessAllowed
+            ))
         }
         return combineLatest(signals)
         |> ignoreValues
         |> map { _ -> FetchResourceSourceType in }
         |> then(.single(.local))
     } else {
-        return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory), info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground), isRandomAccessAllowed: isRandomAccessAllowed), implNext: reportResultStatus)
+        return mediaBox.fetchedResource(reference.resource, parameters: MediaResourceFetchParameters(
+            tag: TelegramMediaResourceFetchTag(statsCategory: statsCategory),
+            info: TelegramCloudMediaResourceFetchInfo(reference: reference, preferBackgroundReferenceRevalidation: preferBackgroundReferenceRevalidation, continueInBackground: continueInBackground),
+            location: MediaResourceStorageLocation(reference: reference),
+            isRandomAccessAllowed: isRandomAccessAllowed
+        ), implNext: reportResultStatus)
     }
 }
 

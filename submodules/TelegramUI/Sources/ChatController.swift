@@ -1195,7 +1195,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     var existingIds = Set<Int64>()
                                     for (_, file) in files {
                                         loop: for attribute in file.attributes {
-                                            if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                                            if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                                                 if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                                     packReferences.append(packReference)
                                                     existingIds.insert(id)
@@ -1469,7 +1469,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                 var existingIds = Set<Int64>()
                 for (_, file) in customEmoji {
                     loop: for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                             if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                 packReferences.append(packReference)
                                 existingIds.insert(id)
@@ -13694,7 +13694,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         
         var stickerPackReference: StickerPackReference?
         for attribute in file.attributes {
-            if case let .CustomEmoji(_, _, packReference) = attribute {
+            if case let .CustomEmoji(_, _, _, packReference) = attribute {
                 stickerPackReference = packReference
                 break
             }

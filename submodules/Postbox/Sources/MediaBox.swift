@@ -144,6 +144,8 @@ public final class MediaBox {
     private let cacheQueue = Queue()
     private let timeBasedCleanup: TimeBasedCleanup
     
+    public let storageBox: StorageBox
+    
     private let didRemoveResourcesPipe = ValuePipe<Void>()
     public var didRemoveResources: Signal<Void, NoError> {
         return .single(Void()) |> then(self.didRemoveResourcesPipe.signal())
@@ -187,6 +189,10 @@ public final class MediaBox {
     public init(basePath: String) {
         self.basePath = basePath
         
+        self.storageBox = StorageBox(logger: StorageBox.Logger(impl: { string in
+            postboxLog(string)
+        }), basePath: basePath + "/storage")
+        
         self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
             self.basePath,
             self.basePath + "/cache",
@@ -202,6 +208,14 @@ public final class MediaBox {
     
     public func setMaxStoreTimes(general: Int32, shortLived: Int32, gigabytesLimit: Int32) {
         self.timeBasedCleanup.setMaxStoreTimes(general: general, shortLived: shortLived, gigabytesLimit: gigabytesLimit)
+    }
+    
+    private func idForFileName(name: String) -> String {
+        if name.hasSuffix("_partial") {
+            return String(name[name.startIndex ..< name.index(name.endIndex, offsetBy: -8)])
+        } else {
+            return name
+        }
     }
     
     private func fileNameForId(_ id: MediaResourceId) -> String {
@@ -580,6 +594,10 @@ public final class MediaBox {
                     return
                 }
                 
+                if let location = parameters?.location {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId, messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                }
+                
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
                     subscriber.putCompletion()
                     return
@@ -741,6 +759,10 @@ public final class MediaBox {
             
             self.dataQueue.async {
                 let paths = self.storePathsForId(resource.id)
+                
+                if let location = parameters?.location {
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId, messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                }
                 
                 if let _ = fileSize(paths.complete) {
                     if implNext {
@@ -1174,6 +1196,17 @@ public final class MediaBox {
         }
     }
     
+    public func resourceUsage(id: MediaResourceId) -> Int64 {
+        let paths = self.storePathsForId(id)
+        if let size = fileSize(paths.complete) {
+            return Int64(size)
+        } else if let size = fileSize(paths.partial, useTotalFileAllocatedSize: true) {
+            return Int64(size)
+        } else {
+            return 0
+        }
+    }
+    
     public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[MediaResourceId: Int64], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -1187,6 +1220,99 @@ public final class MediaBox {
                         result[wrappedId] = Int64(size)
                     }
                 }
+                subscriber.putNext(result)
+                subscriber.putCompletion()
+            }
+            return EmptyDisposable
+        }
+    }
+    
+    public func collectAllResourceUsage() -> Signal<[(id: String?, path: String, size: Int64)], NoError> {
+        return Signal { subscriber in
+            self.dataQueue.async {
+                var result: [(id: String?, path: String, size: Int64)] = []
+                
+                var fileIds = Set<Data>()
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath), includingPropertiesForKeys: [.fileSizeKey, .fileResourceIdentifierKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let fileId = (try? url.resourceValues(forKeys: Set([.fileResourceIdentifierKey])))?.fileResourceIdentifier as? Data {
+                                if fileIds.contains(fileId) {
+                                    //paths.append(url.lastPathComponent)
+                                    continue loop
+                                }
+                            
+                                if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    fileIds.insert(fileId)
+                                    result.append((id: self.idForFileName(name: url.lastPathComponent), path: url.lastPathComponent, size: Int64(value)))
+                                    //paths.append(url.lastPathComponent)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                /*var cacheResult: Int64 = 0
+                
+                var excludePrefixes = Set<String>()
+                for id in excludeIds {
+                    let cachedRepresentationPrefix = self.fileNameForId(id)
+                    
+                    excludePrefixes.insert(cachedRepresentationPrefix)
+                }
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("cache/" + url.lastPathComponent)
+                                cacheResult += Int64(value)
+                            }
+                        }
+                    }
+                }
+                
+                func processRecursive(directoryPath: String, subdirectoryPath: String) {
+                    if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: directoryPath), includingPropertiesForKeys: [.fileSizeKey, .isDirectoryKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                        loop: for url in enumerator {
+                            if let url = url as? URL {
+                                if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                    continue loop
+                                }
+                                
+                                if let isDirectory = (try? url.resourceValues(forKeys: Set([.isDirectoryKey])))?.isDirectory, isDirectory {
+                                    processRecursive(directoryPath: url.path, subdirectoryPath: subdirectoryPath + "/\(url.lastPathComponent)")
+                                } else if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                    paths.append("\(subdirectoryPath)/" + url.lastPathComponent)
+                                    cacheResult += Int64(value)
+                                }
+                            }
+                        }
+                    }
+                }
+                
+                processRecursive(directoryPath: self.basePath + "/animation-cache", subdirectoryPath: "animation-cache")
+                
+                if let enumerator = FileManager.default.enumerator(at: URL(fileURLWithPath: self.basePath + "/short-cache"), includingPropertiesForKeys: [.fileSizeKey], options: [.skipsHiddenFiles, .skipsSubdirectoryDescendants], errorHandler: nil) {
+                    loop: for url in enumerator {
+                        if let url = url as? URL {
+                            if let prefix = url.lastPathComponent.components(separatedBy: ":").first, excludePrefixes.contains(prefix) {
+                                continue loop
+                            }
+                            
+                            if let value = (try? url.resourceValues(forKeys: Set([.fileSizeKey])))?.fileSize, value != 0 {
+                                paths.append("short-cache/" + url.lastPathComponent)
+                                cacheResult += Int64(value)
+                            }
+                        }
+                    }
+                }*/
+                
                 subscriber.putNext(result)
                 subscriber.putCompletion()
             }

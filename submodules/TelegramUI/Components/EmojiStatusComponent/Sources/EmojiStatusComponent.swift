@@ -442,7 +442,10 @@ public final class EmojiStatusComponent: Component {
                     var accentTint = false
                     if let _ = emojiThemeColor {
                         for attribute in emojiFile.attributes {
-                            if case let .CustomEmoji(_, _, packReference) = attribute {
+                            if case let .CustomEmoji(_, isSingleColor, _, packReference) = attribute {
+                                if isSingleColor {
+                                    accentTint = true
+                                }
                                 switch packReference {
                                 case let .id(id, _):
                                     if id == 773947703670341676 || id == 2964141614563343 {
@@ -456,8 +459,10 @@ public final class EmojiStatusComponent: Component {
                     }
                     if accentTint {
                         animationLayer.contentTintColor = emojiThemeColor
+                        animationLayer.dynamicColor = emojiThemeColor
                     } else {
                         animationLayer.contentTintColor = nil
+                        animationLayer.dynamicColor = nil
                     }
                     
                     animationLayer.frame = CGRect(origin: CGPoint(), size: size)

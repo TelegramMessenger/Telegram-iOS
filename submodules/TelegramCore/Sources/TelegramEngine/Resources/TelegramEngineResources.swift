@@ -293,6 +293,7 @@ public extension TelegramEngine {
                         preferBackgroundReferenceRevalidation: false,
                         continueInBackground: false
                     ),
+                    location: nil,
                     isRandomAccessAllowed: true
                 ))
                 |> map { result -> EngineMediaResource.Fetch.Result in

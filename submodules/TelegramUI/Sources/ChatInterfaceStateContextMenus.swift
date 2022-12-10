@@ -1165,7 +1165,7 @@ func contextMenuForChatPresentationInterfaceState(chatPresentationInterfaceState
                 }
             }
             
-            if resourceAvailable, !message.containsSecretMedia {
+            if resourceAvailable, !message.containsSecretMedia, !chatPresentationInterfaceState.copyProtectionEnabled, !message.isCopyProtected() {
                 var mediaReference: AnyMediaReference?
                 var isVideo = false
                 for media in message.media {
@@ -2413,7 +2413,7 @@ private final class ChatReadReportContextItemNode: ASDisplayNode, ContextMenuCus
                 var firstCustomEmojiReaction: TelegramMediaFile?
                 for (_, file) in customEmoji {
                     loop: for attribute in file.attributes {
-                        if case let .CustomEmoji(_, _, packReference) = attribute, let packReference = packReference {
+                        if case let .CustomEmoji(_, _, _, packReference) = attribute, let packReference = packReference {
                             if case let .id(id, _) = packReference, !existingIds.contains(id) {
                                 if firstCustomEmojiReaction == nil {
                                     firstCustomEmojiReaction = file

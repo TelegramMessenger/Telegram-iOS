@@ -526,7 +526,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                         var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, displayText, _):
+                            case let .CustomEmoji(_, _, displayText, _):
                                 text = displayText
                                 
                                 var packId: ItemCollectionId?
@@ -781,7 +781,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                 }
                                 for attribute in item.file.attributes {
                                     switch attribute {
-                                    case let .CustomEmoji(_, alt, _):
+                                    case let .CustomEmoji(_, _, alt, _):
                                         if !item.file.isPremiumEmoji || hasPremium {
                                             if !alt.isEmpty, let keyword = allEmoticons[alt] {
                                                 result.append((alt, item.file, keyword))
@@ -811,7 +811,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                         itemFile: itemFile,
                                         subgroupId: nil,
                                         icon: .none,
-                                        accentTint: false
+                                        tintMode: animationData.isTemplate ? .primary : .none
                                     )
                                     items.append(item)
                                 }
@@ -824,8 +824,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                                     itemFile: nil,
                                     subgroupId: nil,
                                     icon: .none,
-                                    accentTint: false)
-                                )
+                                    tintMode: .none
+                                ))
                             }
                             
                             return [EmojiPagerContentComponent.ItemGroup(
@@ -1731,7 +1731,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
                         var emojiAttribute: ChatTextInputTextCustomEmojiAttribute?
                         loop: for attribute in file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, displayText, _):
+                            case let .CustomEmoji(_, _, displayText, _):
                                 text = displayText
                                 var packId: ItemCollectionId?
                                 if let id = groupId.base as? ItemCollectionId {
@@ -2072,7 +2072,7 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                             
                             loop: for attribute in file.attributes {
                             switch attribute {
-                            case let .CustomEmoji(_, _, packReference), let .Sticker(_, packReference, _):
+                            case let .CustomEmoji(_, _, _, packReference), let .Sticker(_, packReference, _):
                                 if let packReference = packReference {
                                     let controller = strongSelf.context.sharedContext.makeStickerPackScreen(context: context, updatedPresentationData: nil, mainStickerPack: packReference, stickerPacks: [packReference], loadedStickerPacks: [], parentNavigationController: strongSelf.controllerInteraction.navigationController(), sendSticker: { file, sourceView, sourceRect in
                                         sendSticker(file, false, false, nil, false, sourceView, sourceRect, nil)
