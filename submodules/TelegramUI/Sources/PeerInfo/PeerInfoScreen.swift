@@ -4789,9 +4789,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     
                     var canReport = true
-                    if channel.isVerified {
-                        canReport = false
-                    }
                     if channel.adminRights != nil {
                         canReport = false
                     }

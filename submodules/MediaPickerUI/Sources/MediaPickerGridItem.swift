@@ -13,6 +13,8 @@ import CheckNode
 import LegacyComponents
 import PhotoResources
 import InvisibleInkDustNode
+import ImageBlur
+import FastBlur
 
 enum MediaPickerGridItemContent: Equatable {
     case asset(PHFetchResult<PHAsset>, Int)
@@ -116,6 +118,10 @@ final class MediaPickerGridItemNode: GridItemNode {
         super.init()
         
         self.addSubnode(self.imageNode)
+        
+        self.imageNode.contentUpdated = { [weak self] image in
+            self?.spoilerNode?.setImage(image)
+        }
     }
     
     deinit {
@@ -367,14 +373,25 @@ final class MediaPickerGridItemNode: GridItemNode {
         self.updateHiddenMedia()
     }
     
+    private var didSetupSpoiler = false
     private func updateHasSpoiler(_ hasSpoiler: Bool) {
+        var animated = true
+        if !self.didSetupSpoiler {
+            animated = false
+            self.didSetupSpoiler = true
+        }
+    
         if hasSpoiler {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode()
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
                 self.spoilerNode = spoilerNode
                 
-                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                spoilerNode.setImage(self.imageNode.image)
+                
+                if animated {
+                    spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             self.spoilerNode?.update(size: self.bounds.size, transition: .immediate)
             self.spoilerNode?.frame = CGRect(origin: .zero, size: self.bounds.size)
@@ -422,14 +439,15 @@ final class MediaPickerGridItemNode: GridItemNode {
 }
 
 class SpoilerOverlayNode: ASDisplayNode {
-    private let blurNode: NavigationBackgroundNode
+    private let blurNode: ASImageNode
     private let dustNode: MediaDustNode
   
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?
     
     override init() {
-        self.blurNode = NavigationBackgroundNode(color: UIColor(rgb: 0x000000, alpha: 0.1), enableBlur: true)
+        self.blurNode = ASImageNode()
+        self.blurNode.displaysAsynchronously = false
          
         self.dustNode = MediaDustNode()
         
@@ -444,7 +462,6 @@ class SpoilerOverlayNode: ASDisplayNode {
     override func didLoad() {
         super.didLoad()
         
-
         let maskView = UIView()
         self.maskView = maskView
 //        self.dustNode.view.mask = maskView
@@ -456,26 +473,44 @@ class SpoilerOverlayNode: ASDisplayNode {
         self.maskLayer = maskLayer
     }
     
-    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
-        self.blurNode.update(size: size, transition: transition)
-        self.blurNode.frame = CGRect(origin: .zero, size: size)
-        
-        self.dustNode.frame = CGRect(origin: .zero, size: size)
-        self.dustNode.update(size: size, color: .white)
-                
-//        var leftOffset: CGFloat = 0.0
-//        var rightOffset: CGFloat = 0.0
-//        let corners = corners ?? ImageCorners(radius: 16.0)
-//        if case .Tail = corners.bottomLeft {
-//            leftOffset = 4.0
-//        } else if case .Tail = corners.bottomRight {
-//            rightOffset = 4.0
-//        }
-//        let rect = CGRect(origin: CGPoint(x: leftOffset, y: 0.0), size: CGSize(width: size.width - leftOffset - rightOffset, height: size.height))
-//        let path = UIBezierPath(roundRect: rect, topLeftRadius: corners.topLeft.radius, topRightRadius: corners.topRight.radius, bottomLeftRadius: corners.bottomLeft.radius, bottomRightRadius: corners.bottomRight.radius)
-//        let buttonPath = UIBezierPath(roundedRect: self.buttonNode.frame, cornerRadius: 16.0)
-//        path.append(buttonPath)
-//        path.usesEvenOddFillRule = true
-//        self.maskLayer?.path = path.cgPath
+    func setImage(_ image: UIImage?) {
+        self.blurNode.image = image.flatMap { blurredImage($0) }
     }
+    
+    func update(size: CGSize, transition: ContainedViewLayoutTransition) {
+        transition.updateFrame(node: self.blurNode, frame: CGRect(origin: .zero, size: size))
+        
+        transition.updateFrame(node: self.dustNode, frame: CGRect(origin: .zero, size: size))
+        self.dustNode.update(size: size, color: .white, transition: transition)
+    }
+}
+
+private func blurredImage(_ image: UIImage) -> UIImage? {
+    guard let image = image.cgImage else {
+        return nil
+    }
+    
+    let thumbnailSize = CGSize(width: image.width, height: image.height)
+    let thumbnailContextSize = thumbnailSize.aspectFilled(CGSize(width: 20.0, height: 20.0))
+    if let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) {
+        thumbnailContext.withFlippedContext { c in
+            c.interpolationQuality = .none
+            c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContextSize))
+        }
+        imageFastBlur(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
+        
+        let thumbnailContext2Size = thumbnailSize.aspectFitted(CGSize(width: 100.0, height: 100.0))
+        if let thumbnailContext2 = DrawingContext(size: thumbnailContext2Size, scale: 1.0) {
+            thumbnailContext2.withFlippedContext { c in
+                c.interpolationQuality = .none
+                if let image = thumbnailContext.generateImage()?.cgImage {
+                    c.draw(image, in: CGRect(origin: CGPoint(), size: thumbnailContext2Size))
+                }
+            }
+            imageFastBlur(Int32(thumbnailContext2Size.width), Int32(thumbnailContext2Size.height), Int32(thumbnailContext2.bytesPerRow), thumbnailContext2.bytes)
+            adjustSaturationInContext(context: thumbnailContext2, saturation: 1.7)
+            return thumbnailContext2.generateImage()
+        }
+    }
+    return nil
 }

@@ -251,15 +251,15 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.maskLayer = maskLayer
     }
     
-    func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
+    func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
         
-        if let (imageSignal, drawingSize) = imageSignal {
+        if let (imageSignal, drawingSize, boundingSize) = imageSignal {
             self.blurredImageNode.setSignal(imageSignal)
             
             let imageLayout = self.blurredImageNode.asyncLayout()
-            let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: imageFrame.size, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
+            let arguments = TransformImageArguments(corners: corners ?? ImageCorners(), imageSize: drawingSize, boundingSize: boundingSize, intrinsicInsets: UIEdgeInsets(), resizeMode: .blurBackground, emptyColor: .clear, custom: nil)
             let apply = imageLayout(arguments)
             apply()
             
@@ -277,7 +277,7 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.blurredImageNode.frame = imageFrame
                 
         self.dustNode.frame = CGRect(origin: .zero, size: size)
-        self.dustNode.update(size: size, color: .white)
+        self.dustNode.update(size: size, color: .white, transition: .immediate)
         
         if text.isEmpty {
             self.buttonNode.isHidden = true
@@ -320,7 +320,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     private let imageNode: TransformImageNode
     private var currentImageArguments: TransformImageArguments?
     private var currentHighQualityImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
-    private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize)?
+    private var currentBlurredImageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?
     private var highQualityImageNode: TransformImageNode?
 
     private var videoNode: UniversalVideoNode?
@@ -1360,13 +1360,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     strongSelf.currentHighQualityImageSignal = (updateImageSignal(false, true), imageDimensions)
                                     
                                     if let updateBlurredImageSignal = updateBlurredImageSignal {
-                                        strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), imageDimensions)
+                                        strongSelf.currentBlurredImageSignal = (updateBlurredImageSignal(false, true), drawingSize, boundingSize)
                                     }
                                 }
                             }
-                            
-
-                            
+                                                        
                             if let _ = secretBeginTimeAndTimeout {
                                 if updatedStatusSignal == nil, let fetchStatus = strongSelf.fetchStatus, case .Local = fetchStatus {
                                     if let statusNode = strongSelf.statusNode, case .secretTimeout = statusNode.state {   

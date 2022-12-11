@@ -131,6 +131,10 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
                 strongSelf.updateHasSpoiler(hasSpoiler)
             }))
         }
+        
+        self.imageNode.contentUpdated = { [weak self] image in
+            self?.spoilerNode?.setImage(image)
+        }
     }
     
     deinit {
@@ -151,14 +155,25 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.interaction?.openSelectedMedia(asset, self.imageNode.image)
     }
     
+    private var didSetupSpoiler = false
     private func updateHasSpoiler(_ hasSpoiler: Bool) {
+        var animated = true
+        if !self.didSetupSpoiler {
+            animated = false
+            self.didSetupSpoiler = true
+        }
+    
         if hasSpoiler {
             if self.spoilerNode == nil {
                 let spoilerNode = SpoilerOverlayNode()
                 self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
                 self.spoilerNode = spoilerNode
                 
-                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                spoilerNode.setImage(self.imageNode.image)
+                
+                if animated {
+                    spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
             }
             self.spoilerNode?.update(size: self.bounds.size, transition: .immediate)
             self.spoilerNode?.frame = CGRect(origin: .zero, size: self.bounds.size)
@@ -616,11 +631,15 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             }
         }
         
-        self.messageNodes?.first?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        self.messageNodes?.first?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        if let topNode = self.messageNodes?.first {
+            topNode.layer.animateAlpha(from: topNode.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            topNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        }
         
-        self.messageNodes?.last?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        self.messageNodes?.last?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        if let bottomNode = self.messageNodes?.last {
+            bottomNode.layer.animateAlpha(from: bottomNode.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            bottomNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        }
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

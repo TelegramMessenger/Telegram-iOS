@@ -233,59 +233,6 @@ public class InvisibleInkDustNode: ASDisplayNode {
             self.emitterSpotNode.layer.removeAllAnimations()
             self.emitterMaskFillNode.layer.removeAllAnimations()
         }
-        
-        var spoilersLength: Int = 0
-        if let spoilers = textNode.cachedLayout?.spoilers {
-            for spoiler in spoilers {
-                spoilersLength += spoiler.0.length
-            }
-        }
-        
-        let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
-        Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
-            if let (_, color, _, _, _) = self.currentParams {
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let animation = POPBasicAnimation()
-                animation.property = (POPAnimatableProperty.property(withName: "color", initializer: { property in
-                    property?.readBlock = { node, values in
-                        if let color = (node as! InvisibleInkDustNode).emitter?.color {
-                            if let a = color.components {
-                                values?[0] = a[0]
-                                values?[1] = a[1]
-                                values?[2] = a[2]
-                                values?[3] = a[3]
-                            }
-                        }
-                    }
-                    property?.writeBlock = { node, values in
-                        if let values = values, let color = CGColor(colorSpace: colorSpace, components: values) {
-                            (node as! InvisibleInkDustNode).animColor = color
-                            (node as! InvisibleInkDustNode).updateEmitter()
-                        }
-                    }
-                    property?.threshold = 0.4
-                }) as! POPAnimatableProperty)
-                animation.fromValue = self.emitter?.color
-                animation.toValue = color
-                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                animation.duration = 0.1
-                animation.completionBlock = { [weak self] _, _ in
-                    if let strongSelf = self {
-                        strongSelf.animColor = nil
-                        strongSelf.updateEmitter()
-                    }
-                }
-                self.pop_add(animation, forKey: "color")
-            }
-            
-            Queue.mainQueue().after(0.15) {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
-                transition.updateAlpha(node: self, alpha: 1.0)
-                transition.updateAlpha(node: textNode, alpha: 0.0, completion: { [weak self] _ in
-                    self?.isRevealed = false
-                })
-            }
-        }
     }
     
     private func updateEmitter() {

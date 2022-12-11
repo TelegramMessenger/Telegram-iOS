@@ -1157,7 +1157,7 @@ public func chatSecretPhoto(account: Account, photoReference: ImageMediaReferenc
     }
 }
 
-private func adjustSaturationInContext(context: DrawingContext, saturation: CGFloat) {
+public func adjustSaturationInContext(context: DrawingContext, saturation: CGFloat) {
     var buffer = vImage_Buffer()
     buffer.data = context.bytes
     buffer.width = UInt(context.size.width * context.scale)

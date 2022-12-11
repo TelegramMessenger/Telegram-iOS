@@ -173,8 +173,8 @@ final class PenTool: DrawingElement {
         self.lineWidth = lineWidth
         self.arrow = arrow
         
-        let minLineWidth = max(1.0, min(drawingSize.width, drawingSize.height) * 0.003)
-        let maxLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(1.0, min(drawingSize.width, drawingSize.height) * 0.0015)
+        let maxLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.05)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth

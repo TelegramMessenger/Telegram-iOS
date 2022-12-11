@@ -257,12 +257,14 @@ public class MediaDustNode: ASDisplayNode {
     }
     
     
-    public func update(size: CGSize, color: UIColor) {
+    public func update(size: CGSize, color: UIColor, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, color)
-                
-        self.emitterNode.frame = CGRect(origin: CGPoint(), size: size)
-        self.emitterMaskNode.frame = self.emitterNode.bounds
-        self.emitterMaskFillNode.frame = self.emitterNode.bounds
+        
+        let bounds = CGRect(origin: .zero, size: size)
+        transition.updateFrame(node: self.emitterNode, frame: bounds)
+        
+        self.emitterMaskNode.frame = bounds
+        self.emitterMaskFillNode.frame = bounds
         
         if self.isNodeLoaded {
             self.updateEmitter()
