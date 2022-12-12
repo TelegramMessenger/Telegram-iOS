@@ -599,7 +599,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                             }
                         }
                         if let node = node {
-                            return (node.view, { [weak node] animateCheckNode in
+                            return (node.view, node.spoilerNode?.dustNode, { [weak node] animateCheckNode in
                                 node?.animateFadeIn(animateCheckNode: animateCheckNode, animateSpoilerNode: false)
                             })
                         } else {

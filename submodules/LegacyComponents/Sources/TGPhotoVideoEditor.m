@@ -12,7 +12,7 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController image:(UIImage *)image video:(NSURL *)video stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo dismissed:(void (^)(void))dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController image:(UIImage *)image video:(NSURL *)video stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext transitionView:(UIView *)transitionView didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo dismissed:(void (^)(void))dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
@@ -34,10 +34,17 @@
     }
     
     void (^present)(UIImage *) = ^(UIImage *screenImage) {
-        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSuggestedAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.stickersContext = stickersContext;
-        controller.skipInitialTransition = true;
-        controller.dontHideStatusBar = true;
+        
+        TGMediaAvatarEditorTransition *transition;
+        if (transitionView != nil) {
+            transition = [[TGMediaAvatarEditorTransition alloc] initWithController:controller fromView:transitionView];
+        } else {
+            controller.skipInitialTransition = true;
+            controller.dontHideStatusBar = true;
+        }
+        
         controller.didFinishEditing = ^(__unused id<TGMediaEditAdjustments> adjustments, UIImage *resultImage, __unused UIImage *thumbnailImage, __unused bool hasChanges, void(^commit)(void))
         {
             if (didFinishWithImage != nil)
@@ -84,6 +91,46 @@
         TGOverlayControllerWindow *controllerWindow = [[TGOverlayControllerWindow alloc] initWithManager:windowManager parentController:controller contentController:controller];
         controllerWindow.hidden = false;
         controller.view.clipsToBounds = true;
+        
+        if (transitionView != nil) {
+            transition.referenceFrame = ^CGRect
+            {
+                UIView *referenceView = transitionView;
+                return [referenceView.superview convertRect:referenceView.frame toView:nil];
+            };
+            transition.referenceImageSize = ^CGSize
+            {
+                return image.size;
+            };
+            transition.referenceScreenImageSignal = ^SSignal *
+            {
+                return [SSignal single:image];
+            };
+            [transition presentAnimated:true];
+            
+            transitionView.alpha = 0.0;
+            TGDispatchAfter(0.4, dispatch_get_main_queue(), ^{
+                transitionView.alpha = 1.0;
+            });
+            
+            controller.beginCustomTransitionOut = ^(CGRect outReferenceFrame, UIView *repView, void (^completion)(void))
+            {
+                transition.outReferenceFrame = outReferenceFrame;
+                transition.repView = repView;
+                
+                transitionView.alpha = 0.0;
+                [transition dismissAnimated:true completion:^
+                {
+                    transitionView.alpha = 1.0;
+                    dispatch_async(dispatch_get_main_queue(), ^
+                    {
+                        if (completion != nil)
+                            completion();
+                            dismissed();
+                    });
+                }];
+            };
+        }
     };
     
     if (image != nil) {

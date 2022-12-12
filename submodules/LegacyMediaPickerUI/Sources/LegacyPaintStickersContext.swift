@@ -9,6 +9,7 @@ import TelegramAnimatedStickerNode
 import YuvConversion
 import StickerResources
 import DrawingUI
+import SolidRoundedButtonNode
 
 protocol LegacyPaintEntity {
     var position: CGPoint { get }
@@ -495,5 +496,18 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
     
     public func drawingAdapter(_ size: CGSize) -> TGPhotoDrawingAdapter! {
         return LegacyDrawingAdapter(context: self.context, size: size)
+    }
+    
+    public func solidRoundedButton(_ title: String!, action: (() -> Void)!) -> (UIView & TGPhotoSolidRoundedButtonView)! {
+        let theme = SolidRoundedButtonTheme(theme: self.context.sharedContext.currentPresentationData.with { $0 }.theme)
+        let button = SolidRoundedButtonView(title: title, theme: theme, height: 50.0, cornerRadius: 10.0)
+        button.pressed = action
+        return button
+    }
+}
+
+extension SolidRoundedButtonView: TGPhotoSolidRoundedButtonView {
+    public func updateWidth(_ width: CGFloat) {
+        let _ = self.updateLayout(width: width, transition: .immediate)
     }
 }

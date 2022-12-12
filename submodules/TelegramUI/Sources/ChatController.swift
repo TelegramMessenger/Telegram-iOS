@@ -822,21 +822,35 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             return true
                         case let .suggestedProfilePhoto(image):
                             if let image = image {
-                                legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), present: { [weak self] c, a in
-                                    self?.present(c, in: .window(.root), with: a)
-                                }, imageCompletion: { [weak self] image in
-                                    if let strongSelf = self {
-                                        if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                            settingsController.updateProfilePhoto(image)
+                                if message.effectivelyIncoming(strongSelf.context.account.peerId) {
+                                    var selectedNode: (ASDisplayNode, CGRect, () -> (UIView?, UIView?))?
+                                    strongSelf.chatDisplayNode.historyNode.forEachItemNode { itemNode in
+                                        if let itemNode = itemNode as? ChatMessageItemView {
+                                            if let result = itemNode.transitionNode(id: message.id, media: image) {
+                                                selectedNode = result
+                                            }
                                         }
                                     }
-                                }, videoCompletion: { [weak self] image, url, adjustments in
-                                    if let strongSelf = self {
-                                        if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                            settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                    let transitionView = selectedNode?.0.view
+                                    
+                                    legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, present: { [weak self] c, a in
+                                        self?.present(c, in: .window(.root), with: a)
+                                    }, imageCompletion: { [weak self] image in
+                                        if let strongSelf = self {
+                                            if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                settingsController.updateProfilePhoto(image)
+                                            }
                                         }
-                                    }
-                                })
+                                    }, videoCompletion: { [weak self] image, url, adjustments in
+                                        if let strongSelf = self {
+                                            if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
+                                                settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                            }
+                                        }
+                                    })
+                                } else {
+                                    openMessageByAction = true
+                                }
                             }
                         default:
                             break

@@ -29,6 +29,7 @@ swift_library(
         "//submodules/TextFormat:TextFormat",
         "//submodules/AttachmentUI:AttachmentUI",
         "//submodules/DrawingUI:DrawingUI",
+        "//submodules/SolidRoundedButtonNode:SolidRoundedButtonNode",
     ],
     visibility = [
         "//visibility:public",

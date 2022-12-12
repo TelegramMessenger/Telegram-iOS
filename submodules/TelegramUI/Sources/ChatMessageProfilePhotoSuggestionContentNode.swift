@@ -93,6 +93,50 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.fetchDisposable.dispose()
     }
     
+    override func transitionNode(messageId: MessageId, media: Media) -> (ASDisplayNode, CGRect, () -> (UIView?, UIView?))? {
+        if self.item?.message.id == messageId {
+            return (self.imageNode, self.imageNode.bounds, { [weak self] in
+                guard let strongSelf = self else {
+                    return (nil, nil)
+                }
+                
+                let resultView = strongSelf.imageNode.view.snapshotContentTree(unhide: true)
+                return (resultView, nil)
+            })
+        } else {
+            return nil
+        }
+    }
+    
+    override func updateHiddenMedia(_ media: [Media]?) -> Bool {
+        var mediaHidden = false
+        var currentMedia: Media?
+        if let item = item {
+            mediaLoop: for media in item.message.media {
+                if let media = media as? TelegramMediaAction {
+                    switch media.action {
+                    case let .suggestedProfilePhoto(image):
+                        currentMedia = image
+                        break mediaLoop
+                    default:
+                        break
+                    }
+                }
+            }
+        }
+        if let currentMedia = currentMedia, let media = media {
+            for item in media {
+                if item.isSemanticallyEqual(to: currentMedia) {
+                    mediaHidden = true
+                    break
+                }
+            }
+        }
+        
+        self.imageNode.isHidden = mediaHidden
+        return mediaHidden
+    }
+    
     @objc private func buttonPressed() {
         guard let item = self.item else {
             return
@@ -105,6 +149,8 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
+        
+        let currentItem = self.item
 
         return { item, layoutConstants, _, _, _, _ in
             let contentProperties = ChatMessageBubbleContentProperties(hidesSimpleAuthorHeader: true, headerSpacing: 0.0, hidesBackground: .always, forceFullCorners: false, forceAlignment: .center)
@@ -119,6 +165,12 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                 if let media = item.message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .suggestedProfilePhoto(image) = media.action {
                     photo = image
                 }
+                
+                var mediaUpdated = true
+                if let photo = photo, let media = currentItem?.message.media.first(where: { $0 is TelegramMediaAction }) as? TelegramMediaAction, case let .suggestedProfilePhoto(maybeCurrentPhoto) = media.action, let currentPhoto = maybeCurrentPhoto {
+                    mediaUpdated = !photo.isSemanticallyEqual(to: currentPhoto)
+                }
+                
                 let isVideo = !(photo?.videoRepresentations.isEmpty ?? true)
                 let fromYou = item.message.author?.id == item.context.account.peerId
                 
@@ -144,7 +196,9 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                             strongSelf.item = item
                             
                             if let photo = photo {
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                if mediaUpdated {
+                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                }
                                      
                                 let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: photo), synchronousLoad: synchronousLoads)
                                 strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)

@@ -11,6 +11,11 @@
 
 @end
 
+@protocol TGPhotoSolidRoundedButtonView <NSObject>
+
+- (void)updateWidth:(CGFloat)width;
+
+@end
 
 @protocol TGPhotoPaintStickerRenderView <NSObject>
 
@@ -127,6 +132,8 @@
 
 @property (nonatomic, copy) id<TGCaptionPanelView>(^captionPanelView)(void);
 
+
+- (UIView<TGPhotoSolidRoundedButtonView> *)solidRoundedButton:(NSString *)title action:(void(^)(void))action;
 - (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size;
 
 @end

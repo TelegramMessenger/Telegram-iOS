@@ -165,6 +165,10 @@ private func findMediaResource(media: Media, previousMedia: Media?, resource: Me
                 if let image = image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
                     return result
                 }
+            case let .suggestedProfilePhoto(image):
+                if let image = image, let result = findMediaResource(media: image, previousMedia: previousMedia, resource: resource) {
+                    return result
+                }
             default:
                 break
         }

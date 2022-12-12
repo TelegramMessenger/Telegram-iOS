@@ -1145,6 +1145,11 @@
     return _intent & (TGPhotoEditorControllerForumAvatarIntent);
 }
 
+- (bool)presentedForSuggestedAvatar
+{
+    return _intent & (TGPhotoEditorControllerSuggestedAvatarIntent);
+}
+
 #pragma mark - Transition
 
 - (void)transitionIn
@@ -1317,6 +1322,10 @@
     TGPhotoEditorBackButton backButtonType = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButtonType = TGPhotoEditorDoneButtonCheck;
     
+    if ([self presentedForSuggestedAvatar]) {
+        [_portraitToolbarView setCancelDoneButtonsHidden:tab == TGPhotoEditorCropTab animated:!isInitialAppearance];
+    }
+    
     __weak TGPhotoEditorController *weakSelf = self;
     TGPhotoEditorTabController *controller = nil;
     switch (tab)
@@ -1332,7 +1341,8 @@
             {
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
-                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation]];
+                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar]];
+                cropController.stickersContext = _stickersContext;
                 cropController.scrubberView = _scrubberView;
                 cropController.dotImageView = _dotImageView;
                 cropController.dotMarkerView = _dotMarkerView;
@@ -1459,6 +1469,20 @@
                     [strongSelf->_currentTabController _finishedTransitionInWithView:nil];
                     
                     [strongSelf returnFullPreviewView];
+                };
+                cropController.cancelPressed = ^{
+                    __strong TGPhotoEditorController *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_portraitToolbarView.cancelPressed();
+                };
+                cropController.donePressed = ^{
+                    __strong TGPhotoEditorController *strongSelf = weakSelf;
+                    if (strongSelf == nil)
+                        return;
+                    
+                    strongSelf->_portraitToolbarView.donePressed();
                 };
                 controller = cropController;
                 

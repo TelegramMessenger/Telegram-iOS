@@ -8485,3 +8485,9 @@ Sorry for the inconvenience.";
 
 "Notification.SuggestedProfilePhoto" = "Suggested Profile Photo";
 "Notification.SuggestedProfileVideo" = "Suggested Profile Video";
+
+"PhotoEditor.SetProfilePhoto" = "Set Profile Photo";
+"PhotoEditor.SetProfileVideo" = "Set Profile Video";
+
+"PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
+"PhotoEditor.SetAsMyVideo" = "Set as My Video";

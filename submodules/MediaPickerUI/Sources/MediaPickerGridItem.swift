@@ -91,7 +91,7 @@ final class MediaPickerGridItemNode: GridItemNode {
     private var theme: PresentationTheme?
         
     private let spoilerDisposable = MetaDisposable()
-    private var spoilerNode: SpoilerOverlayNode?
+    var spoilerNode: SpoilerOverlayNode?
     
     private var currentIsPreviewing = false
             
@@ -440,7 +440,7 @@ final class MediaPickerGridItemNode: GridItemNode {
 
 class SpoilerOverlayNode: ASDisplayNode {
     private let blurNode: ASImageNode
-    private let dustNode: MediaDustNode
+    let dustNode: MediaDustNode
   
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?

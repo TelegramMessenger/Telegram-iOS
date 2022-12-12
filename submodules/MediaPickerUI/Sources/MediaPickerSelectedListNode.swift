@@ -394,7 +394,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         })
     }
     
-    func animateTo(_ view: UIView, completion: @escaping (Bool) -> Void) {
+    func animateTo(_ view: UIView, dustNode: ASDisplayNode?, completion: @escaping (Bool) -> Void) {
         view.alpha = 0.0
         
         let frame = self.frame
@@ -405,6 +405,20 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.durationTextNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.durationBackgroundNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
+        var dustSupernode: ASDisplayNode?
+        var dustPosition: CGPoint?
+        if let dustNode = dustNode {
+            dustSupernode = dustNode.supernode
+            dustPosition = dustNode.position
+            
+            self.addSubnode(dustNode)
+            dustNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            
+            dustNode.layer.animatePosition(from: CGPoint(x: frame.width / 2.0, y: frame.height / 2.0), to: dustNode.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            self.spoilerNode?.dustNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        }
+        
         self.corners = []
         self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
         self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak view, weak self] _ in
@@ -412,6 +426,11 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             
             self?.durationTextNode?.layer.removeAllAnimations()
             self?.durationBackgroundNode?.layer.removeAllAnimations()
+            
+            if let dustNode = dustNode {
+                dustSupernode?.addSubnode(dustNode)
+                dustNode.position = dustPosition ?? dustNode.position
+            }
             
             var animateCheckNode = false
             if let strongSelf = self, let checkNode = strongSelf.checkNode, checkNode.alpha.isZero {
@@ -424,6 +443,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             
             Queue.mainQueue().after(0.01) {
                 self?.layer.removeAllAnimations()
+                self?.spoilerNode?.dustNode.layer.removeAllAnimations()
             }
         })
     }
@@ -553,7 +573,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         })
     }
     
-    var getTransitionView: (String ) -> (UIView, (Bool) -> Void)? = { _ in return nil }
+    var getTransitionView: (String) -> (UIView, ASDisplayNode?, (Bool) -> Void)? = { _ in return nil }
     
     func animateIn(initiated: @escaping () -> Void, completion: @escaping () -> Void = {}) {
         let _ = (self.ready.get()
@@ -576,7 +596,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             }
             
             for (identifier, itemNode) in strongSelf.itemNodes {
-                if let (transitionView, _) = strongSelf.getTransitionView(identifier) {
+                if let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
                     itemNode.animateFrom(transitionView)
                 } else {
                     itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -624,8 +644,8 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         }
         
         for (identifier, itemNode) in self.itemNodes {
-            if let (transitionView, completion) = self.getTransitionView(identifier) {
-                itemNode.animateTo(transitionView, completion: completion)
+            if let (transitionView, maybeDustNode, completion) = self.getTransitionView(identifier) {
+                itemNode.animateTo(transitionView, dustNode: maybeDustNode, completion: completion)
             } else {
                 itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             }
