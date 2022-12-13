@@ -183,7 +183,7 @@ final class MediaStreamVideoComponent: Component {
                 self.pictureInPictureController?.stopPictureInPicture()
             }
         }
-        
+        private var isAnimating = false
         private func updateVideoStalled(isStalled: Bool) {
             if isStalled {
                 guard let component = self.component else { return }
@@ -205,14 +205,16 @@ final class MediaStreamVideoComponent: Component {
                     addSubview(loadingBlurView)
                     if needsFadeInAnimation {
                         let anim = CABasicAnimation(keyPath: "opacity")
-                        anim.duration = 0.5
+                        anim.duration = 0.4
                         anim.fromValue = 0
                         anim.toValue = 1
+                        loadingBlurView.layer.opacity = 1
                         anim.fillMode = .forwards
                         anim.isRemovedOnCompletion = false
                         loadingBlurView.layer.add(anim, forKey: "opacity")
                     }
                 }
+                loadingBlurView.layer.zPosition = 999
                 if shimmerBorderLayer.superlayer == nil {
                     loadingBlurView.contentView.layer.addSublayer(shimmerBorderLayer)
                 }
@@ -235,18 +237,20 @@ final class MediaStreamVideoComponent: Component {
                 borderShimmer.updateHorizontal(background: .clear, foreground: .white)
                 loadingBlurView.alpha = 1
             } else {
-                if hadVideo {
+                if hadVideo && !isAnimating && loadingBlurView.layer.opacity == 1 {
                     let anim = CABasicAnimation(keyPath: "opacity")
-                    anim.duration = 0.5
-                    anim.fromValue = 1
-                    anim.toValue = 0
+                    anim.duration = 0.25
+                    anim.fromValue = 1.0
+                    anim.toValue = 0.0
+                    self.loadingBlurView.layer.opacity = 0
                     anim.fillMode = .forwards
                     anim.isRemovedOnCompletion = false
+                    isAnimating = true
                     anim.completion = { [weak self] _ in
                         guard self?.videoStalled == false else { return }
                         self?.loadingBlurView.removeFromSuperview()
                         self?.placeholderView.removeFromSuperview()
-                        self?.loadingBlurView.layer.removeAllAnimations()
+                        self?.isAnimating = false
                     }
                     loadingBlurView.layer.add(anim, forKey: "opacity")
                 }
@@ -302,7 +306,7 @@ final class MediaStreamVideoComponent: Component {
                         }
                     })
                     stallTimer = _stallTimer
-                    
+                    self.clipsToBounds = component.isFullscreen // or just true
                     if let videoBlurView = self.videoRenderingContext.makeView(input: input, blur: true) {
                         self.videoBlurView = videoBlurView
                         self.insertSubview(videoBlurView, belowSubview: self.blurTintView)
@@ -378,7 +382,6 @@ final class MediaStreamVideoComponent: Component {
                             if #available(iOS 14.0, *) {
                                 pictureInPictureController?.requiresLinearPlayback = true
                             }
-                            
                             self.pictureInPictureController = pictureInPictureController
                             //                            }
                         }
@@ -451,7 +454,7 @@ final class MediaStreamVideoComponent: Component {
                     
                     videoSize = CGSize(width: aspect * 100.0, height: 100.0).aspectFitted(.init(width: availableVideoWidth, height: availableVideoHeight))
                 }
-                let blurredVideoSize = videoSize.aspectFilled(availableSize)
+                let blurredVideoSize = component.isFullscreen ? availableSize : videoSize.aspectFilled(availableSize)
                 
                 component.onVideoSizeRetrieved(videoSize)
                 
@@ -478,7 +481,10 @@ final class MediaStreamVideoComponent: Component {
                 if let videoBlurView = self.videoBlurView {
                     videoBlurView.updateIsEnabled(component.isVisible)
                     if component.isFullscreen {
-                        transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)), size: blurredVideoSize), completion: nil)
+                        transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(
+                            origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)),
+                            size: blurredVideoSize
+                        ), completion: nil)
                     } else {
                         videoBlurView.frame = videoView.frame.insetBy(dx: -69 * aspect, dy: -69)
                     }
@@ -627,6 +633,7 @@ final class MediaStreamVideoComponent: Component {
                 self.component?.pictureInPictureClosed()
             }
             // TODO: extract precise animation timing or observe window changes
+            // Handle minimized case separatelly (can we detect minimized?)
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                 self.videoView?.alpha = 1
             }

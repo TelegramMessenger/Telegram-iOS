@@ -57,6 +57,7 @@ public final class MediaStreamComponent: CombinedComponent {
         var storedIsFullscreen: Bool?
         var isFullscreen: Bool = false
         var videoSize: CGSize?
+        var prevFullscreenOrientation: UIDeviceOrientation?
         
         private(set) var canManageCall: Bool = false
         // TODO: also handle pictureInPicturePossible
@@ -325,6 +326,7 @@ public final class MediaStreamComponent: CombinedComponent {
                 state.isFullscreen = true
                 isFullscreen = true
             } else if !isLandscape && state.isFullscreen && canEnforceOrientation {
+                state.prevFullscreenOrientation = nil
                 state.isFullscreen = false
                 isFullscreen = false
             } else {
@@ -710,9 +712,12 @@ public final class MediaStreamComponent: CombinedComponent {
                     if velocity.y > 200.0 {
                         if state.isFullscreen {
                             state.isFullscreen = false
-                            state.updateDismissOffset(value: 0.0, interactive: false)
-                            if let controller = controller() as? MediaStreamComponentController {
+                            state.prevFullscreenOrientation = UIDevice.current.orientation
+                            state.dismissOffset = 0.0// updateDismissOffset(value: 0.0, interactive: false)
+                            if canEnforceOrientation, let controller = controller() as? MediaStreamComponentController {
                                 controller.updateOrientation(orientation: .portrait)
+                            } else {
+                                state.updated(transition: .easeInOut(duration: 0.25))
                             }
                         } else {
                             if isFullyDragged || state.initialOffset != 0 {
@@ -835,21 +840,31 @@ public final class MediaStreamComponent: CombinedComponent {
                             }),
                             title: "expand"
                         )),
-                        action: {
+                        action: { [weak state] in
+                            guard let state = state else { return }
                             guard state.videoIsPlayable else {
-                                state.isFullscreen = false 
+                                state.isFullscreen = false
                                 return
                             }
                             if let controller = controller() as? MediaStreamComponentController {
-                                guard let size = state.videoSize else { return }
+//                                guard let _ = state.videoSize else { return }
                                 state.isFullscreen.toggle()
                                 if state.isFullscreen {
-                                    if size.width > size.height {
+//                                    if size.width > size.height {
+                                    let currentOrientation = state.prevFullscreenOrientation ?? UIDevice.current.orientation
+                                    switch currentOrientation {
+                                    case .landscapeLeft:
                                         controller.updateOrientation(orientation: .landscapeRight)
-                                    } else {
-                                        controller.updateOrientation(orientation: .portrait)
+                                    case .landscapeRight:
+                                        controller.updateOrientation(orientation: .landscapeLeft)
+                                    default:
+                                        controller.updateOrientation(orientation: .landscapeRight)
                                     }
+//                                    } else {
+//                                        controller.updateOrientation(orientation: .portrait)
+//                                    }
                                 } else {
+                                    state.prevFullscreenOrientation = UIDevice.current.orientation
                                     // TODO: Check and mind current device orientation
                                     controller.updateOrientation(orientation: .portrait)
                                 }
@@ -916,13 +931,14 @@ public final class MediaStreamComponent: CombinedComponent {
                             controller.presentShare()
                         }
                     ).minSize(CGSize(width: 64.0, height: 80))),
-                    rightItem: state.hasVideo ? AnyComponent(Button(
+                    rightItem: /*state.hasVideo ?*/ AnyComponent(Button(
                         content: AnyComponent(BundleIconComponent(
                             name: isFullscreen ? "Media Gallery/Minimize" : "Media Gallery/Fullscreen",
                             tintColor: .white
                         )),
                         action: {
                             state.isFullscreen = false
+                            state.prevFullscreenOrientation = UIDevice.current.orientation
                             if let controller = controller() as? MediaStreamComponentController {
                                 if canEnforceOrientation {
                                     controller.updateOrientation(orientation: .portrait)
@@ -931,7 +947,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                 }
                             }
                         }
-                    ).minSize(CGSize(width: 64.0, height: 80))) : nil,
+                    ).minSize(CGSize(width: 64.0, height: 80)))/* : nil*/,
                     centerItem: infoItem
                 ))
                 let fullScreenOverlayComponent = fullscreenOverlay.update(
