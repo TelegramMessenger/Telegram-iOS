@@ -988,6 +988,7 @@ public extension Api {
 }
 public extension Api {
     enum MessageAction: TypeConstructorDescription {
+        case messageActionAttachMenuBotAllowed
         case messageActionBotAllowed(domain: String)
         case messageActionChannelCreate(title: String)
         case messageActionChannelMigrateFrom(title: String, chatId: Int64)
@@ -1027,6 +1028,12 @@ public extension Api {
     
     public func serialize(_ buffer: Buffer, _ boxed: Swift.Bool) {
     switch self {
+                case .messageActionAttachMenuBotAllowed:
+                    if boxed {
+                        buffer.appendInt32(-404267113)
+                    }
+                    
+                    break
                 case .messageActionBotAllowed(let domain):
                     if boxed {
                         buffer.appendInt32(-1410748418)
@@ -1302,6 +1309,8 @@ public extension Api {
     
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
+                case .messageActionAttachMenuBotAllowed:
+                return ("messageActionAttachMenuBotAllowed", [])
                 case .messageActionBotAllowed(let domain):
                 return ("messageActionBotAllowed", [("domain", String(describing: domain))])
                 case .messageActionChannelCreate(let title):
@@ -1377,6 +1386,9 @@ public extension Api {
     }
     }
     
+        public static func parse_messageActionAttachMenuBotAllowed(_ reader: BufferReader) -> MessageAction? {
+            return Api.MessageAction.messageActionAttachMenuBotAllowed
+        }
         public static func parse_messageActionBotAllowed(_ reader: BufferReader) -> MessageAction? {
             var _1: String?
             _1 = parseString(reader)

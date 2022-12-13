@@ -99,6 +99,7 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
     case topicCreated(title: String, iconColor: Int32, iconFileId: Int64?)
     case topicEdited(components: [ForumTopicEditComponent])
     case suggestedProfilePhoto(image: TelegramMediaImage?)
+    case attachMenuBotAllowed
     
     public init(decoder: PostboxDecoder) {
         let rawValue: Int32 = decoder.decodeInt32ForKey("_rawValue", orElse: 0)
@@ -175,6 +176,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             self = .topicEdited(components: decoder.decodeObjectArrayWithDecoderForKey("components"))
         case 30:
             self = .suggestedProfilePhoto(image: decoder.decodeObjectForKey("image") as? TelegramMediaImage)
+        case 31:
+            self = .attachMenuBotAllowed
         default:
             self = .unknown
         }
@@ -326,6 +329,8 @@ public enum TelegramMediaActionType: PostboxCoding, Equatable {
             if let image = image {
                 encoder.encodeObject(image, forKey: "image")
             }
+        case .attachMenuBotAllowed:
+            encoder.encodeInt32(31, forKey: "_rawValue")
         }
     }
     

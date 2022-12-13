@@ -1254,7 +1254,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                 } else {
                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                 }
-                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text, action: nil), action: { _ in return false })
+                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(participant.peer), text: text, action: nil, duration: 3), action: { _ in return false })
                             }
                         } else {
                             if case let .channel(groupPeer) = groupPeer, let listenerLink = inviteLinks?.listenerLink, !groupPeer.hasPermission(.inviteMembers) {
@@ -1362,7 +1362,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil, duration: 3), action: { _ in return false })
                                             }
                                         }))
                                     } else if case let .legacyGroup(groupPeer) = groupPeer {
@@ -1430,7 +1430,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                                                 } else {
                                                     text = strongSelf.presentationData.strings.VoiceChat_InvitedPeerText(peer.displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                                                 }
-                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil), action: { _ in return false })
+                                                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: text, action: nil, duration: 3), action: { _ in return false })
                                             }
                                         }))
                                     }
@@ -2262,7 +2262,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                         return
                     }
                     let text = strongSelf.presentationData.strings.VoiceChat_PeerJoinedText(EnginePeer(event.peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
-                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(event.peer), text: text, action: nil), action: { _ in return false })
+                    strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(event.peer), text: text, action: nil, duration: 3), action: { _ in return false })
                 }
             }))
             
@@ -2277,7 +2277,7 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
                 } else {
                     text = strongSelf.presentationData.strings.VoiceChat_DisplayAsSuccess(EnginePeer(peer).displayTitle(strings: strongSelf.presentationData.strings, displayOrder: strongSelf.presentationData.nameDisplayOrder)).string
                 }
-                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text, action: nil), action: { _ in return false })
+                strongSelf.presentUndoOverlay(content: .invitedToVoiceChat(context: strongSelf.context, peer: EnginePeer(peer), text: text, action: nil, duration: 3), action: { _ in return false })
             }))
 
             self.stateVersionDisposable.set((self.call.stateVersion

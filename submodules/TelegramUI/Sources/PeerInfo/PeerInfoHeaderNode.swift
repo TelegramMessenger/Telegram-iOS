@@ -399,7 +399,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
             if peer.isDeleted {
                 overrideImage = .deletedIcon
             } else if let previousItem = previousItem, item == nil {
-                if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
+                if case let .image(_, representations, _, _, _) = previousItem, let rep = representations.last {
                     self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
                 }
                 overrideImage = AvatarNodeImageOverride.none
@@ -499,7 +499,7 @@ final class PeerInfoAvatarTransformContainerNode: ASDisplayNode {
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         videoId = videoId &+ resource.photoId
                     }
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
+                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail
@@ -784,7 +784,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
         if canEdit, peer.profileImageRepresentations.isEmpty {
             overrideImage = .editAvatarIcon(forceNone: true)
         } else if let previousItem = previousItem, item == nil {
-            if case let .image(_, representations, _, _) = previousItem, let rep = representations.last {
+            if case let .image(_, representations, _, _, _) = previousItem, let rep = representations.last {
                 self.removedPhotoResourceIds.insert(rep.representation.resource.id.stringRepresentation)
             }
             overrideImage = canEdit ? .editAvatarIcon(forceNone: true) : AvatarNodeImageOverride.none
@@ -831,7 +831,7 @@ final class PeerInfoEditingAvatarNode: ASDisplayNode {
                     if let resource = videoRepresentations.first?.representation.resource as? CloudPhotoSizeMediaResource {
                         id = id &+ resource.photoId
                     }
-                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail):
+                case let .image(reference, imageRepresentations, videoRepresentationsValue, immediateThumbnail, _):
                     representations = imageRepresentations
                     videoRepresentations = videoRepresentationsValue
                     immediateThumbnailData = immediateThumbnail

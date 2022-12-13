@@ -28,6 +28,8 @@ swift_library(
         "//submodules/BotPaymentsUI:BotPaymentsUI",
         "//submodules/PromptUI:PromptUI",
         "//submodules/PhoneNumberFormat:PhoneNumberFormat",
+        "//submodules/QrCodeUI:QrCodeUI",
+        "//submodules/InstantPageUI:InstantPageUI",
     ],
     visibility = [
         "//visibility:public",

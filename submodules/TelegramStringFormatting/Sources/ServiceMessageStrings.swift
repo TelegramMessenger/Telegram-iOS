@@ -831,6 +831,8 @@ public func universalServiceMessageString(presentationData: (PresentationTheme, 
                 } else {
                     attributedString = NSAttributedString(string: strings.Notification_SuggestedProfileVideo, font: titleFont, textColor: primaryTextColor)
                 }
+            case .attachMenuBotAllowed:
+                attributedString = NSAttributedString(string: strings.Notification_BotWriteAllowed, font: titleFont, textColor: primaryTextColor)
             case .unknown:
                 attributedString = nil
             }

@@ -158,6 +158,7 @@ public struct ReplyMarkupMessageFlags: OptionSet {
     public static let setupReply = ReplyMarkupMessageFlags(rawValue: 1 << 2)
     public static let inline = ReplyMarkupMessageFlags(rawValue: 1 << 3)
     public static let fit = ReplyMarkupMessageFlags(rawValue: 1 << 4)
+    public static let persistent = ReplyMarkupMessageFlags(rawValue: 1 << 5)
 }
 
 public class ReplyMarkupMessageAttribute: MessageAttribute, Equatable {

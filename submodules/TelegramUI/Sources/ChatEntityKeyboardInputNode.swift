@@ -1993,7 +1993,9 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                         let _ = strongSelf.controllerInteraction.sendSticker(fileReference, silentPosting, schedule, query, clearInput, sourceView, sourceRect, sourceLayer, bubbleUpEmojiOrStickersets)
                     }
                     
-                    if let chatPeerId = strongSelf.chatPeerId {
+                    let isLocked = file.isPremiumSticker && !hasPremium
+                    
+                    if let chatPeerId = strongSelf.chatPeerId, !isLocked {
                         if chatPeerId != strongSelf.context.account.peerId && chatPeerId.namespace != Namespaces.Peer.SecretChat  {
                             menuItems.append(.action(ContextMenuActionItem(text: presentationData.strings.Conversation_SendMessage_SendSilently, icon: { theme in
                                 return generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Menu/SilentIcon"), color: theme.actionSheet.primaryTextColor)
@@ -2093,8 +2095,8 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
                     guard let view = view else {
                         return nil
                     }
-                    
-                    return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: file.isPremiumSticker && !hasPremium, menu: menuItems, openPremiumIntro: {
+                        
+                    return (view, itemLayer.convert(itemLayer.bounds, to: view.layer), StickerPreviewPeekContent(account: context.account, theme: presentationData.theme, strings: presentationData.strings, item: .pack(file), isLocked: isLocked && !isStarred, menu: menuItems, openPremiumIntro: {
                         guard let strongSelf = self else {
                             return
                         }

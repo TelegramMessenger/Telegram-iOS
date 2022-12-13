@@ -9518,7 +9518,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                     let hapticFeedback = HapticFeedback()
                     hapticFeedback.impact()
                     
-                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action), elevatedLayout: false, action: { [weak self] action in
+                    strongSelf.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.Conversation_SendMesageAsPremiumInfo, action: strongSelf.presentationData.strings.EmojiInput_PremiumEmojiToast_Action, duration: 3), elevatedLayout: false, action: { [weak self] action in
                         guard let strongSelf = self else {
                             return true
                         }
@@ -12063,8 +12063,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         let _ = (context.engine.messages.getAttachMenuBot(botId: botId)
                         |> deliverOnMainQueue).start(next: { bot in
                             let peer = EnginePeer(bot.peer)
-                            let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
-                                let _ = (context.engine.messages.addBotToAttachMenu(botId: botId)
+                                                        
+                            let controller = addWebAppToAttachmentController(context: context, peerName: peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, requestWriteAccess: bot.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                                let _ = (context.engine.messages.addBotToAttachMenu(botId: botId, allowWrite: allowWrite)
                                 |> deliverOnMainQueue).start(error: { _ in
                                     
                                 }, completed: {

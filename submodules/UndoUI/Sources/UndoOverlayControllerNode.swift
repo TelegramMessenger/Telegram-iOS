@@ -518,7 +518,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 
                 displayUndo = false
                 self.originalRemainingSeconds = 3
-            case let .invitedToVoiceChat(context, peer, text, action):
+            case let .invitedToVoiceChat(context, peer, text, action, duration):
                 self.avatarNode = AvatarNode(font: avatarPlaceholderFont(size: 15.0))
                 self.iconNode = nil
                 self.iconCheckNode = nil
@@ -536,11 +536,10 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 if let action = action {
                     displayUndo = true
                     undoText = action
-                    self.originalRemainingSeconds = 5
                 } else {
                     displayUndo = false
-                    self.originalRemainingSeconds = 3
                 }
+                self.originalRemainingSeconds = duration
             case let .audioRate(slowdown, text):
                 self.avatarNode = nil
                 self.iconNode = nil

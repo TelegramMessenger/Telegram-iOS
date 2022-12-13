@@ -107,7 +107,7 @@ final class AvatarGalleryItemFooterContentNode: GalleryFooterContentNode {
         var buttonText: String?
         var canShare = true
         switch entry {
-            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _):
+            case let .image(_, _, _, videoRepresentations, peer, date, _, _, _, _, _):
                 nameText = peer.flatMap(EnginePeer.init)?.displayTitle(strings: self.presentationData.strings, displayOrder: self.presentationData.nameDisplayOrder) ?? ""
                 if let date = date {
                     dateText = humanReadableStringForTimestamp(strings: self.strings, dateTimeFormat: self.dateTimeFormat, timestamp: date).string

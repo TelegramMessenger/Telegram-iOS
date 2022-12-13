@@ -190,13 +190,13 @@ final class MediaPickerGridItemNode: GridItemNode {
     
     func animateFadeIn(animateCheckNode: Bool, animateSpoilerNode: Bool) {
         if animateCheckNode {
-            self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.checkNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
-        self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-        self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+        self.gradientNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.typeIconNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
+        self.durationNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         if animateSpoilerNode {
-            self.spoilerNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            self.spoilerNode?.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
         }
     }
         

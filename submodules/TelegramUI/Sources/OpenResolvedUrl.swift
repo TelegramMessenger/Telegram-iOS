@@ -632,8 +632,8 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         let choose = filterChooseTypes(choose, peerTypes: bot.peerTypes)
                         
                         let botPeer = EnginePeer(bot.peer)
-                        let controller = addWebAppToAttachmentController(context: context, peerName: botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, completion: {
-                            let _ = (context.engine.messages.addBotToAttachMenu(botId: peerId)
+                        let controller = addWebAppToAttachmentController(context: context, peerName: botPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), icons: bot.icons, requestWriteAccess: bot.flags.contains(.requiresWriteAccess), completion: { allowWrite in
+                            let _ = (context.engine.messages.addBotToAttachMenu(botId: peerId, allowWrite: allowWrite)
                             |> deliverOnMainQueue).start(error: { _ in
                                 presentError(presentationData.strings.WebApp_AddToAttachmentUnavailableError)
                             }, completed: {

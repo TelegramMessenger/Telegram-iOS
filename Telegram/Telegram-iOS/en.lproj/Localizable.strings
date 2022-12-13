@@ -8450,6 +8450,7 @@ Sorry for the inconvenience.";
 "UserInfo.SuggestPhoto" = "Suggest Photo for %@";
 "UserInfo.SetCustomPhoto" = "Set Photo for %@";
 "UserInfo.ResetCustomPhoto" = "Reset to Original Photo";
+"UserInfo.CustomPhotoInfo" = "You can replace %@’s photo with another photo that only you will see.";
 
 "UserInfo.SuggestPhotoTitle" = "Do you want to suggest a profile picture for %@?";
 "UserInfo.SetCustomPhotoTitle" = "Do you want to set a custom profile picture for %@?";
@@ -8466,6 +8467,9 @@ Sorry for the inconvenience.";
 
 "UserInfo.CustomPhoto" = "photo set by you";
 "UserInfo.CustomVideo" = "video set by you";
+
+"UserInfo.PublicPhoto" = "public photo";
+"UserInfo.PublicVideo" = "public video";
 
 "UserInfo.ResetToOriginalAlertText" = "Are you sure you want to reset to %@ original photo?";
 "UserInfo.ResetToOriginalAlertReset" = "Reset";
@@ -8491,3 +8495,12 @@ Sorry for the inconvenience.";
 
 "PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
 "PhotoEditor.SetAsMyVideo" = "Set as My Video";
+
+"Notification.BotWriteAllowed" = "You allowed this bot to message you when you added it in the attachment menu.";
+
+"Privacy.ProfilePhoto.SetPublicPhoto" = "Set Public Photo";
+"Privacy.ProfilePhoto.UpdatePublicPhoto" = "Update Public Photo";
+"Privacy.ProfilePhoto.RemovePublicPhoto" = "Remove Public Photo";
+"Privacy.ProfilePhoto.PublicPhotoInfo" = "You can upload a public photo for those who are restricted from viewing your real profile photo.";
+
+"WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";

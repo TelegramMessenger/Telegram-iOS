@@ -116,7 +116,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             switch action.action {
             case let .photoUpdated(image), let .suggestedProfilePhoto(image):
                 if let peer = messageMainPeer(EngineMessage(message)), let image = image {
-                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action")])
+                    let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action", false)])
                     
                     let sourceCorners: AvatarGalleryController.SourceCorners
                     if case .photoUpdated = action.action {

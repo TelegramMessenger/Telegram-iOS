@@ -82,6 +82,7 @@ public final class QrCodeScanScreen: ViewController {
     public enum Subject {
         case authTransfer(activeSessionsContext: ActiveSessionsContext)
         case peer
+        case custom(info: String)
     }
     
     private let context: AccountContext
@@ -97,8 +98,11 @@ public final class QrCodeScanScreen: ViewController {
     }
     
     public var showMyCode: () -> Void = {}
+    public var completion: (String?) -> Void = { _ in }
     
     private var codeResolved = false
+    
+    private var validLayout: ContainerViewLayout?
     
     public init(context: AccountContext, subject: QrCodeScanScreen.Subject) {
         self.context = context
@@ -126,7 +130,9 @@ public final class QrCodeScanScreen: ViewController {
             (strongSelf.displayNode as! QrCodeScanScreenNode).updateInForeground(inForeground)
         })
         
-        if case .peer = subject {
+        if case .custom = subject {
+            self.navigationItem.leftBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Common_Cancel, style: .plain, target: self, action: #selector(self.cancelPressed))
+        } else if case .peer = subject {
             self.navigationItem.rightBarButtonItem = UIBarButtonItem(title: self.presentationData.strings.Contacts_QrCode_MyCode, style: .plain, target: self, action: #selector(self.myCodePressed))
         } else {
             #if DEBUG
@@ -145,12 +151,32 @@ public final class QrCodeScanScreen: ViewController {
         self.approveDisposable.dispose()
     }
     
+    @objc private func cancelPressed() {
+        guard let layout = self.validLayout else {
+            return
+        }
+        self.completion(nil)
+        self.controllerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: layout.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+            self.dismiss()
+        })
+    }
+    
     @objc private func myCodePressed() {
         self.showMyCode()
     }
     
     @objc private func testPressed() {
         self.dismissWithSession(session: nil)
+    }
+    
+    private var animatedIn = false
+    public override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        
+        if case .custom = self.subject, !self.animatedIn, let layout = self.validLayout {
+            self.animatedIn = true
+            self.controllerNode.layer.animatePosition(from: CGPoint(x: 0.0, y: layout.size.height), to: CGPoint(), duration: 0.4, timingFunction: kCAMediaTimingFunctionSpring, additive: true)
+        }
     }
     
     private func dismissWithSession(session: RecentAccountSession?) {
@@ -182,6 +208,14 @@ public final class QrCodeScanScreen: ViewController {
         } else {
             self.dismiss()
         }
+    }
+    
+    private func completeWithCode(_ code: String) {
+        guard case .custom = self.subject else {
+            return
+        }
+        self.completion(code)
+        self.dismiss()
     }
     
     override public func loadDisplayNode() {
@@ -235,6 +269,8 @@ public final class QrCodeScanScreen: ViewController {
                             }
                         })
                     }
+                case .custom:
+                    strongSelf.completeWithCode(code)
             }
         })
         
@@ -246,6 +282,8 @@ public final class QrCodeScanScreen: ViewController {
     override public func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         super.containerLayoutUpdated(layout, transition: transition)
         
+            self.validLayout = layout
+                
         (self.displayNode as! QrCodeScanScreenNode).containerLayoutUpdated(layout: layout, navigationHeight: self.navigationLayout(layout: layout).navigationFrame.maxY, transition: transition)
     }
 }
@@ -344,6 +382,9 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
             case .peer:
                 title = ""
                 text = ""
+            case let .custom(info):
+                title = presentationData.strings.AuthSessions_AddDevice_ScanTitle
+                text = info
         }
         
         self.titleNode = ImmediateTextNode()
@@ -445,6 +486,8 @@ private final class QrCodeScanScreenNode: ViewControllerTracingNode, UIScrollVie
                     filteredCodes = codes.filter { $0.message.hasPrefix("tg://") }
                 case .peer:
                     filteredCodes = codes.filter { $0.message.hasPrefix("https://t.me/") || $0.message.hasPrefix("t.me/") }
+                case .custom:
+                    filteredCodes = codes
             }
             if let code = filteredCodes.first, CGRect(x: 0.3, y: 0.3, width: 0.4, height: 0.4).contains(code.boundingBox.center) {
                 if strongSelf.codeWithError != code.message {

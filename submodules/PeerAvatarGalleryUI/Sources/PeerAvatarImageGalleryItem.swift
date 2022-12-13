@@ -106,7 +106,7 @@ class PeerAvatarImageGalleryItem: GalleryItem {
         switch self.entry {
             case let .topImage(representations, _, _, _, _, _):
                 content = representations
-            case let .image(_, _, representations, _, _, _, _, _, _, _):
+            case let .image(_, _, representations, _, _, _, _, _, _, _, _):
                 content = representations
         }
         
@@ -268,7 +268,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                 
                 var id: Int64
                 var category: String?
-                if case let .image(mediaId, _, _, _, _, _, _, _, _, categoryValue) = entry {
+                if case let .image(mediaId, _, _, _, _, _, _, _, _, categoryValue, _) = entry {
                     id = mediaId.id
                     category = categoryValue
                 } else {
@@ -608,7 +608,7 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     switch entry {
                         case let .topImage(topRepresentations, _, _, _, _, _):
                             representations = topRepresentations
-                        case let .image(_, _, imageRepresentations, _, _, _, _, _, _, _):
+                        case let .image(_, _, imageRepresentations, _, _, _, _, _, _, _, _):
                             representations = imageRepresentations
                     }
                     

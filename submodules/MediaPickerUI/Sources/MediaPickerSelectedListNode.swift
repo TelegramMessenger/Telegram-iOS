@@ -285,18 +285,18 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.isHidden = self.interaction?.hiddenMediaId == asset.uniqueIdentifier
         if !self.isHidden && wasHidden {
             if let checkNode = self.checkNode, checkNode.alpha > 0.0 {
-                checkNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                checkNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
             
             if let durationTextNode = self.durationTextNode, durationTextNode.alpha > 0.0 {
-                durationTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                durationTextNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
             if let durationBackgroundNode = self.durationBackgroundNode, durationBackgroundNode.alpha > 0.0 {
-                durationBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                durationBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
             
             if let spoilerNode = self.spoilerNode, spoilerNode.alpha > 0.0 {
-                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
             }
         }
     }
