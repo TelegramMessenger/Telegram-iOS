@@ -41,6 +41,7 @@ swift_library(
         "//submodules/SparseItemGrid:SparseItemGrid",
         "//submodules/UndoUI:UndoUI",
         "//submodules/MoreButtonNode:MoreButtonNode",
+        "//submodules/InvisibleInkDustNode:InvisibleInkDustNode", 
     ],
     visibility = [
         "//visibility:public",

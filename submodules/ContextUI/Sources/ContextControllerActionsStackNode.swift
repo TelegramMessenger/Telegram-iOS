@@ -12,6 +12,7 @@ import Markdown
 import EntityKeyboard
 import AnimationCache
 import MultiAnimationRenderer
+import AnimationUI
 
 public protocol ContextControllerActionsStackItemNode: ASDisplayNode {
     var wantsFullWidth: Bool { get }
@@ -63,6 +64,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
     private let titleLabelNode: ImmediateTextNode
     private let subtitleNode: ImmediateTextNode
     private let iconNode: ASImageNode
+    private var animationNode: AnimationNode?
     
     private var iconDisposable: Disposable?
     
@@ -94,7 +96,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         self.iconNode = ASImageNode()
         self.iconNode.isAccessibilityElement = false
         self.iconNode.isUserInteractionEnabled = false
-        
+                
         super.init()
         
         self.isAccessibilityElement = true
@@ -275,6 +277,14 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
             }
         } else if let image = self.iconNode.image {
             iconSize = image.size
+        } else if let animationName = self.item.animationName {
+            if self.animationNode == nil {
+                let animationNode = AnimationNode(animation: animationName, colors: ["__allcolors__": titleColor], scale: 1.0)
+                animationNode.loop()
+                self.addSubnode(animationNode)
+                self.animationNode = animationNode
+            }
+            iconSize = CGSize(width: 24.0, height: 24.0)
         } else {
             let iconImage = self.item.icon(presentationData.theme)
             self.iconNode.image = iconImage
@@ -323,6 +333,9 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
                 let iconWidth = max(standardIconWidth, iconSize.width)
                 let iconFrame = CGRect(origin: CGPoint(x: size.width - iconSideInset - iconWidth + floor((iconWidth - iconSize.width) / 2.0), y: floor((size.height - iconSize.height) / 2.0)), size: iconSize)
                 transition.updateFrame(node: self.iconNode, frame: iconFrame, beginWithCurrentState: true)
+                if let animationNode = self.animationNode {
+                    transition.updateFrame(node: animationNode, frame: iconFrame, beginWithCurrentState: true)
+                }
             }
         })
     }

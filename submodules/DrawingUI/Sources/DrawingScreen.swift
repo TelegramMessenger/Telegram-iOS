@@ -279,7 +279,7 @@ struct DrawingState: Equatable {
         return DrawingState(
             selectedTool: .pen,
             tools: [
-                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffffff), size: 0.3, mode: .round)),
+                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xe22400), size: 0.25, mode: .round)),
                 .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xfee21b), size: 0.5, mode: .round)),
                 .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.5, mode: .round)),
                 .pencil(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x2570f0), size: 0.5, mode: .round)),
@@ -466,6 +466,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.drawingState = .initial
             self.drawingViewState = DrawingView.NavigationState(canUndo: false, canRedo: false, canClear: false, canZoomOut: false)
             self.currentColor = self.drawingState.tools.first?.color ?? DrawingColor(rgb: 0xffffff)
+            
+            self.updateToolState.invoke(self.drawingState.currentToolState)
         }
                 
         private var currentToolState: DrawingToolState {

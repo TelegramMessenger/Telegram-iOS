@@ -8482,3 +8482,15 @@ Sorry for the inconvenience.";
 
 "CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";
 "CacheEvictionMenu.CategoryExceptions_any" = "%@ Exceptions";
+
+"Conversation.Messages_1" = "%@ message";
+"Conversation.Messages_any" = "%@ messages";
+
+"Notification.SuggestedProfilePhoto" = "Suggested Profile Photo";
+"Notification.SuggestedProfileVideo" = "Suggested Profile Video";
+
+"PhotoEditor.SetProfilePhoto" = "Set Profile Photo";
+"PhotoEditor.SetProfileVideo" = "Set Profile Video";
+
+"PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
+"PhotoEditor.SetAsMyVideo" = "Set as My Video";

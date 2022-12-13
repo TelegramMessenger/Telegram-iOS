@@ -4789,9 +4789,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                     }
                     
                     var canReport = true
-                    if channel.isVerified {
-                        canReport = false
-                    }
                     if channel.adminRights != nil {
                         canReport = false
                     }
@@ -6741,11 +6738,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
     
-    private func updateProfilePhoto(_ image: UIImage, mode: AvatarEditingMode) {
+    fileprivate func updateProfilePhoto(_ image: UIImage, mode: AvatarEditingMode) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
         }
-        
+
         if self.headerNode.isAvatarExpanded {
             self.headerNode.ignoreCollapse = true
             self.headerNode.updateIsAvatarExpanded(false, transition: .immediate)
@@ -6757,7 +6754,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.account.postbox.mediaBox.storeResourceData(resource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: mode == .custom ? true : false)
         
-        self.state = self.state.withUpdatingAvatar(.image(representation))
+        if case .suggest = mode {
+        } else {
+            self.state = self.state.withUpdatingAvatar(.image(representation))
+        }
+        
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
         }
@@ -6809,7 +6810,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }))
     }
               
-    private func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?, mode: AvatarEditingMode) {
+    fileprivate func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?, mode: AvatarEditingMode) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
         }
@@ -6825,7 +6826,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.context.account.postbox.mediaBox.storeResourceData(photoResource.id, data: data)
         let representation = TelegramMediaImageRepresentation(dimensions: PixelDimensions(width: 640, height: 640), resource: photoResource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: mode == .custom ? true : false)
         
-        self.state = self.state.withUpdatingAvatar(.image(representation))
+        if case .suggest = mode {
+        } else {
+            self.state = self.state.withUpdatingAvatar(.image(representation))
+        }
+       
         if let (layout, navigationHeight) = self.validLayout {
             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: mode == .custom ? .animated(duration: 0.2, curve: .easeInOut) : .immediate, additive: false)
         }
@@ -6964,7 +6969,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }))
     }
     
-    private enum AvatarEditingMode {
+    fileprivate enum AvatarEditingMode {
         case generic
         case suggest
         case custom
@@ -9315,6 +9320,20 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
             self.controllerNode.emojiStatusSelectionController = nil
             emojiStatusSelectionController.dismiss()
         }
+    }
+    
+    func updateProfilePhoto(_ image: UIImage) {
+        if !self.isNodeLoaded {
+            self.loadDisplayNode()
+        }
+        self.controllerNode.updateProfilePhoto(image, mode: .generic)
+    }
+    
+    func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?) {
+        if !self.isNodeLoaded {
+            self.loadDisplayNode()
+        }
+        self.controllerNode.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: .generic)
     }
     
     static func displayChatNavigationMenu(context: AccountContext, chatNavigationStack: [ChatNavigationStackItem], nextFolderId: Int32?, parentController: ViewController, backButtonView: UIView, navigationController: NavigationController, gesture: ContextGesture) {

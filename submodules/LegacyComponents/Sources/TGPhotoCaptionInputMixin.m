@@ -50,7 +50,7 @@
     UIView *parentView = [self _parentView];
     
     id<TGCaptionPanelView> inputPanel = nil;
-    if (_stickersContext) {
+    if (_stickersContext && _stickersContext.captionPanelView != nil) {
         inputPanel = _stickersContext.captionPanelView();
     }
     _inputPanel = inputPanel;

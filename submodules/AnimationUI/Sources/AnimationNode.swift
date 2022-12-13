@@ -47,6 +47,12 @@ public final class AnimationNode : ASDisplayNode {
                         self.colorCallbacks.append(colorCallback)
                         view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
                     }
+                    
+                    if let value = colors["__allcolors__"] {
+                        for keypath in view.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+                            view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
+                        }
+                    }
                 }
                 
                 return view
@@ -74,6 +80,12 @@ public final class AnimationNode : ASDisplayNode {
                         /*let colorCallback = LOTColorValueCallback(color: value.cgColor)
                         self.colorCallbacks.append(colorCallback)
                         view.setValueDelegate(colorCallback, for: LOTKeypath(string: "\(key).Color"))*/
+                    }
+                    
+                    if let value = colors["__allcolors__"] {
+                        for keypath in view.allKeypaths(predicate: { $0.keys.last == "Color" }) {
+                            view.setValueProvider(ColorValueProvider(value.lottieColorValue), keypath: AnimationKeypath(keypath: keypath))
+                        }
                     }
                 }
                 

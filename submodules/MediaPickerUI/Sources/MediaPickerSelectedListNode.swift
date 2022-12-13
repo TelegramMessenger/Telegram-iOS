@@ -25,6 +25,9 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
     
     private var adjustmentsDisposable: Disposable?
     
+    private let spoilerDisposable = MetaDisposable()
+    private var spoilerNode: SpoilerOverlayNode?
+    
     private var theme: PresentationTheme?
     
     private var validLayout: CGSize?
@@ -68,43 +71,75 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         
         self.addSubnode(self.imageNode)
         
-        if asset.isVideo, let editingState = interaction?.editingState {
-            func adjustmentsChangedSignal(editingState: TGMediaEditingContext) -> Signal<TGMediaEditAdjustments?, NoError> {
-                return Signal { subscriber in
-                    let disposable = editingState.adjustmentsSignal(for: asset).start(next: { next in
-                        if let next = next as? TGMediaEditAdjustments {
-                            subscriber.putNext(next)
-                        } else if next == nil {
-                            subscriber.putNext(nil)
+        if let editingState = interaction?.editingState {
+            if asset.isVideo {
+                func adjustmentsChangedSignal(editingState: TGMediaEditingContext) -> Signal<TGMediaEditAdjustments?, NoError> {
+                    return Signal { subscriber in
+                        let disposable = editingState.adjustmentsSignal(for: asset).start(next: { next in
+                            if let next = next as? TGMediaEditAdjustments {
+                                subscriber.putNext(next)
+                            } else if next == nil {
+                                subscriber.putNext(nil)
+                            }
+                        }, error: nil, completed: {})
+                        return ActionDisposable {
+                            disposable?.dispose()
                         }
-                    }, error: nil, completed: {})
-                    return ActionDisposable {
-                        disposable?.dispose()
                     }
+                }
+                
+                self.adjustmentsDisposable = (adjustmentsChangedSignal(editingState: editingState)
+                                              |> deliverOnMainQueue).start(next: { [weak self] adjustments in
+                    if let strongSelf = self {
+                        let duration: Double
+                        if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
+                            duration = adjustments.trimEndValue - adjustments.trimStartValue
+                        } else {
+                            duration = asset.originalDuration ?? 0.0
+                        }
+                        strongSelf.videoDuration = duration
+                        
+                        if let size = strongSelf.validLayout {
+                            strongSelf.updateLayout(size: size, transition: .immediate)
+                        }
+                    }
+                })
+            }
+            
+            let spoilerSignal = Signal<Bool, NoError> { subscriber in
+                if let signal = editingState.spoilerSignal(forIdentifier: asset.uniqueIdentifier) {
+                    let disposable = signal.start(next: { next in
+                        if let next = next as? Bool {
+                            subscriber.putNext(next)
+                        }
+                    }, error: { _ in
+                    }, completed: nil)!
+                    
+                    return ActionDisposable {
+                        disposable.dispose()
+                    }
+                } else {
+                    return EmptyDisposable
                 }
             }
             
-            self.adjustmentsDisposable = (adjustmentsChangedSignal(editingState: editingState)
-            |> deliverOnMainQueue).start(next: { [weak self] adjustments in
-                if let strongSelf = self {
-                    let duration: Double
-                    if let adjustments = adjustments as? TGVideoEditAdjustments, adjustments.trimApplied() {
-                        duration = adjustments.trimEndValue - adjustments.trimStartValue
-                    } else {
-                        duration = asset.originalDuration ?? 0.0
-                    }
-                    strongSelf.videoDuration = duration
-                    
-                    if let size = strongSelf.validLayout {
-                        strongSelf.updateLayout(size: size, transition: .immediate)
-                    }
+            self.spoilerDisposable.set((spoilerSignal
+            |> deliverOnMainQueue).start(next: { [weak self] hasSpoiler in
+                guard let strongSelf = self else {
+                    return
                 }
-            })
+                strongSelf.updateHasSpoiler(hasSpoiler)
+            }))
+        }
+        
+        self.imageNode.contentUpdated = { [weak self] image in
+            self?.spoilerNode?.setImage(image)
         }
     }
     
     deinit {
         self.adjustmentsDisposable?.dispose()
+        self.spoilerDisposable.dispose()
     }
     
     override func didLoad() {
@@ -118,6 +153,36 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             return
         }
         self.interaction?.openSelectedMedia(asset, self.imageNode.image)
+    }
+    
+    private var didSetupSpoiler = false
+    private func updateHasSpoiler(_ hasSpoiler: Bool) {
+        var animated = true
+        if !self.didSetupSpoiler {
+            animated = false
+            self.didSetupSpoiler = true
+        }
+    
+        if hasSpoiler {
+            if self.spoilerNode == nil {
+                let spoilerNode = SpoilerOverlayNode()
+                self.insertSubnode(spoilerNode, aboveSubnode: self.imageNode)
+                self.spoilerNode = spoilerNode
+                
+                spoilerNode.setImage(self.imageNode.image)
+                
+                if animated {
+                    spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                }
+            }
+            self.spoilerNode?.update(size: self.bounds.size, transition: .immediate)
+            self.spoilerNode?.frame = CGRect(origin: .zero, size: self.bounds.size)
+        } else if let spoilerNode = self.spoilerNode {
+            self.spoilerNode = nil
+            spoilerNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak spoilerNode] _ in
+                spoilerNode?.removeFromSupernode()
+            })
+        }
     }
     
     func setup(size: CGSize) {
@@ -229,6 +294,10 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             if let durationBackgroundNode = self.durationBackgroundNode, durationBackgroundNode.alpha > 0.0 {
                 durationBackgroundNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
             }
+            
+            if let spoilerNode = self.spoilerNode, spoilerNode.alpha > 0.0 {
+                spoilerNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+            }
         }
     }
     
@@ -248,6 +317,11 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.validLayout = size
         
         transition.updateFrame(node: self.imageNode, frame: CGRect(origin: CGPoint(), size: size))
+        
+        if let spoilerNode = self.spoilerNode {
+            transition.updateFrame(node: spoilerNode, frame: CGRect(origin: CGPoint(), size: size))
+            spoilerNode.update(size: size, transition: transition)
+        }
         
         let checkSize = CGSize(width: 29.0, height: 29.0)
         if let checkNode = self.checkNode {
@@ -320,7 +394,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         })
     }
     
-    func animateTo(_ view: UIView, completion: @escaping (Bool) -> Void) {
+    func animateTo(_ view: UIView, dustNode: ASDisplayNode?, completion: @escaping (Bool) -> Void) {
         view.alpha = 0.0
         
         let frame = self.frame
@@ -331,6 +405,20 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
         self.durationTextNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         self.durationBackgroundNode?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false)
         
+        var dustSupernode: ASDisplayNode?
+        var dustPosition: CGPoint?
+        if let dustNode = dustNode {
+            dustSupernode = dustNode.supernode
+            dustPosition = dustNode.position
+            
+            self.addSubnode(dustNode)
+            dustNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.25)
+            
+            dustNode.layer.animatePosition(from: CGPoint(x: frame.width / 2.0, y: frame.height / 2.0), to: dustNode.position, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring)
+            
+            self.spoilerNode?.dustNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.25, removeOnCompletion: false)
+        }
+        
         self.corners = []
         self.updateLayout(size: targetFrame.size, transition: .animated(duration: 0.25, curve: .spring))
         self.layer.animateFrame(from: frame, to: targetFrame, duration: 0.25, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, completion: { [weak view, weak self] _ in
@@ -338,6 +426,11 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             
             self?.durationTextNode?.layer.removeAllAnimations()
             self?.durationBackgroundNode?.layer.removeAllAnimations()
+            
+            if let dustNode = dustNode {
+                dustSupernode?.addSubnode(dustNode)
+                dustNode.position = dustPosition ?? dustNode.position
+            }
             
             var animateCheckNode = false
             if let strongSelf = self, let checkNode = strongSelf.checkNode, checkNode.alpha.isZero {
@@ -350,6 +443,7 @@ private class MediaPickerSelectedItemNode: ASDisplayNode {
             
             Queue.mainQueue().after(0.01) {
                 self?.layer.removeAllAnimations()
+                self?.spoilerNode?.dustNode.layer.removeAllAnimations()
             }
         })
     }
@@ -479,7 +573,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         })
     }
     
-    var getTransitionView: (String ) -> (UIView, (Bool) -> Void)? = { _ in return nil }
+    var getTransitionView: (String) -> (UIView, ASDisplayNode?, (Bool) -> Void)? = { _ in return nil }
     
     func animateIn(initiated: @escaping () -> Void, completion: @escaping () -> Void = {}) {
         let _ = (self.ready.get()
@@ -502,7 +596,7 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
             }
             
             for (identifier, itemNode) in strongSelf.itemNodes {
-                if let (transitionView, _) = strongSelf.getTransitionView(identifier) {
+                if let (transitionView, _, _) = strongSelf.getTransitionView(identifier) {
                     itemNode.animateFrom(transitionView)
                 } else {
                     itemNode.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.1)
@@ -550,18 +644,22 @@ final class MediaPickerSelectedListNode: ASDisplayNode, UIScrollViewDelegate, UI
         }
         
         for (identifier, itemNode) in self.itemNodes {
-            if let (transitionView, completion) = self.getTransitionView(identifier) {
-                itemNode.animateTo(transitionView, completion: completion)
+            if let (transitionView, maybeDustNode, completion) = self.getTransitionView(identifier) {
+                itemNode.animateTo(transitionView, dustNode: maybeDustNode, completion: completion)
             } else {
                 itemNode.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false)
             }
         }
         
-        self.messageNodes?.first?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        self.messageNodes?.first?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        if let topNode = self.messageNodes?.first {
+            topNode.layer.animateAlpha(from: topNode.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            topNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: -30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        }
         
-        self.messageNodes?.last?.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.15, removeOnCompletion: false)
-        self.messageNodes?.last?.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        if let bottomNode = self.messageNodes?.last {
+            bottomNode.layer.animateAlpha(from: bottomNode.alpha, to: 0.0, duration: 0.15, removeOnCompletion: false)
+            bottomNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: 30.0), duration: 0.4, delay: 0.0, timingFunction: kCAMediaTimingFunctionSpring, removeOnCompletion: false, additive: true)
+        }
     }
     
     func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {

@@ -957,6 +957,8 @@
             }
         }
         
+        bool spoiler = [editingContext spoilerForItem:item];
+        
         switch (asset.type)
         {
             case TGMediaAssetPhotoType:
@@ -1028,6 +1030,10 @@
                             dict[@"timer"] = timer;
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1104,6 +1110,10 @@
                                     dict[@"timer"] = timer;
                                 else if (groupedId != nil && !hasAnyTimers)
                                     dict[@"groupedId"] = groupedId;
+                                
+                                if (spoiler) {
+                                    dict[@"spoiler"] = @true;
+                                }
                                 
                                 id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                                 return generatedItem;
@@ -1188,6 +1198,10 @@
                             else if (groupedId != nil && !hasAnyTimers)
                                 dict[@"groupedId"] = groupedId;
                             
+                            if (spoiler) {
+                                dict[@"spoiler"] = @true;
+                            }
+                            
                             id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                             return generatedItem;
                         }] catch:^SSignal *(__unused id error)
@@ -1227,6 +1241,10 @@
                         
                         if (groupedId != nil)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1296,6 +1314,10 @@
                             dict[@"timer"] = timer;
                         else if (groupedId != nil && !hasAnyTimers)
                             dict[@"groupedId"] = groupedId;
+                        
+                        if (spoiler) {
+                            dict[@"spoiler"] = @true;
+                        }
                         
                         id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                         return generatedItem;
@@ -1374,6 +1396,10 @@
                     if (timer != nil)
                         dict[@"timer"] = timer;
                     
+                    if (spoiler) {
+                        dict[@"spoiler"] = @true;
+                    }
+                    
                     id generatedItem = descriptionGenerator(dict, caption, nil, asset.identifier);
                     return generatedItem;
                 }]];
@@ -1387,8 +1413,7 @@
                 break;
         }
         
-        if (groupedId != nil && i == 10)
-        {
+        if (groupedId != nil && i == 10) {
             i = 0;
             groupedId = @([self generateGroupedId]);
         }

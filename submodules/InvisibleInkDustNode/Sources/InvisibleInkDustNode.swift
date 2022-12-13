@@ -15,7 +15,7 @@ func createEmitterBehavior(type: String) -> NSObject {
     return castedBehaviorWithType(behaviorClass, NSSelectorFromString(selector), type)
 }
 
-private func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
+func generateMaskImage(size originalSize: CGSize, position: CGPoint, inverse: Bool) -> UIImage? {
     var size = originalSize
     var position = position
     var scale: CGFloat = 1.0
@@ -58,8 +58,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
     private let emitterMaskFillNode: ASDisplayNode
         
     public var isRevealed = false
-    
-    private var exploding = false
+    private var isExploding = false
     
     public init(textNode: TextNode?) {
         self.textNode = textNode
@@ -158,8 +157,8 @@ public class InvisibleInkDustNode: ASDisplayNode {
             transition.updateAlpha(node: self, alpha: 1.0)
             transition.updateAlpha(node: textNode, alpha: 0.0)
             
-            if self.exploding {
-                self.exploding = false
+            if self.isExploding {
+                self.isExploding = false
                 self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             }
         }
@@ -171,7 +170,7 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         self.isRevealed = true
-        self.exploding = true
+        self.isExploding = true
         
         let position = gestureRecognizer.location(in: self.view)
         self.emitterLayer?.setValue(true, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
@@ -227,65 +226,12 @@ public class InvisibleInkDustNode: ASDisplayNode {
         }
         
         Queue.mainQueue().after(0.8 * UIView.animationDurationFactor()) {
-            self.exploding = false
+            self.isExploding = false
             self.emitterLayer?.setValue(false, forKeyPath: "emitterBehaviors.fingerAttractor.enabled")
             self.textSpotNode.layer.removeAllAnimations()
             
             self.emitterSpotNode.layer.removeAllAnimations()
             self.emitterMaskFillNode.layer.removeAllAnimations()
-        }
-        
-        var spoilersLength: Int = 0
-        if let spoilers = textNode.cachedLayout?.spoilers {
-            for spoiler in spoilers {
-                spoilersLength += spoiler.0.length
-            }
-        }
-        
-        let timeToRead = min(45.0, ceil(max(4.0, Double(spoilersLength) * 0.04)))
-        Queue.mainQueue().after(timeToRead * UIView.animationDurationFactor()) {
-            if let (_, color, _, _, _) = self.currentParams {
-                let colorSpace = CGColorSpaceCreateDeviceRGB()
-                let animation = POPBasicAnimation()
-                animation.property = (POPAnimatableProperty.property(withName: "color", initializer: { property in
-                    property?.readBlock = { node, values in
-                        if let color = (node as! InvisibleInkDustNode).emitter?.color {
-                            if let a = color.components {
-                                values?[0] = a[0]
-                                values?[1] = a[1]
-                                values?[2] = a[2]
-                                values?[3] = a[3]
-                            }
-                        }
-                    }
-                    property?.writeBlock = { node, values in
-                        if let values = values, let color = CGColor(colorSpace: colorSpace, components: values) {
-                            (node as! InvisibleInkDustNode).animColor = color
-                            (node as! InvisibleInkDustNode).updateEmitter()
-                        }
-                    }
-                    property?.threshold = 0.4
-                }) as! POPAnimatableProperty)
-                animation.fromValue = self.emitter?.color
-                animation.toValue = color
-                animation.timingFunction = CAMediaTimingFunction(name: CAMediaTimingFunctionName.linear)
-                animation.duration = 0.1
-                animation.completionBlock = { [weak self] _, _ in
-                    if let strongSelf = self {
-                        strongSelf.animColor = nil
-                        strongSelf.updateEmitter()
-                    }
-                }
-                self.pop_add(animation, forKey: "color")
-            }
-            
-            Queue.mainQueue().after(0.15) {
-                let transition = ContainedViewLayoutTransition.animated(duration: 0.4, curve: .linear)
-                transition.updateAlpha(node: self, alpha: 1.0)
-                transition.updateAlpha(node: textNode, alpha: 0.0, completion: { [weak self] _ in
-                    self?.isRevealed = false
-                })
-            }
         }
     }
     

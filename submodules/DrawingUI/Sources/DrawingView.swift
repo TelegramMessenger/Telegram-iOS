@@ -71,7 +71,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
     var tool: Tool = .pen
     var toolColor: DrawingColor = DrawingColor(color: .white)
-    var toolBrushSize: CGFloat = 0.35
+    var toolBrushSize: CGFloat = 0.25
     var toolHasArrow: Bool = false
     
     var stateUpdated: (NavigationState) -> Void = { _ in }
@@ -577,7 +577,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     func updateToolState(_ state: DrawingToolState) {
         switch state {
         case let .pen(brushState):
-            self.drawingGesturePipeline?.mode = .polyline
+            self.drawingGesturePipeline?.mode = .location
             self.tool = .pen
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size

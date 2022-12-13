@@ -195,10 +195,16 @@ final class PeerAvatarImageGalleryItemNode: ZoomableContentGalleryItemNode {
                     subject = .image(entry.representations)
                     actionCompletionText = strongSelf.presentationData.strings.Gallery_ImageSaved
                 }
-                let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll)
-                shareController.actionCompleted = { [weak self] in
-                    if let strongSelf = self, let actionCompletionText = actionCompletionText {
-                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                
+                let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                var forceTheme: PresentationTheme?
+                if !presentationData.theme.overallDarkAppearance {
+                    forceTheme = defaultDarkColorPresentationTheme
+                }
+                
+                let shareController = ShareController(context: strongSelf.context, subject: subject, preferredAction: .saveToCameraRoll, forceTheme: forceTheme)
+                shareController.actionCompleted = {
+                    if let actionCompletionText = actionCompletionText {
                         interaction.presentController(UndoOverlayController(presentationData: presentationData, content: .mediaSaved(text: actionCompletionText), elevatedLayout: true, animateInAsReplacement: false, action: { _ in return true }), nil)
                     }
                 }
