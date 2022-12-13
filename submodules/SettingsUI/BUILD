@@ -108,6 +108,7 @@ swift_library(
         "//submodules/PersistentStringHash:PersistentStringHash",
         "//submodules/TelegramUI/Components/NotificationPeerExceptionController",
         "//submodules/TelegramUI/Components/ChatTimerScreen",
+        "//submodules/AnimatedAvatarSetNode",
     ],
     visibility = [
         "//visibility:public",

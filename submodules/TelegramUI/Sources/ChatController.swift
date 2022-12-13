@@ -15310,7 +15310,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
             var attemptSelectionImpl: ((Peer) -> Void)?
             let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, filter: filter, attemptSelection: { peer, _ in
                 attemptSelectionImpl?(peer)
-            }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }))
+            }, multipleSelection: true, forwardedMessageIds: messages.map { $0.id }, selectForumThreads: true))
             let context = self.context
             attemptSelectionImpl = { [weak self, weak controller] peer in
                 guard let strongSelf = self, let controller = controller else {
@@ -15667,7 +15667,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             break
                         case let .chat(textInputState, _, _):
                             if let textInputState = textInputState {
-                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData))
+                                let controller = self.context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: self.context, updatedPresentationData: self.updatedPresentationData, selectForumThreads: true))
                                 controller.peerSelected = { [weak self, weak controller] peer, threadId in
                                     let peerId = peer.id
                                     

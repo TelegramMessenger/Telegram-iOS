@@ -3461,7 +3461,7 @@ func replayFinalState(
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
                 if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
                 deletedMessageIds.append(contentsOf: ids.map { .global($0) })
             case let .DeleteMessages(ids):
@@ -3478,7 +3478,7 @@ func replayFinalState(
                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                 })
                 if !resourceIds.isEmpty {
-                    let _ = mediaBox.removeCachedResources(Set(resourceIds), force: true).start()
+                    let _ = mediaBox.removeCachedResources(Array(Set(resourceIds)), force: true).start()
                 }
             case let .UpdatePeerChatInclusion(peerId, groupId, changedGroup):
                 let currentInclusion = transaction.getPeerChatListInclusion(peerId)

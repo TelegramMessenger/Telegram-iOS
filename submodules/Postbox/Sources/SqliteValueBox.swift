@@ -8,6 +8,7 @@ private struct SqliteValueBoxTable {
 }
 
 let SQLITE_TRANSIENT = unsafeBitCast(-1, to: sqlite3_destructor_type.self)
+let SQLITE_PREPARE_PERSISTENT: UInt32 = 1
 
 private func checkTableKey(_ table: ValueBoxTable, _ key: ValueBoxKey) {
     switch table.keyType {
@@ -731,7 +732,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT value FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT value FROM t\(table.id) WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.getStatements[table.id] = preparedStatement
@@ -760,7 +761,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.getRowIdStatements[table.id] = preparedStatement
@@ -790,7 +791,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsLimit[table.id] = preparedStatement
@@ -823,7 +824,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyAscStatementsNoLimit[table.id] = preparedStatement
@@ -854,7 +855,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsLimit[table.id] = preparedStatement
@@ -886,7 +887,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeKeyDescStatementsNoLimit[table.id] = preparedStatement
@@ -918,7 +919,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key >= ? AND key <= ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "DELETE FROM t\(table.id) WHERE key >= ? AND key <= ?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.deleteRangeStatements[table.id] = preparedStatement
@@ -950,7 +951,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC LIMIT ?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsLimit[table.id] = preparedStatement
@@ -982,7 +983,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key ASC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueAscStatementsNoLimit[table.id] = preparedStatement
@@ -1014,7 +1015,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC LIMIT ?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsLimit[table.id] = preparedStatement
@@ -1047,7 +1048,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key, value FROM t\(table.id) WHERE key > ? AND key < ? ORDER BY key DESC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.rangeValueDescStatementsNoLimit[table.id] = preparedStatement
@@ -1077,7 +1078,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key, value FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key, value FROM t\(table.id) ORDER BY key ASC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.scanStatements[table.id] = preparedStatement
@@ -1098,7 +1099,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT key FROM t\(table.id) ORDER BY key ASC", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT key FROM t\(table.id) ORDER BY key ASC", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.scanKeysStatements[table.id] = preparedStatement
@@ -1120,7 +1121,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT rowid FROM t\(table.id) WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.existsStatements[table.id] = preparedStatement
@@ -1149,7 +1150,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET value=? WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "UPDATE t\(table.id) SET value=? WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.updateStatements[table.id] = preparedStatement
@@ -1180,7 +1181,7 @@ public final class SqliteValueBox: ValueBox {
                 resultStatement = statement
             } else {
                 var statement: OpaquePointer? = nil
-                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, &statement, nil)
+                let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO UPDATE SET value=excluded.value", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
                     preconditionFailure(errorText)
@@ -1194,7 +1195,7 @@ public final class SqliteValueBox: ValueBox {
                 resultStatement = statement
             } else {
                 var statement: OpaquePointer? = nil
-                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+                let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
                     preconditionFailure(errorText)
@@ -1233,7 +1234,7 @@ public final class SqliteValueBox: ValueBox {
                 resultStatement = statement
             } else {
                 var statement: OpaquePointer? = nil
-                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO NOTHING", -1, &statement, nil)
+                let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?) ON CONFLICT(key) DO NOTHING", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
                     preconditionFailure(errorText)
@@ -1247,7 +1248,7 @@ public final class SqliteValueBox: ValueBox {
                 resultStatement = statement
             } else {
                 var statement: OpaquePointer? = nil
-                let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, &statement, nil)
+                let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO t\(table.table.id) (key, value) VALUES(?, ?)", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
                 if status != SQLITE_OK {
                     let errorText = self.database.currentError() ?? "Unknown error"
                     preconditionFailure(errorText)
@@ -1285,7 +1286,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM t\(table.id) WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "DELETE FROM t\(table.id) WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.deleteStatements[table.id] = preparedStatement
@@ -1315,7 +1316,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "UPDATE t\(table.id) SET key=? WHERE key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "UPDATE t\(table.id) SET key=? WHERE key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.moveStatements[table.id] = preparedStatement
@@ -1349,7 +1350,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO t\(toTable.id) (key, value) SELECT ?, t\(fromTable.id).value FROM t\(fromTable.id) WHERE t\(fromTable.id).key=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO t\(toTable.id) (key, value) SELECT ?, t\(fromTable.id).value FROM t\(fromTable.id) WHERE t\(fromTable.id).key=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.copyStatements[TablePairKey(table1: fromTable.id, table2: toTable.id)] = preparedStatement
@@ -1384,7 +1385,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "INSERT INTO ft\(table.id) (collectionId, itemId, contents, tags) VALUES(?, ?, ?, ?)", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "INSERT INTO ft\(table.id) (collectionId, itemId, contents, tags) VALUES(?, ?, ?, ?)", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.fullTextInsertStatements[table.id] = preparedStatement
@@ -1423,7 +1424,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "DELETE FROM ft\(table.id) WHERE itemId=?", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "DELETE FROM ft\(table.id) WHERE itemId=?", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.fullTextDeleteStatements[table.id] = preparedStatement
@@ -1447,7 +1448,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\"'", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\"'", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             if status != SQLITE_OK {
                 self.printError()
                 assertionFailure()
@@ -1474,7 +1475,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\"'", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\"'", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.fullTextMatchCollectionStatements[table.id] = preparedStatement
@@ -1503,7 +1504,7 @@ public final class SqliteValueBox: ValueBox {
             resultStatement = statement
         } else {
             var statement: OpaquePointer? = nil
-            let status = sqlite3_prepare_v2(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\" AND tags:\"' || ? || '\"'", -1, &statement, nil)
+            let status = sqlite3_prepare_v3(self.database.handle, "SELECT collectionId, itemId FROM ft\(table.id) WHERE ft\(table.id) MATCH 'contents:\"' || ? || '\" AND collectionId:\"' || ? || '\" AND tags:\"' || ? || '\"'", -1, SQLITE_PREPARE_PERSISTENT, &statement, nil)
             precondition(status == SQLITE_OK)
             let preparedStatement = SqlitePreparedStatement(statement: statement)
             self.fullTextMatchCollectionTagsStatements[table.id] = preparedStatement

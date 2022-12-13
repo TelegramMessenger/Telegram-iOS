@@ -663,7 +663,7 @@ func _internal_fetchAndUpdateCachedPeerData(accountPeerId: PeerId, peerId rawPee
                                                     addMessageMediaResourceIdsToRemove(media: media, resourceIds: &resourceIds)
                                                 })
                                                 if !resourceIds.isEmpty {
-                                                    let _ = postbox.mediaBox.removeCachedResources(Set(resourceIds)).start()
+                                                    let _ = postbox.mediaBox.removeCachedResources(Array(Set(resourceIds))).start()
                                                 }
                                             }
                                         case .chatFull:

@@ -81,7 +81,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                             totalSize += resourceSize
                             
                             for reference in entry.references {
-                                if let message = transaction.getMessage(MessageId(peerId: reference.peerId, namespace: MessageId.Namespace(reference.messageNamespace), id: reference.messageId)) {
+                                if let message = transaction.getMessage(MessageId(peerId: PeerId(reference.peerId), namespace: MessageId.Namespace(reference.messageNamespace), id: reference.messageId)) {
                                     for mediaItem in message.media {
                                         guard let mediaId = mediaItem.id else {
                                             continue
@@ -102,7 +102,7 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
                                             mediaSize += resourceSize
                                             processedResourceIds.insert(resourceId.stringRepresentation)
                                             
-                                            media[reference.peerId, default: [:]][category, default: [:]][mediaId, default: 0] += resourceSize
+                                            media[PeerId(reference.peerId), default: [:]][category, default: [:]][mediaId, default: 0] += resourceSize
                                             if let index = mediaResourceIds.index(forKey: mediaId) {
                                                 if !mediaResourceIds[index].value.contains(resourceId) {
                                                     mediaResourceIds[mediaId]?.append(resourceId)
@@ -489,5 +489,5 @@ func _internal_collectCacheUsageStats(account: Account, peerId: PeerId? = nil, a
 }
 
 func _internal_clearCachedMediaResources(account: Account, mediaResourceIds: Set<MediaResourceId>) -> Signal<Float, NoError> {
-    return account.postbox.mediaBox.removeCachedResources(mediaResourceIds)
+    return account.postbox.mediaBox.removeCachedResources(Array(mediaResourceIds))
 }
