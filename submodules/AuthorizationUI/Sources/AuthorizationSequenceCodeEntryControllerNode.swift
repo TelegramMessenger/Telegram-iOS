@@ -14,6 +14,7 @@ import TelegramAnimatedStickerNode
 import SolidRoundedButtonNode
 import InvisibleInkDustNode
 import AuthorizationUtils
+import TelegramStringFormatting
 
 final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextFieldDelegate {
     private let strings: PresentationStrings
@@ -64,6 +65,7 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
     var loginWithCode: ((String) -> Void)?
     var signInWithApple: (() -> Void)?
     var openFragment: ((String) -> Void)?
+    var present: (ViewController, Any?) -> Void = { _, _ in }
     
     var requestNextOption: (() -> Void)?
     var requestAnotherOption: (() -> Void)?
@@ -170,6 +172,34 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             strongSelf.textChanged(text: strongSelf.codeInputView.text)
         }
         
+        self.codeInputView.longPressed = { [weak self] in
+            guard let strongSelf = self else {
+                return
+            }
+            
+            if let code = UIPasteboard.general.string, let codeLength = strongSelf.requiredCodeLength, code.count == Int(codeLength) {
+                let code = normalizeArabicNumeralString(code, type: .western)
+                guard code.rangeOfCharacter(from: CharacterSet(charactersIn: "0123456789").inverted) == nil else {
+                    return
+                }
+                
+                let controller = ContextMenuController(actions: [ContextMenuAction(content: .text(title: strongSelf.strings.Common_Paste, accessibilityLabel: strongSelf.strings.Common_Paste), action: { [weak self] in
+                    self?.updateCode(code)
+                })])
+                
+                strongSelf.present(
+                    controller,
+                    ContextMenuControllerPresentationArguments(sourceNodeAndRect: { [weak self] in
+                        if let strongSelf = self {
+                            return (strongSelf, strongSelf.codeInputView.frame.offsetBy(dx: 0.0, dy: -8.0), strongSelf, strongSelf.bounds)
+                        } else {
+                            return nil
+                        }
+                    })
+                )
+            }
+        }
+        
         self.nextOptionButtonNode.addTarget(self, action: #selector(self.nextOptionNodePressed), forControlEvents: .touchUpInside)
         self.proceedNode.pressed = { [weak self] in
             self?.proceedPressed()
@@ -188,28 +218,34 @@ final class AuthorizationSequenceCodeEntryControllerNode: ASDisplayNode, UITextF
             self.view.addSubview(signInWithAppleButton)
         }
     }
-    
+        
     func updateCode(_ code: String) {
         self.codeInputView.text = code
         self.textChanged(text: code)
 
+        if let codeLength = self.requiredCodeLength, code.count == Int(codeLength) {
+            self.loginWithCode?(code)
+        }
+    }
+    
+    var requiredCodeLength: Int32? {
         if let codeType = self.codeType {
-            var codeLength: Int32?
             switch codeType {
-                case let .call(length):
-                    codeLength = length
-                case let .otherSession(length):
-                    codeLength = length
-                case let .missedCall(_, length):
-                    codeLength = length
-                case let .sms(length):
-                    codeLength = length
-                default:
-                    break
+            case let .call(length):
+                return length
+            case let .otherSession(length):
+                return length
+            case let .missedCall(_, length):
+                return length
+            case let .sms(length):
+                return length
+            case let .fragment(_, length):
+                return length
+            default:
+                return nil
             }
-            if let codeLength = codeLength, code.count == Int(codeLength) {
-                self.loginWithCode?(code)
-            }
+        } else {
+            return nil
         }
     }
     

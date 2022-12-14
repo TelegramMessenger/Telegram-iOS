@@ -8504,3 +8504,5 @@ Sorry for the inconvenience.";
 "Privacy.ProfilePhoto.PublicPhotoInfo" = "You can upload a public photo for those who are restricted from viewing your real profile photo.";
 
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
+
+"Common.Paste" = "Paste";

@@ -109,6 +109,10 @@ public final class AuthorizationSequenceCodeEntryController: ViewController {
             self?.navigationItem.rightBarButtonItem?.isEnabled = value
         }
         
+        self.controllerNode.present = { [weak self] c, a in
+            self?.present(c, in: .window(.root), with: a)
+        }
+        
         if let (number, email, codeType, nextType, timeout) = self.data {
             var appleSignInAllowed = false
             if case let .email(_, _, _, appleSignInAllowedValue, _) = codeType {
