@@ -194,7 +194,7 @@ public final class MediaBox {
         }), basePath: basePath + "/storage")
         
         self.timeBasedCleanup = TimeBasedCleanup(generalPaths: [
-            self.basePath,
+            //self.basePath,
             self.basePath + "/cache",
             self.basePath + "/animation-cache"
         ], shortLivedPaths: [
@@ -595,7 +595,7 @@ public final class MediaBox {
                 }
                 
                 if let location = parameters?.location {
-                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId, messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
                 }
                 
                 guard let (fileContext, releaseContext) = self.fileContext(for: resource.id) else {
@@ -761,7 +761,7 @@ public final class MediaBox {
                 let paths = self.storePathsForId(resource.id)
                 
                 if let location = parameters?.location {
-                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId, messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
+                    self.storageBox.add(reference: StorageBox.Reference(peerId: location.peerId.toInt64(), messageNamespace: UInt8(clamping: location.messageId.namespace), messageId: location.messageId.id), to: resource.id.stringRepresentation.data(using: .utf8)!)
                 }
                 
                 if let _ = fileSize(paths.complete) {
@@ -1207,6 +1207,24 @@ public final class MediaBox {
         }
     }
     
+    public func resourceUsageWithInfo(id: MediaResourceId) -> Int32 {
+        let paths = self.storePathsForId(id)
+        
+        var value = stat()
+        
+        if stat(paths.complete, &value) == 0 {
+            return Int32(value.st_mtimespec.tv_sec)
+        }
+        
+        value = stat()
+        
+        if stat(paths.partial, &value) == 0 {
+            return Int32(value.st_mtimespec.tv_sec)
+        }
+        
+        return 0
+    }
+    
     public func collectResourceCacheUsage(_ ids: [MediaResourceId]) -> Signal<[MediaResourceId: Int64], NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
@@ -1472,7 +1490,7 @@ public final class MediaBox {
         }
     }
     
-    public func removeCachedResources(_ ids: Set<MediaResourceId>, force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
+    public func removeCachedResources(_ ids: [MediaResourceId], force: Bool = false, notify: Bool = false) -> Signal<Float, NoError> {
         return Signal { subscriber in
             self.dataQueue.async {
                 let uniqueIds = Set(ids.map { $0.stringRepresentation })

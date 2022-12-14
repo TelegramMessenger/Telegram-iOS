@@ -896,6 +896,7 @@ public class Account {
     private let managedOperationsDisposable = DisposableSet()
     private let managedTopReactionsDisposable = MetaDisposable()
     private var storageSettingsDisposable: Disposable?
+    private var automaticCacheEvictionContext: AutomaticCacheEvictionContext?
     
     public let importableContacts = Promise<[DeviceContactNormalizedPhoneNumber: ImportableDeviceContactData]>()
     
@@ -1190,13 +1191,15 @@ public class Account {
 
         if !supplementary {
             let mediaBox = postbox.mediaBox
-            self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
+            /*self.storageSettingsDisposable = accountManager.sharedData(keys: [SharedDataKeys.cacheStorageSettings]).start(next: { [weak mediaBox] sharedData in
                 guard let mediaBox = mediaBox else {
                     return
                 }
                 let settings: CacheStorageSettings = sharedData.entries[SharedDataKeys.cacheStorageSettings]?.get(CacheStorageSettings.self) ?? CacheStorageSettings.defaultSettings
                 mediaBox.setMaxStoreTimes(general: settings.defaultCacheStorageTimeout, shortLived: 60 * 60, gigabytesLimit: settings.defaultCacheStorageLimitGigabytes)
-            })
+            })*/
+            
+            mediaBox.setMaxStoreTimes(general: 1 * 24 * 60 * 60, shortLived: 60 * 60, gigabytesLimit: 100 * 1024 * 1024)
         }
         
         let _ = masterNotificationsKey(masterNotificationKeyValue: self.masterNotificationKey, postbox: self.postbox, ignoreDisabled: false, createIfNotExists: true).start(next: { key in
@@ -1217,6 +1220,8 @@ public class Account {
             }
             strongSelf.managedTopReactionsDisposable.set(managedTopReactions(postbox: strongSelf.postbox, network: strongSelf.network).start())
         }
+        
+        self.automaticCacheEvictionContext = AutomaticCacheEvictionContext(postbox: postbox, accountManager: accountManager)
         
         /*#if DEBUG
         self.managedOperationsDisposable.add(debugFetchAllStickers(account: self).start(completed: {

@@ -2645,14 +2645,16 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         var isPremium = false
         var isVerified = false
         var isFake = false
-        let smallTitleString: NSAttributedString
-        let titleString: NSAttributedString
-        let smallSubtitleString: NSAttributedString
-        let subtitleString: NSAttributedString
+        let titleStringText: String
+        let smallTitleAttributes: MultiScaleTextState.Attributes
+        let titleAttributes: MultiScaleTextState.Attributes
+        let subtitleStringText: String
+        let smallSubtitleAttributes: MultiScaleTextState.Attributes
+        let subtitleAttributes: MultiScaleTextState.Attributes
         var subtitleIsButton: Bool = false
-        var panelSubtitleString: NSAttributedString?
-        var nextPanelSubtitleString: NSAttributedString?
-        let usernameString: NSAttributedString
+        var panelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
+        var nextPanelSubtitleString: (text: String, attributes: MultiScaleTextState.Attributes)?
+        let usernameString: (text: String, attributes: MultiScaleTextState.Attributes)
         if let peer = peer {
             isPremium = peer.isPremium
             isVerified = peer.isVerified
@@ -2681,17 +2683,21 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 }
             }
 
-            titleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-            smallTitleString = NSAttributedString(string: title, font: Font.regular(30.0), textColor: .white)
+            titleStringText = title
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(30.0), color: .white)
+            
             if self.isSettings, let user = peer as? TelegramUser {
                 var subtitle = formatPhoneNumber(context: self.context, number: user.phone ?? "")
                 
                 if let mainUsername = user.addressName, !mainUsername.isEmpty {
                     subtitle = "\(subtitle) • @\(mainUsername)"
                 }
-                smallSubtitleString = NSAttributedString(string: subtitle, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                subtitleString = NSAttributedString(string: subtitle, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                subtitleStringText = subtitle
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             } else if let _ = threadData {
                 let subtitleColor: UIColor
                 subtitleColor = presentationData.theme.list.itemAccentColor
@@ -2699,9 +2705,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 let statusText: String
                 statusText = peer.debugDisplayTitle
                 
-                smallSubtitleString = NSAttributedString(string: statusText, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                subtitleString = NSAttributedString(string: statusText, font: Font.semibold(15.0), textColor: subtitleColor)
-                usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                subtitleStringText = statusText
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.semibold(15.0), color: subtitleColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 
                 subtitleIsButton = true
 
@@ -2713,10 +2721,10 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     } else {
                         subtitleColor = presentationData.theme.list.itemSecondaryTextColor
                     }
-                    panelSubtitleString = NSAttributedString(string: panelStatusData.text, font: Font.regular(17.0), textColor: subtitleColor)
+                    panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = NSAttributedString(string: nextPanelStatusData.text, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 }
             } else if let statusData = statusData {
                 let subtitleColor: UIColor
@@ -2725,9 +2733,12 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                 } else {
                     subtitleColor = presentationData.theme.list.itemSecondaryTextColor
                 }
-                smallSubtitleString = NSAttributedString(string: statusData.text, font: Font.regular(15.0), textColor: UIColor(rgb: 0xffffff, alpha: 0.7))
-                subtitleString = NSAttributedString(string: statusData.text, font: Font.regular(17.0), textColor: subtitleColor)
-                usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                
+                subtitleStringText = statusData.text
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: UIColor(white: 1.0, alpha: 0.7))
+                
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
 
                 let (maybePanelStatusData, maybeNextPanelStatusData, _) = panelStatusData
                 if let panelStatusData = maybePanelStatusData {
@@ -2737,22 +2748,28 @@ final class PeerInfoHeaderNode: ASDisplayNode {
                     } else {
                         subtitleColor = presentationData.theme.list.itemSecondaryTextColor
                     }
-                    panelSubtitleString = NSAttributedString(string: panelStatusData.text, font: Font.regular(17.0), textColor: subtitleColor)
+                    panelSubtitleString = (panelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: subtitleColor))
                 }
                 if let nextPanelStatusData = maybeNextPanelStatusData {
-                    nextPanelSubtitleString = NSAttributedString(string: nextPanelStatusData.text, font: Font.regular(17.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                    nextPanelSubtitleString = (nextPanelStatusData.text, MultiScaleTextState.Attributes(font: Font.regular(17.0), color: presentationData.theme.list.itemSecondaryTextColor))
                 }
             } else {
-                subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-                smallSubtitleString = subtitleString
-                usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+                subtitleStringText = " "
+                subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+                
+                usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
             }
         } else {
-            titleString = NSAttributedString(string: " ", font: Font.semibold(24.0), textColor: presentationData.theme.list.itemPrimaryTextColor)
-            smallTitleString = titleString
-            subtitleString = NSAttributedString(string: " ", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
-            smallSubtitleString = subtitleString
-            usernameString = NSAttributedString(string: "", font: Font.regular(15.0), textColor: presentationData.theme.list.itemSecondaryTextColor)
+            titleStringText = " "
+            titleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: presentationData.theme.list.itemPrimaryTextColor)
+            smallTitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(24.0), color: .white)
+            
+            subtitleStringText = " "
+            subtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+            smallSubtitleAttributes = MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor)
+            
+            usernameString = ("", MultiScaleTextState.Attributes(font: Font.regular(15.0), color: presentationData.theme.list.itemSecondaryTextColor))
         }
         
         let textSideInset: CGFloat = 36.0
@@ -2760,17 +2777,17 @@ final class PeerInfoHeaderNode: ASDisplayNode {
         
         let titleConstrainedSize = CGSize(width: width - textSideInset * 2.0 - (isPremium || isVerified || isFake ? 20.0 : 0.0), height: .greatestFiniteMagnitude)
         
-        let titleNodeLayout = self.titleNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: titleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallTitleString, constrainedSize: titleConstrainedSize)
+        let titleNodeLayout = self.titleNode.updateLayout(text: titleStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: titleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallTitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.titleNode.accessibilityLabel = titleString.string
+        self.titleNode.accessibilityLabel = titleStringText
         
-        let subtitleNodeLayout = self.subtitleNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: subtitleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: smallSubtitleString, constrainedSize: titleConstrainedSize)
+        let subtitleNodeLayout = self.subtitleNode.updateLayout(text: subtitleStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: subtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: smallSubtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.subtitleNode.accessibilityLabel = subtitleString.string
+        self.subtitleNode.accessibilityLabel = subtitleStringText
         
         if subtitleIsButton {
             let subtitleBackgroundNode: ASDisplayNode
@@ -2863,25 +2880,25 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             }
         }
         
-        let panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: panelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize)
+        let panelSubtitleNodeLayout = self.panelSubtitleNode.updateLayout(text: panelSubtitleString?.text ?? subtitleStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: panelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: panelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
-        self.panelSubtitleNode.accessibilityLabel = (panelSubtitleString ?? subtitleString).string
+        self.panelSubtitleNode.accessibilityLabel = panelSubtitleString?.text ?? subtitleStringText
         
-        let nextPanelSubtitleNodeLayout = self.nextPanelSubtitleNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: nextPanelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: nextPanelSubtitleString ?? subtitleString, constrainedSize: titleConstrainedSize)
+        let nextPanelSubtitleNodeLayout = self.nextPanelSubtitleNode.updateLayout(text: nextPanelSubtitleString?.text ?? subtitleStringText, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: nextPanelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: nextPanelSubtitleString?.attributes ?? subtitleAttributes, constrainedSize: titleConstrainedSize)
         ], mainState: TitleNodeStateRegular)
         if let _ = nextPanelSubtitleString {
             self.nextPanelSubtitleNode.isHidden = false
         }
         
-        let usernameNodeLayout = self.usernameNode.updateLayout(states: [
-            TitleNodeStateRegular: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
-            TitleNodeStateExpanded: MultiScaleTextState(attributedText: usernameString, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
+        let usernameNodeLayout = self.usernameNode.updateLayout(text: usernameString.text, states: [
+            TitleNodeStateRegular: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: titleConstrainedSize.width, height: titleConstrainedSize.height)),
+            TitleNodeStateExpanded: MultiScaleTextState(attributes: usernameString.attributes, constrainedSize: CGSize(width: width - titleNodeLayout[TitleNodeStateExpanded]!.size.width - 8.0, height: titleConstrainedSize.height))
         ], mainState: TitleNodeStateRegular)
-        self.usernameNode.accessibilityLabel = usernameString.string
+        self.usernameNode.accessibilityLabel = usernameString.text
         
         let avatarCenter: CGPoint
         if let transitionSourceAvatarFrame = transitionSourceAvatarFrame {
@@ -2987,7 +3004,7 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             subtitleAlpha = 1.0 - titleCollapseFraction
             panelSubtitleAlpha = 0.0
         } else {
-            if (panelSubtitleString ?? subtitleString).string != subtitleString.string {
+            if (panelSubtitleString?.text ?? subtitleStringText) != subtitleStringText {
                 subtitleAlpha = 1.0 - effectiveAreaExpansionFraction
                 panelSubtitleAlpha = effectiveAreaExpansionFraction
                 subtitleOffset = -effectiveAreaExpansionFraction * 5.0

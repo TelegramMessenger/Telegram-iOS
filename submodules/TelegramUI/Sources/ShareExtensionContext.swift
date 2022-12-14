@@ -663,7 +663,7 @@ public class ShareRootControllerImpl {
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
-                                                    }, pretendPresentedInModal: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -837,7 +837,7 @@ public class ShareRootControllerImpl {
                                                     var attemptSelectionImpl: ((Peer) -> Void)?
                                                     let controller = context.sharedContext.makePeerSelectionController(PeerSelectionControllerParams(context: context, filter: [.onlyPrivateChats, .excludeDisabled, .doNotSearchMessages, .excludeSecretChats], hasChatListSelector: false, hasContactSelector: true, hasGlobalSearch: false, title: presentationData.strings.ChatImport_Title, attemptSelection: { peer, _ in
                                                         attemptSelectionImpl?(peer)
-                                                    }, pretendPresentedInModal: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
@@ -912,7 +912,7 @@ public class ShareRootControllerImpl {
                                                         attemptSelectionImpl?(peer)
                                                     }, createNewGroup: {
                                                         createNewGroupImpl?()
-                                                    }, pretendPresentedInModal: true))
+                                                    }, pretendPresentedInModal: true, selectForumThreads: true))
                                                     
                                                     controller.customDismiss = {
                                                         self?.getExtensionContext()?.completeRequest(returningItems: nil, completionHandler: nil)
