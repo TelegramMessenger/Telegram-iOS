@@ -115,7 +115,9 @@ public:
         if (!_audioDeviceModule->Playing()) {
             _audioDeviceModule->InitPlayout();
             //_audioDeviceModule->InitRecording();
-            _audioDeviceModule->InternalStartPlayout();
+            if (_audioDeviceModule->PlayoutIsInitialized()) {
+                _audioDeviceModule->InternalStartPlayout();
+            }
             //_audioDeviceModule->InternalStartRecording();
         }
     }
