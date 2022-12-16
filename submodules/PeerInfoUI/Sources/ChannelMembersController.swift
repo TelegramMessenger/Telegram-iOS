@@ -14,6 +14,7 @@ import PresentationDataUtils
 import ItemListPeerItem
 import ItemListPeerActionItem
 import InviteLinksUI
+import UndoUI
 
 private final class ChannelMembersControllerArguments {
     let context: AccountContext
@@ -24,8 +25,9 @@ private final class ChannelMembersControllerArguments {
     let openPeer: (Peer) -> Void
     let inviteViaLink: () -> Void
     let updateHideMembers: (Bool) -> Void
+    let displayHideMembersTip: (HideMembersDisabledReason) -> Void
     
-    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping () -> Void, updateHideMembers: @escaping (Bool) -> Void) {
+    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping () -> Void, updateHideMembers: @escaping (Bool) -> Void, displayHideMembersTip: @escaping (HideMembersDisabledReason) -> Void) {
         self.context = context
         self.addMember = addMember
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
@@ -33,6 +35,7 @@ private final class ChannelMembersControllerArguments {
         self.openPeer = openPeer
         self.inviteViaLink = inviteViaLink
         self.updateHideMembers = updateHideMembers
+        self.displayHideMembersTip = displayHideMembersTip
     }
 }
 
@@ -48,8 +51,13 @@ private enum ChannelMembersEntryStableId: Hashable {
     case peer(PeerId)
 }
 
+private enum HideMembersDisabledReason: Equatable {
+    case notEnoughMembers(Int)
+    case notAllowed
+}
+
 private enum ChannelMembersEntry: ItemListNodeEntry {
-    case hideMembers(String, Bool, Bool)
+    case hideMembers(text: String, disabledReason: HideMembersDisabledReason?, isInteractive: Bool, value: Bool)
     case hideMembersInfo(String)
     case addMember(PresentationTheme, String)
     case addMemberInfo(PresentationTheme, String)
@@ -96,8 +104,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     
     static func ==(lhs: ChannelMembersEntry, rhs: ChannelMembersEntry) -> Bool {
         switch lhs {
-            case let .hideMembers(text, enabled, value):
-                if case .hideMembers(text, enabled, value) = rhs {
+            case let .hideMembers(text, enabled, isInteractive, value):
+                if case .hideMembers(text, enabled, isInteractive, value) = rhs {
                     return true
                 } else {
                     return false
@@ -244,9 +252,17 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
-            case let .hideMembers(text, enabled, value):
-                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
-                    arguments.updateHideMembers(value)
+            case let .hideMembers(text, disabledReason, isInteractive, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enableInteractiveChanges: isInteractive, enabled: true, displayLocked: !value && disabledReason != nil, sectionId: self.section, style: .blocks, updated: { value in
+                    if let disabledReason {
+                        arguments.displayHideMembersTip(disabledReason)
+                    } else {
+                        arguments.updateHideMembers(value)
+                    }
+                }, activatedWhileDisabled: {
+                    if let disabledReason {
+                        arguments.displayHideMembersTip(disabledReason)
+                    }
                 })
             case let .hideMembersInfo(text):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
@@ -349,13 +365,33 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
     }
     
     var membersHidden = false
+    var memberCount: Int?
     if let cachedData = view.cachedData as? CachedChannelData, case let .known(value) = cachedData.membersHidden {
         membersHidden = value.value
+        memberCount = cachedData.participantsSummary.memberCount.flatMap(Int.init)
     }
     
     if displayHideMembers {
+        let appConfiguration = context.currentAppConfiguration.with({ $0 })
+        var minMembers = 100
+        if let data = appConfiguration.data, let value = data["hidden_members_group_size_min"] as? Double {
+            minMembers = Int(value)
+        }
+        
+        var disabledReason: HideMembersDisabledReason?
+        if memberCount ?? 0 < minMembers {
+            disabledReason = .notEnoughMembers(minMembers)
+        } else if !canSetupHideMembers {
+            disabledReason = .notAllowed
+        }
+        
+        var isInteractive = canSetupHideMembers
+        if canSetupHideMembers && !membersHidden && disabledReason != nil {
+            isInteractive = false
+        }
+        
         //TODO:localize
-        entries.append(.hideMembers("Hide Members", canSetupHideMembers, membersHidden))
+        entries.append(.hideMembers(text: "Hide Members", disabledReason: disabledReason, isInteractive: isInteractive, value: membersHidden))
         
         let infoText: String
         if membersHidden {
@@ -366,7 +402,7 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
         entries.append(.hideMembersInfo(infoText))
     }
     
-    if !membersHidden, let participants = participants, let contacts = contacts {
+    if let participants = participants, let contacts = contacts {
         var canAddMember: Bool = false
         if let peer = view.peers[view.peerId] as? TelegramChannel {
             canAddMember = peer.hasPermission(.inviteMembers)
@@ -461,6 +497,8 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
     var dismissInputImpl: (() -> Void)?
     
     var getControllerImpl: (() -> ViewController?)?
+    
+    var displayHideMembersTip: ((HideMembersDisabledReason) -> Void)?
     
     let actionsDisposable = DisposableSet()
     
@@ -592,6 +630,8 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
         }
     }, updateHideMembers: { value in
         let _ = context.engine.peers.updateChannelMembersHidden(peerId: peerId, value: value).start()
+    }, displayHideMembersTip: { disabledReason in
+        displayHideMembersTip?(disabledReason)
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -721,6 +761,22 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
     }
     dismissInputImpl = { [weak controller] in
         controller?.view.endEditing(true)
+    }
+    displayHideMembersTip = { [weak controller] reason in
+        guard let controller else {
+            return
+        }
+        
+        let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+        
+        let text: String
+        switch reason {
+        case let .notEnoughMembers(minCount):
+            text = presentationData.strings.PeerInfo_HideMembersLimitedParticipantCountText(Int32(minCount))
+        case .notAllowed:
+            text = presentationData.strings.PeerInfo_HideMembersLimitedRights
+        }
+        controller.present(UndoOverlayController(presentationData: presentationData, content: .universal(animation: "anim_topics", scale: 0.066, colors: [:], title: nil, text: text, customUndoText: nil), elevatedLayout: false, animateInAsReplacement: false, action: { _ in return false }), in: .current)
     }
     getControllerImpl =  { [weak controller] in
         return controller
