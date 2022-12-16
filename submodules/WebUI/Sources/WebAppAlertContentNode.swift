@@ -128,7 +128,7 @@ private final class WebAppAlertContentNode: AlertContentNode {
         self.updateTheme(theme)
         
         if let peerIcon = self.peerIcon {
-            let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: peerIcon)).start()
+            let _ = freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: peerIcon)).start()
             self.iconDisposable = (svgIconImageFile(account: account, fileReference: .standalone(media: peerIcon))
             |> deliverOnMainQueue).start(next: { [weak self] transform in
                 if let strongSelf = self {

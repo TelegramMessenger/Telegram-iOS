@@ -476,8 +476,8 @@ final class WatchMediaHandler: WatchRequestHandler {
                                     if let dimensions = media.dimensions {
                                         size = dimensions.cgSize
                                     }
-                                    self.disposable.add(freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start())
-                                    return chatMessageSticker(account: context.account, file: media, small: false, fetched: true, onlyFullSize: true)
+                                    self.disposable.add(freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: fileReference).start())
+                                    return chatMessageSticker(account: context.account, userLocation: .other, file: media, small: false, fetched: true, onlyFullSize: true)
                                 }
                                 return .complete()
                             }
@@ -545,13 +545,13 @@ final class WatchMediaHandler: WatchRequestHandler {
                                 }
                                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                                        imageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference, onlyFullSize: true)
+                                        imageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .other, photoReference: imageReference, onlyFullSize: true)
                                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                                         if fileReference.media.isVideo {
-                                            imageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
+                                            imageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: .other, fileReference: fileReference)
                                             roundVideo = fileReference.media.isInstantVideo
                                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                                            imageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                                            imageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .other, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                                         }
                                     }
                                 }

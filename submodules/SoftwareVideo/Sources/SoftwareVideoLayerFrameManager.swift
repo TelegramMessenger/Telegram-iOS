@@ -37,7 +37,7 @@ public final class SoftwareVideoLayerFrameManager {
     private var didStart = false
     public var started: () -> Void = { }
     
-    public init(account: Account, fileReference: FileMediaReference, layerHolder: SampleBufferLayer?, layer: AVSampleBufferDisplayLayer? = nil, hintVP9: Bool = false) {
+    public init(account: Account, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, fileReference: FileMediaReference, layerHolder: SampleBufferLayer?, layer: AVSampleBufferDisplayLayer? = nil, hintVP9: Bool = false) {
         var resource = fileReference.media.resource
         var secondaryResource: MediaResource?
         for attribute in fileReference.media.attributes {
@@ -59,7 +59,7 @@ public final class SoftwareVideoLayerFrameManager {
         self.layer = layer ?? layerHolder?.layer
         self.layer?.videoGravity = .resizeAspectFill
         self.layer?.masksToBounds = true
-        self.fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource)).start()
+        self.fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, reference: fileReference.resourceReference(resource)).start()
     }
     
     deinit {

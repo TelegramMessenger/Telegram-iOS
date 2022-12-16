@@ -277,9 +277,9 @@ public class StatsMessageItemNode: ListViewItemNode, ItemListItemNode {
                 if let currentContentImageMedia = currentContentImageMedia, contentImageMedia.isSemanticallyEqual(to: currentContentImageMedia) {
                 } else {
                     if let image = contentImageMedia as? TelegramMediaImage {
-                        updateImageSignal = mediaGridMessagePhoto(account: item.context.account, photoReference: .message(message: MessageReference(item.message), media: image))
+                        updateImageSignal = mediaGridMessagePhoto(account: item.context.account, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image))
                     } else if let file = contentImageMedia as? TelegramMediaFile {
-                        updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), autoFetchFullSizeThumbnail: true)
+                        updateImageSignal = mediaGridMessageVideo(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), videoReference: .message(message: MessageReference(item.message), media: file), autoFetchFullSizeThumbnail: true)
                     }
                 }
             }

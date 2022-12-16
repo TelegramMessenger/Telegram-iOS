@@ -237,13 +237,13 @@ final class EditAccessoryPanelNode: AccessoryPanelNode {
         if mediaUpdated {
             if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                 if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                    updateImageSignal = chatMessagePhotoThumbnail(account: self.context.account, photoReference: imageReference)
+                    updateImageSignal = chatMessagePhotoThumbnail(account: self.context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, photoReference: imageReference)
                     isPhoto = true
                 } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                     if fileReference.media.isVideo {
-                        updateImageSignal = chatMessageVideoThumbnail(account: self.context.account, fileReference: fileReference)
+                        updateImageSignal = chatMessageVideoThumbnail(account: self.context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, fileReference: fileReference)
                     } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                        updateImageSignal = chatWebpageSnippetFile(account: self.context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                        updateImageSignal = chatWebpageSnippetFile(account: self.context.account, userLocation: (message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                     }
                 }
             } else {

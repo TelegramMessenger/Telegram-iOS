@@ -152,7 +152,7 @@ public func ensureDownloadedNotificationSoundList(postbox: Postbox) -> Signal<Ne
             
             for resource in resources {
                 signals.append(
-                    fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
+                    fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .file, reference: .soundList(resource: resource))
                     |> ignoreValues
                     |> `catch` { _ -> Signal<Never, NoError> in
                         return .complete()
@@ -228,7 +228,7 @@ private func pollNotificationSoundList(postbox: Postbox, network: Network) -> Si
                         
                         for resource in resources {
                             signals.append(
-                                fetchedMediaResource(mediaBox: postbox.mediaBox, reference: .soundList(resource: resource))
+                                fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .file, reference: .soundList(resource: resource))
                                 |> ignoreValues
                                 |> `catch` { _ -> Signal<Never, NoError> in
                                     return .complete()

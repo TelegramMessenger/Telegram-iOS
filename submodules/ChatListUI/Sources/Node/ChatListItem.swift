@@ -569,7 +569,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
+                    let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -580,7 +580,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessagePhoto(account: self.context.account, photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
+                    let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -597,7 +597,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
+                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, userLocation: .peer(self.message.id.peerId), videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -1326,7 +1326,7 @@ class ChatListItemNode: ItemListRevealOptionsItemNode {
                         if let photo = photo, let video = smallestVideoRepresentation(photo.videoRepresentations), let peerReference = PeerReference(peer._asPeer()) {
                             let videoId = photo.id?.id ?? peer.id.id._internalGetInt64Value()
                             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
-                            let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
+                            let videoContent = NativeVideoContent(id: .profileVideo(videoId, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear, captureProtected: false)
                             if videoContent.id != strongSelf.videoContent?.id {
                                 strongSelf.videoNode?.removeFromSupernode()
                                 strongSelf.videoContent = videoContent

@@ -43,6 +43,7 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
     
     init(
         context: AccountContext,
+        userLocation: MediaResourceUserLocation,
         file: FileMediaReference
     ) {
         self.context = context
@@ -71,6 +72,8 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
+                userLocation: userLocation,
+                userContentType: .gif,
                 fileReference: self.file,
                 automaticallyFetchHeader: true
             )

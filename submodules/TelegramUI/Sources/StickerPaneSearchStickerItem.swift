@@ -167,15 +167,15 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
                     let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0))
                     self.animationNode?.setup(source: AnimatedStickerResourceSource(account: account, resource: stickerItem.file.resource, isVideo: stickerItem.file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .cached)
                     self.animationNode?.visibility = self.isVisibleInGrid
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: stickerItem.file.resource).start())
                 } else {
                     if let animationNode = self.animationNode {
                         animationNode.visibility = false
                         self.animationNode = nil
                         animationNode.removeFromSupernode()
                     }
-                    self.imageNode.setSignal(chatMessageSticker(account: account, file: stickerItem.file, small: true))
-                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
+                    self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: stickerItem.file, small: true))
+                    self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: stickerPackFileReference(stickerItem.file), resource: chatMessageStickerResource(file: stickerItem.file, small: true)).start())
                 }
                 
                 self.currentState = (account, stickerItem, dimensions.cgSize)

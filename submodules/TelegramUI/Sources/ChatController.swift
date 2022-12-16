@@ -10326,7 +10326,7 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                         for i in 0 ..< min(1, result.count) {
                             if let video = result[i].videoRepresentations.first {
                                 let duration: Double = (video.representation.startTimestamp ?? 0.0) + (i == 0 ? 4.0 : 2.0)
-                                signals.append(preloadVideoResource(postbox: context.account.postbox, resourceReference: video.reference, duration: duration))
+                                signals.append(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: video.reference, duration: duration))
                             }
                         }
                         return combineLatest(signals) |> mapToSignal { _ in
@@ -16193,58 +16193,6 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.commitPurposefulAction()
         
         let _ = self.presentVoiceMessageDiscardAlert(action: {
-            if self.context.sharedContext.immediateExperimentalUISettings.playlistPlayback {
-                if url.hasSuffix(".m3u8") {
-                    let navigationController = self.navigationController as? NavigationController
-                    
-                    let webPage = TelegramMediaWebpage(
-                        webpageId: MediaId(namespace: 0, id: 0),
-                        content: .Loaded(TelegramMediaWebpageLoadedContent(
-                            url: url,
-                            displayUrl: url,
-                            hash: 0,
-                            type: "video",
-                            websiteName: nil,
-                            title: nil,
-                            text: nil,
-                            embedUrl: url,
-                            embedType: "video",
-                            embedSize: nil,
-                            duration: nil,
-                            author: nil,
-                            image: nil,
-                            file: nil,
-                            attributes: [],
-                            instantPage: nil
-                        ))
-                    )
-                    let entry = InstantPageGalleryEntry(
-                        index: 0,
-                        pageId: webPage.webpageId,
-                        media: InstantPageMedia(
-                            index: 0,
-                            media: webPage,
-                            url: nil,
-                            caption: nil,
-                            credit: nil
-                        ),
-                        caption: nil,
-                        credit: nil,
-                        location: nil
-                    )
-                    
-                    let gallery = InstantPageGalleryController(context: self.context, webPage: webPage, entries: [entry], centralIndex: 0, replaceRootController: { [weak navigationController] controller, ready in
-                        if let navigationController = navigationController {
-                            navigationController.replaceTopController(controller, animated: false, ready: ready)
-                        }
-                    }, baseNavigationController: navigationController)
-                    self.present(gallery, in: .window(.root), with: InstantPageGalleryControllerPresentationArguments(transitionArguments: { entry -> GalleryTransitionArguments? in
-                        return nil
-                    }))
-                    return;
-                }
-            }
-            
             openUserGeneratedUrl(context: self.context, peerId: self.peerView?.peerId, url: url, concealed: concealed, skipUrlAuth: skipUrlAuth, skipConcealedAlert: skipConcealedAlert, present: { [weak self] c in
                 self?.present(c, in: .window(.root))
             }, openResolved: { [weak self] resolved in

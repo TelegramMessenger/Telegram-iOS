@@ -139,6 +139,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
         
         let videoContent = NativeVideoContent(
             id: .message(0, MediaId(namespace: 0, id: Int64.random(in: 0..<Int64.max))),
+            userLocation: .other,
             fileReference: .standalone(media: file),
             streamVideo: .none,
             loopVideo: true,
@@ -264,7 +265,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                 imageApply = makeImageLayout(arguments)
                 
                 if mediaUpdated {
-                    updatedImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .standalone(media: image), synchronousLoad: true, highQuality: false)
+                    updatedImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .other, photoReference: .standalone(media: image), synchronousLoad: true, highQuality: false)
                 }
             }
             if let video = item.video, let dimensions = video.dimensions {
@@ -295,7 +296,7 @@ final class ChatBotInfoItemNode: ListViewItemNode {
                         if let updatedImageSignal = updatedImageSignal {
                             strongSelf.imageNode.setSignal(updatedImageSignal)
                             if let image = item.photo {
-                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .other, photoReference: .standalone(media: image), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
                             }
                         }
                         strongSelf.imageNode.isHidden = false

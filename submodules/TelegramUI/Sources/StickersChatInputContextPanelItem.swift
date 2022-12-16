@@ -219,8 +219,8 @@ final class StickersChatInputContextPanelItemNode: ListViewItemNode {
                             strongSelf.addSubnode(imageNode)
                         }
                         
-                        imageNode.setSignal(chatMessageSticker(account: item.account, file: file, small: true))
-                        strongSelf.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.account, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
+                        imageNode.setSignal(chatMessageSticker(account: item.account, userLocation: .other, file: file, small: true))
+                        strongSelf.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.account, userLocation: .other, fileReference: stickerPackFileReference(file), resource: chatMessageStickerResource(file: file, small: true)).start())
                         
                         var imageSize = itemSize
                         if let dimensions = file.dimensions {

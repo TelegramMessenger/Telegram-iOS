@@ -833,7 +833,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                                     let accountFullSizeData = Signal<(Data?, Bool), NoError> { subscriber in
                                         let accountResource = account.postbox.mediaBox.cachedResourceRepresentation(file.resource, representation: CachedPreparedSvgRepresentation(), complete: false, fetch: true)
                                         
-                                        let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
+                                        let fetchedFullSize = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: MediaResourceUserContentType(file: file), reference: .media(media: .attachBot(peer: peer, media: file), resource: file.resource))
                                         let fetchedFullSizeDisposable = fetchedFullSize.start()
                                         let fullSizeDisposable = accountResource.start()
                                         
@@ -845,7 +845,7 @@ final class AttachmentPanel: ASDisplayNode, UIScrollViewDelegate {
                                     self.iconDisposables[file.fileId] = accountFullSizeData.start()
                                 }
                             } else {
-                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, fileReference: .attachBot(peer: peer, media: file)).start()
+                                self.iconDisposables[file.fileId] = freeMediaFileInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: .attachBot(peer: peer, media: file)).start()
                             }
                         }
                     }

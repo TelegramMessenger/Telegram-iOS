@@ -37,7 +37,7 @@ private func animationItem(account: Account, emojis: Signal<[TelegramMediaFile],
             let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
             let fittedSize = dimensions.cgSize.aspectFilled(CGSize(width: 384.0, height: 384.0))
 
-            let fetched = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: file))
+            let fetched = freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: file))
             let animationItem = Signal<ManagedAnimationItem?, NoError> { subscriber in
                 let fetchedDisposable = fetched.start()
                 let resourceDisposable = (chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: file.resource, fitzModifier: nil, width: Int(fittedSize.width), height: Int(fittedSize.height), synchronousLoad: false)

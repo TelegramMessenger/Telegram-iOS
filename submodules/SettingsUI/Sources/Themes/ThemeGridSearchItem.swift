@@ -115,7 +115,7 @@ final class ThemeGridSearchItemNode: GridItemNode {
             }
             if !representations.isEmpty {
                 let tmpImage = TelegramMediaImage(imageId: MediaId(namespace: 0, id: 0), representations: representations, immediateThumbnailData: immediateThumbnailData, reference: nil, partialReference: nil, flags: [])
-                updateImageSignal =  mediaGridMessagePhoto(account: item.account, photoReference: .standalone(media: tmpImage), fullRepresentationSize: CGSize(width: 512, height: 512))
+                updateImageSignal =  mediaGridMessagePhoto(account: item.account, userLocation: .other, photoReference: .standalone(media: tmpImage), fullRepresentationSize: CGSize(width: 512, height: 512))
             } else {
                 updateImageSignal = .complete()
             }

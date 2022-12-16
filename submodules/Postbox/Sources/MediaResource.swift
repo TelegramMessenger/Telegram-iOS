@@ -41,24 +41,37 @@ public protocol MediaResourceFetchInfo {
 
 public final class MediaResourceStorageLocation {
     public let peerId: PeerId
-    public let messageId: MessageId
+    public let messageId: MessageId?
     
-    public init(peerId: PeerId, messageId: MessageId) {
+    public init(peerId: PeerId, messageId: MessageId?) {
         self.peerId = peerId
         self.messageId = messageId
     }
+}
+
+public enum MediaResourceUserContentType: UInt8, Equatable {
+    case image = 0
+    case video = 1
+    case audio = 2
+    case file = 3
+    case gif = 4
+    case emoji = 5
+    case sticker = 6
+    case other = 7
 }
 
 public struct MediaResourceFetchParameters {
     public let tag: MediaResourceFetchTag?
     public let info: MediaResourceFetchInfo?
     public let location: MediaResourceStorageLocation?
+    public let contentType: MediaResourceUserContentType
     public let isRandomAccessAllowed: Bool
     
-    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, isRandomAccessAllowed: Bool) {
+    public init(tag: MediaResourceFetchTag?, info: MediaResourceFetchInfo?, location: MediaResourceStorageLocation?, contentType: MediaResourceUserContentType, isRandomAccessAllowed: Bool) {
         self.tag = tag
         self.info = info
         self.location = location
+        self.contentType = contentType
         self.isRandomAccessAllowed = isRandomAccessAllowed
     }
 }

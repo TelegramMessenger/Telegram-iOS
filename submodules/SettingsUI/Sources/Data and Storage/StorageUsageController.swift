@@ -1109,7 +1109,10 @@ public func storageUsageController(context: AccountContext, cacheUsagePromise: P
             return context.account.postbox.transaction { transaction -> [(peer: FoundPeer, value: Int32)] in
                 var result: [(peer: FoundPeer, value: Int32)] = []
                 
-                for (peerId, value) in accountSpecificSettings.peerStorageTimeoutExceptions {
+                for item in accountSpecificSettings.peerStorageTimeoutExceptions {
+                    let peerId = item.key
+                    let value = item.value
+                    
                     guard let peer = transaction.getPeer(peerId) else {
                         continue
                     }

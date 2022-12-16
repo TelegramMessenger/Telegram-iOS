@@ -157,8 +157,8 @@ final class ChatRecordingPreviewInputPanelNode: ChatInputPanelNode {
                 }
                 if let context = self.context {
                     let mediaManager = context.sharedContext.mediaManager
-                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
-                    mediaPlayer.actionAtEnd = .action{ [weak mediaPlayer] in
+                    let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: context.account.postbox, userLocation: .other, userContentType: .audio, resourceReference: .standalone(resource: recordedMediaPreview.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true)
+                    mediaPlayer.actionAtEnd = .action { [weak mediaPlayer] in
                         mediaPlayer?.seek(timestamp: 0.0)
                     }
                     self.mediaPlayer = mediaPlayer

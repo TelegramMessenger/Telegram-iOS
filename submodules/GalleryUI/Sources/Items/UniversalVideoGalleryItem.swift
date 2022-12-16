@@ -126,13 +126,13 @@ public class UniversalVideoGalleryItem: GalleryItem {
                     }
                 }
                 if let mediaReference = mediaReference {
-                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: mediaReference) {
+                    if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .peer(message.id.peerId), mediaReference: mediaReference) {
                         return (Int64(id), item)
                     }
                 }
             }
         } else if case let .webPage(webPage, media, _) = contentInfo, let file = media as? TelegramMediaFile  {
-            if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
+            if let item = ChatMediaGalleryThumbnailItem(account: self.context.account, userLocation: .other, mediaReference: .webPage(webPage: WebpageReference(webPage), media: file)) {
                 return (0, item)
             }
         }
@@ -1102,7 +1102,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             var isEnhancedWebPlayer = false
             if let content = item.content as? NativeVideoContent {
                 isAnimated = content.fileReference.media.isAnimated
-                self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, fileReference: content.fileReference)
+                self.videoFramePreview = MediaPlayerFramePreview(postbox: item.context.account.postbox, userLocation: content.userLocation, userContentType: .video, fileReference: content.fileReference)
             } else if let _ = item.content as? SystemVideoContent {
                 self._title.set(.single(item.presentationData.strings.Message_Video))
             } else if let content = item.content as? WebEmbedVideoContent {
@@ -2565,7 +2565,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
                     if let strongSelf = self {
                         switch strongSelf.fetchStatus {
                         case .Local:
-                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, mediaReference: .message(message: MessageReference(message), media: file))
+                            let _ = (SaveToCameraRoll.saveToCameraRoll(context: strongSelf.context, postbox: strongSelf.context.account.postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: file))
                             |> deliverOnMainQueue).start(completed: {
                                 guard let strongSelf = self else {
                                     return

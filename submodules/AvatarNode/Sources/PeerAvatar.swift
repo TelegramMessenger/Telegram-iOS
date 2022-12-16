@@ -65,11 +65,11 @@ public func peerAvatarImageData(account: Account, peerReference: PeerReference?,
                     })
                     var fetchedDataDisposable: Disposable?
                     if let peerReference = peerReference {
-                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .image, reference: .avatar(peer: peerReference, resource: smallProfileImage.resource), statsCategory: .generic).start()
                     } else if let authorOfMessage = authorOfMessage {
-                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .messageAuthorAvatar(message: authorOfMessage, resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .image, reference: .messageAuthorAvatar(message: authorOfMessage, resource: smallProfileImage.resource), statsCategory: .generic).start()
                     } else {
-                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
+                        fetchedDataDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .image, reference: .standalone(resource: smallProfileImage.resource), statsCategory: .generic).start()
                     }
                     return ActionDisposable {
                         resourceDataDisposable.dispose()

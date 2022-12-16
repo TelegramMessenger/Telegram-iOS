@@ -242,7 +242,10 @@ public func storageUsageExceptionsScreen(
         return context.account.postbox.transaction { transaction -> [(peer: FoundPeer, value: Int32)] in
             var result: [(peer: FoundPeer, value: Int32)] = []
             
-            for (peerId, value) in accountSpecificSettings.peerStorageTimeoutExceptions {
+            for item in accountSpecificSettings.peerStorageTimeoutExceptions {
+                let peerId = item.key
+                let value = item.value
+                
                 guard let peer = transaction.getPeer(peerId) else {
                     continue
                 }
@@ -324,7 +327,13 @@ public func storageUsageExceptionsScreen(
                 let _ = updateAccountSpecificCacheStorageSettingsInteractively(postbox: context.account.postbox, { settings in
                     var settings = settings
                     
-                    settings.peerStorageTimeoutExceptions[peerId] = Int32.max
+                    for i in 0 ..< settings.peerStorageTimeoutExceptions.count {
+                        if settings.peerStorageTimeoutExceptions[i].key == peerId {
+                            settings.peerStorageTimeoutExceptions.remove(at: i)
+                            break
+                        }
+                    }
+                    settings.peerStorageTimeoutExceptions.append(AccountSpecificCacheStorageSettings.Value(key: peerId, value: Int32.max))
                     
                     return settings
                 }).start()
@@ -339,9 +348,24 @@ public func storageUsageExceptionsScreen(
                     var settings = settings
                     
                     if let value = value {
-                        settings.peerStorageTimeoutExceptions[peerId] = value
+                        var found = false
+                        for i in 0 ..< settings.peerStorageTimeoutExceptions.count {
+                            if settings.peerStorageTimeoutExceptions[i].key == peerId {
+                                found = true
+                                settings.peerStorageTimeoutExceptions[i] = AccountSpecificCacheStorageSettings.Value(key: peerId, value: value)
+                                break
+                            }
+                        }
+                        if !found {
+                            settings.peerStorageTimeoutExceptions.append(AccountSpecificCacheStorageSettings.Value(key: peerId, value: value))
+                        }
                     } else {
-                        settings.peerStorageTimeoutExceptions.removeValue(forKey: peerId)
+                        for i in 0 ..< settings.peerStorageTimeoutExceptions.count {
+                            if settings.peerStorageTimeoutExceptions[i].key == peerId {
+                                settings.peerStorageTimeoutExceptions.remove(at: i)
+                                break
+                            }
+                        }
                     }
                     
                     return settings

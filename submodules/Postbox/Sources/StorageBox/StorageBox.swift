@@ -145,6 +145,79 @@ public final class StorageBox {
             self.valueBox.commit()
         }
         
+        func addEmptyReferencesIfNotReferenced(ids: [Data]) -> Int {
+            self.valueBox.begin()
+            
+            var addedCount = 0
+            
+            for id in ids {
+                let reference = Reference(peerId: 0, messageNamespace: 0, messageId: 0)
+                
+                let hashId = md5Hash(id)
+                
+                let mainKey = ValueBoxKey(length: 16)
+                mainKey.setData(0, value: hashId.data)
+                if self.valueBox.exists(self.hashIdToIdTable, key: mainKey) {
+                    continue
+                }
+                
+                addedCount += 1
+                
+                self.valueBox.setOrIgnore(self.hashIdToIdTable, key: mainKey, value: MemoryBuffer(data: id))
+                
+                let idKey = ValueBoxKey(length: hashId.data.count + 8 + 1 + 4)
+                idKey.setData(0, value: hashId.data)
+                idKey.setInt64(hashId.data.count, value: reference.peerId)
+                idKey.setUInt8(hashId.data.count + 8, value: reference.messageNamespace)
+                idKey.setInt32(hashId.data.count + 8 + 1, value: reference.messageId)
+                
+                var alreadyStored = false
+                if !self.valueBox.exists(self.idToReferenceTable, key: idKey) {
+                    self.valueBox.setOrIgnore(self.idToReferenceTable, key: idKey, value: MemoryBuffer())
+                } else {
+                    alreadyStored = true
+                }
+                
+                if !alreadyStored {
+                    var idInPeerIdStored = false
+                    
+                    let peerIdIdKey = ValueBoxKey(length: 8 + 16)
+                    peerIdIdKey.setInt64(0, value: reference.peerId)
+                    peerIdIdKey.setData(8, value: hashId.data)
+                    var peerIdIdCount: Int32 = 0
+                    if let value = self.valueBox.get(self.peerIdToIdTable, key: peerIdIdKey) {
+                        idInPeerIdStored = true
+                        if value.length == 4 {
+                            memcpy(&peerIdIdCount, value.memory, 4)
+                        } else {
+                            assertionFailure()
+                        }
+                    }
+                    peerIdIdCount += 1
+                    self.valueBox.set(self.peerIdToIdTable, key: peerIdIdKey, value: MemoryBuffer(memory: &peerIdIdCount, capacity: 4, length: 4, freeWhenDone: false))
+                    
+                    if !idInPeerIdStored {
+                        let peerIdKey = ValueBoxKey(length: 8)
+                        peerIdKey.setInt64(0, value: reference.peerId)
+                        var peerIdCount: Int32 = 0
+                        if let value = self.valueBox.get(self.peerIdTable, key: peerIdKey) {
+                            if value.length == 4 {
+                                memcpy(&peerIdCount, value.memory, 4)
+                            } else {
+                                assertionFailure()
+                            }
+                        }
+                        peerIdCount += 1
+                        self.valueBox.set(self.peerIdTable, key: peerIdKey, value: MemoryBuffer(memory: &peerIdCount, capacity: 4, length: 4, freeWhenDone: false))
+                    }
+                }
+            }
+            
+            self.valueBox.commit()
+            
+            return addedCount
+        }
+        
         func remove(ids: [Data]) {
             self.valueBox.begin()
             
@@ -247,6 +320,8 @@ public final class StorageBox {
             var currentId: Data?
             var currentReferences: [Reference] = []
             
+            let mainKey = ValueBoxKey(length: 16)
+            
             self.valueBox.scan(self.idToReferenceTable, keys: { key in
                 let id = key.getData(0, length: 16)
                 
@@ -260,7 +335,10 @@ public final class StorageBox {
                     currentReferences.append(reference)
                 } else {
                     if let currentId = currentId, !currentReferences.isEmpty {
-                        result.append(StorageBox.Entry(id: currentId, references: currentReferences))
+                        mainKey.setData(0, value: currentId)
+                        if let value = self.valueBox.get(self.hashIdToIdTable, key: mainKey) {
+                            result.append(StorageBox.Entry(id: value.makeData(), references: currentReferences))
+                        }
                         currentReferences.removeAll(keepingCapacity: true)
                     }
                     currentId = id
@@ -321,6 +399,14 @@ public final class StorageBox {
     public func add(reference: Reference, to id: Data) {
         self.impl.with { impl in
             impl.add(reference: reference, to: id)
+        }
+    }
+    
+    public func addEmptyReferencesIfNotReferenced(ids: [Data], completion: @escaping (Int) -> Void) {
+        self.impl.with { impl in
+            let addedCount = impl.addEmptyReferencesIfNotReferenced(ids: ids)
+            
+            completion(addedCount)
         }
     }
     

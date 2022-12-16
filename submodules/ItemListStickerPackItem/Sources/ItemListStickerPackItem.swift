@@ -517,7 +517,7 @@ class ItemListStickerPackItemNode: ItemListRevealOptionsItemNode {
                         }
                 }
                 if fileUpdated, let resourceReference = resourceReference {
-                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, reference: resourceReference)
+                    updatedFetchSignal = fetchedMediaResource(mediaBox: item.account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: resourceReference)
                 }
             } else {
                 updatedImageSignal = .single({ _ in return nil })

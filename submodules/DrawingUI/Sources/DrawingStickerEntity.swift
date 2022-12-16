@@ -121,8 +121,8 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     self.addSubnode(animationNode)
                 }
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, file: self.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: stickerPackFileReference(self.file), resource: self.file.resource).start())
+                self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: self.context.account.postbox, userLocation: .other, file: self.file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 256.0, height: 256.0))))
+                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(self.file), resource: self.file.resource).start())
             } else {
                 if let animationNode = self.animationNode {
                     animationNode.visibility = false
@@ -131,8 +131,8 @@ final class DrawingStickerEntityView: DrawingEntityView {
                     self.imageNode.isHidden = false
                     self.didSetUpAnimationNode = false
                 }
-                self.imageNode.setSignal(chatMessageSticker(account: self.context.account, file: self.file, small: false, synchronousLoad: false))
-                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, fileReference: stickerPackFileReference(self.file), resource: chatMessageStickerResource(file: self.file, small: false)).start())
+                self.imageNode.setSignal(chatMessageSticker(account: self.context.account, userLocation: .other, file: self.file, small: false, synchronousLoad: false))
+                self.stickerFetchedDisposable.set(freeMediaFileResourceInteractiveFetched(account: self.context.account, userLocation: .other, fileReference: stickerPackFileReference(self.file), resource: chatMessageStickerResource(file: self.file, small: false)).start())
             }
             
             self.dimensions = dimensions.cgSize

@@ -249,7 +249,7 @@ final class ChatMediaInputStickerPackItemNode: ListViewItemNode {
                         animatedStickerNode.visibility = self.visibilityStatus && loopAnimatedStickers
                 }
                 if let resourceReference = resourceReference {
-                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: resourceReference).start())
+                    self.stickerFetchedDisposable.set(fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: .other, userContentType: .sticker, reference: resourceReference).start())
                 }
             }
                                     

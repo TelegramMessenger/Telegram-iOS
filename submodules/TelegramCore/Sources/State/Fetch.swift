@@ -79,6 +79,7 @@ func fetchResource(account: Account, resource: MediaResource, intervals: Signal<
                 tag: nil,
                 info: TelegramCloudMediaResourceFetchInfo(reference: .standalone(resource: file.file.resource), preferBackgroundReferenceRevalidation: false, continueInBackground: false),
                 location: nil,
+                contentType: .other,
                 isRandomAccessAllowed: true
             )))
         }

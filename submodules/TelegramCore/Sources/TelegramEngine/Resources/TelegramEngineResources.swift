@@ -6,6 +6,24 @@ import TelegramApi
 public typealias EngineTempBox = TempBox
 public typealias EngineTempBoxFile = TempBoxFile
 
+public extension MediaResourceUserContentType {
+    init(file: TelegramMediaFile) {
+        if file.isSticker || file.isAnimatedSticker {
+            self = .sticker
+        } else if file.isCustomEmoji {
+            self = .emoji
+        } else if file.isVideo {
+            if file.isAnimated {
+                self = .gif
+            } else {
+                self = .video
+            }
+        } else {
+            self = .other
+        }
+    }
+}
+
 func bufferedFetch(_ signal: Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error>) -> Signal<EngineMediaResource.Fetch.Result, EngineMediaResource.Fetch.Error> {
     return Signal { subscriber in
         final class State {
@@ -294,6 +312,7 @@ public extension TelegramEngine {
                         continueInBackground: false
                     ),
                     location: nil,
+                    contentType: .image,
                     isRandomAccessAllowed: true
                 ))
                 |> map { result -> EngineMediaResource.Fetch.Result in

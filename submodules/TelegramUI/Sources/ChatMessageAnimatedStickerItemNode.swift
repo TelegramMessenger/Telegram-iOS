@@ -560,13 +560,13 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 if self.telegramFile?.id != telegramFile.id {
                     self.telegramFile = telegramFile
                     let dimensions = telegramFile.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), file: telegramFile, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0)), thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
                     self.updateVisibility()
-                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile)).start())
                     
                     if telegramFile.isPremiumSticker {
                         if let effect = telegramFile.videoThumbnails.first {
-                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.context.account, fileReference: .message(message: MessageReference(item.message), media: telegramFile), resource: effect.resource) .start())
+                            self.disposables.add(freeMediaFileResourceInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .message(message: MessageReference(item.message), media: telegramFile), resource: effect.resource) .start())
                         }
                     }
                 }
@@ -628,8 +628,8 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                     
                     let fillSize = emojiFile.isCustomEmoji ? CGSize(width: 512.0, height: 512.0) : CGSize(width: 384.0, height: 384.0)
                     
-                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(fillSize), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
-                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: emojiFile)).start())
+                    self.imageNode.setSignal(chatMessageAnimatedSticker(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), file: emojiFile, small: false, size: dimensions.cgSize.aspectFilled(fillSize), fitzModifier: fitzModifier, thumbnail: false, synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad)
+                    self.disposable.set(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: emojiFile)).start())
                 }
                 
                 let textEmoji = item.message.text.strippedEmoji
@@ -653,7 +653,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                 
                 if let animationItems = animationItems {
                     for (_, animationItem) in animationItems {
-                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, fileReference: .standalone(media: animationItem.file)).start())
+                        self.disposables.add(freeMediaFileInteractiveFetched(account: item.context.account, userLocation: .peer(item.message.id.peerId), fileReference: .standalone(media: animationItem.file)).start())
                     }
                 }
             }
@@ -2274,7 +2274,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
                                         if emoji.strippedEmoji == textEmoji.strippedEmoji {
                                             hasSound = true
                                             let mediaManager = item.context.sharedContext.mediaManager
-                                            let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
+                                            let mediaPlayer = MediaPlayer(audioSessionManager: mediaManager.audioSession, postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), userContentType: .other, resourceReference: .standalone(resource: file.resource), streamable: .none, video: false, preferSoftwareDecoding: false, enableSound: true, fetchAutomatically: true, ambient: true)
                                             mediaPlayer.togglePlayPause()
                                             mediaPlayer.actionAtEnd = .action({ [weak self] in
                                                 self?.mediaPlayer = nil

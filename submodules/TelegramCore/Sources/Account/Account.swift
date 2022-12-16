@@ -1280,6 +1280,16 @@ public class Account {
         self.viewTracker.reset()
     }
     
+    public func cleanupTasks() -> Signal<Never, NoError> {
+        let postbox = self.postbox
+        
+        return Signal { subscriber in
+            return postbox.mediaBox.updateResourceIndex(completion: {
+                subscriber.putCompletion()
+            })
+        }
+    }
+    
     public func restartContactManagement() {
         self.contactSyncManager.beginSync(importableContacts: self.importableContacts.get())
     }

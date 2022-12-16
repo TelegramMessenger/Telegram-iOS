@@ -277,7 +277,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                 return .single(nil)
             }
             return Signal { subscriber in
-                let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+                let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file)).start()
                 let dataDisposable = (context.account.postbox.mediaBox.resourceData(file.resource)
                 |> filter(\.complete)
                 |> take(1)).start(next: { data in
@@ -1807,6 +1807,7 @@ public final class ReactionContextNode: ASDisplayNode, UIScrollViewDelegate {
                     for animationLayer in allLayers {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,
@@ -2418,6 +2419,7 @@ public final class StandaloneReactionAnimation: ASDisplayNode {
                     for animationLayer in allLayers {
                         let baseItemLayer = InlineStickerItemLayer(
                             context: itemNode.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemNode.item.listAnimation.fileId.id, file: itemNode.item.listAnimation),
                             file: itemNode.item.listAnimation,

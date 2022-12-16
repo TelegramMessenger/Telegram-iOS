@@ -1277,9 +1277,9 @@ private final class PremiumIntroScreenContentComponent: CombinedComponent {
                     for item in view.items {
                         if let mediaItem = item.contents.get(RecentMediaItem.self) {
                             let file = mediaItem.media
-                            strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: file.resource).start())
+                            strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: file.resource).start())
                             if let effect = file.videoThumbnails.first {
-                                strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .standalone(media: file), resource: effect.resource).start())
+                                strongSelf.preloadDisposableSet.add(freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file), resource: effect.resource).start())
                             }
                         }
                     }
@@ -2015,7 +2015,7 @@ private final class PremiumIntroScreenComponent: CombinedComponent {
                         strongSelf.selectedProductId = strongSelf.products?.last?.id
                         
                         for (_, video) in promoConfiguration.videos {
-                            strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
+                            strongSelf.preloadDisposableSet.add(preloadVideoResource(postbox: context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: .standalone(resource: video.resource), duration: 3.0).start())
                         }
                     }
                     

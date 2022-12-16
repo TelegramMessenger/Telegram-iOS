@@ -197,10 +197,10 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                             
                             if let photo = photo {
                                 if mediaUpdated {
-                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                                    strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
                                 }
                                      
-                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, photoReference: .message(message: MessageReference(item.message), media: photo), synchronousLoad: synchronousLoads)
+                                let updateImageSignal = chatMessagePhoto(postbox: item.context.account.postbox, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), synchronousLoad: synchronousLoads)
                                 strongSelf.imageNode.setSignal(updateImageSignal, attemptSynchronously: synchronousLoads)
                                 
                                 let arguments = TransformImageArguments(corners: ImageCorners(radius: imageSize.width / 2.0), imageSize: imageSize, boundingSize: imageSize, intrinsicInsets: UIEdgeInsets())

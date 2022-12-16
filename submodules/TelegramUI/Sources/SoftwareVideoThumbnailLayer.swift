@@ -52,7 +52,7 @@ final class SoftwareVideoThumbnailNode: ASDisplayNode {
         self.layer.masksToBounds = true
         
         if let dimensions = fileReference.media.dimensions {
-            self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, videoReference: fileReference, synchronousLoad: synchronousLoad, nilForEmptyResult: true)
+            self.disposable.set((mediaGridMessageVideo(postbox: account.postbox, userLocation: .other, videoReference: fileReference, synchronousLoad: synchronousLoad, nilForEmptyResult: true)
                 |> deliverOnMainQueue).start(next: { [weak self] transform in
                 var boundingSize = dimensions.cgSize.aspectFilled(CGSize(width: 93.0, height: 93.0))
                 let imageSize = boundingSize

@@ -433,7 +433,7 @@ func multipartUpload(network: Network, postbox: Postbox, source: MultipartUpload
                 case let .resource(resource):
                     dataSignal = postbox.mediaBox.resourceData(resource.resource, option: .incremental(waitUntilFetchStatus: true)) |> map { MultipartUploadData.resourceData($0) }
                     headerSize = resource.resource.headerSize
-                    fetchedResource = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resource)
+                    fetchedResource = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resource)
                     |> map { _ in }
                 case let .tempFile(file):
                     if let size = fileSize(file.path) {
