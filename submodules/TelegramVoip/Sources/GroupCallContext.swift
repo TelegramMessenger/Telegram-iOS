@@ -415,7 +415,7 @@ public final class OngoingGroupCallContext {
     private final class Impl {
         let queue: Queue
         let context: GroupCallThreadLocalContext
-        let audioDevice: SharedCallAudioDevice?
+       // let audioDevice: SharedCallAudioDevice?
         let sessionId = UInt32.random(in: 0 ..< UInt32(Int32.max))
         
         let joinPayload = Promise<(String, UInt32)>()
@@ -433,8 +433,8 @@ public final class OngoingGroupCallContext {
         init(queue: Queue, inputDeviceId: String, outputDeviceId: String, audioSessionActive: Signal<Bool, NoError>, video: OngoingCallVideoCapturer?, requestMediaChannelDescriptions: @escaping (Set<UInt32>, @escaping ([MediaChannelDescription]) -> Void) -> Disposable, rejoinNeeded: @escaping () -> Void, outgoingAudioBitrateKbit: Int32?, videoContentType: VideoContentType, enableNoiseSuppression: Bool, disableAudioInput: Bool, preferX264: Bool, logPath: String) {
             self.queue = queue
             
-            self.audioDevice = nil
-            let audioDevice = self.audioDevice
+//            self.audioDevice = nil
+//            let audioDevice = self.audioDevice
             
             var networkStateUpdatedImpl: ((GroupCallNetworkState) -> Void)?
             var audioLevelsUpdatedImpl: (([NSNumber]) -> Void)?
@@ -541,8 +541,8 @@ public final class OngoingGroupCallContext {
                 enableNoiseSuppression: enableNoiseSuppression,
                 disableAudioInput: disableAudioInput,
                 preferX264: preferX264,
-                logPath: logPath,
-                audioDevice: audioDevice
+                logPath: logPath
+//                audioDevice: audioDevice
             )
             
             let queue = self.queue
@@ -595,7 +595,7 @@ public final class OngoingGroupCallContext {
                 guard let `self` = self else {
                     return
                 }
-                self.audioDevice?.setManualAudioSessionIsActive(isActive)
+//                self.audioDevice?.setManualAudioSessionIsActive(isActive)
                 #if os(iOS)
                 self.context.setManualAudioSessionIsActive(isActive)
                 #endif
@@ -907,11 +907,11 @@ public final class OngoingGroupCallContext {
             let mappedTone = tone.flatMap { tone in
                 CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
             }
-            if let audioDevice = self.audioDevice {
-                audioDevice.setTone(mappedTone)
-            } else {
+//            if let audioDevice = self.audioDevice {
+//                audioDevice.setTone(mappedTone)
+//            } else {
                 self.context.setTone(mappedTone)
-            }
+//            }
             #endif
             
         }

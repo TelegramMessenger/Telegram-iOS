@@ -6,7 +6,7 @@ final class AutomaticCacheEvictionContext {
     private final class Impl {
         private struct CombinedSettings: Equatable {
             var categoryStorageTimeout: [CacheStorageSettings.PeerStorageCategory: Int32]
-            var exceptions: [PeerId: Int32]
+            var exceptions: [AccountSpecificCacheStorageSettings.Value]
         }
         
         let queue: Queue
@@ -109,8 +109,8 @@ final class AutomaticCacheEvictionContext {
                     
                     for peerId in peerIds {
                         let timeout: Int32
-                        if let value = settings.exceptions[peerId] {
-                            timeout = value
+                        if let value = settings.exceptions.first(where: { $0.key == peerId }) {
+                            timeout = value.value
                         } else {
                             switch peerId.namespace {
                             case Namespaces.Peer.CloudUser, Namespaces.Peer.SecretChat:

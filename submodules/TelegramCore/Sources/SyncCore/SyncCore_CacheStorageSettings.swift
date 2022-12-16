@@ -90,16 +90,25 @@ public struct AccountSpecificCacheStorageSettings: Codable, Equatable {
         var value: Int32
     }
     
-    public var peerStorageTimeoutExceptions: [PeerId: Int32]
+    public struct Value : Equatable {
+        public let key: PeerId
+        public let value: Int32
+        public init(key: PeerId, value: Int32) {
+            self.key = key
+            self.value = value
+        }
+    }
+    
+    public var peerStorageTimeoutExceptions: [Value]
 
     public static var defaultSettings: AccountSpecificCacheStorageSettings {
         return AccountSpecificCacheStorageSettings(
-            peerStorageTimeoutExceptions: [:]
+            peerStorageTimeoutExceptions: []
         )
     }
     
     public init(
-        peerStorageTimeoutExceptions: [PeerId: Int32]
+        peerStorageTimeoutExceptions: [Value]
     ) {
         self.peerStorageTimeoutExceptions = peerStorageTimeoutExceptions
     }
@@ -109,9 +118,9 @@ public struct AccountSpecificCacheStorageSettings: Codable, Equatable {
 
         if let data = try container.decodeIfPresent(Data.self, forKey: "peerStorageTimeoutExceptionsJson") {
             if let items = try? JSONDecoder().decode([PeerStorageTimeoutExceptionRepresentation].self, from: data) {
-                var peerStorageTimeoutExceptions: [PeerId: Int32] = [:]
+                var peerStorageTimeoutExceptions: [Value] = []
                 for item in items {
-                    peerStorageTimeoutExceptions[item.key] = item.value
+                    peerStorageTimeoutExceptions.append(.init(key: item.key, value: item.value))
                 }
                 self.peerStorageTimeoutExceptions = peerStorageTimeoutExceptions
             } else {
@@ -126,8 +135,8 @@ public struct AccountSpecificCacheStorageSettings: Codable, Equatable {
         var container = encoder.container(keyedBy: StringCodingKey.self)
         
         var peerStorageTimeoutExceptionsValues: [PeerStorageTimeoutExceptionRepresentation] = []
-        for (key, value) in self.peerStorageTimeoutExceptions {
-            peerStorageTimeoutExceptionsValues.append(PeerStorageTimeoutExceptionRepresentation(key: key, value: value))
+        for value in self.peerStorageTimeoutExceptions {
+            peerStorageTimeoutExceptionsValues.append(PeerStorageTimeoutExceptionRepresentation(key: value.key, value: value.value))
         }
         if let data = try? JSONEncoder().encode(peerStorageTimeoutExceptionsValues) {
             try container.encode(data, forKey: "peerStorageTimeoutExceptionsJson")
