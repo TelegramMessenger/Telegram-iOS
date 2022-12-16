@@ -2637,6 +2637,22 @@ public extension Api.functions.channels {
                 }
 }
 public extension Api.functions.channels {
+                static func toggleParticipantsHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
+                    let buffer = Buffer()
+                    buffer.appendInt32(1785624660)
+                    channel.serialize(buffer, true)
+                    enabled.serialize(buffer, true)
+                    return (FunctionDescription(name: "channels.toggleParticipantsHidden", parameters: [("channel", String(describing: channel)), ("enabled", String(describing: enabled))]), buffer, DeserializeFunctionResponse { (buffer: Buffer) -> Api.Updates? in
+                        let reader = BufferReader(buffer)
+                        var result: Api.Updates?
+                        if let signature = reader.readInt32() {
+                            result = Api.parse(reader, signature: signature) as? Api.Updates
+                        }
+                        return result
+                    })
+                }
+}
+public extension Api.functions.channels {
                 static func togglePreHistoryHidden(channel: Api.InputChannel, enabled: Api.Bool) -> (FunctionDescription, Buffer, DeserializeFunctionResponse<Api.Updates>) {
                     let buffer = Buffer()
                     buffer.appendInt32(-356796084)
