@@ -806,6 +806,9 @@ func peerInfoScreenData(context: AccountContext, peerId: PeerId, strings: Presen
                 let membersContext = PeerInfoMembersContext(context: context, peerId: groupId)
                 membersData = combineLatest(membersContext.state, context.account.viewTracker.peerView(groupId, updateData: false))
                 |> map { state, view -> PeerInfoMembersData? in
+                    if let cachedData = view.cachedData as? CachedChannelData, case let .known(value) = cachedData.membersHidden, value.value {
+                        return nil
+                    }
                     if state.members.count > 5 {
                         return .longList(membersContext)
                     } else {

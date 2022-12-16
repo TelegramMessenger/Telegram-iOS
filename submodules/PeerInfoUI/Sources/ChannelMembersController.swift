@@ -23,18 +23,21 @@ private final class ChannelMembersControllerArguments {
     let removePeer: (PeerId) -> Void
     let openPeer: (Peer) -> Void
     let inviteViaLink: () -> Void
+    let updateHideMembers: (Bool) -> Void
     
-    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping () -> Void) {
+    init(context: AccountContext, addMember: @escaping () -> Void, setPeerIdWithRevealedOptions: @escaping (PeerId?, PeerId?) -> Void, removePeer: @escaping (PeerId) -> Void, openPeer: @escaping (Peer) -> Void, inviteViaLink: @escaping () -> Void, updateHideMembers: @escaping (Bool) -> Void) {
         self.context = context
         self.addMember = addMember
         self.setPeerIdWithRevealedOptions = setPeerIdWithRevealedOptions
         self.removePeer = removePeer
         self.openPeer = openPeer
         self.inviteViaLink = inviteViaLink
+        self.updateHideMembers = updateHideMembers
     }
 }
 
 private enum ChannelMembersSection: Int32 {
+    case hideMembers
     case addMembers
     case contacts
     case peers
@@ -46,6 +49,8 @@ private enum ChannelMembersEntryStableId: Hashable {
 }
 
 private enum ChannelMembersEntry: ItemListNodeEntry {
+    case hideMembers(String, Bool, Bool)
+    case hideMembersInfo(String)
     case addMember(PresentationTheme, String)
     case addMemberInfo(PresentationTheme, String)
     case inviteLink(PresentationTheme, String)
@@ -55,6 +60,8 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     
     var section: ItemListSectionId {
         switch self {
+            case .hideMembers, .hideMembersInfo:
+                return ChannelMembersSection.hideMembers.rawValue
             case .addMember, .addMemberInfo, .inviteLink:
                 return ChannelMembersSection.addMembers.rawValue
             case .contactsTitle:
@@ -68,23 +75,39 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     
     var stableId: ChannelMembersEntryStableId {
         switch self {
-            case .addMember:
-                return .index(0)
-            case .addMemberInfo:
-                return .index(1)
-            case .inviteLink:
-                return .index(2)
-            case .contactsTitle:
-                return .index(3)
-            case .peersTitle:
-                return .index(4)
-            case let .peerItem(_, _, _, _, _, participant, _, _, _):
-                return .peer(participant.peer.id)
+        case .hideMembers:
+            return .index(0)
+        case .hideMembersInfo:
+            return .index(1)
+        case .addMember:
+            return .index(2)
+        case .addMemberInfo:
+            return .index(3)
+        case .inviteLink:
+            return .index(4)
+        case .contactsTitle:
+            return .index(5)
+        case .peersTitle:
+            return .index(6)
+        case let .peerItem(_, _, _, _, _, participant, _, _, _):
+            return .peer(participant.peer.id)
         }
     }
     
     static func ==(lhs: ChannelMembersEntry, rhs: ChannelMembersEntry) -> Bool {
         switch lhs {
+            case let .hideMembers(text, enabled, value):
+                if case .hideMembers(text, enabled, value) = rhs {
+                    return true
+                } else {
+                    return false
+                }
+            case let .hideMembersInfo(text):
+                if case .hideMembersInfo(text) = rhs {
+                    return true
+                } else {
+                    return false
+                }
             case let .addMember(lhsTheme, lhsText):
                 if case let .addMember(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
@@ -153,32 +176,51 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     
     static func <(lhs: ChannelMembersEntry, rhs: ChannelMembersEntry) -> Bool {
         switch lhs {
+            case .hideMembers:
+                switch rhs {
+                case .hideMembers:
+                    return false
+                default:
+                    return true
+                }
+            case .hideMembersInfo:
+                switch rhs {
+                case .hideMembers, .hideMembersInfo:
+                    return false
+                default:
+                    return true
+                }
             case .addMember:
-                return true
+                switch rhs {
+                case .hideMembers, .hideMembersInfo, .addMember:
+                    return false
+                default:
+                    return true
+                }
             case .inviteLink:
                 switch rhs {
-                case .addMember:
+                case .hideMembers, .hideMembersInfo, .addMember:
                     return false
                 default:
                     return true
                 }
             case .addMemberInfo:
                 switch rhs {
-                    case .addMember, .inviteLink:
+                    case .hideMembers, .hideMembersInfo, .addMember, .inviteLink:
                         return false
                     default:
                         return true
                 }
             case .contactsTitle:
                 switch rhs {
-                    case .addMember, .addMemberInfo, .inviteLink:
+                    case .hideMembers, .hideMembersInfo, .addMember, .addMemberInfo, .inviteLink:
                         return false
                     default:
                         return true
                 }
             case .peersTitle:
                 switch rhs {
-                    case .addMember, .addMemberInfo, .inviteLink, .contactsTitle:
+                    case .hideMembers, .hideMembersInfo, .addMember, .addMemberInfo, .inviteLink, .contactsTitle:
                         return false
                     case let .peerItem(_, _, _, _, _, _, _, _, isContact):
                         return !isContact
@@ -193,7 +235,7 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
                         return lhsIsContact
                     case let .peerItem(rhsIndex, _, _, _, _, _, _, _, _):
                         return lhsIndex < rhsIndex
-                    case .addMember, .addMemberInfo, .inviteLink:
+                    case .hideMembers, .hideMembersInfo, .addMember, .addMemberInfo, .inviteLink:
                         return false
                 }
         }
@@ -202,6 +244,12 @@ private enum ChannelMembersEntry: ItemListNodeEntry {
     func item(presentationData: ItemListPresentationData, arguments: Any) -> ListViewItem {
         let arguments = arguments as! ChannelMembersControllerArguments
         switch self {
+            case let .hideMembers(text, enabled, value):
+                return ItemListSwitchItem(presentationData: presentationData, title: text, value: value, enabled: enabled, sectionId: self.section, style: .blocks, updated: { value in
+                    arguments.updateHideMembers(value)
+                })
+            case let .hideMembersInfo(text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section)
             case let .addMember(theme, text):
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPersonIcon(theme), title: text, alwaysPlain: false, sectionId: self.section, height: .generic, editing: false, action: {
                     arguments.addMember()
@@ -292,7 +340,33 @@ private func channelMembersControllerEntries(context: AccountContext, presentati
     
     var entries: [ChannelMembersEntry] = []
     
-    if let participants = participants, let contacts = contacts {
+    var displayHideMembers = false
+    var canSetupHideMembers = false
+    if let channel = view.peers[view.peerId] as? TelegramChannel, case .group = channel.info {
+        //TODO:loc
+        displayHideMembers = true
+        canSetupHideMembers = channel.hasPermission(.banMembers)
+    }
+    
+    var membersHidden = false
+    if let cachedData = view.cachedData as? CachedChannelData, case let .known(value) = cachedData.membersHidden {
+        membersHidden = value.value
+    }
+    
+    if displayHideMembers {
+        //TODO:localize
+        entries.append(.hideMembers("Hide Members", canSetupHideMembers, membersHidden))
+        
+        let infoText: String
+        if membersHidden {
+            infoText = "Switch this off to show the list of members in this group."
+        } else {
+            infoText = "Switch this on to hide the list of members in this group. Admins will remain visible."
+        }
+        entries.append(.hideMembersInfo(infoText))
+    }
+    
+    if !membersHidden, let participants = participants, let contacts = contacts {
         var canAddMember: Bool = false
         if let peer = view.peers[view.peerId] as? TelegramChannel {
             canAddMember = peer.hasPermission(.inviteMembers)
@@ -516,6 +590,8 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
             dismissInputImpl?()
             presentControllerImpl?(InviteLinkInviteController(context: context, updatedPresentationData: updatedPresentationData, peerId: peerId, parentNavigationController: controller.navigationController as? NavigationController), nil)
         }
+    }, updateHideMembers: { value in
+        let _ = context.engine.peers.updateChannelMembersHidden(peerId: peerId, value: value).start()
     })
     
     let peerView = context.account.viewTracker.peerView(peerId)
@@ -612,7 +688,18 @@ public func channelMembersController(context: AccountContext, updatedPresentatio
             }
         }
         
-        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(isGroup ? presentationData.strings.Group_Members_Title : presentationData.strings.Channel_Subscribers_Title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
+        var title: String = isGroup ? presentationData.strings.Group_Members_Title : presentationData.strings.Channel_Subscribers_Title
+        if let cachedData = view.cachedData as? CachedGroupData {
+            if let count = cachedData.participants?.participants.count {
+                title = presentationData.strings.GroupInfo_TitleMembers(Int32(count))
+            }
+        } else if let cachedData = view.cachedData as? CachedChannelData {
+            if let count = cachedData.participantsSummary.memberCount {
+                title = presentationData.strings.GroupInfo_TitleMembers(count)
+            }
+        }
+        
+        let controllerState = ItemListControllerState(presentationData: ItemListPresentationData(presentationData), title: .text(title), leftNavigationButton: nil, rightNavigationButton: rightNavigationButton, secondaryRightNavigationButton: secondaryRightNavigationButton, backNavigationButton: ItemListBackButton(title: presentationData.strings.Common_Back), animateChanges: true)
         let listState = ItemListNodeState(presentationData: ItemListPresentationData(presentationData), entries: channelMembersControllerEntries(context: context, presentationData: presentationData, view: view, state: state, contacts: contacts, participants: peers, isGroup: isGroup), style: .blocks, emptyStateItem: emptyStateItem, searchItem: searchItem, animateChanges: animateChanges)
         
         return (controllerState, (listState, arguments))

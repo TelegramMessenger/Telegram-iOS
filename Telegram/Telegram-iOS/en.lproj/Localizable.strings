@@ -8509,3 +8509,6 @@ Sorry for the inconvenience.";
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
 
 "Common.Paste" = "Paste";
+
+"GroupInfo.TitleMembers_1" = "%@ Member";
+"GroupInfo.TitleMembers_any" = "%@ Members";
