@@ -828,7 +828,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
                     let controller = QrCodeScanScreen(context: self.context, subject: .custom(info: info))
                     controller.completion = { [weak self] result in
                         if let strongSelf = self {
-                            strongSelf.sendQrCodeScannedEvent(data: result)
+                            if let result = result {
+                                strongSelf.sendQrCodeScannedEvent(data: result)
+                            } else {
+                                strongSelf.sendQrCodeScannerClosedEvent()
+                            }
                         }
                     }
                     self.currentQrCodeScannerScreen = controller
@@ -983,7 +987,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
             self.webView?.sendEvent(name: "qr_text_received", data: paramsString)
         }
         
-        fileprivate func sendQrCodeScannerClosedEvent(data: String?) {
+        fileprivate func sendQrCodeScannerClosedEvent() {
             self.webView?.sendEvent(name: "scan_qr_popup_closed", data: nil)
         }
         
