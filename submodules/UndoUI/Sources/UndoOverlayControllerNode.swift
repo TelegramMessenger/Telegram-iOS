@@ -860,13 +860,13 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                 } else {
                     displayUndo = false
                 }
-            case let .image(image, title, text, undo):
+            case let .image(image, title, text, round, undo):
                 self.avatarNode = nil
                 self.iconNode = ASImageNode()
                 self.iconNode?.clipsToBounds = true
                 self.iconNode?.contentMode = .scaleAspectFill
                 self.iconNode?.image = image
-                self.iconNode?.cornerRadius = 4.0
+                self.iconNode?.cornerRadius = round ? 16.0 : 4.0
                 self.iconImageSize = CGSize(width: 32.0, height: 32.0)
                 self.iconCheckNode = nil
                 self.animationNode = nil
@@ -1100,7 +1100,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
         self.content = content
         
         switch content {
-            case let .image(image, title, text, _):
+            case let .image(image, title, text, _, _):
                 self.iconNode?.image = image
                 if let title = title {
                     self.titleNode.attributedText = NSAttributedString(string: title, font: Font.semibold(14.0), textColor: .white)

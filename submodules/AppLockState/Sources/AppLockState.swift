@@ -24,13 +24,13 @@ public struct UnlockAttempts: Codable, Equatable {
 public struct LockState: Codable, Equatable {
     public var isManuallyLocked: Bool
     public var autolockTimeout: Int32?
-    public var unlockAttemts: UnlockAttempts?
+    public var unlockAttempts: UnlockAttempts?
     public var applicationActivityTimestamp: MonotonicTimestamp?
 
     public init(isManuallyLocked: Bool = false, autolockTimeout: Int32? = nil, unlockAttemts: UnlockAttempts? = nil, applicationActivityTimestamp: MonotonicTimestamp? = nil) {
         self.isManuallyLocked = isManuallyLocked
         self.autolockTimeout = autolockTimeout
-        self.unlockAttemts = unlockAttemts
+        self.unlockAttempts = unlockAttemts
         self.applicationActivityTimestamp = applicationActivityTimestamp
     }
 }

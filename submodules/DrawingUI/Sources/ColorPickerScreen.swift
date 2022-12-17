@@ -2274,10 +2274,10 @@ private final class ColorPickerContent: CombinedComponent {
             
             let swatch1Button = swatch1Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(false),
+                    type: .pallete(state.selectedColor == DrawingColor(color: .black)),
                     color: DrawingColor(color: .black),
                     action: {
-                        
+                        state.updateColor(DrawingColor(color: .black))
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -2290,10 +2290,10 @@ private final class ColorPickerContent: CombinedComponent {
         
             let swatch2Button = swatch2Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(false),
+                    type: .pallete(state.selectedColor == DrawingColor(rgb: 0x0161fd)),
                     color: DrawingColor(rgb: 0x0161fd),
                     action: {
-                        
+                        state.updateColor(DrawingColor(rgb: 0x0161fd))
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -2306,9 +2306,10 @@ private final class ColorPickerContent: CombinedComponent {
             
             let swatch3Button = swatch3Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(false),
+                    type: .pallete(state.selectedColor == DrawingColor(rgb: 0x32c759)),
                     color: DrawingColor(rgb: 0x32c759),
                     action: {
+                        state.updateColor(DrawingColor(rgb: 0x32c759))
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -2321,9 +2322,10 @@ private final class ColorPickerContent: CombinedComponent {
             
             let swatch4Button = swatch4Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(false),
+                    type: .pallete(state.selectedColor == DrawingColor(rgb: 0xffcc02)),
                     color: DrawingColor(rgb: 0xffcc02),
                     action: {
+                        state.updateColor(DrawingColor(rgb: 0xffcc02))
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),
@@ -2336,9 +2338,10 @@ private final class ColorPickerContent: CombinedComponent {
             
             let swatch5Button = swatch5Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(false),
+                    type: .pallete(state.selectedColor == DrawingColor(rgb: 0xff3a30)),
                     color: DrawingColor(rgb: 0xff3a30),
                     action: {
+                        state.updateColor(DrawingColor(rgb: 0xff3a30))
                     }
                 ),
                 availableSize: CGSize(width: 30.0, height: 30.0),

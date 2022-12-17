@@ -12,6 +12,7 @@ import AccountContext
 import LocalizedPeerData
 import ContextUI
 import Markdown
+import ChatControllerInteraction
 
 private let nameFont = Font.medium(14.0)
 

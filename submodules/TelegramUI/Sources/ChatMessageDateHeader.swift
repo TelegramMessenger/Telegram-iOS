@@ -13,6 +13,7 @@ import UniversalMediaPlayer
 import GalleryUI
 import HierarchyTrackingLayer
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 private let timezoneOffset: Int32 = {
     let nowTimestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)

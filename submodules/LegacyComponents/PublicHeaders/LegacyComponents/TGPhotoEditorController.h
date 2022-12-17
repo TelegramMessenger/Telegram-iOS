@@ -12,7 +12,7 @@
 @class AVPlayer;
 
 @protocol TGPhotoPaintStickersContext;
-@class TGPhotoEntitiesContainerView;
+@protocol TGPhotoDrawingEntitiesView;
 
 typedef enum {
     TGPhotoEditorControllerGenericIntent = 0,
@@ -60,9 +60,11 @@ typedef enum {
 @property (nonatomic, strong) PGCameraShotMetadata *metadata;
 @property (nonatomic, strong) NSArray *faces;
 
+@property (nonatomic, strong) NSString *senderName;
+
 @property (nonatomic, strong) AVPlayer *player;
 
-@property (nonatomic, strong) TGPhotoEntitiesContainerView *entitiesView;
+@property (nonatomic, strong) UIView<TGPhotoDrawingEntitiesView> *entitiesView;
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context item:(id<TGMediaEditableItem>)item intent:(TGPhotoEditorControllerIntent)intent adjustments:(id<TGMediaEditAdjustments>)adjustments caption:(NSAttributedString *)caption screenImage:(UIImage *)screenImage availableTabs:(TGPhotoEditorTab)availableTabs selectedTab:(TGPhotoEditorTab)selectedTab;
 

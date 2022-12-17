@@ -21,8 +21,6 @@
 
 #import <LegacyComponents/TGSecretTimerMenu.h>
 
-#import "TGPhotoEntitiesContainerView.h"
-
 @interface TGMediaPickerGalleryModel ()
 {
     TGMediaPickerGalleryInterfaceView *_interfaceView;
@@ -363,7 +361,7 @@
     UIView *referenceParentView = nil;
     UIImage *image = nil;
     
-    TGPhotoEntitiesContainerView *entitiesView = nil;
+    UIView<TGPhotoDrawingEntitiesView> *entitiesView = nil;
     
     id<TGMediaEditableItem> editableMediaItem = item.editableMediaItem;
     
@@ -373,7 +371,7 @@
         screenImage = [(UIImageView *)editorReferenceView image];
         referenceView = editorReferenceView;
         
-        if ([editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject isKindOfClass:[TGPhotoEntitiesContainerView class]]) {
+        if ([editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject conformsToProtocol:@protocol(TGPhotoDrawingEntitiesView)]) {
             entitiesView = editorReferenceView.subviews.firstObject.subviews.firstObject.subviews.firstObject;
         }
     }

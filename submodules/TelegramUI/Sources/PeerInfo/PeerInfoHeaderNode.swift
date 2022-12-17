@@ -3433,6 +3433,11 @@ final class PeerInfoHeaderNode: ASDisplayNode {
             return nil
         }
         
+        let setByFrame = self.avatarListNode.listContainerNode.setByYouNode.view.convert(self.avatarListNode.listContainerNode.setByYouNode.bounds, to: self.view).insetBy(dx: -44.0, dy: 0.0)
+        if self.avatarListNode.listContainerNode.setByYouNode.alpha > 0.0, setByFrame.contains(point) {
+            return self.avatarListNode.listContainerNode.setByYouNode.view
+        }
+        
         if !(self.state?.isEditing ?? false) {
             switch self.currentCredibilityIcon {
             case .premium, .emojiStatus:

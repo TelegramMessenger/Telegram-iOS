@@ -1,5 +1,4 @@
 #import "TGPhotoDrawingController.h"
-#import "TGPhotoPaintController.h"
 
 #import "LegacyComponentsInternal.h"
 
@@ -21,16 +20,17 @@
 
 #import "TGPaintingWrapperView.h"
 #import "TGPhotoEditorSparseView.h"
-#import "TGPhotoEntitiesContainerView.h"
 
 #import "PGPhotoEditor.h"
 #import "TGPhotoEditorPreviewView.h"
 
-
-
-
 #import "TGPaintCanvas.h"
 #import "TGPainting.h"
+
+const CGFloat TGPhotoPaintTopPanelSize = 44.0f;
+const CGFloat TGPhotoPaintBottomPanelSize = 79.0f;
+const CGSize TGPhotoPaintingLightMaxSize = { 1280.0f, 1280.0f };
+const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 @interface TGPhotoDrawingController () <UIScrollViewDelegate, UIGestureRecognizerDelegate>
 {
@@ -76,7 +76,7 @@
 
 @implementation TGPhotoDrawingController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -84,8 +84,8 @@
         _context = context;
         _stickersContext = stickersContext;
         
-        CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
-        _drawingAdapter = [_stickersContext drawingAdapter:size];
+        CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
+        _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize];
         _interfaceController = (UIViewController<TGPhotoDrawingInterfaceController> *)_drawingAdapter.interfaceController;
         
         __weak TGPhotoDrawingController *weakSelf = self;
@@ -218,6 +218,16 @@
     [self.view setNeedsLayout];
 }
 
+- (void)viewDidLoad
+{
+    [super viewDidLoad];
+
+    PGPhotoEditor *photoEditor = _photoEditor;
+    if (!_skipEntitiesSetup) {
+        [_entitiesView setupWithEntitiesData:photoEditor.paintingData.entitiesData];
+    }
+}
+
 - (void)viewDidAppear:(BOOL)animated
 {
     [super viewDidAppear:animated];
@@ -292,11 +302,11 @@
 
 - (CGSize)fittedContentSize
 {
-    return [TGPhotoPaintController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
+    return [TGPhotoDrawingController fittedContentSize:_photoEditor.cropRect orientation:_photoEditor.cropOrientation originalSize:_photoEditor.originalSize];
 }
 
 + (CGSize)fittedContentSize:(CGRect)cropRect orientation:(UIImageOrientation)orientation originalSize:(CGSize)originalSize {
-    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGFloat scale = fittedOriginalSize.width / originalSize.width;
     
     CGSize size = CGSizeMake(cropRect.size.width * scale, cropRect.size.height * scale);
@@ -308,11 +318,11 @@
 
 - (CGRect)fittedCropRect:(bool)originalSize
 {
-    return [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:originalSize];
+    return [TGPhotoDrawingController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:originalSize];
 }
 
 + (CGRect)fittedCropRect:(CGRect)cropRect originalSize:(CGSize)originalSize keepOriginalSize:(bool)keepOriginalSize {
-    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGFloat scale = fittedOriginalSize.width / originalSize.width;
     
     CGSize size = fittedOriginalSize;
@@ -324,7 +334,7 @@
 
 - (CGPoint)fittedCropCenterScale:(CGFloat)scale
 {
-    return [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect centerScale:scale];
+    return [TGPhotoDrawingController fittedCropRect:_photoEditor.cropRect centerScale:scale];
 }
 
 + (CGPoint)fittedCropRect:(CGRect)cropRect centerScale:(CGFloat)scale
@@ -488,7 +498,7 @@
 - (CGRect)_targetFrameForTransitionInFromFrame:(CGRect)fromFrame
 {
     CGSize referenceSize = [self referenceViewSize];
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(fromFrame.size, containerFrame.size);
     CGRect toFrame = CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -518,7 +528,7 @@
     _entitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     _entitiesView.transform = CGAffineTransformMakeRotation(_photoEditor.cropRotation);
     
-    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoPaintController maximumPaintingSize]);
+    CGSize fittedOriginalSize = TGScaleToSize(_photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
     CGSize rotatedSize = TGRotatedContentSize(fittedOriginalSize, _photoEditor.cropRotation);
     CGPoint centerPoint = CGPointMake(rotatedSize.width / 2.0f, rotatedSize.height / 2.0f);
     
@@ -554,7 +564,7 @@
 
 - (CGRect)transitionOutSourceFrameForReferenceFrame:(CGRect)referenceFrame orientation:(UIInterfaceOrientation)orientation
 {
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGSize fittedSize = TGScaleToSize(referenceFrame.size, containerFrame.size);
     return CGRectMake(containerFrame.origin.x + (containerFrame.size.width - fittedSize.width) / 2, containerFrame.origin.y + (containerFrame.size.height - fittedSize.height) / 2, fittedSize.width, fittedSize.height);
@@ -571,7 +581,7 @@
     [previewView prepareForTransitionOut];
     
     UIInterfaceOrientation orientation = self.effectiveOrientation;
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:self.view.frame toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     CGRect referenceFrame = CGRectMake(0, 0, self.photoEditor.rotatedCropSize.width, self.photoEditor.rotatedCropSize.height);
     CGRect rect = CGRectOffset([self transitionOutSourceFrameForReferenceFrame:referenceFrame orientation:orientation], -containerFrame.origin.x, -containerFrame.origin.y);
     previewView.frame = rect;
@@ -745,7 +755,7 @@
     CGSize referenceSize = [self referenceViewSize];
     CGFloat screenSide = MAX(referenceSize.width, referenceSize.height) + 2 * TGPhotoPaintBottomPanelSize;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:self.effectiveOrientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
     
     CGFloat topInset = [self controllerStatusBarHeight] + 31.0;
     CGFloat visibleArea = self.view.frame.size.height - _keyboardHeight - topInset;
@@ -800,7 +810,7 @@
     screenEdges.bottom -= safeAreaInset.bottom;
     screenEdges.right -= safeAreaInset.right;
     
-    CGRect containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+    CGRect containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:CGRectMake(0, 0, referenceSize.width, referenceSize.height) toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
                 
     PGPhotoEditor *photoEditor = self.photoEditor;
     TGPhotoEditorPreviewView *previewView = self.previewView;
@@ -878,6 +888,21 @@
 - (UIRectEdge)preferredScreenEdgesDeferringSystemGestures
 {
     return UIRectEdgeTop | UIRectEdgeBottom;
+}
+
++ (CGSize)maximumPaintingSize
+{
+    static dispatch_once_t onceToken;
+    static CGSize size;
+    dispatch_once(&onceToken, ^
+    {
+        CGSize screenSize = TGScreenSize();
+        if ((NSInteger)screenSize.height == 480)
+            size = TGPhotoPaintingLightMaxSize;
+        else
+            size = TGPhotoPaintingMaxSize;
+    });
+    return size;
 }
 
 @end

@@ -2101,8 +2101,8 @@ public final class EmojiPagerContentComponent: Component {
     
     public final class InputInteraction {
         public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void
-        public let deleteBackwards: () -> Void
-        public let openStickerSettings: () -> Void
+        public let deleteBackwards: (() -> Void)?
+        public let openStickerSettings: (() -> Void)?
         public let openFeatured: () -> Void
         public let openSearch: () -> Void
         public let addGroupAction: (AnyHashable, Bool) -> Void
@@ -2122,8 +2122,8 @@ public final class EmojiPagerContentComponent: Component {
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
-            deleteBackwards: @escaping () -> Void,
-            openStickerSettings: @escaping () -> Void,
+            deleteBackwards: (() -> Void)?,
+            openStickerSettings: (() -> Void)?,
             openFeatured: @escaping () -> Void,
             openSearch: @escaping () -> Void,
             addGroupAction: @escaping (AnyHashable, Bool) -> Void,
@@ -6310,7 +6310,8 @@ public final class EmojiPagerContentComponent: Component {
         selectedItems: Set<MediaId> = Set(),
         topStatusTitle: String? = nil,
         topicTitle: String? = nil,
-        topicColor: Int32? = nil
+        topicColor: Int32? = nil,
+        hasSearch: Bool = true
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7088,15 +7089,17 @@ public final class EmojiPagerContentComponent: Component {
             
             var displaySearchWithPlaceholder: String?
             var searchInitiallyHidden = true
-            if isReactionSelection {
-                displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
-            } else if isStatusSelection {
-                displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
-            } else if isTopicIconSelection {
-                displaySearchWithPlaceholder = strings.EmojiSearch_SearchTopicIconsPlaceholder
-            } else if isEmojiSelection {
-                displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
-                searchInitiallyHidden = false
+            if hasSearch {
+                if isReactionSelection {
+                    displaySearchWithPlaceholder = strings.EmojiSearch_SearchReactionsPlaceholder
+                } else if isStatusSelection {
+                    displaySearchWithPlaceholder = strings.EmojiSearch_SearchStatusesPlaceholder
+                } else if isTopicIconSelection {
+                    displaySearchWithPlaceholder = strings.EmojiSearch_SearchTopicIconsPlaceholder
+                } else if isEmojiSelection {
+                    displaySearchWithPlaceholder = strings.EmojiSearch_SearchEmojiPlaceholder
+                    searchInitiallyHidden = false
+                }
             }
             
             return EmojiPagerContentComponent(
@@ -7160,7 +7163,9 @@ public final class EmojiPagerContentComponent: Component {
         animationRenderer: MultiAnimationRenderer,
         stickerNamespaces: [ItemCollectionId.Namespace],
         stickerOrderedItemListCollectionIds: [Int32],
-        chatPeerId: EnginePeer.Id?
+        chatPeerId: EnginePeer.Id?,
+        hasSearch: Bool,
+        hasTrending: Bool
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7212,7 +7217,7 @@ public final class EmojiPagerContentComponent: Component {
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
             hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
-            context.account.viewTracker.featuredStickerPacks(),
+            hasTrending ? context.account.viewTracker.featuredStickerPacks() : .single([]),
             context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0))),
             ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),
             peerSpecificPack
@@ -7674,8 +7679,8 @@ public final class EmojiPagerContentComponent: Component {
                 itemLayoutType: .detailed,
                 itemContentUniqueId: nil,
                 warpContentsOnEdges: false,
-                displaySearchWithPlaceholder: strings.StickersSearch_SearchStickersPlaceholder,
-                searchInitiallyHidden: false,
+                displaySearchWithPlaceholder: hasSearch ? strings.StickersSearch_SearchStickersPlaceholder : nil,
+                searchInitiallyHidden: true,
                 searchIsPlaceholderOnly: true,
                 emptySearchResults: nil,
                 enableLongPress: false,

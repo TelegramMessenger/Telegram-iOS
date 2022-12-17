@@ -9,10 +9,13 @@ import TelegramPresentationData
 import AccountContext
 import ChatPresentationInterfaceState
 import EntityKeyboard
+import ChatControllerInteraction
+import MultiplexedVideoNode
+import FeaturedStickersScreen
 
 private let searchBarHeight: CGFloat = 52.0
 
-protocol PaneSearchContentNode {
+public protocol PaneSearchContentNode {
     var ready: Signal<Void, NoError> { get }
     var deactivateSearchBar: (() -> Void)? { get set }
     var updateActivity: ((Bool) -> Void)? { get set }
@@ -28,7 +31,7 @@ protocol PaneSearchContentNode {
     func itemAt(point: CGPoint) -> (ASDisplayNode, Any)?
 }
 
-final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
+public final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
     private let context: AccountContext
     private let mode: ChatMediaInputSearchMode
     public private(set) var contentNode: PaneSearchContentNode & ASDisplayNode
@@ -40,15 +43,15 @@ final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
     
     private var validLayout: CGSize?
     
-    var onCancel: (() -> Void)?
+    public var onCancel: (() -> Void)?
     
-    var openGifContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
+    public var openGifContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
     
-    var ready: Signal<Void, NoError> {
+    public var ready: Signal<Void, NoError> {
         return self.contentNode.ready
     }
     
-    init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void) {
+    public init(context: AccountContext, theme: PresentationTheme, strings: PresentationStrings, controllerInteraction: ChatControllerInteraction, inputNodeInteraction: ChatMediaInputNodeInteraction, mode: ChatMediaInputSearchMode, trendingGifsPromise: Promise<ChatMediaInputGifPaneTrendingState?>, cancel: @escaping () -> Void) {
         self.context = context
         self.mode = mode
         self.controllerInteraction = controllerInteraction
@@ -102,7 +105,7 @@ final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
         }
     }
     
-    func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
+    public func updateThemeAndStrings(theme: PresentationTheme, strings: PresentationStrings) {
         self.backgroundNode.backgroundColor = theme.chat.inputMediaPanel.stickersBackgroundColor.withAlphaComponent(1.0)
         self.contentNode.updateThemeAndStrings(theme: theme, strings: strings)
         self.searchBar.updateThemeAndStrings(theme: theme, strings: strings)
@@ -117,15 +120,15 @@ final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
         self.searchBar.placeholderString = NSAttributedString(string: placeholder, font: Font.regular(17.0), textColor: theme.chat.inputMediaPanel.stickersSearchPlaceholderColor)
     }
     
-    func updateQuery(_ query: String) {
+    public func updateQuery(_ query: String) {
         self.searchBar.updateQuery(query)
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
+    public func itemAt(point: CGPoint) -> (ASDisplayNode, Any)? {
         return self.contentNode.itemAt(point: CGPoint(x: point.x, y: point.y - searchBarHeight))
     }
     
-    func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(size: CGSize, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, inputHeight: CGFloat, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         self.validLayout = size
         transition.updateFrame(node: self.backgroundNode, frame: CGRect(origin: CGPoint(), size: size))
         
@@ -138,11 +141,11 @@ final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
         self.contentNode.updateLayout(size: contentFrame.size, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, inputHeight: inputHeight, deviceMetrics: deviceMetrics, transition: transition)
     }
     
-    func deactivate() {
+    public func deactivate() {
         self.searchBar.deactivate(clear: true)
     }
     
-    func animateIn(from placeholder: PaneSearchBarPlaceholderNode?, anchorTop: CGPoint, anhorTopView: UIView, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    public func animateIn(from placeholder: PaneSearchBarPlaceholderNode?, anchorTop: CGPoint, anhorTopView: UIView, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         var verticalOrigin: CGFloat = anhorTopView.convert(anchorTop, to: self.view).y
         if let placeholder = placeholder {
             let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)
@@ -170,7 +173,7 @@ final class PaneSearchContainerNode: ASDisplayNode, EntitySearchContainerNode {
         }
     }
     
-    func animateOut(to placeholder: PaneSearchBarPlaceholderNode, animateOutSearchBar: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
+    public func animateOut(to placeholder: PaneSearchBarPlaceholderNode, animateOutSearchBar: Bool, transition: ContainedViewLayoutTransition, completion: @escaping () -> Void) {
         if case let .animated(duration, curve) = transition {
             if let size = self.validLayout {
                 let placeholderFrame = placeholder.view.convert(placeholder.bounds, to: self.view)

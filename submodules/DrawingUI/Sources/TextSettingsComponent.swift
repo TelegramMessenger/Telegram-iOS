@@ -5,6 +5,7 @@ import ComponentFlow
 import LegacyComponents
 import TelegramCore
 import Postbox
+import LottieAnimationComponent
 
 enum DrawingTextStyle: Equatable {
     case regular
@@ -175,21 +176,29 @@ final class TextAlignmentComponent: Component {
 }
 
 final class TextFontComponent: Component {
+    let styleButton: AnyComponent<Empty>
+    let alignmentButton: AnyComponent<Empty>
+    
     let values: [DrawingTextFont]
     let selectedValue: DrawingTextFont
     let updated: (DrawingTextFont) -> Void
     
-    init(values: [DrawingTextFont], selectedValue: DrawingTextFont, updated: @escaping (DrawingTextFont) -> Void) {
+    init(styleButton: AnyComponent<Empty>, alignmentButton: AnyComponent<Empty>, values: [DrawingTextFont], selectedValue: DrawingTextFont, updated: @escaping (DrawingTextFont) -> Void) {
+        self.styleButton = styleButton
+        self.alignmentButton = alignmentButton
         self.values = values
         self.selectedValue = selectedValue
         self.updated = updated
     }
     
     static func == (lhs: TextFontComponent, rhs: TextFontComponent) -> Bool {
-        return lhs.values == rhs.values && lhs.selectedValue == rhs.selectedValue
+        return lhs.styleButton == rhs.styleButton && lhs.alignmentButton == rhs.alignmentButton && lhs.values == rhs.values && lhs.selectedValue == rhs.selectedValue
     }
     
     public final class View: UIView {
+        private let styleButtonHost: ComponentView<Empty>
+        private let alignmentButtonHost: ComponentView<Empty>
+        
         private var buttons: [DrawingTextFont: HighlightableButton] = [:]
         private let scrollView = UIScrollView()
         private let scrollMask = UIView()
@@ -206,6 +215,9 @@ final class TextFontComponent: Component {
             self.scrollView.showsHorizontalScrollIndicator = false
             self.scrollView.showsVerticalScrollIndicator = false
             self.scrollView.decelerationRate = .fast
+            
+            self.styleButtonHost = ComponentView()
+            self.alignmentButtonHost = ComponentView()
             
             super.init(frame: frame)
             
@@ -250,6 +262,36 @@ final class TextFontComponent: Component {
             self.updated = component.updated
             
             var contentWidth: CGFloat = 0.0
+            
+            let styleSize = self.styleButtonHost.update(
+                transition: transition,
+                component: component.styleButton,
+                environment: {},
+                containerSize: CGSize(width: 30.0, height: 30.0)
+            )
+            if let view = self.styleButtonHost.view {
+                if view.superview == nil {
+                    self.scrollView.addSubview(view)
+                }
+                view.frame = CGRect(origin: CGPoint(x: -7.0, y: -7.0), size: styleSize)
+            }
+            
+            contentWidth += 44.0
+            
+            let alignmentSize = self.alignmentButtonHost.update(
+                transition: transition,
+                component: component.alignmentButton,
+                environment: {},
+                containerSize: CGSize(width: 30.0, height: 30.0)
+            )
+            if let view = self.alignmentButtonHost.view {
+                if view.superview == nil {
+                    self.scrollView.addSubview(view)
+                }
+                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: alignmentSize)
+            }
+            
+            contentWidth += 32.0
             
             for value in component.values {
                 contentWidth += 12.0
@@ -319,6 +361,7 @@ final class TextSettingsComponent: CombinedComponent {
     let style: DrawingTextStyle
     let alignment: DrawingTextAlignment
     let font: DrawingTextFont
+    let isEmojiKeyboard: Bool
 
     let presentColorPicker: () -> Void
     let presentFastColorPicker: (GenericComponentViewTag) -> Void
@@ -327,24 +370,28 @@ final class TextSettingsComponent: CombinedComponent {
     let toggleStyle: () -> Void
     let toggleAlignment: () -> Void
     let updateFont: (DrawingTextFont) -> Void
-  
+    let toggleKeyboard: (() -> Void)?
+    
     init(
         color: DrawingColor?,
         style: DrawingTextStyle,
         alignment: DrawingTextAlignment,
         font: DrawingTextFont,
+        isEmojiKeyboard: Bool,
         presentColorPicker: @escaping () -> Void = {},
         presentFastColorPicker: @escaping (GenericComponentViewTag) -> Void = { _ in },
         updateFastColorPickerPan: @escaping (CGPoint) -> Void = { _ in },
         dismissFastColorPicker: @escaping () -> Void = {},
         toggleStyle: @escaping () -> Void,
         toggleAlignment: @escaping () -> Void,
-        updateFont: @escaping (DrawingTextFont) -> Void
+        updateFont: @escaping (DrawingTextFont) -> Void,
+        toggleKeyboard: (() -> Void)?
     ) {
         self.color = color
         self.style = style
         self.alignment = alignment
         self.font = font
+        self.isEmojiKeyboard = isEmojiKeyboard
         self.presentColorPicker = presentColorPicker
         self.presentFastColorPicker = presentFastColorPicker
         self.updateFastColorPickerPan = updateFastColorPickerPan
@@ -352,6 +399,7 @@ final class TextSettingsComponent: CombinedComponent {
         self.toggleStyle = toggleStyle
         self.toggleAlignment = toggleAlignment
         self.updateFont = updateFont
+        self.toggleKeyboard = toggleKeyboard
     }
     
     static func ==(lhs: TextSettingsComponent, rhs: TextSettingsComponent) -> Bool {
@@ -367,6 +415,9 @@ final class TextSettingsComponent: CombinedComponent {
         if lhs.font != rhs.font {
             return false
         }
+        if lhs.isEmojiKeyboard != rhs.isEmojiKeyboard {
+            return false
+        }
         return true
     }
     
@@ -376,6 +427,8 @@ final class TextSettingsComponent: CombinedComponent {
             case filled
             case semi
             case stroke
+            case keyboard
+            case emoji
         }
         private var cachedImages: [ImageKey: UIImage] = [:]
         func image(_ key: ImageKey) -> UIImage {
@@ -392,6 +445,10 @@ final class TextSettingsComponent: CombinedComponent {
                     image = UIImage(bundleImageName: "Media Editor/TextSemi")!
                 case .stroke:
                     image = UIImage(bundleImageName: "Media Editor/TextStroke")!
+                case .keyboard:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Text/AccessoryIconKeyboard"), color: .white)!
+                case .emoji:
+                    image = generateTintedImage(image: UIImage(bundleImageName: "Chat/Input/Media/EntityInputEmojiIcon"), color: .white)!
                 }
                 cachedImages[key] = image
                 return image
@@ -407,8 +464,9 @@ final class TextSettingsComponent: CombinedComponent {
         let colorButton = Child(ColorSwatchComponent.self)
         let colorButtonTag = GenericComponentViewTag()
         
-        let alignmentButton = Child(Button.self)
-        let styleButton = Child(Button.self)
+//        let styleButton = Child(Button.self)
+//        let alignmentButton = Child(Button.self)
+        let keyboardButton = Child(Button.self)
         let font = Child(TextFontComponent.self)
         
         return { context in
@@ -465,69 +523,71 @@ final class TextSettingsComponent: CombinedComponent {
                 styleImage = state.image(.stroke)
             }
             
-            let styleButton = styleButton.update(
-                component: Button(
-                    content: AnyComponent(
-                        Image(
-                            image: styleImage
-                        )
-                    ),
-                    action: {
-                        toggleStyle()
-                    }
-                ).minSize(CGSize(width: 44.0, height: 44.0)),
-                availableSize: CGSize(width: 30.0, height: 30.0),
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(styleButton
-                .position(CGPoint(x: offset + styleButton.size.width / 2.0, y: context.availableSize.height / 2.0))
-                .update(Transition.Update { _, view, transition in
-                    if let snapshot = view.snapshotView(afterScreenUpdates: false) {
-                        transition.setAlpha(view: snapshot, alpha: 0.0, completion: { [weak snapshot] _ in
-                            snapshot?.removeFromSuperview()
-                        })
-                        snapshot.frame = view.frame
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                        view.superview?.addSubview(snapshot)
-                    }
-                })
-            )
-            offset += 44.0
-            
-            let alignmentButton = alignmentButton.update(
-                component: Button(
-                    content: AnyComponent(
-                        TextAlignmentComponent(
-                            alignment: component.alignment
-                        )
-                    ),
-                    action: {
-                        toggleAlignment()
-                    }
-                ).minSize(CGSize(width: 44.0, height: 44.0)),
-                availableSize: context.availableSize,
-                transition: .easeInOut(duration: 0.2)
-            )
-            context.add(alignmentButton
-                .position(CGPoint(x: offset + alignmentButton.size.width / 2.0, y: context.availableSize.height / 2.0))
-            )
-            offset += 44.0
-            
+            var fontAvailableWidth: CGFloat = context.availableSize.width
+            if component.color != nil {
+                fontAvailableWidth -= 88.0
+            }
+                        
             let font = font.update(
                 component: TextFontComponent(
+                    styleButton: AnyComponent(
+                        Button(
+                            content: AnyComponent(
+                                Image(
+                                    image: styleImage
+                                )
+                            ),
+                            action: {
+                                toggleStyle()
+                            }
+                        ).minSize(CGSize(width: 44.0, height: 44.0))
+                    ),
+                    alignmentButton: AnyComponent(
+                        Button(
+                            content: AnyComponent(
+                                TextAlignmentComponent(
+                                    alignment: component.alignment
+                                )
+                            ),
+                            action: {
+                                toggleAlignment()
+                            }
+                        ).minSize(CGSize(width: 44.0, height: 44.0))
+                    ),
                     values: DrawingTextFont.allCases,
                     selectedValue: component.font,
                     updated: { font in
                         updateFont(font)
                     }
                 ),
-                availableSize: CGSize(width: context.availableSize.width - offset, height: 30.0),
+                availableSize: CGSize(width: fontAvailableWidth, height: 30.0),
                 transition: .easeInOut(duration: 0.2)
             )
             context.add(font
                 .position(CGPoint(x: offset + font.size.width / 2.0, y: context.availableSize.height / 2.0))
             )
-            offset += 44.0
+            
+            if let toggleKeyboard = component.toggleKeyboard {
+                let keyboardButton = keyboardButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            LottieAnimationComponent(
+                                animation: LottieAnimationComponent.AnimationItem(name: !component.isEmojiKeyboard ? "input_anim_smileToKey" : "input_anim_keyToSmile" , mode: .animateTransitionFromPrevious),
+                                colors: ["__allcolors__": UIColor.white],
+                                size: CGSize(width: 32.0, height: 32.0)
+                            )
+                        ),
+                        action: {
+                            toggleKeyboard()
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)),
+                    availableSize: CGSize(width: 32.0, height: 32.0),
+                    transition: .easeInOut(duration: 0.2)
+                )
+                context.add(keyboardButton
+                    .position(CGPoint(x: context.availableSize.width - keyboardButton.size.width / 2.0, y: context.availableSize.height / 2.0))
+                )
+            }
                         
             return context.availableSize
         }

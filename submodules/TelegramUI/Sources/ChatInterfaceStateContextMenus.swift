@@ -32,6 +32,7 @@ import Pasteboard
 import SettingsUI
 import PremiumUI
 import TextNodeWithEntities
+import ChatControllerInteraction
 
 private struct MessageContextMenuData {
     let starStatus: Bool?

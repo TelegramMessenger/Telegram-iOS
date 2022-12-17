@@ -86,6 +86,10 @@ swift_library(
         "//submodules/TelegramAnimatedStickerNode:TelegramAnimatedStickerNode",
         "//submodules/StickerResources:StickerResources",
         "//submodules/ImageBlur:ImageBlur",
+        "//submodules/TextFormat:TextFormat",
+        "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
+        "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode:ChatEntityKeyboardInputNode",
+        "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
     ],
     visibility = [
         "//visibility:public",

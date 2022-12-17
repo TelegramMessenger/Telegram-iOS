@@ -3,10 +3,10 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
-@class TGPhotoEntitiesContainerView;
+@protocol TGPhotoDrawingEntitiesView;
 
 @interface TGPhotoToolsController : TGPhotoEditorTabController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(TGPhotoEntitiesContainerView *)entitiesView;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView;
 
 @end

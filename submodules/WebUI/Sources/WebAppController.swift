@@ -593,6 +593,8 @@ public final class WebAppController: ViewController, AttachmentContainable {
              
         private let hapticFeedback = HapticFeedback()
         
+        private weak var currentQrCodeScannerScreen: QrCodeScanScreen?
+        
         private var delayedScriptMessage: WKScriptMessage?
         private func handleScriptMessage(_ message: WKScriptMessage) {
             guard let controller = self.controller else {
@@ -829,7 +831,13 @@ public final class WebAppController: ViewController, AttachmentContainable {
                             strongSelf.sendQrCodeScannedEvent(data: result)
                         }
                     }
+                    self.currentQrCodeScannerScreen = controller
                     self.controller?.present(controller, in: .window(.root))
+                case "web_app_close_scan_qr_popup":
+                    if let controller = self.currentQrCodeScannerScreen {
+                        self.currentQrCodeScannerScreen = nil
+                        controller.dismissAnimated()
+                    }
                 case "web_app_read_text_from_clipboard":
                     if let json = json, let requestId = json["req_id"] as? String {
                         let currentTimestamp = CACurrentMediaTime()
@@ -972,7 +980,11 @@ public final class WebAppController: ViewController, AttachmentContainable {
         
         fileprivate func sendQrCodeScannedEvent(data: String?) {
             let paramsString = data.flatMap { "{data: \"\($0)\"}" } ?? "{}"
-            self.webView?.sendEvent(name: "scan_qr_popup_closed", data: paramsString)
+            self.webView?.sendEvent(name: "qr_text_received", data: paramsString)
+        }
+        
+        fileprivate func sendQrCodeScannerClosedEvent(data: String?) {
+            self.webView?.sendEvent(name: "scan_qr_popup_closed", data: nil)
         }
         
         fileprivate func sendClipboardTextEvent(requestId: String, fillData: Bool) {

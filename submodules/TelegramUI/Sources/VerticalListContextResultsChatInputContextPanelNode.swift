@@ -10,6 +10,7 @@ import MergeLists
 import AccountContext
 import SwiftSignalKit
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 private enum VerticalChatContextResultsEntryStableId: Hashable {
     case action

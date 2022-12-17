@@ -12,15 +12,16 @@ import AccountContext
 import StickerPackPreviewUI
 import PresentationDataUtils
 import UndoUI
+import ChatControllerInteraction
 
-final class TrendingPaneInteraction {
-    let installPack: (ItemCollectionInfo) -> Void
-    let openPack: (ItemCollectionInfo) -> Void
-    let getItemIsPreviewed: (StickerPackItem) -> Bool
-    let openSearch: () -> Void
-    let itemContext = StickerPaneSearchGlobalItemContext()
+public final class TrendingPaneInteraction {
+    public let installPack: (ItemCollectionInfo) -> Void
+    public let openPack: (ItemCollectionInfo) -> Void
+    public let getItemIsPreviewed: (StickerPackItem) -> Bool
+    public let openSearch: () -> Void
+    public let itemContext = StickerPaneSearchGlobalItemContext()
     
-    init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, openSearch: @escaping () -> Void) {
+    public init(installPack: @escaping (ItemCollectionInfo) -> Void, openPack: @escaping (ItemCollectionInfo) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, openSearch: @escaping () -> Void) {
         self.installPack = installPack
         self.openPack = openPack
         self.getItemIsPreviewed = getItemIsPreviewed
@@ -28,17 +29,17 @@ final class TrendingPaneInteraction {
     }
 }
 
-final class TrendingPanePackEntry: Identifiable, Comparable {
-    let index: Int
-    let info: StickerPackCollectionInfo
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let topItems: [StickerPackItem]
-    let installed: Bool
-    let unread: Bool
-    let topSeparator: Bool
+public final class TrendingPanePackEntry: Identifiable, Comparable {
+    public let index: Int
+    public let info: StickerPackCollectionInfo
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let topItems: [StickerPackItem]
+    public let installed: Bool
+    public let unread: Bool
+    public let topSeparator: Bool
     
-    init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
+    public init(index: Int, info: StickerPackCollectionInfo, theme: PresentationTheme, strings: PresentationStrings, topItems: [StickerPackItem], installed: Bool, unread: Bool, topSeparator: Bool) {
         self.index = index
         self.info = info
         self.theme = theme
@@ -49,11 +50,11 @@ final class TrendingPanePackEntry: Identifiable, Comparable {
         self.topSeparator = topSeparator
     }
     
-    var stableId: ItemCollectionId {
+    public var stableId: ItemCollectionId {
         return self.info.id
     }
     
-    static func ==(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
+    public static func ==(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
         if lhs.index != rhs.index {
             return false
         }
@@ -81,11 +82,11 @@ final class TrendingPanePackEntry: Identifiable, Comparable {
         return true
     }
     
-    static func <(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
+    public static func <(lhs: TrendingPanePackEntry, rhs: TrendingPanePackEntry) -> Bool {
         return lhs.index < rhs.index
     }
     
-    func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
+    public func item(account: Account, interaction: TrendingPaneInteraction, grid: Bool) -> GridItem {
         let info = self.info
         return StickerPaneSearchGlobalItem(account: account, theme: self.theme, strings: self.strings, listAppearance: false, info: self.info, topItems: self.topItems, topSeparator: self.topSeparator, regularInsets: false, installed: self.installed, unread: self.unread, open: {
             interaction.openPack(info)
@@ -190,13 +191,13 @@ private func trendingPaneEntries(trendingEntries: [FeaturedStickerPackItem], ins
     return result
 }
 
-final class ChatMediaInputTrendingPane: ChatMediaInputPane {
+public final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     private let context: AccountContext
     private let controllerInteraction: ChatControllerInteraction
     private let getItemIsPreviewed: (StickerPackItem) -> Bool
     private let isPane: Bool
     
-    let gridNode: GridNode
+    public let gridNode: GridNode
     
     private var enqueuedTransitions: [TrendingPaneTransition] = []
     private var validLayout: (CGSize, CGFloat)?
@@ -206,15 +207,15 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
     
     private let _ready = Promise<Void>()
     private var didSetReady = false
-    var ready: Signal<Void, NoError> {
+    public var ready: Signal<Void, NoError> {
         return self._ready.get()
     }
     
-    var scrollingInitiated: (() -> Void)?
+    public var scrollingInitiated: (() -> Void)?
     
     private let installDisposable = MetaDisposable()
     
-    init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
+    public init(context: AccountContext, controllerInteraction: ChatControllerInteraction, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, isPane: Bool) {
         self.context = context
         self.controllerInteraction = controllerInteraction
         self.getItemIsPreviewed = getItemIsPreviewed
@@ -236,7 +237,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         self.installDisposable.dispose()
     }
     
-    func activate() {
+    public func activate() {
         if self.isActivated {
             return
         }
@@ -369,7 +370,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         })
     }
     
-    override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
+    public override func updateLayout(size: CGSize, topInset: CGFloat, bottomInset: CGFloat, isExpanded: Bool, isVisible: Bool, deviceMetrics: DeviceMetrics, transition: ContainedViewLayoutTransition) {
         let hadValidLayout = self.validLayout != nil
         self.validLayout = (size, bottomInset)
         
@@ -401,7 +402,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }
     }
     
-    override func willEnterHierarchy() {
+    public override func willEnterHierarchy() {
         super.willEnterHierarchy()
         
         self.activate()
@@ -416,7 +417,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         }
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
+    public func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
         let localPoint = self.view.convert(point, to: self.gridNode.view)
         var resultNode: StickerPaneSearchGlobalItemNode?
         self.gridNode.forEachItemNode { itemNode in
@@ -430,7 +431,7 @@ final class ChatMediaInputTrendingPane: ChatMediaInputPane {
         return nil
     }
     
-    func updatePreviewing(animated: Bool) {
+    public func updatePreviewing(animated: Bool) {
         self.gridNode.forEachItemNode { itemNode in
             if let itemNode = itemNode as? StickerPaneSearchGlobalItemNode {
                 itemNode.updatePreviewing(animated: animated)

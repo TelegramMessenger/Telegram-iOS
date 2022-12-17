@@ -29,7 +29,6 @@
 
 #import "TGPhotoToolbarView.h"
 #import "TGPhotoEditorPreviewView.h"
-#import "TGPhotoEntitiesContainerView.h"
 
 #import <LegacyComponents/TGMenuView.h>
 
@@ -38,7 +37,6 @@
 
 #import "TGPhotoCropController.h"
 #import "TGPhotoToolsController.h"
-#import "TGPhotoPaintController.h"
 #import "TGPhotoDrawingController.h"
 #import "TGPhotoQualityController.h"
 #import "TGPhotoAvatarPreviewController.h"
@@ -71,7 +69,7 @@
     TGPhotoToolbarView *_landscapeToolbarView;
     TGPhotoEditorPreviewView *_previewView;
     PGPhotoEditorView *_fullPreviewView;
-    TGPhotoEntitiesContainerView *_fullEntitiesView;
+    UIView<TGPhotoDrawingEntitiesView> *_fullEntitiesView;
     UIImageView *_fullPaintingView;
     
     PGPhotoEditor *_photoEditor;
@@ -288,10 +286,7 @@
                 
             case TGPhotoEditorPaintTab:
             case TGPhotoEditorEraserTab:
-                if ([strongSelf->_currentTabController isKindOfClass:[TGPhotoPaintController class]])
-                    [strongSelf->_currentTabController handleTabAction:tab];
-                else
-                    [strongSelf presentTab:TGPhotoEditorPaintTab];
+                [strongSelf presentTab:TGPhotoEditorPaintTab];
                 break;
                 
             case TGPhotoEditorStickerTab:
@@ -353,9 +348,9 @@
         _fullPaintingView = [[UIImageView alloc] init];
         _fullPaintingView.frame = _fullPreviewView.frame;
         
-        _fullEntitiesView = [[TGPhotoEntitiesContainerView alloc] init];
+        _fullEntitiesView = [_stickersContext drawingEntitiesViewWithSize:CGSizeMake(0, 0)];
         _fullEntitiesView.userInteractionEnabled = false;
-        CGRect rect = [TGPhotoPaintController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
+        CGRect rect = [TGPhotoDrawingController fittedCropRect:_photoEditor.cropRect originalSize:_photoEditor.originalSize keepOriginalSize:true];
         _fullEntitiesView.frame = CGRectMake(0, 0, rect.size.width, rect.size.height);
     }
         
@@ -1341,7 +1336,7 @@
             {
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
-                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar]];
+                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar] senderName:self.senderName];
                 cropController.stickersContext = _stickersContext;
                 cropController.scrubberView = _scrubberView;
                 cropController.dotImageView = _dotImageView;

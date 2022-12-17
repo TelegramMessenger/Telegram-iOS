@@ -16,11 +16,11 @@
 
 #import "TGMediaPickerGalleryVideoScrubber.h"
 #import "TGModernGalleryVideoView.h"
-#import "TGPhotoEntitiesContainerView.h"
+
 
 #import "TGPhotoPaintStickersContext.h"
 
-#import "TGPhotoPaintController.h"
+#import "TGPhotoDrawingController.h"
 
 const CGFloat TGPhotoAvatarPreviewPanelSize = 96.0f;
 const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanelSize + 40.0f;
@@ -48,6 +48,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     TGModernButton *_cancelButton;
     UILabel *_titleLabel;
+    UILabel *_subtitleLabel;
     UIView<TGPhotoSolidRoundedButtonView> *_doneButton;
     
     bool _wasPlayingBeforeCropping;
@@ -56,6 +57,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     bool _isForum;
     bool _isSuggestion;
+    NSString *_senderName;
 }
 
 @property (nonatomic, weak) PGPhotoEditor *photoEditor;
@@ -65,7 +67,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion senderName:(NSString *)senderName {
     self = [super initWithContext:context];
     if (self != nil)
     {
@@ -73,6 +75,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         self.previewView = previewView;
         _isForum = isForum;
         _isSuggestion = isSuggestion;
+        _senderName = senderName;
     }
     return self;
 }
@@ -181,7 +184,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _coverLabel.backgroundColor = [UIColor clearColor];
         _coverLabel.font = TGSystemFontOfSize(14.0f);
         _coverLabel.textColor = [UIColor whiteColor];
-        _coverLabel.text = TGLocalized(@"PhotoEditor.SelectCoverFrame");
+        _coverLabel.text = _isSuggestion ? TGLocalized(@"PhotoEditor.SelectCoverFrameSuggestion") : TGLocalized(@"PhotoEditor.SelectCoverFrame");
         [_coverLabel sizeToFit];
         [_portraitToolsWrapperView addSubview:_coverLabel];
         
@@ -193,9 +196,18 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _titleLabel.backgroundColor = [UIColor clearColor];
         _titleLabel.font = TGBoldSystemFontOfSize(17.0f);
         _titleLabel.textColor = [UIColor whiteColor];
-        _titleLabel.text = self.item.isVideo ? TGLocalized(@"PhotoEditor.SetProfileVideo") : TGLocalized(@"PhotoEditor.SetProfilePhoto");
+        _titleLabel.text = self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoTitle") : TGLocalized(@"Conversation.SuggestedPhotoTitle");
         [_titleLabel sizeToFit];
         [_wrapperView addSubview:_titleLabel];
+        
+        _subtitleLabel = [[UILabel alloc] init];
+        _subtitleLabel.backgroundColor = [UIColor clearColor];
+        _subtitleLabel.font = TGSystemFontOfSize(14.0f);
+        _subtitleLabel.textColor = [UIColor whiteColor];
+        _subtitleLabel.numberOfLines = 2;
+        _subtitleLabel.textAlignment = NSTextAlignmentCenter;
+        _subtitleLabel.text = [NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoText") : TGLocalized(@"Conversation.SuggestedPhotoText"), _senderName];
+        [_wrapperView addSubview:_subtitleLabel];
         
         if (!self.item.isVideo) {
             _cancelButton = [[TGModernButton alloc] init];
@@ -369,15 +381,17 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     [_cropView animateTransitionIn];
     
-    _cancelButton.alpha = 0.0;
-    _titleLabel.alpha = 0.0;
-    _doneButton.alpha = 0.0;
+    _cancelButton.alpha = 0.0f;
+    _titleLabel.alpha = 0.0f;
+    _subtitleLabel.alpha = 0.0f;
+    _doneButton.alpha = 0.0f;
     
     [UIView animateWithDuration:0.3f animations:^
     {
-        _cancelButton.alpha = 1.0;
-        _titleLabel.alpha = 1.0;
-        _doneButton.alpha = 1.0;
+        _cancelButton.alpha = 1.0f;
+        _titleLabel.alpha = 1.0f;
+        _subtitleLabel.alpha = 1.0f;
+        _doneButton.alpha = 1.0f;
         
         _portraitToolsWrapperView.alpha = 1.0f;
         _landscapeToolsWrapperView.alpha = 1.0f;
@@ -468,7 +482,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         
         if (self.switchingToTab == TGPhotoEditorPaintTab)
         {
-            containerFrame = [TGPhotoPaintController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
+            containerFrame = [TGPhotoDrawingController photoContainerFrameForParentViewFrame:referenceBounds toolbarLandscapeSize:self.toolbarLandscapeSize orientation:orientation panelSize:TGPhotoPaintTopPanelSize + TGPhotoPaintBottomPanelSize hasOnScreenNavigation:self.hasOnScreenNavigation];
         }
         
         CGSize fittedSize = TGScaleToSize(cropRectFrame.size, containerFrame.size);
@@ -551,9 +565,10 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _landscapeToolsWrapperView.alpha = 0.0f;
         _dotImageView.alpha = 0.0f;
         _dotMarkerView.alpha = 0.0f;
-        _cancelButton.alpha = 0.0;
-        _titleLabel.alpha = 0.0;
-        _doneButton.alpha = 0.0;
+        _cancelButton.alpha = 0.0f;
+        _titleLabel.alpha = 0.0f;
+        _subtitleLabel.alpha = 0.0f;
+        _doneButton.alpha = 0.0f;
     } completion:^(__unused BOOL finished)
     {
         if (!switching) {
@@ -670,8 +685,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _landscapeToolsWrapperView.alpha = 0.0f;
         _dotImageView.alpha = 0.0f;
         _titleLabel.alpha = 0.0f;
+        _subtitleLabel.alpha = 0.0f;
         _cancelButton.alpha = 0.0f;
-        _doneButton.alpha = 0.0;
+        _doneButton.alpha = 0.0f;
     } completion:nil];
 }
 
@@ -804,6 +820,8 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     CGSize buttonSize = CGSizeMake(MIN(referenceSize.width, referenceSize.height) - 16.0 * 2.0, 50.0f);
     [_doneButton updateWidth:buttonSize.width];
     
+    CGSize subtitleSize = [_subtitleLabel sizeThatFits:CGSizeMake(referenceSize.width - 48.0, referenceSize.height)];
+    
     switch (orientation)
     {
         case UIInterfaceOrientationLandscapeLeft:
@@ -820,6 +838,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _portraitToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
             
             _titleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _titleLabel.frame.size.width) / 2.0), 0.0, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
+            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom + safeAreaInset.bottom, subtitleSize.width, subtitleSize.height);
             
             _cancelButton.frame = CGRectMake(-_cancelButton.frame.size.width, screenEdges.top + floor((44.0 - _cancelButton.frame.size.height) / 2.0), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
             
@@ -841,6 +860,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _portraitToolsWrapperView.frame = CGRectMake((screenSide - referenceSize.width) / 2, screenSide - panelToolbarPortraitSize, referenceSize.width, panelToolbarPortraitSize);
             
             _titleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _titleLabel.frame.size.width) / 2.0), 0.0, _titleLabel.frame.size.width, _titleLabel.frame.size.height);
+            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom + safeAreaInset.bottom, subtitleSize.width, subtitleSize.height);
             
             _cancelButton.frame = CGRectMake(-_cancelButton.frame.size.width, screenEdges.top + floor((44.0 - _cancelButton.frame.size.height) / 2.0), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
             
@@ -867,6 +887,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _coverLabel.frame = CGRectMake(floor((_portraitToolsWrapperView.frame.size.width - _coverLabel.frame.size.width) / 2.0), CGRectGetMaxY(_scrubberView.frame) + 6.0, _coverLabel.frame.size.width, _coverLabel.frame.size.height);
             
             _titleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _titleLabel.frame.size.width) / 2.0), screenEdges.top + floor((44.0 - _titleLabel.frame.size.height) / 2.0), _titleLabel.frame.size.width, _titleLabel.frame.size.height);
+            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom - 56.0 - buttonSize.height - subtitleSize.height - 8.0, subtitleSize.width, subtitleSize.height);
             
             _cancelButton.frame = CGRectMake(screenEdges.left + 16.0, screenEdges.top + floor((44.0 - _cancelButton.frame.size.height) / 2.0), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
             

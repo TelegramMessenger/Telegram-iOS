@@ -124,7 +124,7 @@ private enum ContactListSearchEntry: Comparable, Identifiable {
     func item(context: AccountContext, presentationData: PresentationData, nameSortOrder: PresentationPersonNameOrder, nameDisplayOrder: PresentationPersonNameOrder, timeFormat: PresentationDateTimeFormat, addContact: ((String) -> Void)?, openPeer: @escaping (ContactListPeer) -> Void, contextAction: ((EnginePeer, ASDisplayNode, ContextGesture?, CGPoint?) -> Void)?) -> ListViewItem {
         switch self {
             case let .addContact(theme, strings, phoneNumber):
-                return ContactsAddItem(theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
+                return ContactsAddItem(context: context, theme: theme, strings: strings, phoneNumber: phoneNumber, header: ChatListSearchItemHeader(type: .phoneNumber, theme: theme, strings: strings, actionTitle: nil, action: nil), action: {
                     addContact?(phoneNumber)
                 })
             case let .peer(_, theme, strings, peer, presence, group, enabled):

@@ -22,6 +22,7 @@ public enum ItemListPeerActionItemColor {
 public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
     let icon: UIImage?
+    let iconSignal: Signal<UIImage?, NoError>?
     let title: String
     public let alwaysPlain: Bool
     let hasSeparator: Bool
@@ -31,9 +32,10 @@ public class ItemListPeerActionItem: ListViewItem, ItemListItem {
     public let sectionId: ItemListSectionId
     let action: (() -> Void)?
     
-    public init(presentationData: ItemListPresentationData, icon: UIImage?, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool = false, action: (() -> Void)?) {
+    public init(presentationData: ItemListPresentationData, icon: UIImage?, iconSignal: Signal<UIImage?, NoError>? = nil, title: String, alwaysPlain: Bool = false, hasSeparator: Bool = true, sectionId: ItemListSectionId, height: ItemListPeerActionItemHeight = .peerList, color: ItemListPeerActionItemColor = .accent, editing: Bool = false, action: (() -> Void)?) {
         self.presentationData = presentationData
         self.icon = icon
+        self.iconSignal = iconSignal
         self.title = title
         self.alwaysPlain = alwaysPlain
         self.hasSeparator = hasSeparator
@@ -114,6 +116,8 @@ class ItemListPeerActionItemNode: ListViewItemNode {
     
     private var item: ItemListPeerActionItem?
     
+    private let iconDisposable = MetaDisposable()
+    
     init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
@@ -149,6 +153,10 @@ class ItemListPeerActionItemNode: ListViewItemNode {
         self.addSubnode(self.activateArea)
     }
     
+    deinit {
+        self.iconDisposable.dispose()
+    }
+    
     func asyncLayout() -> (_ item: ItemListPeerActionItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, (Bool) -> Void) {
         let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         
@@ -171,7 +179,7 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     iconOffset = 1.0
                     verticalInset = 11.0
                     verticalOffset = 0.0
-                    leftInset = (item.icon == nil ? 16.0 : 59.0) + params.leftInset
+                    leftInset = (item.icon == nil && item.iconSignal == nil ? 16.0 : 59.0) + params.leftInset
                 case .peerList:
                     iconOffset = 3.0
                     verticalInset = 14.0
@@ -232,6 +240,15 @@ class ItemListPeerActionItemNode: ListViewItemNode {
                     strongSelf.iconNode.image = item.icon
                     if let image = item.icon {
                         transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - image.size.width) / 2.0) + iconOffset, y: floor((contentSize.height - image.size.height) / 2.0)), size: image.size))
+                    } else if let iconSignal = item.iconSignal {
+                        let imageSize = CGSize(width: 28.0, height: 28.0)
+                        strongSelf.iconDisposable.set((iconSignal
+                        |> deliverOnMainQueue).start(next: { [weak self] image in
+                            if let strongSelf = self, let image {
+                                strongSelf.iconNode.image = image
+                            }
+                        }))
+                        transition.updateFrame(node: strongSelf.iconNode, frame: CGRect(origin: CGPoint(x: params.leftInset + editingOffset + floor((leftInset - params.leftInset - imageSize.width) / 2.0) + iconOffset, y: floor((contentSize.height - imageSize.height) / 2.0)), size: imageSize))
                     }
                     
                     if strongSelf.backgroundNode.supernode == nil {

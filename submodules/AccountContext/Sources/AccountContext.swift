@@ -706,6 +706,13 @@ public enum ChatListSearchFilter: Equatable {
     }
 }
 
+public enum InstalledStickerPacksControllerMode {
+    case general
+    case modal
+    case masks
+    case emoji
+}
+
 public let defaultContactLabel: String = "_$!<Mobile>!$_"
 
 public enum CreateGroupMode {
@@ -811,6 +818,8 @@ public protocol SharedAccountContext: AnyObject {
     func makeStickerPackScreen(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?, mainStickerPack: StickerPackReference, stickerPacks: [StickerPackReference], loadedStickerPacks: [LoadedStickerPack], parentNavigationController: NavigationController?, sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?) -> ViewController
         
     func makeProxySettingsController(sharedContext: SharedAccountContext, account: UnauthorizedAccount) -> ViewController
+    
+    func makeInstalledStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode) -> ViewController
     
     func navigateToCurrentCall()
     var hasOngoingCall: ValuePromise<Bool> { get }

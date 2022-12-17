@@ -28,6 +28,7 @@ import TextSelectionNode
 import AudioTranscriptionPendingIndicatorComponent
 import UndoUI
 import TelegramNotices
+import ChatControllerInteraction
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

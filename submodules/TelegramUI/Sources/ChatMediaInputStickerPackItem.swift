@@ -11,6 +11,7 @@ import ItemListStickerPackItem
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import ChatPresentationInterfaceState
 
 final class ChatMediaInputStickerPackItem: ListViewItem {
     let account: Account

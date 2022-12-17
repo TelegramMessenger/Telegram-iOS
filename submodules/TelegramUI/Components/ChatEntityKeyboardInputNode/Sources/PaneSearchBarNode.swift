@@ -6,6 +6,7 @@ import Display
 import TelegramPresentationData
 import ActivityIndicator
 import AppBundle
+import FeaturedStickersScreen
 
 private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: UIImage(bundleImageName: "Components/Search Bar/Loupe"), color: color)

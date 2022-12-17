@@ -13,6 +13,7 @@ import AccountContext
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 private let messageFont = Font.regular(17.0)
 private let messageBoldFont = Font.semibold(17.0)

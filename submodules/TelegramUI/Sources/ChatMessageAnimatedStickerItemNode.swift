@@ -28,6 +28,7 @@ import AppBundle
 import LottieMeshSwift
 import ChatPresentationInterfaceState
 import TextNodeWithEntities
+import ChatControllerInteraction
 
 private let nameFont = Font.medium(14.0)
 private let inlineBotPrefixFont = Font.regular(14.0)
@@ -699,7 +700,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             
             if let overlayMeshAnimationNode = self.overlayMeshAnimationNode {
                 self.overlayMeshAnimationNode = nil
-                if let transitionNode = item.controllerInteraction.getMessageTransitionNode() {
+                if let transitionNode = item.controllerInteraction.getMessageTransitionNode() as? ChatMessageTransitionNode {
                     transitionNode.remove(decorationNode: overlayMeshAnimationNode)
                 }
             }
@@ -1943,7 +1944,7 @@ class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
         guard let item = self.item else {
             return
         }
-        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() else {
+        guard let transitionNode = item.controllerInteraction.getMessageTransitionNode() as? ChatMessageTransitionNode else {
             return
         }
         

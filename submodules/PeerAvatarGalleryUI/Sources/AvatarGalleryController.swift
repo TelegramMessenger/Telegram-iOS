@@ -364,6 +364,7 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     private let context: AccountContext
     private let peer: Peer
     private let sourceCorners: SourceCorners
+    private let isSuggested: Bool
     
     private var presentationData: PresentationData
     
@@ -403,10 +404,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
     
     private let editDisposable = MetaDisposable ()
     
-    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
+    public init(context: AccountContext, peer: Peer, sourceCorners: SourceCorners = .round, remoteEntries: Promise<[AvatarGalleryEntry]>? = nil, isSuggested: Bool = false, skipInitial: Bool = false, centralEntryIndex: Int? = nil, replaceRootController: @escaping (ViewController, Promise<Bool>?) -> Void, synchronousLoad: Bool = false) {
         self.context = context
         self.peer = peer
         self.sourceCorners = sourceCorners
+        self.isSuggested = isSuggested
         self.presentationData = context.sharedContext.currentPresentationData.with { $0 }
         self.replaceRootController = replaceRootController
         
@@ -460,6 +462,11 @@ public class AvatarGalleryController: ViewController, StandalonePresentableContr
                     if strongSelf.centralEntryIndex == nil {
                         strongSelf.centralEntryIndex = 0
                     }
+                    
+                    if strongSelf.isSuggested, let firstEntry = entries.first {
+                        strongSelf.navigationItem.title = !firstEntry.videoRepresentations.isEmpty ? strongSelf.presentationData.strings.Conversation_SuggestedVideoTitle : strongSelf.presentationData.strings.Conversation_SuggestedPhotoTitle
+                    }
+                    
                     if strongSelf.isViewLoaded {
                         strongSelf.galleryNode.pager.replaceItems(strongSelf.entries.map({ entry in PeerAvatarImageGalleryItem(context: context, peer: peer, presentationData: presentationData, entry: entry, sourceCorners: sourceCorners, delete: strongSelf.canDelete ? {
                             self?.deleteEntry(entry)

@@ -11,6 +11,7 @@ import TelegramUIPreferences
 import ItemListPeerItem
 import MergeLists
 import ItemListUI
+import ChatControllerInteraction
 
 private struct GroupsInCommonListTransaction {
     let deletions: [ListViewDeleteItem]

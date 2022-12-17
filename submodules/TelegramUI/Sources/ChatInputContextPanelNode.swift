@@ -7,6 +7,7 @@ import TelegramPresentationData
 import TelegramUIPreferences
 import AccountContext
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 enum ChatInputContextPanelPlacement {
     case overPanels

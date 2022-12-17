@@ -11,29 +11,49 @@ import ComponentFlow
 import ViewControllerComponent
 import EntityKeyboard
 import PagerComponent
+import FeaturedStickersScreen
+
+struct InputData: Equatable {
+    var emoji: EmojiPagerContentComponent
+    var stickers: EmojiPagerContentComponent?
+    var masks: EmojiPagerContentComponent?
+    
+    init(
+        emoji: EmojiPagerContentComponent,
+        stickers: EmojiPagerContentComponent?,
+        masks: EmojiPagerContentComponent?
+    ) {
+        self.emoji = emoji
+        self.stickers = stickers
+        self.masks = masks
+    }
+}
 
 private final class StickerSelectionComponent: Component {
-    public typealias EnvironmentType = Empty
+    typealias EnvironmentType = Empty
     
-    public let theme: PresentationTheme
-    public let strings: PresentationStrings
-    public let deviceMetrics: DeviceMetrics
-    public let stickerContent: EmojiPagerContentComponent
-    public let backgroundColor: UIColor
-    public let separatorColor: UIColor
+    let theme: PresentationTheme
+    let strings: PresentationStrings
+    let deviceMetrics: DeviceMetrics
+    let bottomInset: CGFloat
+    let content: InputData
+    let backgroundColor: UIColor
+    let separatorColor: UIColor
     
-    public init(
+    init(
         theme: PresentationTheme,
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
-        stickerContent: EmojiPagerContentComponent,
+        bottomInset: CGFloat,
+        content: InputData,
         backgroundColor: UIColor,
         separatorColor: UIColor
     ) {
         self.theme = theme
         self.strings = strings
         self.deviceMetrics = deviceMetrics
-        self.stickerContent = stickerContent
+        self.bottomInset = bottomInset
+        self.content = content
         self.backgroundColor = backgroundColor
         self.separatorColor = separatorColor
     }
@@ -48,7 +68,10 @@ private final class StickerSelectionComponent: Component {
         if lhs.deviceMetrics != rhs.deviceMetrics {
             return false
         }
-        if lhs.stickerContent != rhs.stickerContent {
+        if lhs.bottomInset != rhs.bottomInset {
+            return false
+        }
+        if lhs.content != rhs.content {
             return false
         }
         if lhs.backgroundColor != rhs.backgroundColor {
@@ -96,7 +119,7 @@ private final class StickerSelectionComponent: Component {
             self.backgroundColor = component.backgroundColor
             let panelBackgroundColor = component.backgroundColor.withMultipliedAlpha(0.85)
             self.panelBackgroundView.updateColor(color: panelBackgroundColor, transition: .immediate)
-            self.panelSeparatorView.backgroundColor = component.separatorColor
+            self.panelSeparatorView.backgroundColor = UIColor(rgb: 0xffffff, alpha: 0.1)
             
             self.component = component
             self.state = state
@@ -109,15 +132,18 @@ private final class StickerSelectionComponent: Component {
                     theme: component.theme,
                     strings: component.strings,
                     isContentInFocus: true,
-                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: 0.0, right: 0.0),
+                    containerInsets: UIEdgeInsets(top: topPanelHeight - 34.0, left: 0.0, bottom: component.bottomInset, right: 0.0),
                     topPanelInsets: UIEdgeInsets(top: 0.0, left: 4.0, bottom: 0.0, right: 4.0),
-                    emojiContent: nil,
-                    stickerContent: component.stickerContent,
+                    emojiContent: component.content.emoji,
+                    stickerContent: component.content.stickers,
+                    maskContent: component.content.masks,
                     gifContent: nil,
                     hasRecentGifs: false,
                     availableGifSearchEmojies: [],
                     defaultToEmojiTab: false,
                     externalTopPanelContainer: self.panelHostView,
+                    externalBottomPanelContainer: nil,
+                    displayTopPanelBackground: true,
                     topPanelExtensionUpdated: { _, _ in },
                     hideInputUpdated: { _, _, _ in },
                     hideTopPanelUpdated: { _, _ in },
@@ -128,7 +154,7 @@ private final class StickerSelectionComponent: Component {
                     deviceMetrics: component.deviceMetrics,
                     hiddenInputHeight: 0.0,
                     inputHeight: 0.0,
-                    displayBottomPanel: false,
+                    displayBottomPanel: true,
                     isExpanded: true
                 )),
                 environment: {},
@@ -182,8 +208,8 @@ public class StickerPickerScreen: ViewController {
         let scrollView: UIScrollView
         let hostView: ComponentHostView<Empty>
         
-        private var stickerContent: EmojiPagerContentComponent?
-        private let stickerContentDisposable = MetaDisposable()
+        private var content: InputData?
+        private let contentDisposable = MetaDisposable()
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private(set) var isExpanded = false
@@ -224,31 +250,63 @@ public class StickerPickerScreen: ViewController {
             self.containerView.addSubview(self.scrollView)
             self.scrollView.addSubview(self.hostView)
             
-            self.stickerContentDisposable.set((
-                EmojiPagerContentComponent.stickerInputData(
-                    context: context,
-                    animationCache: context.animationCache,
-                    animationRenderer: context.animationRenderer,
-                    stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
-                    stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
-                    chatPeerId: context.account.peerId
-                )
-                |> deliverOnMainQueue).start(next: { [weak self] content in
-                    if let strongSelf = self {
-                        strongSelf.updateContent(content)
-                    }
-                })
+            let emojiItems = EmojiPagerContentComponent.emojiInputData(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                isStandalone: false,
+                isStatusSelection: false,
+                isReactionSelection: false,
+                isEmojiSelection: true,
+                topReactionItems: [],
+                areUnicodeEmojiEnabled: true,
+                areCustomEmojiEnabled: true,
+                chatPeerId: context.account.peerId,
+                hasSearch: false
             )
+            
+            let stickerItems = EmojiPagerContentComponent.stickerInputData(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+                stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+                chatPeerId: context.account.peerId,
+                hasSearch: false,
+                hasTrending: true
+            )
+            
+            let maskItems = EmojiPagerContentComponent.stickerInputData(
+                context: context,
+                animationCache: context.animationCache,
+                animationRenderer: context.animationRenderer,
+                stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
+                stickerOrderedItemListCollectionIds: [],
+                chatPeerId: context.account.peerId,
+                hasSearch: false,
+                hasTrending: false
+            )
+            
+            let signal = combineLatest(queue: .mainQueue(),
+                emojiItems,
+                stickerItems,
+                maskItems
+            )
+            self.contentDisposable.set(signal.start(next: { [weak self] emoji, stickers, masks in
+                if let strongSelf = self {
+                    strongSelf.updateContent(InputData(emoji: emoji, stickers: stickers, masks: masks))
+                }
+            }))
         }
         
         deinit {
-            self.stickerContentDisposable.dispose()
+            self.contentDisposable.dispose()
         }
         
-        
-        func updateContent(_ content: EmojiPagerContentComponent) {
-            self.stickerContent = content
-            content.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+        func updateContent(_ content: InputData) {
+            self.content = content
+            
+            content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
                 performItemAction: { [weak self] _, item, _, _, _, _ in
                     guard let strongSelf = self, let file = item.itemFile else {
                         return
@@ -256,30 +314,229 @@ public class StickerPickerScreen: ViewController {
                     strongSelf.controller?.completion(file)
                     strongSelf.controller?.dismiss(animated: true)
                 },
-                deleteBackwards: {},
-                openStickerSettings: {
-//                    guard let controllerInteraction = controllerInteraction else {
-//                        return
-//                    }
-//                    let controller = installedStickerPacksController(context: context, mode: .modal)
-//                    controller.navigationPresentation = .modal
-//                    controllerInteraction.navigationController()?.pushViewController(controller)
-                },
+                deleteBackwards: nil,
+                openStickerSettings: nil,
                 openFeatured: {
-//                    guard let controllerInteraction = controllerInteraction else {
-//                        return
-//                    }
-//
-//                    controllerInteraction.navigationController()?.pushViewController(FeaturedStickersScreen(
-//                        context: context,
-//                        highlightedPackId: nil,
-//                        sendSticker: { [weak controllerInteraction] fileReference, sourceNode, sourceRect in
-//                            guard let controllerInteraction = controllerInteraction else {
-//                                return false
-//                            }
-//                            return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
-//                        }
-//                    ))
+                },
+                openSearch: {},
+                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                    guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
+                        return
+                    }
+                    let context = controller.context
+                    
+                    if isPremiumLocked {
+//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
+//                        controllerInteraction.navigationController()?.pushViewController(controller)
+                        
+                        return
+                    }
+                    
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            if featuredStickerPack.info.id == collectionId {
+                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
+                                |> mapToSignal { result -> Signal<Void, NoError> in
+                                    switch result {
+                                    case let .result(info, items, installed):
+                                        if installed {
+                                            return .complete()
+                                        } else {
+                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                        }
+                                    case .fetching:
+                                        break
+                                    case .none:
+                                        break
+                                    }
+                                    return .complete()
+                                }
+                                |> deliverOnMainQueue).start(completed: {
+                                })
+                                
+                                break
+                            }
+                        }
+                    })
+                },
+                clearGroup: { [weak self] groupId in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    if groupId == AnyHashable("popular") {
+                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
+                        let context = controller.context
+                        items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
+                            let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    }
+                },
+                pushController: { c in },
+                presentController: { c in },
+                presentGlobalOverlayController: { c in },
+                navigationController: { [weak self] in
+                    return self?.controller?.navigationController as? NavigationController
+                },
+                requestUpdate: { _ in },
+                updateSearchQuery: { _, _ in },
+                chatPeerId: nil,
+                peekBehavior: nil,
+                customLayout: nil,
+                externalBackground: nil,
+                externalExpansionView: nil,
+                useOpaqueTheme: false
+            )
+            
+            content.masks?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+                performItemAction: { [weak self] _, item, _, _, _, _ in
+                    guard let strongSelf = self, let file = item.itemFile else {
+                        return
+                    }
+                    strongSelf.controller?.completion(file)
+                    strongSelf.controller?.dismiss(animated: true)
+                },
+                deleteBackwards: nil,
+                openStickerSettings: nil,
+                openFeatured: {
+                },
+                openSearch: {},
+                addGroupAction: { [weak self] groupId, isPremiumLocked in
+                    guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
+                        return
+                    }
+                    let context = controller.context
+                    
+                    if isPremiumLocked {
+//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
+//                        controllerInteraction.navigationController()?.pushViewController(controller)
+                        
+                        return
+                    }
+                    
+                    let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                    let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { views in
+                        guard let view = views.views[viewKey] as? OrderedItemListView else {
+                            return
+                        }
+                        for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                            if featuredStickerPack.info.id == collectionId {
+                                let _ = (context.engine.stickers.loadedStickerPack(reference: .id(id: featuredStickerPack.info.id.id, accessHash: featuredStickerPack.info.accessHash), forceActualized: false)
+                                |> mapToSignal { result -> Signal<Void, NoError> in
+                                    switch result {
+                                    case let .result(info, items, installed):
+                                        if installed {
+                                            return .complete()
+                                        } else {
+                                            return context.engine.stickers.addStickerPackInteractively(info: info, items: items)
+                                        }
+                                    case .fetching:
+                                        break
+                                    case .none:
+                                        break
+                                    }
+                                    return .complete()
+                                }
+                                |> deliverOnMainQueue).start(completed: {
+                                })
+                                
+                                break
+                            }
+                        }
+                    })
+                },
+                clearGroup: { [weak self] groupId in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    if groupId == AnyHashable("popular") {
+                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
+                        var items: [ActionSheetItem] = []
+                        let context = controller.context
+                        items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                            guard let strongSelf = self else {
+                                return
+                            }
+                            
+                            strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
+                            let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                        }))
+                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
+                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                actionSheet?.dismissAnimated()
+                            })
+                        ])])
+                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    }
+                },
+                pushController: { c in },
+                presentController: { c in },
+                presentGlobalOverlayController: { c in },
+                navigationController: { [weak self] in
+                    return self?.controller?.navigationController as? NavigationController
+                },
+                requestUpdate: { _ in },
+                updateSearchQuery: { _, _ in },
+                chatPeerId: nil,
+                peekBehavior: nil,
+                customLayout: nil,
+                externalBackground: nil,
+                externalExpansionView: nil,
+                useOpaqueTheme: false
+            )
+            
+            content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
+                performItemAction: { [weak self] _, item, _, _, _, _ in
+                    guard let strongSelf = self, let file = item.itemFile else {
+                        return
+                    }
+                    strongSelf.controller?.completion(file)
+                    strongSelf.controller?.dismiss(animated: true)
+                },
+                deleteBackwards: nil,
+                openStickerSettings: nil,
+                openFeatured: { [weak self] in
+                    guard let strongSelf = self, let controller = strongSelf.controller else {
+                        return
+                    }
+                    strongSelf.controller?.push(
+                        FeaturedStickersScreen(
+                            context: controller.context,
+                            highlightedPackId: nil,
+                            sendSticker: { _, _, _ in
+//                                guard let controllerInteraction = controllerInteraction else {
+//                                    return false
+//                                }
+                                return false
+//                                return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
+                            }
+                        )
+                    )
                 },
                 openSearch: {},
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
@@ -477,6 +734,7 @@ public class StickerPickerScreen: ViewController {
             self.controller?.updateModalStyleOverlayTransitionFactor(modalProgress, transition: transition.containedViewLayoutTransition)
             
             let clipFrame: CGRect
+            let contentFrame: CGRect
             if layout.metrics.widthClass == .compact {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.25)
                 if isLandscape {
@@ -495,6 +753,7 @@ public class StickerPickerScreen: ViewController {
                 
                 if isLandscape {
                     clipFrame = CGRect(origin: CGPoint(), size: layout.size)
+                    contentFrame = clipFrame
                 } else {
                     let coveredByModalTransition: CGFloat = 0.0
                     var containerTopInset: CGFloat = 10.0
@@ -510,6 +769,7 @@ public class StickerPickerScreen: ViewController {
                     let containerFrame = unscaledFrame.offsetBy(dx: 0.0, dy: scaledTopInset - (unscaledFrame.midY - containerScale * unscaledFrame.height / 2.0))
                     
                     clipFrame = CGRect(x: containerFrame.minX, y: containerFrame.minY, width: containerFrame.width, height: containerFrame.height)
+                    contentFrame = CGRect(x: containerFrame.minX, y: containerFrame.minY, width: containerFrame.width, height: containerFrame.height - topInset)
                 }
             } else {
                 self.dim.backgroundColor = UIColor(rgb: 0x000000, alpha: 0.4)
@@ -521,12 +781,13 @@ public class StickerPickerScreen: ViewController {
                 let minSide = min(layout.size.width, layout.size.height)
                 let containerSize = CGSize(width: min(layout.size.width - 20.0, floor(maxSide / 2.0)), height: min(layout.size.height, minSide) - verticalInset * 2.0)
                 clipFrame = CGRect(origin: CGPoint(x: floor((layout.size.width - containerSize.width) / 2.0), y: floor((layout.size.height - containerSize.height) / 2.0)), size: containerSize)
+                contentFrame = clipFrame
             }
             
             transition.setFrame(view: self.containerView, frame: clipFrame)
             transition.setFrame(view: self.scrollView, frame: CGRect(origin: CGPoint(), size: clipFrame.size), completion: nil)
                         
-            if let stickerContent = self.stickerContent {
+            if let content = self.content {
                 var stickersTransition: Transition = transition
                 if let scheduledEmojiContentAnimationHint = self.scheduledEmojiContentAnimationHint {
                     self.scheduledEmojiContentAnimationHint = nil
@@ -541,14 +802,15 @@ public class StickerPickerScreen: ViewController {
                             theme: self.theme,
                             strings: self.presentationData.strings,
                             deviceMetrics: layout.deviceMetrics,
-                            stickerContent: stickerContent,
+                            bottomInset: layout.intrinsicInsets.bottom,
+                            content: content,
                             backgroundColor: self.theme.list.itemBlocksBackgroundColor,
                             separatorColor: self.theme.list.blocksBackgroundColor
                         )
                     ),
                     environment: {},
                     forceUpdate: true,
-                    containerSize: CGSize(width: clipFrame.size.width, height: clipFrame.height)
+                    containerSize: CGSize(width: contentFrame.size.width, height: contentFrame.height)
                 )
                 contentSize.height = max(layout.size.height - navigationHeight, contentSize.height)
                 transition.setFrame(view: self.hostView, frame: CGRect(origin: CGPoint(), size: contentSize), completion: nil)
@@ -814,10 +1076,6 @@ public class StickerPickerScreen: ViewController {
     
     required public init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
-    }
-    
-    @objc private func cancelPressed() {
-        self.dismiss(animated: true, completion: nil)
     }
     
     override open func loadDisplayNode() {

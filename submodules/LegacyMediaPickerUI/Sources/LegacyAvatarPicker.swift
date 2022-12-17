@@ -53,7 +53,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
 }
 
 
-public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference, transitionView: UIView?, present: @escaping (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments) -> Void) {
+public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference, transitionView: UIView?, senderName: String? = nil, present: @escaping (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments) -> Void) {
     let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
@@ -93,7 +93,7 @@ public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, image: image, video: url, stickersContext: paintStickersContext, transitionView: transitionView, didFinishWithImage: { image in
+        TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, image: image, video: url, stickersContext: paintStickersContext, transitionView: transitionView, senderName: senderName, didFinishWithImage: { image in
             if let image = image {
                 imageCompletion(image)
             }

@@ -15,6 +15,7 @@ import ComponentDisplayAdapters
 import LottieAnimationComponent
 import ViewControllerComponent
 import ContextUI
+import ChatEntityKeyboardInputNode
 
 enum DrawingToolState: Equatable {
     enum Key: CaseIterable {
@@ -279,10 +280,10 @@ struct DrawingState: Equatable {
         return DrawingState(
             selectedTool: .pen,
             tools: [
-                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xe22400), size: 0.25, mode: .round)),
-                .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xfee21b), size: 0.5, mode: .round)),
-                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.5, mode: .round)),
-                .pencil(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x2570f0), size: 0.5, mode: .round)),
+                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xe22400), size: 0.2, mode: .round)),
+                .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xfee21b), size: 0.75, mode: .round)),
+                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.4, mode: .round)),
+                .pencil(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x2570f0), size: 0.3, mode: .round)),
                 .lasso,
                 .eraser(DrawingToolState.EraserState(size: 0.5, mode: .bitmap))
             ]
@@ -308,6 +309,7 @@ enum DrawingScreenTransition {
 }
 
 private let undoButtonTag = GenericComponentViewTag()
+private let redoButtonTag = GenericComponentViewTag()
 private let clearAllButtonTag = GenericComponentViewTag()
 private let colorButtonTag = GenericComponentViewTag()
 private let addButtonTag = GenericComponentViewTag()
@@ -699,7 +701,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         }
         
         func addTextEntity() {
-            let textEntity = DrawingTextEntity(text: "", style: .regular, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: self.currentColor)
+            let textEntity = DrawingTextEntity(text: NSAttributedString(), style: .regular, font: .sanFrancisco, alignment: .center, fontSize: 1.0, color: DrawingColor(color: .white))
             self.insertEntity.invoke(textEntity)
         }
         
@@ -811,6 +813,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         style: DrawingTextStyle(style: textEntity.style),
                         alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                         font: DrawingTextFont(font: textEntity.font),
+                        isEmojiKeyboard: false,
                         toggleStyle: { [weak state, weak textEntity] in
                             guard let textEntity = textEntity else {
                                 return
@@ -860,7 +863,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 entityView.update()
                             }
                             state?.updated(transition: .easeInOut(duration: 0.2))
-                        }
+                        },
+                        toggleKeyboard: nil
                     ),
                     availableSize: CGSize(width: context.availableSize.width - 84.0, height: 44.0),
                     transition: context.transition
@@ -1200,7 +1204,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             action: {
                                 performAction.invoke(.redo)
                             }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)),
+                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
                         availableSize: CGSize(width: 24.0, height: 24.0),
                         transition: context.transition
                     )
@@ -1368,37 +1372,40 @@ private final class DrawingScreenComponent: CombinedComponent {
                         image = nil
                     }
                     
-                    let brushModeButton = brushModeButton.update(
-                        component: Button(
-                            content: AnyComponent(
-                                BrushButtonContent(
-                                    title: title,
-                                    image: image ?? UIImage()
-                                )
-                            ),
-                            action: { [weak state] in
-                                guard let controller = controller() as? DrawingScreen else {
-                                    return
-                                }
-                                if let buttonView = controller.node.componentHost.findTaggedView(tag: brushModeButtonTag) as? Button.View {
-                                    if isEraser {
-                                        state?.presentEraserModePicker(buttonView)
-                                    } else {
-                                        state?.presentBrushModePicker(buttonView)
+                    if [.pen, .eraser].contains(state.drawingState.selectedTool) {
+                        let brushModeButton = brushModeButton.update(
+                            component: Button(
+                                content: AnyComponent(
+                                    BrushButtonContent(
+                                        title: title,
+                                        image: image ?? UIImage()
+                                    )
+                                ),
+                                action: { [weak state] in
+                                    guard let controller = controller() as? DrawingScreen else {
+                                        return
+                                    }
+                                    if let buttonView = controller.node.componentHost.findTaggedView(tag: brushModeButtonTag) as? Button.View {
+                                        if isEraser {
+                                            state?.presentEraserModePicker(buttonView)
+                                        } else {
+                                            state?.presentBrushModePicker(buttonView)
+                                        }
                                     }
                                 }
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(brushModeButtonTag),
-                        availableSize: CGSize(width: 75.0, height: 33.0),
-                        transition: .immediate
-                    )
-                    context.add(brushModeButton
-                        .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - brushModeButton.size.width / 2.0 - 5.0, y: context.availableSize.height - environment.safeInsets.bottom - brushModeButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                        .appear(.default(alpha: true))
-                        .disappear(.default(alpha: true))
-                    )
-                    
-                    modeRightInset += 35.0
+                            ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(brushModeButtonTag),
+                            availableSize: CGSize(width: 75.0, height: 33.0),
+                            transition: .immediate
+                        )
+                        context.add(brushModeButton
+                            .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - brushModeButton.size.width / 2.0 - 5.0, y: context.availableSize.height - environment.safeInsets.bottom - brushModeButton.size.height / 2.0 - 2.0 - UIScreenPixel))
+                            .appear(.default(alpha: true))
+                            .disappear(.default(alpha: true))
+                        )
+                        modeRightInset += 35.0
+                    } else {
+                        modeRightInset = 16.0
+                    }
                 } else {
                     var isFilled = false
                     if let entity = state.selectedEntity as? DrawingSimpleShapeEntity, case .fill = entity.drawType {
@@ -1662,7 +1669,7 @@ private final class DrawingScreenComponent: CombinedComponent {
 }
 
 public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
-    fileprivate final class Node: ViewControllerTracingNode, FPSCounterDelegate {
+    fileprivate final class Node: ViewControllerTracingNode {
         private weak var controller: DrawingScreen?
         private let context: AccountContext
         private let updateState: ActionSlot<DrawingView.NavigationState>
@@ -1685,10 +1692,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private var presentationData: PresentationData
         private let hapticFeedback = HapticFeedback()
         private var validLayout: ContainerViewLayout?
-        
-        private let fpsCounter = FPSCounter()
-        private var fpsLabel: UILabel?
-        
+                
         private var _drawingView: DrawingView?
         var drawingView: DrawingView {
             if self._drawingView == nil, let controller = self.controller {
@@ -1741,7 +1745,26 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 }
                 self.performAction.connect { [weak self] action in
                     if let strongSelf = self {
-                        strongSelf._drawingView?.performAction(action)
+                        if action == .clear {
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                            actionSheet.setItemGroups([
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Paint_ClearConfirm, color: .destructive, action: { [weak actionSheet, weak self] in
+                                        actionSheet?.dismissAnimated()
+
+                                        self?._drawingView?.performAction(action)
+                                    })
+                                ]),
+                                ActionSheetItemGroup(items: [
+                                    ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                        actionSheet?.dismissAnimated()
+                                    })
+                                ])
+                            ])
+                            strongSelf.controller?.present(actionSheet, in: .window(.root))
+                        } else {
+                            strongSelf._drawingView?.performAction(action)
+                        }
                     }
                 }
                 self.updateToolState.connect { [weak self] state in
@@ -1762,7 +1785,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         private var _entitiesView: DrawingEntitiesView?
         var entitiesView: DrawingEntitiesView {
             if self._entitiesView == nil, let controller = self.controller {
-                self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size, entities: [])
+                self._entitiesView = DrawingEntitiesView(context: self.context, size: controller.size)
                 self._drawingView?.entitiesView = self._entitiesView
                 let entitiesLayer = self.entitiesView.layer
                 self._drawingView?.getFullImage = { [weak self, weak entitiesLayer] withDrawing in
@@ -1917,10 +1940,33 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             super.init()
             
             self.apply.connect { [weak self] _ in
-                self?.controller?.requestApply()
+                if let strongSelf = self {
+                    strongSelf.controller?.requestApply()
+                }
             }
             self.dismiss.connect { [weak self] _ in
-                self?.controller?.requestDismiss()
+                if let strongSelf = self {
+                    if !strongSelf.drawingView.isEmpty {
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        actionSheet.setItemGroups([
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.PhotoEditor_DiscardChanges, color: .accent, action: { [weak actionSheet, weak self] in
+                                    actionSheet?.dismissAnimated()
+
+                                    self?.controller?.requestDismiss()
+                                })
+                            ]),
+                            ActionSheetItemGroup(items: [
+                                ActionSheetButtonItem(title: strongSelf.presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                                    actionSheet?.dismissAnimated()
+                                })
+                            ])
+                        ])
+                        strongSelf.controller?.present(actionSheet, in: .window(.root))
+                    } else {
+                        strongSelf.controller?.requestDismiss()
+                    }
+                }
             }
         }
         
@@ -1929,23 +1975,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             
             self.view.disablesInteractiveKeyboardGestureRecognizer = true
             self.view.disablesInteractiveTransitionGestureRecognizer = true
-            
-            if self.fpsLabel == nil {
-                let fpsLabel = UILabel(frame: CGRect(origin: CGPoint(x: 30.0, y: 10.0), size: CGSize(width: 120.0, height: 44.0)))
-                fpsLabel.alpha = 0.1
-                fpsLabel.textColor = .white
-//                self.view.addSubview(fpsLabel)
-                self.fpsLabel = fpsLabel
+        }
                 
-                self.fpsCounter.delegate = self
-                self.fpsCounter.startTracking()
-            }
-        }
-        
-        func fpsCounter(_ counter: FPSCounter, didUpdateFramesPerSecond fps: Int) {
-            self.fpsLabel?.text = "\(fps)"
-        }
-        
         func presentEyedropper(dismissed: @escaping () -> Void) {
             guard let controller = self.controller else {
                 return
@@ -2060,6 +2091,11 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             
             if let buttonView = self.componentHost.findTaggedView(tag: undoButtonTag) {
+                buttonView.alpha = 0.0
+                buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+            }
+            if let buttonView = self.componentHost.findTaggedView(tag: redoButtonTag), buttonView.alpha > 0.0 {
                 buttonView.alpha = 0.0
                 buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
@@ -2190,6 +2226,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                             style: DrawingTextStyle(style: textEntity.style),
                             alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                             font: DrawingTextFont(font: textEntity.font),
+                            isEmojiKeyboard: entityView.textView.inputView != nil,
                             presentColorPicker: { [weak self] in
                                 guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                                     return
@@ -2262,6 +2299,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                 if let layout = strongSelf.validLayout {
                                     strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
                                 }
+                            },
+                            toggleKeyboard: { [weak self] in
+                                guard let strongSelf = self else {
+                                    return
+                                }
+                                strongSelf.toggleInputMode()
                             }
                         )
                     ),
@@ -2280,6 +2323,58 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 }
             }
         }
+        
+        private func toggleInputMode() {
+            guard let entityView = self.entitiesView.selectedEntityView as? DrawingTextEntityView else {
+                return
+            }
+            
+            let textView = entityView.textView
+            var shouldHaveInputView = false
+            if textView.isFirstResponder {
+                if textView.inputView == nil {
+                    shouldHaveInputView = true
+                }
+            } else {
+                shouldHaveInputView = true
+            }
+            
+            if shouldHaveInputView {
+                let inputView = EntityInputView(context: self.context, isDark: true, areCustomEmojiEnabled: true)
+                inputView.insertText = { [weak entityView] text in
+                    entityView?.insertText(text)
+                }
+                inputView.deleteBackwards = { [weak textView] in
+                    textView?.deleteBackward()
+                }
+                inputView.switchToKeyboard = { [weak self] in
+                    guard let strongSelf = self else {
+                        return
+                    }
+                    strongSelf.toggleInputMode()
+                }
+//                inputView?.presentController = { [weak self] c in
+//                    guard let strongSelf = self else {
+//                        return
+//                    }
+//                    strongSelf.presentController(c)
+//                }
+                
+                textView.inputView = inputView
+            } else {
+                textView.inputView = nil
+            }
+            
+            if textView.isFirstResponder {
+                textView.reloadInputViews()
+            } else {
+                textView.becomeFirstResponder()
+            }
+            
+            if let layout = self.validLayout {
+                self.containerLayoutUpdated(layout: layout, animateOut: false, transition: .immediate)
+            }
+        }
     }
     
     fileprivate var node: Node {
@@ -2288,14 +2383,16 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     
     private let context: AccountContext
     private let size: CGSize
+    private let originalSize: CGSize
     
     public var requestDismiss: (() -> Void)!
     public var requestApply: (() -> Void)!
     public var getCurrentImage: (() -> UIImage?)!
     
-    public init(context: AccountContext, size: CGSize) {
+    public init(context: AccountContext, size: CGSize, originalSize: CGSize) {
         self.context = context
         self.size = size
+        self.originalSize = originalSize
         
         super.init(navigationBarPresentationData: nil)
         
@@ -2342,36 +2439,36 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }, opaque: false, scale: 1.0)
         
         var hasAnimatedEntities = false
-        var legacyEntities: [TGPhotoPaintEntity] = []
     
         for entity in self.entitiesView.entities {
             if entity.isAnimated {
                 hasAnimatedEntities = true
+                break
             }
-            if let entity = entity as? DrawingStickerEntity {
-                let coder = PostboxEncoder()
-                coder.encodeRootObject(entity.file)
-                
-                let baseSize = max(10.0, min(entity.referenceDrawingSize.width, entity.referenceDrawingSize.height) * 0.38)
-                if let stickerEntity = TGPhotoPaintStickerEntity(document: coder.makeData(), baseSize: CGSize(width: baseSize, height: baseSize), animated: entity.isAnimated) {
-                    stickerEntity.position = entity.position
-                    stickerEntity.scale = entity.scale
-                    stickerEntity.angle = entity.rotation
-                    legacyEntities.append(stickerEntity)
-                }
-            } else if let entity = entity as? DrawingTextEntity, let view = self.entitiesView.getView(for: entity.uuid) as? DrawingTextEntityView {
-                let textEntity = TGPhotoPaintStaticEntity()
-                textEntity.position = entity.position
-                textEntity.angle = entity.rotation
-                textEntity.renderImage = view.getRenderImage()
-                legacyEntities.append(textEntity)
-            } else if let _ = entity as? DrawingSimpleShapeEntity {
-                
-            } else if let _ = entity as? DrawingBubbleEntity {
-                
-            } else if let _ = entity as? DrawingVectorEntity {
-                
-            }
+//            if let entity = entity as? DrawingStickerEntity {
+//                let coder = PostboxEncoder()
+//                coder.encodeRootObject(entity.file)
+//
+//                let baseSize = max(10.0, min(entity.referenceDrawingSize.width, entity.referenceDrawingSize.height) * 0.38)
+//                if let stickerEntity = TGPhotoPaintStickerEntity(document: coder.makeData(), baseSize: CGSize(width: baseSize, height: baseSize), animated: entity.isAnimated) {
+//                    stickerEntity.position = entity.position
+//                    stickerEntity.scale = entity.scale
+//                    stickerEntity.angle = entity.rotation
+//                    legacyEntities.append(stickerEntity)
+//                }
+//            } else if let entity = entity as? DrawingTextEntity, let view = self.entitiesView.getView(for: entity.uuid) as? DrawingTextEntityView {
+//                let textEntity = TGPhotoPaintStaticEntity()
+//                textEntity.position = entity.position
+//                textEntity.angle = entity.rotation
+//                textEntity.renderImage = view.getRenderImage()
+//                legacyEntities.append(textEntity)
+//            } else if let _ = entity as? DrawingSimpleShapeEntity {
+//
+//            } else if let _ = entity as? DrawingBubbleEntity {
+//
+//            } else if let _ = entity as? DrawingVectorEntity {
+//
+//            }
         }
             
         let finalImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
@@ -2396,7 +2493,8 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             image = finalImage
         }
         
-        return TGPaintingData(painting: nil, image: image, stillImage: stillImage, entities: legacyEntities, undoManager: nil)
+        return TGPaintingData(drawing: nil, entitiesData: self.entitiesView.entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities)
+//        return TGPaintingData(painting: nil, image: image, stillImage: stillImage, entities: legacyEntities, undoManager: nil)
     }
     
     public func resultImage() -> UIImage! {

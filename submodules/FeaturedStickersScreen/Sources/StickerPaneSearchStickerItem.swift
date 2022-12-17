@@ -10,6 +10,7 @@ import StickerResources
 import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ChatPresentationInterfaceState
 
 final class StickerPaneSearchStickerSection: GridSection {
     let code: String
@@ -65,16 +66,16 @@ final class StickerPaneSearchStickerSectionNode: ASDisplayNode {
     }
 }
 
-final class StickerPaneSearchStickerItem: GridItem {
-    let account: Account
-    let code: String?
-    let stickerItem: FoundStickerItem
-    let selected: (ASDisplayNode, CGRect) -> Void
-    let inputNodeInteraction: ChatMediaInputNodeInteraction
+public final class StickerPaneSearchStickerItem: GridItem {
+    public let account: Account
+    public let code: String?
+    public let stickerItem: FoundStickerItem
+    public let selected: (ASDisplayNode, CGRect) -> Void
+    public let inputNodeInteraction: ChatMediaInputNodeInteraction
     
-    let section: GridSection?
+    public let section: GridSection?
     
-    init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
+    public init(account: Account, code: String?, stickerItem: FoundStickerItem, inputNodeInteraction: ChatMediaInputNodeInteraction, theme: PresentationTheme, selected: @escaping (ASDisplayNode, CGRect) -> Void) {
         self.account = account
         self.stickerItem = stickerItem
         self.inputNodeInteraction = inputNodeInteraction
@@ -83,7 +84,7 @@ final class StickerPaneSearchStickerItem: GridItem {
         self.section = nil
     }
     
-    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
+    public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchStickerItemNode()
         node.inputNodeInteraction = self.inputNodeInteraction
         node.setup(account: self.account, stickerItem: self.stickerItem, code: self.code)
@@ -91,7 +92,7 @@ final class StickerPaneSearchStickerItem: GridItem {
         return node
     }
     
-    func update(node: GridItemNode) {
+    public func update(node: GridItemNode) {
         guard let node = node as? StickerPaneSearchStickerItemNode else {
             assertionFailure()
             return
@@ -104,17 +105,17 @@ final class StickerPaneSearchStickerItem: GridItem {
 
 private let textFont = Font.regular(20.0)
 
-final class StickerPaneSearchStickerItemNode: GridItemNode {
+public final class StickerPaneSearchStickerItemNode: GridItemNode {
     private var currentState: (Account, FoundStickerItem, CGSize)?
-    let imageNode: TransformImageNode
-    private(set) var animationNode: AnimatedStickerNode?
+    public let imageNode: TransformImageNode
+    public private(set) var animationNode: AnimatedStickerNode?
     private let textNode: ASTextNode
     
     private let stickerFetchedDisposable = MetaDisposable()
     
-    var currentIsPreviewing = false
+    public var currentIsPreviewing = false
     
-    override var isVisibleInGrid: Bool {
+    public override var isVisibleInGrid: Bool {
         didSet {
             self.updateVisibility()
         }
@@ -122,14 +123,14 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
     
     private var isPlaying = false
     
-    var inputNodeInteraction: ChatMediaInputNodeInteraction?
-    var selected: ((ASDisplayNode, CGRect) -> Void)?
+    public var inputNodeInteraction: ChatMediaInputNodeInteraction?
+    public var selected: ((ASDisplayNode, CGRect) -> Void)?
     
-    var stickerItem: FoundStickerItem? {
+    public var stickerItem: FoundStickerItem? {
         return self.currentState?.1
     }
     
-    override init() {
+    public override init() {
         self.imageNode = TransformImageNode()
         self.textNode = ASTextNode()
         self.textNode.isUserInteractionEnabled = false
@@ -145,7 +146,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         self.stickerFetchedDisposable.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.imageNode.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.imageNodeTap(_:))))
@@ -184,7 +185,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         }
     }
     
-    override func layout() {
+    public override func layout() {
         super.layout()
         
         let bounds = self.bounds
@@ -211,11 +212,11 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         self.selected?(self, self.bounds)
     }
     
-    func transitionNode() -> ASDisplayNode? {
+    public func transitionNode() -> ASDisplayNode? {
         return self.imageNode
     }
     
-    func updateVisibility() {
+    public func updateVisibility() {
         let isPlaying = self.isVisibleInGrid
         if self.isPlaying != isPlaying {
             self.isPlaying = isPlaying
@@ -223,7 +224,7 @@ final class StickerPaneSearchStickerItemNode: GridItemNode {
         }
     }
     
-    func updatePreviewing(animated: Bool) {
+    public func updatePreviewing(animated: Bool) {
         var isPreviewing = false
         if let (_, item, _) = self.currentState, let interaction = self.inputNodeInteraction {
             isPreviewing = interaction.previewedStickerPackItem == .found(item)

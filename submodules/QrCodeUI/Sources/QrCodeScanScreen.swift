@@ -152,13 +152,8 @@ public final class QrCodeScanScreen: ViewController {
     }
     
     @objc private func cancelPressed() {
-        guard let layout = self.validLayout else {
-            return
-        }
         self.completion(nil)
-        self.controllerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: layout.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
-            self.dismiss()
-        })
+        self.dismissAnimated()
     }
     
     @objc private func myCodePressed() {
@@ -210,12 +205,20 @@ public final class QrCodeScanScreen: ViewController {
         }
     }
     
+    public func dismissAnimated() {
+        guard let layout = self.validLayout else {
+            return
+        }
+        self.controllerNode.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: layout.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+            self.dismiss()
+        })
+    }
+    
     private func completeWithCode(_ code: String) {
         guard case .custom = self.subject else {
             return
         }
         self.completion(code)
-        self.dismiss()
     }
     
     override public func loadDisplayNode() {

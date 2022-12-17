@@ -17,6 +17,9 @@ import UndoUI
 import SegmentedControlNode
 import LegacyComponents
 import ChatPresentationInterfaceState
+import FeaturedStickersScreen
+import ChatControllerInteraction
+import ChatEntityKeyboardInputNode
 
 private enum DrawingPaneType {
     case stickers

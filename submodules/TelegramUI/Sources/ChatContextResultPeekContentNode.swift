@@ -10,6 +10,7 @@ import PhotoResources
 import AppBundle
 import ContextUI
 import SoftwareVideo
+import MultiplexedVideoNode
 
 final class ChatContextResultPeekContent: PeekControllerContent {
     let account: Account

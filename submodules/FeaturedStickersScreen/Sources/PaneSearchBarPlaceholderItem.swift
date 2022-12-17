@@ -11,35 +11,35 @@ private func generateLoupeIcon(color: UIColor) -> UIImage? {
     return generateTintedImage(image: templateLoupeIcon, color: color)
 }
 
-enum PaneSearchBarType {
+public enum PaneSearchBarType {
     case stickers
     case gifs
 }
 
-final class PaneSearchBarPlaceholderItem: GridItem {
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let type: PaneSearchBarType
-    let activate: () -> Void
+public final class PaneSearchBarPlaceholderItem: GridItem {
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let type: PaneSearchBarType
+    public let activate: () -> Void
     
-    let section: GridSection? = nil
-    let fillsRowWithHeight: (CGFloat, Bool)? = (56.0, true)
+    public let section: GridSection? = nil
+    public let fillsRowWithHeight: (CGFloat, Bool)? = (56.0, true)
     
-    init(theme: PresentationTheme, strings: PresentationStrings, type: PaneSearchBarType, activate: @escaping () -> Void) {
+    public init(theme: PresentationTheme, strings: PresentationStrings, type: PaneSearchBarType, activate: @escaping () -> Void) {
         self.theme = theme
         self.strings = strings
         self.type = type
         self.activate = activate
     }
     
-    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
+    public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = PaneSearchBarPlaceholderNode()
         node.activate = self.activate
         node.setup(theme: self.theme, strings: self.strings, type: self.type)
         return node
     }
     
-    func update(node: GridItemNode) {
+    public func update(node: GridItemNode) {
         guard let node = node as? PaneSearchBarPlaceholderNode else {
             assertionFailure()
             return
@@ -49,15 +49,15 @@ final class PaneSearchBarPlaceholderItem: GridItem {
     }
 }
 
-final class PaneSearchBarPlaceholderNode: GridItemNode {
+public final class PaneSearchBarPlaceholderNode: GridItemNode {
     private var currentState: (PresentationTheme, PresentationStrings, PaneSearchBarType)?
-    var activate: (() -> Void)?
+    public var activate: (() -> Void)?
     
-    let backgroundNode: ASImageNode
-    let labelNode: ImmediateTextNode
-    let iconNode: ASImageNode
+    public let backgroundNode: ASImageNode
+    public let labelNode: ImmediateTextNode
+    public let iconNode: ASImageNode
     
-    override init() {
+    public override init() {
         self.backgroundNode = ASImageNode()
         self.backgroundNode.displaysAsynchronously = false
         self.backgroundNode.displayWithoutProcessing = true
@@ -82,13 +82,13 @@ final class PaneSearchBarPlaceholderNode: GridItemNode {
         self.addSubnode(self.iconNode)
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
-    func setup(theme: PresentationTheme, strings: PresentationStrings, type: PaneSearchBarType) {
+    public func setup(theme: PresentationTheme, strings: PresentationStrings, type: PaneSearchBarType) {
         if self.currentState?.0 !== theme || self.currentState?.1 !== strings || self.currentState?.2 != type {
             self.backgroundNode.image = generateStretchableFilledCircleImage(diameter: 36.0, color: theme.chat.inputMediaPanel.stickersSearchBackgroundColor)
             self.iconNode.image = generateLoupeIcon(color: theme.chat.inputMediaPanel.stickersSearchControlColor)
@@ -105,7 +105,7 @@ final class PaneSearchBarPlaceholderNode: GridItemNode {
         }
     }
     
-    override func layout() {
+    public override func layout() {
         super.layout()
         
         let bounds = self.bounds

@@ -8,7 +8,18 @@ import TelegramAnimatedStickerNode
 import StickerResources
 import AccountContext
 
-final class DrawingStickerEntity: DrawingEntity {
+final class DrawingStickerEntity: DrawingEntity, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case isAnimated
+        case file
+        case referenceDrawingSize
+        case position
+        case scale
+        case rotation
+        case mirrored
+    }
+    
     let uuid: UUID
     let isAnimated: Bool
     let file: TelegramMediaFile
@@ -21,6 +32,10 @@ final class DrawingStickerEntity: DrawingEntity {
     
     var color: DrawingColor = DrawingColor.clear
     var lineWidth: CGFloat = 0.0
+    
+    var center: CGPoint {
+        return self.position
+    }
     
     init(file: TelegramMediaFile) {
         self.uuid = UUID()
@@ -35,10 +50,30 @@ final class DrawingStickerEntity: DrawingEntity {
         self.mirrored = false
     }
     
-    var center: CGPoint {
-        return self.position
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.isAnimated = try container.decode(Bool.self, forKey: .isAnimated)
+        self.file = try container.decode(TelegramMediaFile.self, forKey: .file)
+        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
+        self.position = try container.decode(CGPoint.self, forKey: .position)
+        self.scale = try container.decode(CGFloat.self, forKey: .scale)
+        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
     }
     
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.isAnimated, forKey: .isAnimated)
+        try container.encode(self.file, forKey: .file)
+        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
+        try container.encode(self.position, forKey: .position)
+        try container.encode(self.scale, forKey: .scale)
+        try container.encode(self.rotation, forKey: .rotation)
+        try container.encode(self.mirrored, forKey: .mirrored)
+    }
+        
     func duplicate() -> DrawingEntity {
         let newEntity = DrawingStickerEntity(file: self.file)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
@@ -102,7 +137,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
     
     private func setup() {
         if let dimensions = self.file.dimensions {
-            if self.file.isAnimatedSticker || self.file.isVideoSticker {
+            if self.file.isAnimatedSticker || self.file.isVideoSticker || self.file.mimeType == "video/webm" {
                 if self.animationNode == nil {
                     let animationNode = DefaultAnimatedStickerNodeImpl()
                     animationNode.autoplay = false
@@ -176,7 +211,7 @@ final class DrawingStickerEntityView: DrawingEntityView {
                 self.didSetUpAnimationNode = true
                 let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
                 let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384.0, height: 384.0))
-                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource, isVideo: self.file.isVideoSticker)
+                let source = AnimatedStickerResourceSource(account: self.context.account, resource: self.file.resource, isVideo: self.file.isVideoSticker || self.file.mimeType == "video/webm")
                 self.animationNode?.setup(source: source, width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
             
                 self.cachedDisposable.set((source.cachedDataPath(width: 384, height: 384)

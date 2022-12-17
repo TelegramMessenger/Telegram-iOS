@@ -432,16 +432,7 @@ public func legacyEnqueueWebSearchMessages(_ selectionState: TGMediaSelectionCon
         for result in results {
             let editableItem = LegacyWebSearchItem(result: result)
             if let adjustments = editingState.adjustments(for: editableItem) {
-                var animated = false
-                if let entities = adjustments.paintingData?.entities {
-                    for entity in entities {
-                        if let paintEntity = entity as? TGPhotoPaintEntity, paintEntity.animated {
-                            animated = true
-                            break
-                        }
-                    }
-                }
- 
+                let animated = adjustments.paintingData?.hasAnimation ?? false
                 if let imageSignal = editingState.imageSignal(for: editableItem) {
                     let signal = imageSignal.map { image -> Any in
                         if let image = image as? UIImage {

@@ -13,6 +13,7 @@ import ChatPresentationInterfaceState
 import AnimationCache
 import MultiAnimationRenderer
 import TextFormat
+import ChatControllerInteraction
 
 private enum EmojisChatInputContextPanelEntryStableId: Hashable, Equatable {
     case symbol(String)

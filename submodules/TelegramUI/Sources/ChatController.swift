@@ -86,6 +86,9 @@ import EmojiStatusComponent
 import ChatTimerScreen
 import MediaPasteboardUI
 import ChatListHeaderComponent
+import ChatControllerInteraction
+import FeaturedStickersScreen
+import ChatEntityKeyboardInputNode
 
 #if DEBUG
 import os.signpost
@@ -833,18 +836,25 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                     }
                                     let transitionView = selectedNode?.0.view
                                     
-                                    legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, present: { [weak self] c, a in
+                                    let senderName: String?
+                                    if let peer = message.peers[message.id.peerId] {
+                                        senderName = EnginePeer(peer).compactDisplayTitle
+                                    } else {
+                                        senderName = nil
+                                    }
+                                    
+                                    legacyAvatarEditor(context: strongSelf.context, media: .message(message: MessageReference(message), media: image), transitionView: transitionView, senderName: senderName, present: { [weak self] c, a in
                                         self?.present(c, in: .window(.root), with: a)
                                     }, imageCompletion: { [weak self] image in
                                         if let strongSelf = self {
                                             if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                settingsController.updateProfilePhoto(image)
+                                                settingsController.updateProfilePhoto(image, mode: .accept)
                                             }
                                         }
                                     }, videoCompletion: { [weak self] image, url, adjustments in
                                         if let strongSelf = self {
                                             if let rootController = strongSelf.effectiveNavigationController as? TelegramRootController, let settingsController = rootController.accountSettingsController as? PeerInfoScreenImpl {
-                                                settingsController.updateProfileVideo(image, asset: AVURLAsset(url: url), adjustments: adjustments)
+                                                settingsController.updateProfileVideo(image, mode: .accept, asset: AVURLAsset(url: url), adjustments: adjustments)
                                             }
                                         }
                                     })
@@ -12277,10 +12287,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                                         |> take(1)
                                         |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
                                             var stableId: String?
-                                            let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                                            let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
                                             outer: for (id, data) in basicData {
                                                 for phoneNumber in data.phoneNumbers {
-                                                    if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                                    if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
                                                         stableId = id
                                                         break outer
                                                     }
@@ -13199,10 +13209,10 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
                             |> take(1)
                             |> mapToSignal { basicData -> Signal<(Peer?,  DeviceContactExtendedData?), NoError> in
                                 var stableId: String?
-                                let queryPhoneNumber = formatPhoneNumber(phoneNumber)
+                                let queryPhoneNumber = formatPhoneNumber(context: context, number: phoneNumber)
                                 outer: for (id, data) in basicData {
                                     for phoneNumber in data.phoneNumbers {
-                                        if formatPhoneNumber(phoneNumber.value) == queryPhoneNumber {
+                                        if formatPhoneNumber(context: context, number: phoneNumber.value) == queryPhoneNumber {
                                             stableId = id
                                             break outer
                                         }
