@@ -531,7 +531,9 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
         }
         let range = NSMakeRange(0, text.length)
         let fontSize = self.displayFontSize
-                        
+    
+        self.textView.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(fontSize * 0.24)
+    
         let font: UIFont
         switch self.textEntity.font {
         case .sanFrancisco:
@@ -1106,21 +1108,7 @@ class DrawingTextView: UITextView {
             self.setNeedsDisplay()
         }
     }
-    
-    override var font: UIFont? {
-        get {
-            return super.font
-        }
-        set {
-            super.font = newValue
-            if let font = newValue {
-                self.drawingLayoutManager.textContainers.first?.lineFragmentPadding = floor(font.pointSize * 0.24)
-            }
-            
-            self.fixTypingAttributes()
-        }
-    }
-    
+        
     override var textColor: UIColor? {
         get {
             return super.textColor

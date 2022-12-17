@@ -248,8 +248,11 @@ final class PenTool: DrawingElement {
         return layer
     }
     
+    var lastPoint: CGPoint?
     func updateWithLocation(_ point: CGPoint, ended: Bool = false) {
         if ended {
+            self.lastPoint = self.drawPoints[self.nextPointIndex - 1].point
+            
             if let path = tempBezierPath {
                 bezierPaths.last?.append(path)
             }
@@ -277,13 +280,13 @@ final class PenTool: DrawingElement {
                 self.updateWithLocation(point.location)
             }
         case .ended:
+            self.updateTouchPoints(point: self._points[self._points.count - 1].location, previousPoint: self._points[self._points.count - 2].location)
             self.updateWithLocation(point.location, ended: true)
             
             if self.arrow {
                 let points = self.path?.points ?? []
                 var direction: CGFloat?
                 
-
                 let p2 = points[points.count - 1].location
                 for i in 1 ..< min(points.count - 2, 12) {
                     let p1 = points[points.count - 1 - i].location
@@ -292,8 +295,8 @@ final class PenTool: DrawingElement {
                         break
                     }
                 }
-                
-                if let point = points.last?.location, let direction {
+                                
+                if let point = self.lastPoint, let direction {
                     self.arrowParams = (point, direction)
                     
                     let arrowLeftPath = UIBezierPath()

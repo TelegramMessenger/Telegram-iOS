@@ -609,7 +609,7 @@ private struct Line {
 
 final class Texture {
 #if !targetEnvironment(simulator)
-    let buffer: MTLBuffer
+    let buffer: MTLBuffer?
 #endif
     
     let width: Int
@@ -650,16 +650,17 @@ final class Texture {
             textureDescriptor.pixelFormat = .bgra8Unorm
             textureDescriptor.width = width
             textureDescriptor.height = height
-            textureDescriptor.usage = [.renderTarget]
+            textureDescriptor.usage = [.renderTarget, .shaderRead]
             textureDescriptor.storageMode = buffer.storageMode
             
             guard let texture = buffer.makeTexture(descriptor: textureDescriptor, offset: 0, bytesPerRow: bytesPerRow) else {
                 return nil
             }
 #endif
-            
             self.texture = texture
         } else {
+            self.buffer = nil
+            
             let textureDescriptor = MTLTextureDescriptor()
             textureDescriptor.textureType = .type2D
             textureDescriptor.pixelFormat = .bgra8Unorm
@@ -675,27 +676,6 @@ final class Texture {
             self.texture = texture
         }
         self.clear()
-        
-//        let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(
-        //            pixelFormat: self.pixelFormat,
-        //            width: Int(self.size.width),
-        //            height: Int(self.size.height),
-        //            mipmapped: false
-        //        )
-        //        textureDescriptor.usage = [.renderTarget, .shaderRead]
-        //        guard let texture = device?.makeTexture(descriptor: textureDescriptor) else {
-        //            return nil
-        //        }
-        //        let region = MTLRegion(
-        //            origin: MTLOrigin(x: 0, y: 0, z: 0),
-        //            size: MTLSize(width: texture.width, height: texture.height, depth: 1)
-        //        )
-        //        let bytesPerRow = 4 * texture.width
-        //        let data = Data(capacity: Int(bytesPerRow * texture.height))
-        //        if let bytes = data.withUnsafeBytes({ $0.baseAddress }) {
-        //            texture.replace(region: region, mipmapLevel: 0, withBytes: bytes, bytesPerRow: bytesPerRow)
-        //        }
-        //        return texture
     }
     
     func clear() {
@@ -710,22 +690,38 @@ final class Texture {
     }
     
     func createCGImage() -> CGImage? {
-        #if targetEnvironment(simulator)
-        guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
-            return nil
+        let dataProvider: CGDataProvider
+        if #available(iOS 12.0, *) {
+#if targetEnvironment(simulator)
+            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
+                return nil
+            }
+            data.length = self.bytesPerRow * self.height
+            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
+            
+            guard let provider = CGDataProvider(data: data as CFData) else {
+                return nil
+            }
+            dataProvider = provider
+#else
+            guard let buffer = self.buffer, let provider = CGDataProvider(data: Data(bytesNoCopy: buffer.contents(), count: buffer.length, deallocator: .custom { _, _ in
+            }) as CFData) else {
+                return nil
+            }
+            dataProvider = provider
+#endif
+        } else {
+            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
+                return nil
+            }
+            data.length = self.bytesPerRow * self.height
+            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
+            
+            guard let provider = CGDataProvider(data: data as CFData) else {
+                return nil
+            }
+            dataProvider = provider
         }
-        data.length = self.bytesPerRow * self.height
-        self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
-        
-        guard let dataProvider = CGDataProvider(data: data as CFData) else {
-            return nil
-        }
-        #else
-        guard let dataProvider = CGDataProvider(data: Data(bytesNoCopy: self.buffer.contents(), count: self.buffer.length, deallocator: .custom { _, _ in
-        }) as CFData) else {
-            return nil
-        }
-        #endif
 
         guard let image = CGImage(
             width: Int(self.width),
