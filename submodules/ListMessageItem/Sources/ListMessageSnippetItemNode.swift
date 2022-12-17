@@ -578,9 +578,9 @@ public final class ListMessageSnippetItemNode: ListMessageNode {
                     updateIconImageSignal = wallpaperThumbnail(account: item.context.account, accountManager: item.context.sharedContext.accountManager, fileReference: fileReference, wallpaper: previewWallpaper, synchronousLoad: false)
                 } else if let iconImageReferenceAndRepresentation = iconImageReferenceAndRepresentation {
                     if let imageReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaImage.self) {
-                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.context.account, photoReference: imageReference)
+                        updateIconImageSignal = chatWebpageSnippetPhoto(account: item.context.account, userLocation: (item.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, photoReference: imageReference)
                     } else if let fileReference = iconImageReferenceAndRepresentation.0.concrete(TelegramMediaFile.self) {
-                        updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, mediaReference: fileReference.abstract, representation: iconImageReferenceAndRepresentation.1)
+                        updateIconImageSignal = chatWebpageSnippetFile(account: item.context.account, userLocation: (item.message?.id.peerId).flatMap(MediaResourceUserLocation.peer) ?? .other, mediaReference: fileReference.abstract, representation: iconImageReferenceAndRepresentation.1)
                     }
                 } else {
                     updateIconImageSignal = .complete()

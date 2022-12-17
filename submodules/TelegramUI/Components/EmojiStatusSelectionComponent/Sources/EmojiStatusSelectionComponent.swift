@@ -39,7 +39,7 @@ private func randomGenericReactionEffect(context: AccountContext) -> Signal<Stri
             return .single(nil)
         }
         return Signal { subscriber in
-            let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, fileReference: .standalone(media: file)).start()
+            let fetchDisposable = freeMediaFileInteractiveFetched(account: context.account, userLocation: .other, fileReference: .standalone(media: file)).start()
             let dataDisposable = (context.account.postbox.mediaBox.resourceData(file.resource)
             |> filter(\.complete)
             |> take(1)).start(next: { data in
@@ -690,6 +690,7 @@ public final class EmojiStatusSelectionController: ViewController {
                         for animationLayer in allLayers {
                             let baseItemLayer = InlineStickerItemLayer(
                                 context: self.context,
+                                userLocation: .other,
                                 attemptSynchronousLoad: false,
                                 emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: itemFile.fileId.id, file: itemFile),
                                 file: item.itemFile,

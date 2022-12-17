@@ -308,7 +308,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                 }
                 
                 if let fileReference = fileReference {
-                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, fileReference: fileReference).start()
+                    let _ = freeMediaFileInteractiveFetched(account: strongSelf.context.account, userLocation: .other, fileReference: fileReference).start()
                 }
                 strongSelf.iconDisposable = (svgIconImageFile(account: strongSelf.context.account, fileReference: fileReference, stickToTop: isPlaceholder)
                 |> deliverOnMainQueue).start(next: { [weak self] transform in
@@ -696,7 +696,7 @@ public final class WebAppController: ViewController, AttachmentContainable {
                                     }
                                     switch result {
                                     case let .instantView(webPage, anchor):
-                                        let controller = InstantPageController(context: strongSelf.context, webPage: webPage, sourcePeerType: .otherPrivate, anchor: anchor)
+                                        let controller = InstantPageController(context: strongSelf.context, webPage: webPage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .otherPrivate), anchor: anchor)
                                         strongSelf.controller?.getNavigationController()?.pushViewController(controller)
                                     default:
                                         strongSelf.context.sharedContext.openExternalUrl(context: strongSelf.context, urlContext: .generic, url: url, forceExternal: true, presentationData: strongSelf.context.sharedContext.currentPresentationData.with { $0 }, navigationController: nil, dismissInput: {})

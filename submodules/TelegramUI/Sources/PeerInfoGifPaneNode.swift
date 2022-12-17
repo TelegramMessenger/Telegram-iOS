@@ -35,6 +35,7 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
     
     init(
         context: AccountContext,
+        userLocation: MediaResourceUserLocation,
         file: FileMediaReference
     ) {
         self.context = context
@@ -63,6 +64,8 @@ private final class FrameSequenceThumbnailNode: ASDisplayNode {
             
             let source = UniversalSoftwareVideoSource(
                 mediaBox: self.context.account.postbox.mediaBox,
+                userLocation: userLocation,
+                userContentType: .gif,
                 fileReference: self.file,
                 automaticallyFetchHeader: true
             )
@@ -298,7 +301,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                     self.imageNode.layer.addSublayer(sampleBufferLayer.layer)
                 }
                 
-                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
+                self.videoLayerFrameManager = SoftwareVideoLayerFrameManager(account: self.context.account, userLocation: .peer(item.message.id.peerId), userContentType: .gif, fileReference: FileMediaReference.message(message: MessageReference(item.message), media: file), layerHolder: sampleBufferLayer)
                 self.videoLayerFrameManager?.start()
             }
         } else {
@@ -314,7 +317,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
             if let image = media as? TelegramMediaImage, let largestSize = largestImageRepresentation(image.representations)?.dimensions {
                 mediaDimensions = largestSize.cgSize
                
-                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, photoReference: .message(message: MessageReference(item.message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
+                self.imageNode.setSignal(mediaGridMessagePhoto(account: context.account, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: image), fullRepresentationSize: CGSize(width: 300.0, height: 300.0), synchronousLoad: synchronousLoad), attemptSynchronously: synchronousLoad, dispatchOnDisplayLink: true)
                 
                 self.fetchStatusDisposable.set(nil)
                 self.statusNode.transitionToState(.none, completion: { [weak self] in
@@ -324,7 +327,7 @@ private final class VisualMediaItemNode: ASDisplayNode {
                 self.resourceStatus = nil
             } else if let file = media as? TelegramMediaFile, file.isVideo {
                 mediaDimensions = file.dimensions?.cgSize
-                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
+                self.imageNode.setSignal(mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(item.message.id.peerId), videoReference: .message(message: MessageReference(item.message), media: file), synchronousLoad: synchronousLoad, autoFetchFullSizeThumbnail: true), attemptSynchronously: synchronousLoad)
                 
                 self.mediaBadgeNode.isHidden = file.isAnimated
                 

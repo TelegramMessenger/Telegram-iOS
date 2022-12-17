@@ -188,12 +188,14 @@ public final class DirectMediaImageCache {
         return self.account.postbox.mediaBox.cachedRepresentationPathForId(resourceId.stringRepresentation, representationId: representationId, keepDuration: .general)
     }
 
-    private func getLoadSignal(width: Int, resource: MediaResourceReference, resourceSizeLimit: Int64) -> Signal<UIImage?, NoError>? {
+    private func getLoadSignal(width: Int, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resource: MediaResourceReference, resourceSizeLimit: Int64) -> Signal<UIImage?, NoError>? {
         return Signal { subscriber in
             let cachePath = self.getCachePath(resourceId: resource.resource.id, imageType: .square(width: width))
 
             let fetch = fetchedMediaResource(
                 mediaBox: self.account.postbox.mediaBox,
+                userLocation: userLocation,
+                userContentType: userContentType,
                 reference: resource,
                 ranges: [(0 ..< resourceSizeLimit, .default)],
                 statsCategory: .image,
@@ -282,7 +284,7 @@ public final class DirectMediaImageCache {
         return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: file).abstract, width: width, representations: file.previewRepresentations)
     }
 
-    private func getImageSynchronous(message: Message, media: Media, width: Int, possibleWidths: [Int]) -> GetMediaResult? {
+    private func getImageSynchronous(message: Message, userLocation: MediaResourceUserLocation, media: Media, width: Int, possibleWidths: [Int]) -> GetMediaResult? {
         var immediateThumbnailData: Data?
         var resource: (resource: MediaResourceReference, size: Int64)?
         if let image = media as? TelegramMediaImage {
@@ -320,15 +322,15 @@ public final class DirectMediaImageCache {
             }
         }
 
-        return GetMediaResult(image: blurredImage, loadSignal: self.getLoadSignal(width: width, resource: resource.resource, resourceSizeLimit: resource.size))
+        return GetMediaResult(image: blurredImage, loadSignal: self.getLoadSignal(width: width, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 
     public func getImage(message: Message, media: Media, width: Int, possibleWidths: [Int], synchronous: Bool) -> GetMediaResult? {
         if synchronous {
-            return self.getImageSynchronous(message: message, media: media, width: width, possibleWidths: possibleWidths)
+            return self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths)
         } else {
             return GetMediaResult(image: nil, loadSignal: Signal { subscriber in
-                let result = self.getImageSynchronous(message: message, media: media, width: width, possibleWidths: possibleWidths)
+                let result = self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths)
                 guard let result = result else {
                     subscriber.putNext(nil)
                     subscriber.putCompletion()

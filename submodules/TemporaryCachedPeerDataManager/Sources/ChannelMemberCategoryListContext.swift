@@ -630,7 +630,7 @@ private final class ChannelMemberMultiCategoryListContext: ChannelMemberCategory
 }
 
 public struct PeerChannelMemberCategoryControl {
-    fileprivate let key: PeerChannelMemberContextKey
+    let key: PeerChannelMemberContextKey
 }
 
 private final class PeerChannelMemberContextWithSubscribers {

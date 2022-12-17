@@ -262,7 +262,7 @@ final class ThemePreviewControllerNode: ASDisplayNode, UIScrollViewDelegate {
                 }
                 strongSelf.remoteChatBackgroundNode.setSignal(signal)
                 
-                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.sharedContext.accountManager.mediaBox, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start())
+                strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.sharedContext.accountManager.mediaBox, userLocation: .other, userContentType: .other, reference: .wallpaper(wallpaper: .slug(file.slug), resource: file.file.resource)).start())
                                 
                 let account = strongSelf.context.account
                 let statusSignal = strongSelf.context.sharedContext.accountManager.mediaBox.resourceStatus(file.file.resource)

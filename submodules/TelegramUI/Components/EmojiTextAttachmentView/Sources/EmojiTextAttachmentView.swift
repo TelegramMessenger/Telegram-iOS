@@ -96,7 +96,7 @@ public extension AnimationCacheAnimationType {
     }
 }
 
-public func animationCacheFetchFile(context: AccountContext, resource: MediaResourceReference, type: AnimationCacheAnimationType, keyframeOnly: Bool, customColor: UIColor?) -> (AnimationCacheFetchOptions) -> Disposable {
+public func animationCacheFetchFile(context: AccountContext, userLocation: MediaResourceUserLocation, userContentType: MediaResourceUserContentType, resource: MediaResourceReference, type: AnimationCacheAnimationType, keyframeOnly: Bool, customColor: UIColor?) -> (AnimationCacheFetchOptions) -> Disposable {
     return { options in
         let source = AnimatedStickerResourceSource(account: context.account, resource: resource.resource, fitzModifier: nil, isVideo: false)
         
@@ -119,7 +119,7 @@ public func animationCacheFetchFile(context: AccountContext, resource: MediaReso
             }
         })
         
-        let fetchDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resource).start()
+        let fetchDisposable = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: userLocation, userContentType: userContentType, reference: resource).start()
         
         return ActionDisposable {
             dataDisposable.dispose()
@@ -142,6 +142,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
     }
     
     private let context: AccountContext
+    private let userLocation: MediaResourceUserLocation
     private let emoji: ChatTextInputTextCustomEmojiAttribute
     private let cache: AnimationCache
     private let renderer: MultiAnimationRenderer
@@ -188,8 +189,9 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         }
     }
     
-    public init(context: AccountContext, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, unique: Bool = false, placeholderColor: UIColor, pointSize: CGSize, dynamicColor: UIColor? = nil, loopCount: Int? = nil) {
+    public init(context: AccountContext, userLocation: MediaResourceUserLocation, attemptSynchronousLoad: Bool, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, unique: Bool = false, placeholderColor: UIColor, pointSize: CGSize, dynamicColor: UIColor? = nil, loopCount: Int? = nil) {
         self.context = context
+        self.userLocation = userLocation
         self.emoji = emoji
         self.cache = cache
         self.renderer = renderer
@@ -342,7 +344,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
             let pointSize = self.pointSize
             let placeholderColor = self.placeholderColor
             let isThumbnailCancelled = Atomic<Bool>(value: false)
-            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { [weak self] result, isFinal in
+            self.loadDisposable = self.renderer.loadFirstFrame(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, size: self.pixelSize, fetch: animationCacheFetchFile(context: self.context, userLocation: self.userLocation, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: true, customColor: isTemplate ? .white : nil), completion: { [weak self] result, isFinal in
                 if !result {
                     MultiAnimationRendererImpl.firstFrameQueue.async {
                         let image = generateStickerPlaceholderImage(data: file.immediateThumbnailData, size: pointSize, scale: min(2.0, UIScreenScale), imageSize: file.dimensions?.cgSize ?? CGSize(width: 512.0, height: 512.0), backgroundColor: nil, foregroundColor: placeholderColor)
@@ -389,7 +391,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
         if file.isAnimatedSticker || file.isVideoEmoji {
             let keyframeOnly = self.pixelSize.width >= 120.0
             
-            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly, customColor: isTemplate ? .white : nil))
+            self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: self.userLocation, userContentType: .sticker, resource: .media(media: .standalone(media: file), resource: file.resource), type: AnimationCacheAnimationType(file: file), keyframeOnly: keyframeOnly, customColor: isTemplate ? .white : nil))
         } else {
             self.disposable = renderer.add(target: self, cache: self.cache, itemId: file.resource.id.stringRepresentation, unique: self.unique, size: self.pixelSize, fetch: { options in
                 let dataDisposable = context.account.postbox.mediaBox.resourceData(file.resource).start(next: { result in
@@ -400,7 +402,7 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
                     cacheStillSticker(path: result.path, width: Int(options.size.width), height: Int(options.size.height), writer: options.writer, customColor: isTemplate ? .white : nil)
                 })
                 
-                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, fileReference: .customEmoji(media: file), resource: file.resource).start()
+                let fetchDisposable = freeMediaFileResourceInteractiveFetched(account: context.account, userLocation: self.userLocation, fileReference: .customEmoji(media: file), resource: file.resource).start()
                 
                 return ActionDisposable {
                     dataDisposable.dispose()
@@ -459,8 +461,8 @@ public final class InlineStickerItemLayer: MultiAnimationRenderTarget {
 public final class EmojiTextAttachmentView: UIView {
     private let contentLayer: InlineStickerItemLayer
     
-    public init(context: AccountContext, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
-        self.contentLayer = InlineStickerItemLayer(context: context, attemptSynchronousLoad: true, emoji: emoji, file: file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: pointSize)
+    public init(context: AccountContext, userLocation: MediaResourceUserLocation, emoji: ChatTextInputTextCustomEmojiAttribute, file: TelegramMediaFile?, cache: AnimationCache, renderer: MultiAnimationRenderer, placeholderColor: UIColor, pointSize: CGSize) {
+        self.contentLayer = InlineStickerItemLayer(context: context, userLocation: userLocation, attemptSynchronousLoad: true, emoji: emoji, file: file, cache: cache, renderer: renderer, placeholderColor: placeholderColor, pointSize: pointSize)
         
         super.init(frame: CGRect())
         

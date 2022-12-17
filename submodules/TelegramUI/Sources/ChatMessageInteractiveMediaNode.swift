@@ -973,14 +973,14 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             }
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad, _ in
-                                    return chatSecretPhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
+                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             } else {
                                 updateImageSignal = { synchronousLoad, highQuality in
-                                    return chatMessagePhoto(postbox: context.account.postbox, photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
+                                    return chatMessagePhoto(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image), synchronousLoad: synchronousLoad, highQuality: highQuality)
                                 }
                                 updateBlurredImageSignal = { synchronousLoad, _ in
-                                    return chatSecretPhoto(account: context.account, photoReference: .message(message: MessageReference(message), media: image))
+                                    return chatSecretPhoto(account: context.account, userLocation: .peer(message.id.peerId), photoReference: .message(message: MessageReference(message), media: image))
                                 }
                             }
                             
@@ -1009,7 +1009,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             
                             updatedFetchControls = FetchControls(fetch: { _ in
                                 if let strongSelf = self {
-                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
+                                    strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).start())
                                 }
                             }, cancel: {
                                 chatMessageWebFileCancelInteractiveFetch(account: context.account, image: image)
@@ -1017,22 +1017,22 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                         } else if let file = media as? TelegramMediaFile {
                             if isSecretMedia {
                                 updateImageSignal = { synchronousLoad, _ in
-                                    return chatSecretMessageVideo(account: context.account, videoReference: .message(message: MessageReference(message), media: file))
+                                    return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
                                 }
                             } else {
                                 if file.isAnimatedSticker {
                                     let dimensions = file.dimensions ?? PixelDimensions(width: 512, height: 512)
                                     updateImageSignal = { synchronousLoad, _ in
-                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
+                                        return chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: file, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 400.0, height: 400.0)))
                                     }
                                 } else if file.isSticker || file.isVideoSticker {
                                     updateImageSignal = { synchronousLoad, _ in
-                                        return chatMessageSticker(account: context.account, file: file, small: false)
+                                        return chatMessageSticker(account: context.account, userLocation: .peer(message.id.peerId), file: file, small: false)
                                     }
                                 } else {
                                     onlyFullSizeVideoThumbnail = isSendingUpdated
                                     updateImageSignal = { synchronousLoad, _ in
-                                        return mediaGridMessageVideo(postbox: context.account.postbox, videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
+                                        return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
                                     }
                                 }
                             }
@@ -1083,7 +1083,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                             updatedFetchControls = FetchControls(fetch: { manual in
                                 if let strongSelf = self {
                                     if file.isAnimated {
-                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
+                                        strongSelf.fetchDisposable.set(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), reference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), statsCategory: statsCategoryForFileWithAttributes(file.attributes)).start())
                                     } else {
                                         strongSelf.fetchDisposable.set(messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: manual).start())
                                     }
@@ -1267,7 +1267,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     
                                     let streamVideo = isMediaStreamable(message: message, media: updatedVideoFile)
                                     let loopVideo = updatedVideoFile.isAnimated
-                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia)
+                                    let videoContent = NativeVideoContent(id: .message(message.stableId, updatedVideoFile.fileId), userLocation: .peer(message.id.peerId), fileReference: .message(message: MessageReference(message), media: updatedVideoFile), streamVideo: streamVideo ? .conservative : .none, loopVideo: loopVideo, enableSound: false, fetchAutomatically: false, onlyFullSizeThumbnail: (onlyFullSizeVideoThumbnail ?? false), continuePlayingWithoutSoundOnLostAudioSession: isInlinePlayableVideo, placeholderColor: emptyColor, captureProtected: message.isCopyProtected() || isExtendedMedia)
                                     let videoNode = UniversalVideoNode(postbox: context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: decoration, content: videoContent, priority: .embedded)
                                     videoNode.isUserInteractionEnabled = false
                                     videoNode.ownsContentNodeUpdated = { [weak self] owns in
@@ -1422,7 +1422,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     if let _ = media as? TelegramMediaImage {
                                         updatedFetchControls.fetch(false)
                                     } else if let image = media as? TelegramMediaWebFile {
-                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, image: image).start())
+                                        strongSelf.fetchDisposable.set(chatMessageWebFileInteractiveFetched(account: context.account, userLocation: .peer(message.id.peerId), image: image).start())
                                     } else if let file = media as? TelegramMediaFile {
                                         let fetchSignal = messageMediaFileInteractiveFetched(context: context, message: message, file: file, userInitiated: false)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
@@ -1440,7 +1440,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     }
                                 } else if case .prefetch = automaticDownload, message.id.namespace != Namespaces.Message.SecretIncoming /*&& message.id.namespace != Namespaces.Message.Local*/ {
                                     if let file = media as? TelegramMediaFile {
-                                        let fetchSignal = preloadVideoResource(postbox: context.account.postbox, resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
+                                        let fetchSignal = preloadVideoResource(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: file), resourceReference: AnyMediaReference.message(message: MessageReference(message), media: file).resourceReference(file.resource), duration: 4.0)
                                         let visibilityAwareFetchSignal = strongSelf.visibilityPromise.get()
                                         |> mapToSignal { visibility -> Signal<Void, NoError> in
                                             if visibility {

@@ -276,7 +276,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             }
                         
             let pointSize: CGFloat = 128.0
-            return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+            return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: strongSelf.context.animationCache, renderer: strongSelf.context.animationRenderer, placeholderColor: UIColor.white.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
         }
     }
     

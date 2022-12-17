@@ -59,7 +59,7 @@ public enum LegacyAttachmentMenuMediaEditing {
 }
 
 public func legacyMediaEditor(context: AccountContext, peer: Peer, threadTitle: String?, media: AnyMediaReference, initialCaption: NSAttributedString, snapshots: [UIView], transitionCompletion: (() -> Void)?, presentStickers: @escaping (@escaping (TelegramMediaFile, Bool, UIView, CGRect) -> Void) -> TGPhotoPaintStickersScreen?, getCaptionPanelView: @escaping () -> TGCaptionPanelView?, sendMessagesWithSignals: @escaping ([Any]?, Bool, Int32) -> Void, present: @escaping (ViewController, Any?) -> Void) {
-    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
+    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
             return
@@ -341,7 +341,7 @@ public func legacyAttachmentMenu(context: AccountContext, peer: Peer, threadTitl
         let editCurrentItem = TGMenuSheetButtonItemView(title: title, type: TGMenuSheetButtonTypeDefault, fontSize: fontSize, action: { [weak controller] in
             controller?.dismiss(animated: true)
             
-            let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: editCurrentMedia)
+            let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: editCurrentMedia)
             |> deliverOnMainQueue).start(next: { (value, isImage) in
                 guard case let .data(data) = value, data.complete else {
                     return

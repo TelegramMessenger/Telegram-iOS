@@ -196,7 +196,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             }
         }
         
-        let gallery = InstantPageGalleryController(context: context, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
+        let gallery = InstantPageGalleryController(context: context, userLocation: chatLocation?.peerId.flatMap(MediaResourceUserLocation.peer) ?? .other, webPage: webPage, message: message, entries: instantPageMedia, centralIndex: centralIndex, fromPlayingVideo: autoplayingVideo, landscape: landscape, timecode: timecode, replaceRootController: { [weak navigationController] controller, ready in
             if let navigationController = navigationController {
                 navigationController.replaceTopController(controller, animated: false, ready: ready)
             }

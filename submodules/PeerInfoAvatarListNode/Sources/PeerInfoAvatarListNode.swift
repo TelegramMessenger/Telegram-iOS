@@ -248,7 +248,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
                 }
                 if let videoContent = self.videoContent {
                     let duration: Double = (self.videoStartTimestamp ?? 0.0) + 4.0
-                    self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, resourceReference: videoContent.fileReference.resourceReference(videoContent.fileReference.media.resource), duration: duration).start())
+                    self.preloadDisposable.set(preloadVideoResource(postbox: self.context.account.postbox, userLocation: .other, userContentType: .video, resourceReference: videoContent.fileReference.resourceReference(videoContent.fileReference.media.resource), duration: duration).start())
                 }
             }
         }
@@ -465,7 +465,7 @@ public final class PeerInfoAvatarListItemNode: ASDisplayNode {
         
         if let video = videoRepresentations.last, let peerReference = PeerReference(self.peer) {
             let videoFileReference = FileMediaReference.avatarList(peer: peerReference, media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.representation.resource, previewRepresentations: representations.map { $0.representation }, videoThumbnails: [], immediateThumbnailData: immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.representation.dimensions, flags: [])]))
-            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: fullSizeOnly, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+            let videoContent = NativeVideoContent(id: .profileVideo(id, nil), userLocation: .other, fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.representation.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: fullSizeOnly, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, startTimestamp: video.representation.startTimestamp, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
             
             if videoContent.id != self.videoContent?.id {
                 self.videoContent = videoContent

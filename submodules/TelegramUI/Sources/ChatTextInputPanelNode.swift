@@ -947,7 +947,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 }
                 
                 let pointSize = floor(24.0 * 1.3)
-                return EmojiTextAttachmentView(context: context, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
+                return EmojiTextAttachmentView(context: context, userLocation: .other, emoji: emoji, file: emoji.file, cache: presentationContext.animationCache, renderer: presentationContext.animationRenderer, placeholderColor: presentationInterfaceState.theme.chat.inputPanel.inputTextColor.withAlphaComponent(0.12), pointSize: CGSize(width: pointSize, height: pointSize))
             }
         }
     }
@@ -2520,6 +2520,7 @@ class ChatTextInputPanelNode: ChatInputPanelNode, ASEditableTextNodeDelegate {
                 transition: .immediate,
                 component: AnyComponent(EmojiSuggestionsComponent(
                     context: context,
+                    userLocation: .other,
                     theme: theme,
                     animationCache: presentationContext.animationCache,
                     animationRenderer: presentationContext.animationRenderer,

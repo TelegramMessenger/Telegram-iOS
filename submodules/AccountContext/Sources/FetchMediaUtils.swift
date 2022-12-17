@@ -6,8 +6,8 @@ import SwiftSignalKit
 import TelegramUIPreferences
 import RangeSet
 
-public func freeMediaFileInteractiveFetched(account: Account, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
+public func freeMediaFileInteractiveFetched(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource))
 }
 
 public func freeMediaFileInteractiveFetched(fetchManager: FetchManager, fileReference: FileMediaReference, priority: FetchManagerPriority) -> Signal<Void, NoError> {
@@ -16,8 +16,8 @@ public func freeMediaFileInteractiveFetched(fetchManager: FetchManager, fileRefe
     return fetchManager.interactivelyFetched(category: fetchCategoryForFile(file), location: .chat(PeerId(0)), locationKey: .free, mediaReference: mediaReference, resourceReference: mediaReference.resourceReference(file.resource), ranges: RangeSet<Int64>(0 ..< Int64.max), statsCategory: statsCategoryForFileWithAttributes(file.attributes), elevatedPriority: false, userInitiated: false, priority: priority, storeToDownloadsPeerType: nil)
 }
 
-public func freeMediaFileResourceInteractiveFetched(account: Account, fileReference: FileMediaReference, resource: MediaResource) -> Signal<FetchResourceSourceType, FetchResourceError> {
-    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: fileReference.resourceReference(resource))
+public func freeMediaFileResourceInteractiveFetched(account: Account, userLocation: MediaResourceUserLocation, fileReference: FileMediaReference, resource: MediaResource) -> Signal<FetchResourceSourceType, FetchResourceError> {
+    return fetchedMediaResource(mediaBox: account.postbox.mediaBox, userLocation: userLocation, userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(resource))
 }
 
 public func cancelFreeMediaFileInteractiveFetch(account: Account, file: TelegramMediaFile) {

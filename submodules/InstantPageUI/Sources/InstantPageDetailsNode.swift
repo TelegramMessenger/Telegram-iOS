@@ -35,7 +35,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
     
     var requestLayoutUpdate: ((Bool) -> Void)?
     
-    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
+    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, strings: PresentationStrings, nameDisplayOrder: PresentationPersonNameOrder, theme: InstantPageTheme, item: InstantPageDetailsItem, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, openPeer: @escaping (EnginePeer) -> Void, openUrl: @escaping (InstantPageUrlItem) -> Void, currentlyExpanded: Bool?, updateDetailsExpanded: @escaping (Bool) -> Void) {
         self.context = context
         self.strings = strings
         self.nameDisplayOrder = nameDisplayOrder
@@ -65,7 +65,7 @@ final class InstantPageDetailsNode: ASDisplayNode, InstantPageNode {
         self.arrowNode = InstantPageDetailsArrowNode(color: theme.controlColor, open: self.expanded)
         self.separatorNode = ASDisplayNode()
         
-        self.contentNode = InstantPageContentNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, sourcePeerType: sourcePeerType, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
+        self.contentNode = InstantPageContentNode(context: context, strings: strings, nameDisplayOrder: nameDisplayOrder, sourceLocation: sourceLocation, theme: theme, items: item.items, contentSize: CGSize(width: item.frame.width, height: item.frame.height - item.titleHeight), openMedia: openMedia, longPressMedia: longPressMedia, openPeer: openPeer, openUrl: openUrl)
         
         super.init()
         

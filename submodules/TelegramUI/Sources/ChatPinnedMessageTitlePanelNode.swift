@@ -627,16 +627,16 @@ final class ChatPinnedMessageTitlePanelNode: ChatTitleAccessoryPanelNode {
             if mediaUpdated {
                 if let updatedMediaReference = updatedMediaReference, imageDimensions != nil {
                     if let imageReference = updatedMediaReference.concrete(TelegramMediaImage.self) {
-                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, photoReference: imageReference)
+                        updateImageSignal = chatMessagePhotoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), photoReference: imageReference)
                     } else if let fileReference = updatedMediaReference.concrete(TelegramMediaFile.self) {
                         if fileReference.media.isAnimatedSticker {
                             let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
-                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
-                            updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: fileReference.resourceReference(fileReference.media.resource))
+                            updateImageSignal = chatMessageAnimatedSticker(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), file: fileReference.media, small: false, size: dimensions.cgSize.aspectFitted(CGSize(width: 160.0, height: 160.0)))
+                            updatedFetchMediaSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .peer(message.id.peerId), userContentType: MediaResourceUserContentType(file: fileReference.media), reference: fileReference.resourceReference(fileReference.media.resource))
                         } else if fileReference.media.isVideo || fileReference.media.isAnimated {
-                            updateImageSignal = chatMessageVideoThumbnail(account: context.account, fileReference: fileReference)
+                            updateImageSignal = chatMessageVideoThumbnail(account: context.account, userLocation: .peer(message.id.peerId), fileReference: fileReference)
                         } else if let iconImageRepresentation = smallestImageRepresentation(fileReference.media.previewRepresentations) {
-                            updateImageSignal = chatWebpageSnippetFile(account: context.account, mediaReference: fileReference.abstract, representation: iconImageRepresentation)
+                            updateImageSignal = chatWebpageSnippetFile(account: context.account, userLocation: .peer(message.id.peerId), mediaReference: fileReference.abstract, representation: iconImageRepresentation)
                         }
                     }
                 } else {

@@ -8513,3 +8513,10 @@ Sorry for the inconvenience.";
 "Common.Paste" = "Paste";
 
 "PhotoEditor.SelectCoverFrameSuggestion" = "Choose a cover for profile video";
+
+"GroupInfo.TitleMembers_1" = "%@ Member";
+"GroupInfo.TitleMembers_any" = "%@ Members";
+
+"PeerInfo.HideMembersLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have their member list hidden.";
+"PeerInfo.HideMembersLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have their member list hidden.";
+"PeerInfo.HideMembersLimitedRights" = "You don't have permission to change this setting.";

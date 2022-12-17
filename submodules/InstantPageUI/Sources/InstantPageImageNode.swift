@@ -49,7 +49,7 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
     
     private var themeUpdated: Bool = false
     
-    init(context: AccountContext, sourcePeerType: MediaAutoDownloadPeerType, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?) {
+    init(context: AccountContext, sourceLocation: InstantPageSourceLocation, theme: InstantPageTheme, webPage: TelegramMediaWebpage, media: InstantPageMedia, attributes: [InstantPageImageAttribute], interactive: Bool, roundCorners: Bool, fit: Bool, openMedia: @escaping (InstantPageMedia) -> Void, longPressMedia: @escaping (InstantPageMedia) -> Void, activatePinchPreview: ((PinchSourceContainerNode) -> Void)?, pinchPreviewFinished: ((InstantPageNode) -> Void)?) {
         self.context = context
         self.theme = theme
         self.webPage = webPage
@@ -74,15 +74,15 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         
         if let image = media.media as? TelegramMediaImage, let largest = largestImageRepresentation(image.representations) {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
-            self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
+            self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
             
-            if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourcePeerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image) {
-                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+            if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: image) {
+                self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
             }
             
             self.fetchControls = FetchControls(fetch: { [weak self] manual in
                 if let strongSelf = self {
-                    strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+                    strongSelf.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
                 }
             }, cancel: {
                 chatMessagePhotoCancelInteractiveFetch(account: context.account, photoReference: imageReference)
@@ -108,12 +108,12 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
         } else if let file = media.media as? TelegramMediaFile {
             let fileReference = FileMediaReference.webPage(webPage: WebpageReference(webPage), media: file)
             if file.mimeType.hasPrefix("image/") {
-                if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourcePeerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
-                    _ = freeMediaFileInteractiveFetched(account: context.account, fileReference: fileReference).start()
+                if !interactive || shouldDownloadMediaAutomatically(settings: context.sharedContext.currentAutomaticMediaDownloadSettings.with { $0 }, peerType: sourceLocation.peerType, networkType: MediaAutoDownloadNetworkType(context.account.immediateNetworkType), authorPeerId: nil, contactsPeerIds: Set(), media: file) {
+                    _ = freeMediaFileInteractiveFetched(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference).start()
                 }
-                self.imageNode.setSignal(instantPageImageFile(account: context.account, fileReference: fileReference, fetched: true))
+                self.imageNode.setSignal(instantPageImageFile(account: context.account, userLocation: sourceLocation.userLocation, fileReference: fileReference, fetched: true))
             } else {
-                self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, videoReference: fileReference))
+                self.imageNode.setSignal(chatMessageVideo(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, videoReference: fileReference))
             }
             if file.isVideo {
                 self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
@@ -133,8 +133,8 @@ final class InstantPageImageNode: ASDisplayNode, InstantPageNode {
             self.imageNode.setSignal(chatMapSnapshotImage(engine: context.engine, resource: resource))
         } else if let webPage = media.media as? TelegramMediaWebpage, case let .Loaded(content) = webPage.content, let image = content.image {
             let imageReference = ImageMediaReference.webPage(webPage: WebpageReference(webPage), media: image)
-            self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, photoReference: imageReference))
-            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
+            self.imageNode.setSignal(chatMessagePhoto(postbox: context.account.postbox, userLocation: sourceLocation.userLocation, photoReference: imageReference))
+            self.fetchedDisposable.set(chatMessagePhotoInteractiveFetched(context: context, userLocation: sourceLocation.userLocation, photoReference: imageReference, displayAtSize: nil, storeToDownloadsPeerType: nil).start())
             self.statusNode.transitionToState(.play(.white), animated: false, completion: {})
             self.pinchContainerNode.contentNode.addSubnode(self.statusNode)
         }

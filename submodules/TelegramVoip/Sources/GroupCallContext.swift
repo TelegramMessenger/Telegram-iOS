@@ -595,7 +595,7 @@ public final class OngoingGroupCallContext {
                 guard let `self` = self else {
                     return
                 }
-                self.audioDevice?.setManualAudioSessionIsActive(isActive)
+//                self.audioDevice?.setManualAudioSessionIsActive(isActive)
                 #if os(iOS)
                 self.context.setManualAudioSessionIsActive(isActive)
                 #endif
@@ -907,11 +907,11 @@ public final class OngoingGroupCallContext {
             let mappedTone = tone.flatMap { tone in
                 CallAudioTone(samples: tone.samples, sampleRate: tone.sampleRate, loopCount: tone.loopCount)
             }
-            if let audioDevice = self.audioDevice {
-                audioDevice.setTone(mappedTone)
-            } else {
+//            if let audioDevice = self.audioDevice {
+//                audioDevice.setTone(mappedTone)
+//            } else {
                 self.context.setTone(mappedTone)
-            }
+//            }
             #endif
             
         }

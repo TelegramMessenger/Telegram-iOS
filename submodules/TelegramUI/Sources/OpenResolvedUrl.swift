@@ -204,7 +204,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
             })
                 present(controller, nil)
         case let .instantView(webpage, anchor):
-            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor))
+            navigationController?.pushViewController(InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .other, peerType: .channel), anchor: anchor))
         case let .join(link):
             dismissInput()
             present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
@@ -376,7 +376,7 @@ func openResolvedUrlImpl(_ resolvedUrl: ResolvedUrl, context: AccountContext, ur
                         subscriber.putNext((nil, settings, themeInfo))
                         subscriber.putCompletion()
                     } else if let resource = themeInfo.file?.resource {
-                        disposables.add(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: .standalone(resource: resource)).start())
+                        disposables.add(fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: .standalone(resource: resource)).start())
                         
                         let maybeFetched = context.sharedContext.accountManager.mediaBox.resourceData(resource, option: .complete(waitUntilFetchStatus: false), attemptSynchronously: false)
                         |> mapToSignal { maybeData -> Signal<Data?, NoError> in

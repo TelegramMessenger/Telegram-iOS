@@ -128,7 +128,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
                     }))
                 }
             } else {
-                self.disposables.add((chatMessageSticker(account: self.account, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
+                self.disposables.add((chatMessageSticker(account: self.account, userLocation: .other, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
                 |> deliverOn(self.queue)).start(next: { [weak self] generator in
                     if let strongSelf = self {
                         let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: entity.baseSize, boundingSize: entity.baseSize, intrinsicInsets: UIEdgeInsets()))

@@ -2086,7 +2086,7 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
             interaction.openUrl(url)
         }, openInstantPage: { [weak self] message, data in
             if let (webpage, anchor) = instantPageAndAnchor(message: message) {
-                let pageController = InstantPageController(context: context, webPage: webpage, sourcePeerType: .channel, anchor: anchor)
+                let pageController = InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: .peer(message.id.peerId), peerType: .channel), anchor: anchor)
                 self?.navigationController?.pushViewController(pageController)
             }
         }, longTap: { action, message in

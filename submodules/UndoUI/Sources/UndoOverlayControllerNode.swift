@@ -407,7 +407,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: resource._asResource(), animated: true)
                     }
                     if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resourceReference)
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resourceReference)
                         |> mapError { _ -> EngineMediaResource.Fetch.Error in
                             return .generic
                         }
@@ -689,7 +689,7 @@ final class UndoOverlayControllerNode: ViewControllerTracingNode {
                         updatedImageSignal = chatMessageStickerPackThumbnail(postbox: context.account.postbox, resource: resource._asResource(), animated: true)
                     }
                     if let resourceReference = resourceReference {
-                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: resourceReference)
+                        updatedFetchSignal = fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resourceReference)
                         |> mapError { _ -> EngineMediaResource.Fetch.Error in
                             return .generic
                         }

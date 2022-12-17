@@ -130,7 +130,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             animationNode.addSubnode(self.textNode)
             
             if isPremiumSticker, let effect = item.file.videoThumbnails.first {
-                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, fileReference: .standalone(media: item.file), resource: effect.resource).start())
+                self.effectDisposable.set(freeMediaFileResourceInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: item.file), resource: effect.resource).start())
                 
                 let source = AnimatedStickerResourceSource(account: account, resource: effect.resource, fitzModifier: nil)
                 let additionalAnimationNode = DefaultAnimatedStickerNodeImpl()
@@ -143,7 +143,7 @@ public final class StickerPreviewPeekContentNode: ASDisplayNode, PeekControllerC
             self.animationNode = nil
         }
         
-        self.imageNode.setSignal(chatMessageSticker(account: account, file: item.file, small: false, fetched: true))
+        self.imageNode.setSignal(chatMessageSticker(account: account, userLocation: .other, file: item.file, small: false, fetched: true))
         
         super.init()
         

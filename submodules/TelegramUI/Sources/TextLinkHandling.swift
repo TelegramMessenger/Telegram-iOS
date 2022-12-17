@@ -80,7 +80,7 @@ func handleTextLinkActionImpl(context: AccountContext, peerId: PeerId?, navigate
                         let packReference: StickerPackReference = .name(name)
                         controller.present(StickerPackScreen(context: context, mainStickerPack: packReference, stickerPacks: [packReference], parentNavigationController: controller.navigationController as? NavigationController), in: .window(.root))
                     case let .instantView(webpage, anchor):
-                        (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourcePeerType: .group, anchor: anchor))
+                        (controller.navigationController as? NavigationController)?.pushViewController(InstantPageController(context: context, webPage: webpage, sourceLocation: InstantPageSourceLocation(userLocation: peerId.flatMap(MediaResourceUserLocation.peer) ?? .other, peerType: .group), anchor: anchor))
                     case let .join(link):
                         controller.present(JoinLinkPreviewController(context: context, link: link, navigateToPeer: { peer, peekData in
                             openResolvedPeerImpl(peer, .chat(textInputState: nil, subject: nil, peekData: peekData))

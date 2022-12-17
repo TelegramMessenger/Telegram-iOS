@@ -14,6 +14,7 @@ import RangeSet
 
 public final class WebEmbedVideoContent: UniversalVideoContent {
     public let id: AnyHashable
+    let userLocation: MediaResourceUserLocation
     let webPage: TelegramMediaWebpage
     public let webpageContent: TelegramMediaWebpageLoadedContent
     public let dimensions: CGSize
@@ -21,11 +22,12 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
     let forcedTimestamp: Int?
     let openUrl: (URL) -> Void
     
-    public init?(webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
+    public init?(userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
         guard let embedUrl = webpageContent.embedUrl else {
             return nil
         }
         self.id = AnyHashable(embedUrl)
+        self.userLocation = userLocation
         self.webPage = webPage
         self.webpageContent = webpageContent
         self.dimensions = webpageContent.embedSize?.cgSize ?? CGSize(width: 128.0, height: 128.0)
@@ -35,7 +37,7 @@ public final class WebEmbedVideoContent: UniversalVideoContent {
     }
     
     public func makeContentNode(postbox: Postbox, audioSession: ManagedAudioSession) -> UniversalVideoContentNode & ASDisplayNode {
-        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp, openUrl: self.openUrl)
+        return WebEmbedVideoContentNode(postbox: postbox, audioSessionManager: audioSession, userLocation: self.userLocation, webPage: self.webPage, webpageContent: self.webpageContent, forcedTimestamp: self.forcedTimestamp, openUrl: self.openUrl)
     }
 }
  
@@ -72,7 +74,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         
     private var readyDisposable = MetaDisposable()
     
-    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
+    init(postbox: Postbox, audioSessionManager: ManagedAudioSession, userLocation: MediaResourceUserLocation, webPage: TelegramMediaWebpage, webpageContent: TelegramMediaWebpageLoadedContent, forcedTimestamp: Int? = nil, openUrl: @escaping (URL) -> Void) {
         self.webpageContent = webpageContent
         
         if let embedSize = webpageContent.embedSize {
@@ -93,7 +95,7 @@ final class WebEmbedVideoContentNode: ASDisplayNode, UniversalVideoContentNode {
         self.addSubnode(self.imageNode)
         
         if let image = webpageContent.image {
-            self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
+            self.imageNode.setSignal(chatMessagePhoto(postbox: postbox, userLocation: userLocation, photoReference: .webPage(webPage: WebpageReference(webPage), media: image)))
             self.imageNode.imageUpdated = { [weak self] _ in
                 self?._ready.set(.single(Void()))
             }

@@ -87,7 +87,7 @@ private enum ExternalShareResourceStatus {
 
 private func collectExternalShareResource(postbox: Postbox, resourceReference: MediaResourceReference, statsCategory: MediaResourceStatsCategory) -> Signal<ExternalShareResourceStatus, NoError> {
     return Signal { subscriber in
-        let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, reference: resourceReference, statsCategory: statsCategory).start()
+        let fetched = fetchedMediaResource(mediaBox: postbox.mediaBox, userLocation: .other, userContentType: .other, reference: resourceReference, statsCategory: statsCategory).start()
         let data = postbox.mediaBox.resourceData(resourceReference.resource, option: .complete(waitUntilFetchStatus: false)).start(next: { value in
             if value.complete {
                 subscriber.putNext(.done(value))
@@ -140,7 +140,7 @@ private func collectExternalShareItems(strings: PresentationStrings, dateTimeFor
                             return .single(.progress)
                         case let .done(data):
                             if file.isSticker, !file.isAnimatedSticker, let dimensions = file.dimensions {
-                                return chatMessageSticker(postbox: postbox, file: file, small: false, fetched: true, onlyFullSize: true)
+                                return chatMessageSticker(postbox: postbox, userLocation: .other, file: file, small: false, fetched: true, onlyFullSize: true)
                                 |> map { f -> ExternalShareItemStatus in
                                     let context = f(TransformImageArguments(corners: ImageCorners(), imageSize: dimensions.cgSize, boundingSize: dimensions.cgSize, intrinsicInsets: UIEdgeInsets(), emptyColor: nil, scale: 1.0))
                                     if let image = context?.generateImage() {
@@ -973,7 +973,7 @@ public final class ShareController: ViewController {
                 } else {
                     context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
                 }
-                return SaveToCameraRoll.saveToCameraRoll(context: context, postbox: postbox, mediaReference: .message(message: MessageReference(message), media: media))
+                return SaveToCameraRoll.saveToCameraRoll(context: context, postbox: postbox, userLocation: .peer(message.id.peerId), mediaReference: .message(message: MessageReference(message), media: media))
             } else {
                 return nil
             }
@@ -1000,7 +1000,7 @@ public final class ShareController: ViewController {
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: .standalone(media: media)) |> map(Optional.init), dismissImmediately: true, completion: {})
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: .standalone(media: media)) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
     private func saveToCameraRoll(mediaReference: AnyMediaReference) {
@@ -1010,7 +1010,7 @@ public final class ShareController: ViewController {
         } else {
             context = self.sharedContext.makeTempAccountContext(account: self.currentAccount)
         }
-        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true, completion: {})
+        self.controllerNode.transitionToProgressWithValue(signal: SaveToCameraRoll.saveToCameraRoll(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: mediaReference) |> map(Optional.init), dismissImmediately: true, completion: {})
     }
     
     private func switchToAccount(account: Account, animateIn: Bool) {

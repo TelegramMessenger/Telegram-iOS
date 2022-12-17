@@ -1619,7 +1619,7 @@ final class WallpaperBackgroundNodeMergedImpl: ASDisplayNode, WallpaperBackgroun
 
             switch spec {
             case let .image(representation, _, _):
-                self.fetchDisposable = (fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, reference: MediaResourceReference.standalone(resource: representation.resource))
+                self.fetchDisposable = (fetchedMediaResource(mediaBox: context.account.postbox.mediaBox, userLocation: .other, userContentType: .other, reference: MediaResourceReference.standalone(resource: representation.resource))
                 |> deliverOnMainQueue).start()
                 self.dataDisposable = (context.account.postbox.mediaBox.resourceData(representation.resource)
                 |> deliverOnMainQueue).start(next: { [weak self] dataValue in

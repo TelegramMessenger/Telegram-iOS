@@ -238,10 +238,10 @@ public final class NotificationViewControllerImpl {
                     return
                 }
                 if let imageReference = accountAndImage.1 {
-                    strongSelf.imageNode.setSignal(chatMessagePhoto(postbox: accountAndImage.0.postbox, photoReference: imageReference))
+                    strongSelf.imageNode.setSignal(chatMessagePhoto(postbox: accountAndImage.0.postbox, userLocation: .other, photoReference: imageReference))
                     
                     accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                    strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, photoReference: imageReference).start())
+                    strongSelf.fetchedDisposable.set(standaloneChatMessagePhotoInteractiveFetched(account: accountAndImage.0, userLocation: .other, photoReference: imageReference).start())
                 }
             }))
         } else if let file = media as? TelegramMediaFile, let dimensions = file.dimensions {
@@ -311,15 +311,15 @@ public final class NotificationViewControllerImpl {
                         let dimensions = fileReference.media.dimensions ?? PixelDimensions(width: 512, height: 512)
                         let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 512.0, height: 512.0))
                         if file.isVideoSticker {
-                            strongSelf.imageNode.setSignal(chatMessageSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false))
+                            strongSelf.imageNode.setSignal(chatMessageSticker(postbox: accountAndImage.0.postbox, userLocation: .other, file: fileReference.media, small: false))
                         } else {
-                            strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, file: fileReference.media, small: false, size: fittedDimensions))
+                            strongSelf.imageNode.setSignal(chatMessageAnimatedSticker(postbox: accountAndImage.0.postbox, userLocation: .other, file: fileReference.media, small: false, size: fittedDimensions))
                         }
                         animatedStickerNode.setup(source: AnimatedStickerResourceSource(account: accountAndImage.0, resource: fileReference.media.resource, isVideo: file.isVideoSticker), width: Int(fittedDimensions.width), height: Int(fittedDimensions.height), playbackMode: .loop, mode: .direct(cachePathPrefix: nil))
                         animatedStickerNode.visibility = true
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                        strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
+                        strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, userLocation: .other, fileReference: fileReference).start())
                     } else if file.isSticker {
                         if let animatedStickerNode = strongSelf.animatedStickerNode {
                             animatedStickerNode.removeFromSupernode()
@@ -327,10 +327,10 @@ public final class NotificationViewControllerImpl {
                         }
                         strongSelf.imageNode.isHidden = false
                         
-                        strongSelf.imageNode.setSignal(chatMessageSticker(account: accountAndImage.0, file: file, small: false))
+                        strongSelf.imageNode.setSignal(chatMessageSticker(account: accountAndImage.0, userLocation: .other, file: file, small: false))
                         
                         accountAndImage.0.network.shouldExplicitelyKeepWorkerConnections.set(.single(true))
-                        strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, fileReference: fileReference).start())
+                        strongSelf.fetchedDisposable.set(freeMediaFileInteractiveFetched(account: accountAndImage.0, userLocation: .other, fileReference: fileReference).start())
                     }
                 }
             }))

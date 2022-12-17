@@ -182,7 +182,7 @@ private final class PrefetchManagerInnerImpl {
                             }
                         } else if case .prefetch = automaticDownload, mediaItem.media.peer.id.namespace != Namespaces.Peer.SecretChat {
                             if let file = media as? TelegramMediaFile, let _ = file.size {
-                                context.fetchDisposable.set(preloadVideoResource(postbox: self.account.postbox, resourceReference: FileMediaReference.message(message: MessageReference(peer: mediaItem.media.peer, author: nil, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), media: file).resourceReference(file.resource), duration: 4.0).start())
+                                context.fetchDisposable.set(preloadVideoResource(postbox: self.account.postbox, userLocation: .peer(mediaItem.media.index.id.peerId), userContentType: MediaResourceUserContentType(file: file), resourceReference: FileMediaReference.message(message: MessageReference(peer: mediaItem.media.peer, author: nil, id: mediaItem.media.index.id, timestamp: mediaItem.media.index.timestamp, incoming: true, secret: false), media: file).resourceReference(file.resource), duration: 4.0).start())
                             }
                         }
                     }
@@ -249,7 +249,7 @@ private final class PrefetchManagerInnerImpl {
         self.preloadGreetingStickerDisposable.set((self.preloadedGreetingStickerPromise.get()
         |> mapToSignal { sticker -> Signal<Void, NoError> in
             if let sticker = sticker {
-                let _ = freeMediaFileInteractiveFetched(account: account, fileReference: .standalone(media: sticker)).start()
+                let _ = freeMediaFileInteractiveFetched(account: account, userLocation: .other, fileReference: .standalone(media: sticker)).start()
                 return chatMessageAnimationData(mediaBox: account.postbox.mediaBox, resource: sticker.resource, fitzModifier: nil, isVideo: sticker.isVideoSticker, width: 384, height: 384, synchronousLoad: false)
                 |> mapToSignal { _ -> Signal<Void, NoError> in
                     return .complete()

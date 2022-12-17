@@ -117,7 +117,7 @@ public func downloadAppUpdate(account: Account, source: String, messageId: Int32
                                     var dataDisposable: Disposable?
                                     var fetchDisposable: Disposable?
                                     var statusDisposable: Disposable?
-                                    let removeDisposable = account.postbox.mediaBox.removeCachedResources(Set([media.resource.id])).start(completed: {
+                                    let removeDisposable = account.postbox.mediaBox.removeCachedResources([media.resource.id]).start(completed: {
                                         let reference = MediaResourceReference.media(media: .message(message: MessageReference(message), media: media), resource: media.resource)
                                         
                                         fetchDisposable = fetchedMediaResource(mediaBox: account.postbox.mediaBox, reference: reference).start()

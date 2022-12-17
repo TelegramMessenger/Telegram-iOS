@@ -420,6 +420,7 @@ public final class EmojiStatusComponent: Component {
                         }
                         animationLayer = InlineStickerItemLayer(
                             context: component.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: false,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: emojiFile.fileId.id, file: emojiFile),
                             file: emojiFile,

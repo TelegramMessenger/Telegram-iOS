@@ -52,9 +52,8 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
     }
 }
 
-
 public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference, transitionView: UIView?, senderName: String? = nil, present: @escaping (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments) -> Void) {
-    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, mediaReference: media)
+    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
     |> deliverOnMainQueue).start(next: { (value, isImage) in
         guard case let .data(data) = value, data.complete else {
             return

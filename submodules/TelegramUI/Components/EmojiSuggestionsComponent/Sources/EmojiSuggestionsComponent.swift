@@ -107,6 +107,7 @@ public final class EmojiSuggestionsComponent: Component {
     
     public init(
         context: AccountContext,
+        userLocation: MediaResourceUserLocation,
         theme: PresentationTheme,
         animationCache: AnimationCache,
         animationRenderer: MultiAnimationRenderer,
@@ -283,6 +284,7 @@ public final class EmojiSuggestionsComponent: Component {
                     } else {
                         itemLayer = InlineStickerItemLayer(
                             context: component.context,
+                            userLocation: .other,
                             attemptSynchronousLoad: synchronousLoad,
                             emoji: ChatTextInputTextCustomEmojiAttribute(interactivelySelectedFromPackId: nil, fileId: item.fileId.id, file: item),
                             file: item,

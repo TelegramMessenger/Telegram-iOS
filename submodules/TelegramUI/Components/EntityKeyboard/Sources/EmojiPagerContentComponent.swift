@@ -2908,14 +2908,14 @@ public final class EmojiPagerContentComponent: Component {
                             return
                         }
                         
-                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0, customColor: animationData.isTemplate ? .white : nil))
+                        strongSelf.disposable = renderer.add(target: strongSelf, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, unique: false, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: pixelSize.width >= 120.0, customColor: animationData.isTemplate ? .white : nil))
                     }
                     
                     if attemptSynchronousLoad {
                         if !renderer.loadFirstFrameSynchronously(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize) {
                             self.updateDisplayPlaceholder(displayPlaceholder: true)
                             
-                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
+                            self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                                 if !isFinal {
                                     if !success {
                                         Queue.mainQueue().async {
@@ -2945,7 +2945,7 @@ public final class EmojiPagerContentComponent: Component {
                             loadAnimation()
                         }
                     } else {
-                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
+                        self.fetchDisposable = renderer.loadFirstFrame(target: self, cache: cache, itemId: animationData.resource.resource.id.stringRepresentation, size: pixelSize, fetch: animationCacheFetchFile(context: context, userLocation: .other, userContentType: .sticker, resource: animationData.resource, type: animationData.type.animationCacheAnimationType, keyframeOnly: true, customColor: animationData.isTemplate ? .white : nil), completion: { [weak self] success, isFinal in
                             if !isFinal {
                                 if !success {
                                     Queue.mainQueue().async {

@@ -1300,6 +1300,55 @@ private func extractAccountManagerState(records: AccountRecordsView<TelegramAcco
         }
         #endif
         
+        if #available(iOS 13.0, *) {
+            let taskId = "\(baseAppBundleId).cleanup"
+            
+            BGTaskScheduler.shared.register(forTaskWithIdentifier: taskId, using: DispatchQueue.main) { task in
+                Logger.shared.log("App \(self.episodeId)", "Executing cleanup task")
+                
+                let disposable = MetaDisposable()
+                
+                let _ = (self.sharedContextPromise.get()
+                |> take(1)
+                |> deliverOnMainQueue).start(next: { sharedApplicationContext in
+                    let _ = (sharedApplicationContext.sharedContext.activeAccountContexts
+                    |> take(1)
+                    |> deliverOnMainQueue).start(next: { activeAccounts in
+                        var signals: Signal<Never, NoError> = .complete()
+                        
+                        for (_, context, _) in activeAccounts.accounts {
+                            signals = signals |> then(context.account.cleanupTasks())
+                        }
+                        
+                        disposable.set(signals.start(completed: {
+                            task.setTaskCompleted(success: true)
+                        }))
+                    })
+                })
+                
+                task.expirationHandler = {
+                    disposable.dispose()
+                    task.setTaskCompleted(success: false)
+                }
+            }
+            
+            BGTaskScheduler.shared.getPendingTaskRequests(completionHandler: { tasks in
+                if tasks.contains(where: { $0.identifier == taskId }) {
+                    Logger.shared.log("App \(self.episodeId)", "Already have a cleanup task pending")
+                    return
+                }
+                let request = BGProcessingTaskRequest(identifier: taskId)
+                request.requiresExternalPower = true
+                request.requiresNetworkConnectivity = false
+                
+                do {
+                    try BGTaskScheduler.shared.submit(request)
+                } catch let e {
+                    Logger.shared.log("App \(self.episodeId)", "Error submitting background task request: \(e)")
+                }
+            })
+        }
+        
         return true
     }
 
