@@ -202,13 +202,19 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         [_titleLabel sizeToFit];
         [_wrapperView addSubview:_titleLabel];
         
+        NSMutableAttributedString *subtitle = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoText") : TGLocalized(@"Conversation.SuggestedPhotoText"), _senderName]];
+        [subtitle addAttribute:NSForegroundColorAttributeName value:[UIColor whiteColor] range:NSMakeRange(0, subtitle.string.length)];
+        [subtitle addAttribute:NSFontAttributeName value:TGSystemFontOfSize(15.0f) range:NSMakeRange(0, subtitle.string.length)];
+        
+        NSMutableParagraphStyle *paragraphStyle = [[NSMutableParagraphStyle alloc] init];
+        paragraphStyle.alignment = NSTextAlignmentCenter;
+        paragraphStyle.lineSpacing = 5.0f;
+        [subtitle addAttribute:NSParagraphStyleAttributeName value:paragraphStyle range:NSMakeRange(0, subtitle.string.length)];
+        
         _subtitleLabel = [[UILabel alloc] init];
+        _subtitleLabel.attributedText = subtitle;
         _subtitleLabel.backgroundColor = [UIColor clearColor];
-        _subtitleLabel.font = TGSystemFontOfSize(14.0f);
-        _subtitleLabel.textColor = [UIColor whiteColor];
         _subtitleLabel.numberOfLines = 2;
-        _subtitleLabel.textAlignment = NSTextAlignmentCenter;
-        _subtitleLabel.text = [NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoText") : TGLocalized(@"Conversation.SuggestedPhotoText"), _senderName];
         if (!self.item.isVideo) {
             [_wrapperView addSubview:_subtitleLabel];
         }
@@ -824,7 +830,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     CGSize buttonSize = CGSizeMake(MIN(referenceSize.width, referenceSize.height) - 16.0 * 2.0, 50.0f);
     [_doneButton updateWidth:buttonSize.width];
     
-    CGSize subtitleSize = [_subtitleLabel sizeThatFits:CGSizeMake(referenceSize.width - 48.0, referenceSize.height)];
+    CGSize subtitleSize = [_subtitleLabel sizeThatFits:CGSizeMake(referenceSize.width - 96.0, referenceSize.height)];
     
     switch (orientation)
     {
@@ -891,7 +897,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _coverLabel.frame = CGRectMake(floor((_portraitToolsWrapperView.frame.size.width - _coverLabel.frame.size.width) / 2.0), CGRectGetMaxY(_scrubberView.frame) + 6.0, _coverLabel.frame.size.width, _coverLabel.frame.size.height);
             
             _titleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _titleLabel.frame.size.width) / 2.0), screenEdges.top + floor((44.0 - _titleLabel.frame.size.height) / 2.0), _titleLabel.frame.size.width, _titleLabel.frame.size.height);
-            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom - 56.0 - buttonSize.height - subtitleSize.height - 16.0, subtitleSize.width, subtitleSize.height);
+            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom - 56.0 - buttonSize.height - subtitleSize.height - 20.0, subtitleSize.width, subtitleSize.height);
             
             _cancelButton.frame = CGRectMake(screenEdges.left + 16.0, screenEdges.top + floor((44.0 - _cancelButton.frame.size.height) / 2.0), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
             

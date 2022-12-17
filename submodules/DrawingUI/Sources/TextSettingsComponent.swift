@@ -261,7 +261,7 @@ final class TextFontComponent: Component {
         func update(component: TextFontComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.updated = component.updated
             
-            var contentWidth: CGFloat = 0.0
+            var contentWidth: CGFloat = 10.0
             
             let styleSize = self.styleButtonHost.update(
                 transition: transition,
@@ -273,7 +273,7 @@ final class TextFontComponent: Component {
                 if view.superview == nil {
                     self.scrollView.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: -7.0, y: -7.0), size: styleSize)
+                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: styleSize)
             }
             
             contentWidth += 44.0
@@ -291,7 +291,7 @@ final class TextFontComponent: Component {
                 view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: alignmentSize)
             }
             
-            contentWidth += 32.0
+            contentWidth += 36.0
             
             for value in component.values {
                 contentWidth += 12.0

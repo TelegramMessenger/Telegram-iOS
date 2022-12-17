@@ -546,6 +546,7 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
             font = Font.with(size: fontSize, design: .round, weight: .semibold)
         }
         text.addAttribute(.font, value: font, range: range)
+        self.textView.font = font
         
         let color = self.textEntity.color.toUIColor()
         let textColor: UIColor

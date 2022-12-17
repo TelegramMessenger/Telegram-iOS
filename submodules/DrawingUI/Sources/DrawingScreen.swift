@@ -455,6 +455,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         var toolIsFocused = false
         var currentColor: DrawingColor
         var selectedEntity: DrawingEntity?
+        
+        var lastFontSize: CGFloat = 0.5
     
         init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updatePlayback: ActionSlot<Bool>, present: @escaping (ViewController) -> Void) {
             self.context = context
@@ -1109,131 +1111,13 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             }
             
+            var editingText = false
+            var fontSize: CGFloat?
             if let textEntity = state.selectedEntity as? DrawingTextEntity, let entityView = textEntity.currentEntityView as? DrawingTextEntityView, entityView.isEditing {
-                let topInset = environment.safeInsets.top + 31.0
-                let textSize = textSize.update(
-                    component: TextSizeSliderComponent(
-                        value: textEntity.fontSize,
-                        updated: { [weak state] size in
-                            state?.updateBrushSize(size)
-                        }
-                    ),
-                    availableSize: CGSize(width: 30.0, height: 240.0),
-                    transition: context.transition
-                )
-                context.add(textSize
-                    .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - environment.inputHeight) / 2.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                        
-                        transition.animatePosition(view: view, from: CGPoint(x: -33.0, y: 0.0), to: CGPoint(), additive: true)
-                    })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                        transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), additive: true)
-                    })
-                )
-                
-                let textCancelButton = textCancelButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Cancel", font: Font.regular(17.0), color: .white)
-                        ),
-                        action: { [weak state] in
-                            if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                                entityView.endEditing(reset: true)
-                            }
-                        }
-                    ),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(textCancelButton
-                    .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
-                let textDoneButton = textDoneButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Done", font: Font.semibold(17.0), color: .white)
-                        ),
-                        action: { [weak state] in
-                            if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                                entityView.endEditing()
-                            }
-                        }
-                    ),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(textDoneButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
+                editingText = true
+                fontSize = textEntity.fontSize
+                state.lastFontSize = textEntity.fontSize
             } else {
-                let undoButton = undoButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Image(image: state.image(.undo))
-                        ),
-                        isEnabled: state.drawingViewState.canUndo,
-                        action: {
-                            performAction.invoke(.undo)
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(undoButtonTag),
-                    availableSize: CGSize(width: 24.0, height: 24.0),
-                    transition: context.transition
-                )
-                context.add(undoButton
-                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
-                if state.drawingViewState.canRedo {
-                    let redoButton = redoButton.update(
-                        component: Button(
-                            content: AnyComponent(
-                                Image(image: state.image(.redo))
-                            ),
-                            action: {
-                                performAction.invoke(.redo)
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
-                        availableSize: CGSize(width: 24.0, height: 24.0),
-                        transition: context.transition
-                    )
-                    context.add(redoButton
-                        .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: environment.safeInsets.top + 31.0))
-                        .appear(.default(scale: true, alpha: true))
-                        .disappear(.default(scale: true, alpha: true))
-                    )
-                }
-                
-                let clearAllButton = clearAllButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Clear All", font: Font.regular(17.0), color: .white)
-                        ),
-                        isEnabled: state.drawingViewState.canClear,
-                        action: {
-                            performAction.invoke(.clear)
-                        }
-                    ).tagged(clearAllButtonTag),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(clearAllButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
                 if state.drawingViewState.canZoomOut {
                     let zoomOutButton = zoomOutButton.update(
                         component: Button(
@@ -1257,6 +1141,119 @@ private final class DrawingScreenComponent: CombinedComponent {
                     )
                 }
             }
+            
+            let topInset = environment.safeInsets.top + 31.0
+            let textSize = textSize.update(
+                component: TextSizeSliderComponent(
+                    value: fontSize ?? state.lastFontSize,
+                    updated: { [weak state] size in
+                        state?.updateBrushSize(size)
+                    }
+                ),
+                availableSize: CGSize(width: 30.0, height: 240.0),
+                transition: context.transition
+            )
+            context.add(textSize
+                .position(CGPoint(x: editingText ? textSize.size.width / 2.0 : textSize.size.width / 2.0 - 33.0, y: topInset + (context.availableSize.height - topInset - environment.inputHeight) / 2.0))
+            )
+            
+            let undoButton = undoButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Image(image: state.image(.undo))
+                    ),
+                    isEnabled: state.drawingViewState.canUndo,
+                    action: {
+                        performAction.invoke(.undo)
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(undoButtonTag),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(undoButton
+                .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: environment.safeInsets.top + 31.0))
+                .scale(editingText ? 0.01 : 1.0)
+                .opacity(editingText ? 0.0 : 1.0)
+            )
+            
+            if state.drawingViewState.canRedo && !editingText {
+                let redoButton = redoButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            Image(image: state.image(.redo))
+                        ),
+                        action: {
+                            performAction.invoke(.redo)
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
+                    availableSize: CGSize(width: 24.0, height: 24.0),
+                    transition: context.transition
+                )
+                context.add(redoButton
+                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: environment.safeInsets.top + 31.0))
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
+                )
+            }
+            
+            let clearAllButton = clearAllButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: "Clear All", font: Font.regular(17.0), color: .white)
+                    ),
+                    isEnabled: state.drawingViewState.canClear,
+                    action: {
+                        performAction.invoke(.clear)
+                    }
+                ).tagged(clearAllButtonTag),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(clearAllButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(editingText ? 0.01 : 1.0)
+                .opacity(editingText ? 0.0 : 1.0)
+            )
+            
+            let textCancelButton = textCancelButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: .white)
+                    ),
+                    action: { [weak state] in
+                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
+                            entityView.endEditing(reset: true)
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(textCancelButton
+                .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(editingText ? 1.0 : 0.01)
+                .opacity(editingText ? 1.0 : 0.0)
+            )
+            
+            let textDoneButton = textDoneButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: environment.strings.Common_Done, font: Font.semibold(17.0), color: .white)
+                    ),
+                    action: { [weak state] in
+                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
+                            entityView.endEditing()
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(textDoneButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(editingText ? 1.0 : 0.01)
+                .opacity(editingText ? 1.0 : 0.0)
+            )
             
             var isEditingSize = false
             if state.toolIsFocused {
@@ -1746,7 +1743,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 self.performAction.connect { [weak self] action in
                     if let strongSelf = self {
                         if action == .clear {
-                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme))
                             actionSheet.setItemGroups([
                                 ActionSheetItemGroup(items: [
                                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Paint_ClearConfirm, color: .destructive, action: { [weak actionSheet, weak self] in
@@ -1947,7 +1944,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.dismiss.connect { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.drawingView.isEmpty {
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme))
                         actionSheet.setItemGroups([
                             ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.PhotoEditor_DiscardChanges, color: .accent, action: { [weak actionSheet, weak self] in
