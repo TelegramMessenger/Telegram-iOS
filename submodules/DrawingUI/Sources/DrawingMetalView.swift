@@ -721,13 +721,7 @@ final class Texture {
             return nil
         }
         #else
-        let content = self.content
-        let pool = self.pool
         guard let dataProvider = CGDataProvider(data: Data(bytesNoCopy: self.buffer.contents(), count: self.buffer.length, deallocator: .custom { [weak pool] _, _ in
-//                guard let pool = pool else {
-//                    return
-//                }
-//                pool.recycle(content: content)
         }) as CFData) else {
             return nil
         }
