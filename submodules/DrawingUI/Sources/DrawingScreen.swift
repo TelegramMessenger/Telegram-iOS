@@ -2215,105 +2215,106 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 if let componentView = self.textEditAccessoryHost.view, componentView.superview != nil {
                     isFirstTime = false
                 }
-                let accessorySize = self.textEditAccessoryHost.update(
-                    transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
-                    component: AnyComponent(
-                        TextSettingsComponent(
-                            color: textEntity.color,
-                            style: DrawingTextStyle(style: textEntity.style),
-                            alignment: DrawingTextAlignment(alignment: textEntity.alignment),
-                            font: DrawingTextFont(font: textEntity.font),
-                            isEmojiKeyboard: entityView.textView.inputView != nil,
-                            presentColorPicker: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
+                UIView.performWithoutAnimation {
+                    let accessorySize = self.textEditAccessoryHost.update(
+                        transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
+                        component: AnyComponent(
+                            TextSettingsComponent(
+                                color: textEntity.color,
+                                style: DrawingTextStyle(style: textEntity.style),
+                                alignment: DrawingTextAlignment(alignment: textEntity.alignment),
+                                font: DrawingTextFont(font: textEntity.font),
+                                isEmojiKeyboard: entityView.textView.inputView != nil,
+                                presentColorPicker: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    entityView.suspendEditing()
+                                    self?.presentColorPicker(initialColor: textEntity.color, dismissed: {
+                                        entityView.resumeEditing()
+                                    })
+                                },
+                                presentFastColorPicker: { [weak self] buttonTag in
+                                    if let buttonView = self?.textEditAccessoryHost.findTaggedView(tag: buttonTag) {
+                                        self?.presentFastColorPicker(sourceView: buttonView)
+                                    }
+                                },
+                                updateFastColorPickerPan: { [weak self] point in
+                                    self?.updateFastColorPickerPan(point)
+                                },
+                                dismissFastColorPicker: { [weak self] in
+                                    self?.dismissFastColorPicker()
+                                },
+                                toggleStyle: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextStyle: DrawingTextEntity.Style
+                                    switch textEntity.style {
+                                    case .regular:
+                                        nextStyle = .filled
+                                    case .filled:
+                                        nextStyle = .semi
+                                    case .semi:
+                                        nextStyle = .stroke
+                                    case .stroke:
+                                        nextStyle = .regular
+                                    }
+                                    textEntity.style = nextStyle
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                toggleAlignment: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextAlignment: DrawingTextEntity.Alignment
+                                    switch textEntity.alignment {
+                                    case .left:
+                                        nextAlignment = .center
+                                    case .center:
+                                        nextAlignment = .right
+                                    case .right:
+                                        nextAlignment = .left
+                                    }
+                                    textEntity.alignment = nextAlignment
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                updateFont: { [weak self] font in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    textEntity.font = font.font
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                toggleKeyboard: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.toggleInputMode()
                                 }
-                                entityView.suspendEditing()
-                                self?.presentColorPicker(initialColor: textEntity.color, dismissed: {
-                                    entityView.resumeEditing()
-                                })
-                            },
-                            presentFastColorPicker: { [weak self] buttonTag in
-                                if let buttonView = self?.textEditAccessoryHost.findTaggedView(tag: buttonTag) {
-                                    self?.presentFastColorPicker(sourceView: buttonView)
-                                }
-                            },
-                            updateFastColorPickerPan: { [weak self] point in
-                                self?.updateFastColorPickerPan(point)
-                            },
-                            dismissFastColorPicker: { [weak self] in
-                                self?.dismissFastColorPicker()
-                            },
-                            toggleStyle: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                var nextStyle: DrawingTextEntity.Style
-                                switch textEntity.style {
-                                case .regular:
-                                    nextStyle = .filled
-                                case .filled:
-                                    nextStyle = .semi
-                                case .semi:
-                                    nextStyle = .stroke
-                                case .stroke:
-                                    nextStyle = .regular
-                                }
-                                textEntity.style = nextStyle
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            toggleAlignment: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                var nextAlignment: DrawingTextEntity.Alignment
-                                switch textEntity.alignment {
-                                case .left:
-                                    nextAlignment = .center
-                                case .center:
-                                    nextAlignment = .right
-                                case .right:
-                                    nextAlignment = .left
-                                }
-                                textEntity.alignment = nextAlignment
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            updateFont: { [weak self] font in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                textEntity.font = font.font
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            toggleKeyboard: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.toggleInputMode()
-                            }
-                        )
-                    ),
-                    environment: {},
-                    forceUpdate: true,
-                    containerSize: CGSize(width: layout.size.width, height: 44.0)
-                )
-                if let componentView = self.textEditAccessoryHost.view {
-                    if componentView.superview == nil {
-                        self.textEditAccessoryView.addSubview(componentView)
-                    }
-                    UIView.performWithoutAnimation {
+                            )
+                        ),
+                        environment: {},
+                        forceUpdate: true,
+                        containerSize: CGSize(width: layout.size.width, height: 44.0)
+                    )
+                    if let componentView = self.textEditAccessoryHost.view {
+                        if componentView.superview == nil {
+                            self.textEditAccessoryView.addSubview(componentView)
+                        }
+                        
                         self.textEditAccessoryView.frame = CGRect(origin: .zero, size: accessorySize)
                         componentView.frame = CGRect(origin: .zero, size: accessorySize)
                     }
