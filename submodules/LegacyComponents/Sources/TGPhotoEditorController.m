@@ -1322,9 +1322,7 @@
     TGPhotoEditorBackButton backButtonType = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButtonType = TGPhotoEditorDoneButtonCheck;
     
-    if ([self presentedForSuggestedAvatar] && !_item.isVideo) {
-        [_portraitToolbarView setCancelDoneButtonsHidden:tab == TGPhotoEditorCropTab animated:!isInitialAppearance];
-    }
+    bool sideButtonsHiddenInCrop = [self presentedForSuggestedAvatar] && !_item.isVideo;
     
     __weak TGPhotoEditorController *weakSelf = self;
     TGPhotoEditorTabController *controller = nil;
@@ -1339,6 +1337,8 @@
             
             if ([self presentedForAvatarCreation])
             {
+                [_containerView.superview insertSubview:_containerView belowSubview:_portraitToolbarView];
+                
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
                 TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar] isSuggesting:[self presentedForSuggestingAvatar] senderName:self.senderName];
@@ -1487,6 +1487,15 @@
                 controller = cropController;
                 
                 doneButtonType = TGPhotoEditorDoneButtonDone;
+                
+                if (sideButtonsHiddenInCrop) {
+                    [_portraitToolbarView setCancelDoneButtonsHidden:true animated:true];
+                    [_portraitToolbarView setCenterButtonsHidden:false animated:true];
+                    [_landscapeToolbarView setAllButtonsHidden:false animated:true];
+                } else {
+                    [_portraitToolbarView setAllButtonsHidden:false animated:false];
+                    [_landscapeToolbarView setAllButtonsHidden:false animated:false];
+                }
             }
             else
             {
@@ -1586,12 +1595,12 @@
             
         case TGPhotoEditorPaintTab:
         {
-            [_portraitToolbarView setAllButtonsHidden:true animated:false];
-            [_landscapeToolbarView setAllButtonsHidden:true animated:false];
+            [_portraitToolbarView setAllButtonsHidden:true animated:[self presentedForAvatarCreation]];
+            [_landscapeToolbarView setAllButtonsHidden:true animated:[self presentedForAvatarCreation]];
             
             [_containerView.superview bringSubviewToFront:_containerView];
             
-            TGPhotoDrawingController *drawingController = [[TGPhotoDrawingController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView stickersContext:_stickersContext];
+            TGPhotoDrawingController *drawingController = [[TGPhotoDrawingController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView stickersContext:_stickersContext isAvatar:[self presentedForAvatarCreation]];
             drawingController.requestDismiss = ^{
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
                 if (strongSelf == nil)
@@ -1602,7 +1611,11 @@
                 __strong TGPhotoEditorController *strongSelf = weakSelf;
                 if (strongSelf == nil)
                     return;
-                [strongSelf applyEditor];
+                if ([strongSelf presentedForAvatarCreation]) {
+                    [strongSelf presentTab:TGPhotoEditorCropTab];
+                } else {
+                    [strongSelf applyEditor];
+                }
             };
             drawingController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             drawingController.controlVideoPlayback = ^(bool play) {
@@ -1657,6 +1670,10 @@
             
         case TGPhotoEditorToolsTab:
         {
+            if ([self presentedForSuggestedAvatar]) {
+                [_portraitToolbarView setCancelDoneButtonsHidden:false animated:true];
+            }
+            
             TGPhotoToolsController *toolsController = [[TGPhotoToolsController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView entitiesView:_fullEntitiesView];
             toolsController.toolbarLandscapeSize = TGPhotoEditorToolbarSize;
             toolsController.beginTransitionIn = ^UIView *(CGRect *referenceFrame, UIView **parentView, bool *noTransitionView)

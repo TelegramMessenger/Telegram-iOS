@@ -321,6 +321,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let isAvatar: Bool
     let present: (ViewController) -> Void
     let updateState: ActionSlot<DrawingView.NavigationState>
     let updateColor: ActionSlot<DrawingColor>
@@ -341,6 +342,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        isAvatar: Bool,
         present: @escaping (ViewController) -> Void,
         updateState: ActionSlot<DrawingView.NavigationState>,
         updateColor: ActionSlot<DrawingColor>,
@@ -359,6 +361,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         dismissFastColorPicker: @escaping () -> Void
     ) {
         self.context = context
+        self.isAvatar = isAvatar
         self.present = present
         self.updateState = updateState
         self.updateColor = updateColor
@@ -379,6 +382,9 @@ private final class DrawingScreenComponent: CombinedComponent {
     
     static func ==(lhs: DrawingScreenComponent, rhs: DrawingScreenComponent) -> Bool {
         if lhs.context !== rhs.context {
+            return false
+        }
+        if lhs.isAvatar != rhs.isAvatar {
             return false
         }
         return true
@@ -1635,7 +1641,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: "media_backToCancel",
                                 mode: .animating(loop: false),
-                                range: isEditingSize || animatingOut ? (0.5, 1.0) : (0.0, 0.5)
+                                range: isEditingSize || animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
                             ),
                             colors: ["__allcolors__": .white],
                             size: CGSize(width: 33.0, height: 33.0)
@@ -2111,7 +2117,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
             }
             if let view = self.componentHost.findTaggedView(tag: toolsTag) as? ToolsComponent.View {
-                view.animateOut(completion: {})
+                view.animateOut(completion: {
+                    completion()
+                })
             }
             if let view = self.componentHost.findTaggedView(tag: modeTag) as? ModeAndSizeComponent.View {
                 view.animateOut()
@@ -2131,6 +2139,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }
         
         func containerLayoutUpdated(layout: ContainerViewLayout, animateOut: Bool = false, transition: Transition) {
+            guard let controller = self.controller else {
+                return
+            }
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
@@ -2162,6 +2173,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 component: AnyComponent(
                     DrawingScreenComponent(
                         context: self.context,
+                        isAvatar: controller.isAvatar,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -2382,15 +2394,17 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     private let context: AccountContext
     private let size: CGSize
     private let originalSize: CGSize
+    private let isAvatar: Bool
     
     public var requestDismiss: (() -> Void)!
     public var requestApply: (() -> Void)!
     public var getCurrentImage: (() -> UIImage?)!
     
-    public init(context: AccountContext, size: CGSize, originalSize: CGSize) {
+    public init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
         self.context = context
         self.size = size
         self.originalSize = originalSize
+        self.isAvatar = isAvatar
         
         super.init(navigationBarPresentationData: nil)
         
@@ -2415,6 +2429,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     
     required public init(coder: NSCoder) {
         preconditionFailure()
+    }
+    
+    deinit {
+        print()
     }
         
     override public func loadDisplayNode() {

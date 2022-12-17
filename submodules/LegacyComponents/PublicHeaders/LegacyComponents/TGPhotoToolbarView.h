@@ -65,6 +65,7 @@ typedef enum
 - (void)setEditButtonsHighlighted:(TGPhotoEditorTab)buttons;
 - (void)setEditButtonsDisabled:(TGPhotoEditorTab)buttons;
 
+- (void)setCenterButtonsHidden:(bool)hidden animated:(bool)animated;
 - (void)setAllButtonsHidden:(bool)hidden animated:(bool)animated;
 - (void)setCancelDoneButtonsHidden:(bool)hidden animated:(bool)animated;
 

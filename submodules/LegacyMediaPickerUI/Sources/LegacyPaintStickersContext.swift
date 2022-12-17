@@ -482,8 +482,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let contentWrapperView: UIView!
         let interfaceController: TGPhotoDrawingInterfaceController!
         
-        init(context: AccountContext, size: CGSize, originalSize: CGSize) {
-            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize)
+        init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize, isAvatar: isAvatar)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView
@@ -494,8 +494,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         }
     }
     
-    public func drawingAdapter(_ size: CGSize, originalSize: CGSize) -> TGPhotoDrawingAdapter! {
-        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize)
+    public func drawingAdapter(_ size: CGSize, originalSize: CGSize, isAvatar: Bool) -> TGPhotoDrawingAdapter! {
+        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize, isAvatar: isAvatar)
     }
     
     public func solidRoundedButton(_ title: String!, action: (() -> Void)!) -> (UIView & TGPhotoSolidRoundedButtonView)! {

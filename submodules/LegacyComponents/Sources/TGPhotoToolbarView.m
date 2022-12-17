@@ -544,6 +544,7 @@
         _animatingCancelDoneButtons = hidden;
         if (hidden) {
             _cancelButton.modernHighlight = false;
+            _doneButton.modernHighlight = false;
         }
         _cancelButton.hidden = false;
         _doneButton.hidden = false;
@@ -561,6 +562,7 @@
             
             if (hidden) {
                 _cancelButton.modernHighlight = true;
+                _doneButton.modernHighlight = true;
             }
             
             if (hidden) {
@@ -575,6 +577,30 @@
         _doneButton.alpha = targetAlpha;
         _cancelButton.hidden = hidden;
         _doneButton.hidden = hidden;
+    }
+}
+
+- (void)setCenterButtonsHidden:(bool)hidden animated:(bool)animated
+{
+    CGFloat targetAlpha = hidden ? 0.0f : 1.0f;
+    
+    if (animated)
+    {
+        _buttonsWrapperView.hidden = false;
+        
+        [UIView animateWithDuration:0.2f
+                         animations:^
+        {
+            _buttonsWrapperView.alpha = targetAlpha;
+        } completion:^(__unused BOOL finished)
+        {
+            _buttonsWrapperView.hidden = hidden;
+        }];
+    }
+    else
+    {
+        _buttonsWrapperView.alpha = targetAlpha;
+        _buttonsWrapperView.hidden = hidden;
     }
 }
 
