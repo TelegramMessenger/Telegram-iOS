@@ -435,6 +435,14 @@
             intent = TGPhotoEditorControllerSignupAvatarIntent;
         }
         
+        if (self.forum) {
+            intent |= TGPhotoEditorControllerForumAvatarIntent;
+        }
+        
+        if (self.isSuggesting) {
+            intent |= TGPhotoEditorControllerSuggestingAvatarIntent;
+        }
+        
         id<TGMediaEditableItem> editableItem = asset;
         if (asset.type == TGMediaAssetGifType) {
             editableItem = [[TGCameraCapturedVideo alloc] initWithAsset:asset livePhoto:false];

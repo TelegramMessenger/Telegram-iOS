@@ -14,6 +14,9 @@ import TelegramStringFormatting
 import WallpaperBackgroundNode
 import ReactionSelectionNode
 import PhotoResources
+import UniversalMediaPlayer
+import TelegramUniversalVideoContent
+import GalleryUI
 
 class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
@@ -21,6 +24,10 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
     private let titleNode: TextNode
     private let subtitleNode: TextNode
     private let imageNode: TransformImageNode
+    
+    fileprivate var videoNode: UniversalVideoNode?
+    private var videoContent: NativeVideoContent?
+    private var videoStartTimestamp: Double?
     
     private let buttonNode: HighlightTrackingButtonNode
     private let buttonStarsNode: PremiumStarsNode
@@ -195,6 +202,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                         if let strongSelf = self {
                             strongSelf.item = item
                             
+                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
                             if let photo = photo {
                                 if mediaUpdated {
                                     strongSelf.fetchDisposable.set(chatMessagePhotoInteractiveFetched(context: item.context, userLocation: .peer(item.message.id.peerId), photoReference: .message(message: MessageReference(item.message), media: photo), displayAtSize: nil, storeToDownloadsPeerType: nil).start())
@@ -207,11 +215,49 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                                 let apply = makeImageLayout(arguments)
                                 apply()
                                 
-                                strongSelf.imageNode.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - imageSize.width) / 2.0), y: 13.0), size: imageSize)
+                                strongSelf.imageNode.frame = imageFrame
+                            }
+                                                        
+                            if let photo = photo, let video = photo.videoRepresentations.last, let id = photo.id?.id {
+                                let videoFileReference = FileMediaReference.message(message: MessageReference(item.message), media: TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: 0), partialReference: nil, resource: video.resource, previewRepresentations: photo.representations, videoThumbnails: [], immediateThumbnailData: photo.immediateThumbnailData, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: video.dimensions, flags: [])]))
+                                let videoContent = NativeVideoContent(id: .profileVideo(id, "action"), userLocation: .peer(item.message.id.peerId), fileReference: videoFileReference, streamVideo: isMediaStreamable(resource: video.resource) ? .conservative : .none, loopVideo: true, enableSound: false, fetchAutomatically: true, onlyFullSizeThumbnail: false, useLargeThumbnail: true, autoFetchFullSizeThumbnail: true, continuePlayingWithoutSoundOnLostAudioSession: false, placeholderColor: .clear)
+                                if videoContent.id != strongSelf.videoContent?.id {
+                                    let mediaManager = item.context.sharedContext.mediaManager
+                                    let videoNode = UniversalVideoNode(postbox: item.context.account.postbox, audioSession: mediaManager.audioSession, manager: mediaManager.universalVideoManager, decoration: GalleryVideoDecoration(), content: videoContent, priority: .secondaryOverlay)
+                                    videoNode.isUserInteractionEnabled = false
+                                    videoNode.ownsContentNodeUpdated = { [weak self] owns in
+                                        if let strongSelf = self {
+                                            strongSelf.videoNode?.isHidden = !owns
+                                        }
+                                    }
+                                    strongSelf.videoContent = videoContent
+                                    strongSelf.videoNode = videoNode
+                                    
+                                    videoNode.updateLayout(size: imageSize, transition: .immediate)
+                                    videoNode.frame = imageFrame
+                                    videoNode.clipsToBounds = true
+                                    videoNode.cornerRadius = imageFrame.width / 2.0
+                                    
+                                    strongSelf.addSubnode(videoNode)
+                                    
+                                    videoNode.canAttachContent = true
+                                    if let videoStartTimestamp = video.startTimestamp {
+                                        videoNode.seek(videoStartTimestamp)
+                                    } else {
+                                        videoNode.seek(0.0)
+                                    }
+                                    videoNode.play()
+                                    
+                                }
+                            } else if let videoNode = strongSelf.videoNode {
+                                strongSelf.videoContent = nil
+                                strongSelf.videoNode = nil
+                                
+                                videoNode.removeFromSupernode()
                             }
                             
-                            let imageFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
-                            let mediaBackgroundFrame = imageFrame.insetBy(dx: -2.0, dy: -2.0)
+                            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
+                            let mediaBackgroundFrame = backgroundFrame.insetBy(dx: -2.0, dy: -2.0)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
                             strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)

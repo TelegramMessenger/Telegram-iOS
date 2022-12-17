@@ -919,7 +919,7 @@ final class PeerInfoAvatarListNode: ASDisplayNode {
         
         self.avatarContainerNode = PeerInfoAvatarTransformContainerNode(context: context)
         self.listContainerTransformNode = ASDisplayNode()
-        self.listContainerNode = PeerInfoAvatarListContainerNode(context: context)
+        self.listContainerNode = PeerInfoAvatarListContainerNode(context: context, isSettings: isSettings)
         self.listContainerNode.clipsToBounds = true
         self.listContainerNode.isHidden = true
         

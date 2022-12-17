@@ -409,13 +409,6 @@ final class PenTool: DrawingElement {
 
         let r = min(limitRange, length)
 
-//        var r = limitRange - length
-//        if r < 0 {
-//            r = 0
-//        }
-
-//        print(r * lowerer)
-
         return (r * lowerer) + constant
     }
 

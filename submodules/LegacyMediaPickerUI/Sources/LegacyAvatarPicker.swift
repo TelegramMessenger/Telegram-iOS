@@ -23,7 +23,7 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
     
     present(legacyController, nil)
         
-    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup, forum: false, title: nil)!
+    let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: false, hasDeleteButton: false, hasViewButton: openCurrent != nil, personalPhoto: true, isVideo: false, saveEditedPhotos: false, saveCapturedMedia: false, signup: signup, forum: false, title: nil, isSuggesting: false)!
     let _ = holder.swap(mixin)
     mixin.didFinishWithImage = { image in
         guard let image = image else {
@@ -53,21 +53,36 @@ public func presentLegacyAvatarPicker(holder: Atomic<NSObject?>, signup: Bool, t
 }
 
 public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference, transitionView: UIView?, senderName: String? = nil, present: @escaping (ViewController, Any?) -> Void, imageCompletion: @escaping (UIImage) -> Void, videoCompletion: @escaping (UIImage, URL, TGVideoEditAdjustments) -> Void) {
-    let _ = (fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media)
-    |> deliverOnMainQueue).start(next: { (value, isImage) in
-        guard case let .data(data) = value, data.complete else {
-            return
+    let isVideo = !((media.media as? TelegramMediaImage)?.videoRepresentations.isEmpty ?? true)
+    
+    let imageSignal = fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media, forceVideo: false)
+    |> map { (value, _) -> (UIImage?, Bool) in
+        if case let .data(data) = value, data.complete {
+            return (UIImage(contentsOfFile: data.path), true)
+        } else {
+            return (nil, false)
         }
-        
-        var image: UIImage?
-        var url: URL?
-        if let maybeImage = UIImage(contentsOfFile: data.path) {
-            image = maybeImage
-        } else if data.complete {
-            url = URL(fileURLWithPath: data.path)
+    }
+    
+    let videoSignal = isVideo ? fetchMediaData(context: context, postbox: context.account.postbox, userLocation: .other, mediaReference: media, forceVideo: true)
+    |> map { (value, isImage) -> (URL?, Bool) in
+        if case let .data(data) = value, data.complete && !isImage {
+            return (URL(fileURLWithPath: data.path), true)
+        } else {
+            return (nil, false)
         }
-        
-        if image == nil && url == nil {
+    } : .single((nil, true))
+    
+    let signals = combineLatest(queue: Queue.mainQueue(),
+        imageSignal,
+        videoSignal
+    )
+    |> filter { image, video in
+        return image.1 && video.1
+    }
+    
+    let _ = signals.start(next: { image, video in
+        if image.0 == nil && video.0 == nil {
             return
         }
         
@@ -92,7 +107,7 @@ public func legacyAvatarEditor(context: AccountContext, media: AnyMediaReference
         
         present(legacyController, nil)
         
-        TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, image: image, video: url, stickersContext: paintStickersContext, transitionView: transitionView, senderName: senderName, didFinishWithImage: { image in
+        TGPhotoVideoEditor.present(with: legacyController.context, parentController: emptyController, image: image.0, video: video.0, stickersContext: paintStickersContext, transitionView: transitionView, senderName: senderName, didFinishWithImage: { image in
             if let image = image {
                 imageCompletion(image)
             }

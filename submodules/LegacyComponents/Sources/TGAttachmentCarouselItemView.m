@@ -915,6 +915,9 @@ const NSUInteger TGAttachmentDisplayedAssetLimit = 500;
         if (_forum) {
             intent |= TGPhotoEditorControllerForumAvatarIntent;
         }
+        if (_isSuggesting) {
+            intent |= TGPhotoEditorControllerSuggestingAvatarIntent;
+        }
         
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:intent adjustments:nil caption:nil screenImage:thumbnailImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
         controller.editingContext = _editingContext;

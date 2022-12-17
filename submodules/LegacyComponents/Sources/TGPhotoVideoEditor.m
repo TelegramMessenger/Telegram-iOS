@@ -17,9 +17,7 @@
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
     id<TGMediaEditableItem> editableItem;
-    if (image != nil) {
-        editableItem = image;
-    } else if (video != nil) {
+    if (video != nil) {
         if (![video.path.lowercaseString hasSuffix:@".mp4"]) {
             NSString *tmpPath = NSTemporaryDirectory();
             int64_t fileId = 0;
@@ -31,6 +29,8 @@
         }
         
         editableItem = [[TGCameraCapturedVideo alloc] initWithURL:video];
+    } else if (image != nil) {
+        editableItem = image;
     }
     
     void (^present)(UIImage *) = ^(UIImage *screenImage) {

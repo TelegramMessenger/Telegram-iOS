@@ -15,14 +15,17 @@ public enum FetchMediaDataState {
     case data(MediaResourceData)
 }
 
-public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference) -> Signal<(FetchMediaDataState, Bool), NoError> {
+public func fetchMediaData(context: AccountContext, postbox: Postbox, userLocation: MediaResourceUserLocation, mediaReference: AnyMediaReference, forceVideo: Bool = false) -> Signal<(FetchMediaDataState, Bool), NoError> {
     var resource: MediaResource?
     var isImage = true
     var fileExtension: String?
     var userContentType: MediaResourceUserContentType = .other
     if let image = mediaReference.media as? TelegramMediaImage {
         userContentType = .image
-        if let representation = largestImageRepresentation(image.representations) {
+        if let video = image.videoRepresentations.first, forceVideo {
+            resource = video.resource
+            isImage = false
+        } else if let representation = largestImageRepresentation(image.representations) {
             resource = representation.resource
         }
     } else if let file = mediaReference.media as? TelegramMediaFile {

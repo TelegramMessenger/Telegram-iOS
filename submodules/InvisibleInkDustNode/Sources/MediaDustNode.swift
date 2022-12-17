@@ -22,6 +22,7 @@ public class MediaDustNode: ASDisplayNode {
     private var isExploding = false
     
     public var revealed: () -> Void = {}
+    public var tapped: () -> Void = {}
     
     public override init() {
         self.emitterNode = ASDisplayNode()
@@ -119,6 +120,8 @@ public class MediaDustNode: ASDisplayNode {
         guard !self.isRevealed else {
             return
         }
+        
+        self.tapped()
         
         self.isRevealed = true
         self.isExploding = true
@@ -255,8 +258,7 @@ public class MediaDustNode: ASDisplayNode {
             self.emitter?.birthRate = min(100000.0, square * 0.02)
         }
     }
-    
-    
+        
     public func update(size: CGSize, color: UIColor, transition: ContainedViewLayoutTransition) {
         self.currentParams = (size, color)
         

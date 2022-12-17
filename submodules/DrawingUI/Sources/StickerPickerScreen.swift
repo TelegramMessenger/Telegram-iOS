@@ -978,6 +978,7 @@ public class StickerPickerScreen: ViewController {
 
                     var dismissing = false
                     if bounds.minY < -60 || (bounds.minY < 0.0 && velocity.y > 300.0) || (self.isExpanded && bounds.minY.isZero && velocity.y > 1800.0) {
+                        self.controller?.completion(nil)
                         self.controller?.dismiss(animated: true, completion: nil)
                         dismissing = true
                     } else if self.isExpanded {

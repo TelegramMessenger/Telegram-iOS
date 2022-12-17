@@ -627,8 +627,8 @@ public func privacyAndSecurityController(
     hasTwoStepAuth: Bool? = nil,
     loginEmailPattern: Signal<String?, NoError>? = nil,
     updatedTwoStepAuthData: (() -> Void)? = nil,
-    requestPublicPhotoSetup: (() -> Void)? = nil,
-    requestPublicPhotoRemove: (() -> Void)? = nil
+    requestPublicPhotoSetup: ((@escaping (UIImage?) -> Void) -> Void)? = nil,
+    requestPublicPhotoRemove: ((@escaping () -> Void) -> Void)? = nil
 ) -> ViewController {
     let statePromise = ValuePromise(PrivacyAndSecurityControllerState(), ignoreRepeated: true)
     let stateValue = Atomic(value: PrivacyAndSecurityControllerState())
@@ -819,10 +819,10 @@ public func privacyAndSecurityController(
         |> deliverOnMainQueue
         currentInfoDisposable.set(signal.start(next: { [weak currentInfoDisposable] info in
             if let info = info {
-                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .profilePhoto, current: info.profilePhoto, requestPublicPhotoSetup: {
-                    requestPublicPhotoSetup?()
-                }, requestPublicPhotoRemove: {
-                    requestPublicPhotoRemove?()
+                pushControllerImpl?(selectivePrivacySettingsController(context: context, kind: .profilePhoto, current: info.profilePhoto, requestPublicPhotoSetup: { completion in
+                    requestPublicPhotoSetup?(completion)
+                }, requestPublicPhotoRemove: { completion in
+                    requestPublicPhotoRemove?(completion)
                 }, updated: { updated, _, _ in
                     if let currentInfoDisposable = currentInfoDisposable {
                         let applySetting: Signal<Void, NoError> = privacySettingsPromise.get()

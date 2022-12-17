@@ -260,6 +260,8 @@
         pickerController.hasSilentPosting = strongController.hasSilentPosting;
         pickerController.hasSchedule = strongController.hasSchedule;
         pickerController.reminder = strongController.reminder;
+        pickerController.forum = strongController.forum;
+        pickerController.isSuggesting = strongController.isSuggesting;
         pickerController.presentScheduleController = strongController.presentScheduleController;
         pickerController.presentTimerController = strongController.presentTimerController;
         [strongController pushViewController:pickerController animated:true];
@@ -361,6 +363,16 @@
 {
     _reminder = reminder;
     self.pickerController.reminder = reminder;
+}
+
+- (void)setForum:(bool)forum {
+    _forum = forum;
+    self.pickerController.forum = forum;
+}
+
+- (void)setIsSuggesting:(bool)isSuggesting {
+    _isSuggesting = isSuggesting;
+    self.pickerController.isSuggesting = isSuggesting;
 }
 
 - (void)setPresentScheduleController:(void (^)(bool, void (^)(int32_t)))presentScheduleController {
