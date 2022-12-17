@@ -33,11 +33,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputChannel(let channelId, let accessHash):
-                return ("inputChannel", [("channelId", String(describing: channelId)), ("accessHash", String(describing: accessHash))])
+                return ("inputChannel", [("channelId", channelId as Any), ("accessHash", accessHash as Any)])
                 case .inputChannelEmpty:
                 return ("inputChannelEmpty", [])
                 case .inputChannelFromMessage(let peer, let msgId, let channelId):
-                return ("inputChannelFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("channelId", String(describing: channelId))])
+                return ("inputChannelFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("channelId", channelId as Any)])
     }
     }
     
@@ -115,11 +115,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputChatPhoto(let id):
-                return ("inputChatPhoto", [("id", String(describing: id))])
+                return ("inputChatPhoto", [("id", id as Any)])
                 case .inputChatPhotoEmpty:
                 return ("inputChatPhotoEmpty", [])
                 case .inputChatUploadedPhoto(let flags, let file, let video, let videoStartTs):
-                return ("inputChatUploadedPhoto", [("flags", String(describing: flags)), ("file", String(describing: file)), ("video", String(describing: video)), ("videoStartTs", String(describing: videoStartTs))])
+                return ("inputChatUploadedPhoto", [("flags", flags as Any), ("file", file as Any), ("video", video as Any), ("videoStartTs", videoStartTs as Any)])
     }
     }
     
@@ -195,7 +195,7 @@ public extension Api {
                 case .inputCheckPasswordEmpty:
                 return ("inputCheckPasswordEmpty", [])
                 case .inputCheckPasswordSRP(let srpId, let A, let M1):
-                return ("inputCheckPasswordSRP", [("srpId", String(describing: srpId)), ("A", String(describing: A)), ("M1", String(describing: M1))])
+                return ("inputCheckPasswordSRP", [("srpId", srpId as Any), ("A", A as Any), ("M1", M1 as Any)])
     }
     }
     
@@ -241,7 +241,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputClientProxy(let address, let port):
-                return ("inputClientProxy", [("address", String(describing: address)), ("port", String(describing: port))])
+                return ("inputClientProxy", [("address", address as Any), ("port", port as Any)])
     }
     }
     
@@ -283,7 +283,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputPhoneContact(let clientId, let phone, let firstName, let lastName):
-                return ("inputPhoneContact", [("clientId", String(describing: clientId)), ("phone", String(describing: phone)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName))])
+                return ("inputPhoneContact", [("clientId", clientId as Any), ("phone", phone as Any), ("firstName", firstName as Any), ("lastName", lastName as Any)])
     }
     }
     
@@ -335,9 +335,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputDialogPeer(let peer):
-                return ("inputDialogPeer", [("peer", String(describing: peer))])
+                return ("inputDialogPeer", [("peer", peer as Any)])
                 case .inputDialogPeerFolder(let folderId):
-                return ("inputDialogPeerFolder", [("folderId", String(describing: folderId))])
+                return ("inputDialogPeerFolder", [("folderId", folderId as Any)])
     }
     }
     
@@ -395,7 +395,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputDocument(let id, let accessHash, let fileReference):
-                return ("inputDocument", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference))])
+                return ("inputDocument", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any)])
                 case .inputDocumentEmpty:
                 return ("inputDocumentEmpty", [])
     }
@@ -443,7 +443,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputEncryptedChat(let chatId, let accessHash):
-                return ("inputEncryptedChat", [("chatId", String(describing: chatId)), ("accessHash", String(describing: accessHash))])
+                return ("inputEncryptedChat", [("chatId", chatId as Any), ("accessHash", accessHash as Any)])
     }
     }
     
@@ -509,13 +509,13 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputEncryptedFile(let id, let accessHash):
-                return ("inputEncryptedFile", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputEncryptedFile", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputEncryptedFileBigUploaded(let id, let parts, let keyFingerprint):
-                return ("inputEncryptedFileBigUploaded", [("id", String(describing: id)), ("parts", String(describing: parts)), ("keyFingerprint", String(describing: keyFingerprint))])
+                return ("inputEncryptedFileBigUploaded", [("id", id as Any), ("parts", parts as Any), ("keyFingerprint", keyFingerprint as Any)])
                 case .inputEncryptedFileEmpty:
                 return ("inputEncryptedFileEmpty", [])
                 case .inputEncryptedFileUploaded(let id, let parts, let md5Checksum, let keyFingerprint):
-                return ("inputEncryptedFileUploaded", [("id", String(describing: id)), ("parts", String(describing: parts)), ("md5Checksum", String(describing: md5Checksum)), ("keyFingerprint", String(describing: keyFingerprint))])
+                return ("inputEncryptedFileUploaded", [("id", id as Any), ("parts", parts as Any), ("md5Checksum", md5Checksum as Any), ("keyFingerprint", keyFingerprint as Any)])
     }
     }
     
@@ -606,9 +606,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputFile(let id, let parts, let name, let md5Checksum):
-                return ("inputFile", [("id", String(describing: id)), ("parts", String(describing: parts)), ("name", String(describing: name)), ("md5Checksum", String(describing: md5Checksum))])
+                return ("inputFile", [("id", id as Any), ("parts", parts as Any), ("name", name as Any), ("md5Checksum", md5Checksum as Any)])
                 case .inputFileBig(let id, let parts, let name):
-                return ("inputFileBig", [("id", String(describing: id)), ("parts", String(describing: parts)), ("name", String(describing: name))])
+                return ("inputFileBig", [("id", id as Any), ("parts", parts as Any), ("name", name as Any)])
     }
     }
     
@@ -757,23 +757,23 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputDocumentFileLocation(let id, let accessHash, let fileReference, let thumbSize):
-                return ("inputDocumentFileLocation", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("thumbSize", String(describing: thumbSize))])
+                return ("inputDocumentFileLocation", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any), ("thumbSize", thumbSize as Any)])
                 case .inputEncryptedFileLocation(let id, let accessHash):
-                return ("inputEncryptedFileLocation", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputEncryptedFileLocation", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputFileLocation(let volumeId, let localId, let secret, let fileReference):
-                return ("inputFileLocation", [("volumeId", String(describing: volumeId)), ("localId", String(describing: localId)), ("secret", String(describing: secret)), ("fileReference", String(describing: fileReference))])
+                return ("inputFileLocation", [("volumeId", volumeId as Any), ("localId", localId as Any), ("secret", secret as Any), ("fileReference", fileReference as Any)])
                 case .inputGroupCallStream(let flags, let call, let timeMs, let scale, let videoChannel, let videoQuality):
-                return ("inputGroupCallStream", [("flags", String(describing: flags)), ("call", String(describing: call)), ("timeMs", String(describing: timeMs)), ("scale", String(describing: scale)), ("videoChannel", String(describing: videoChannel)), ("videoQuality", String(describing: videoQuality))])
+                return ("inputGroupCallStream", [("flags", flags as Any), ("call", call as Any), ("timeMs", timeMs as Any), ("scale", scale as Any), ("videoChannel", videoChannel as Any), ("videoQuality", videoQuality as Any)])
                 case .inputPeerPhotoFileLocation(let flags, let peer, let photoId):
-                return ("inputPeerPhotoFileLocation", [("flags", String(describing: flags)), ("peer", String(describing: peer)), ("photoId", String(describing: photoId))])
+                return ("inputPeerPhotoFileLocation", [("flags", flags as Any), ("peer", peer as Any), ("photoId", photoId as Any)])
                 case .inputPhotoFileLocation(let id, let accessHash, let fileReference, let thumbSize):
-                return ("inputPhotoFileLocation", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("thumbSize", String(describing: thumbSize))])
+                return ("inputPhotoFileLocation", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any), ("thumbSize", thumbSize as Any)])
                 case .inputPhotoLegacyFileLocation(let id, let accessHash, let fileReference, let volumeId, let localId, let secret):
-                return ("inputPhotoLegacyFileLocation", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("volumeId", String(describing: volumeId)), ("localId", String(describing: localId)), ("secret", String(describing: secret))])
+                return ("inputPhotoLegacyFileLocation", [("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any), ("volumeId", volumeId as Any), ("localId", localId as Any), ("secret", secret as Any)])
                 case .inputSecureFileLocation(let id, let accessHash):
-                return ("inputSecureFileLocation", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputSecureFileLocation", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputStickerSetThumb(let stickerset, let thumbVersion):
-                return ("inputStickerSetThumb", [("stickerset", String(describing: stickerset)), ("thumbVersion", String(describing: thumbVersion))])
+                return ("inputStickerSetThumb", [("stickerset", stickerset as Any), ("thumbVersion", thumbVersion as Any)])
                 case .inputTakeoutFileLocation:
                 return ("inputTakeoutFileLocation", [])
     }
@@ -981,7 +981,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputFolderPeer(let peer, let folderId):
-                return ("inputFolderPeer", [("peer", String(describing: peer)), ("folderId", String(describing: folderId))])
+                return ("inputFolderPeer", [("peer", peer as Any), ("folderId", folderId as Any)])
     }
     }
     

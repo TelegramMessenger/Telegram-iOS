@@ -84,7 +84,7 @@ public extension Api {
                 case .inputStickerSetAnimatedEmojiAnimations:
                 return ("inputStickerSetAnimatedEmojiAnimations", [])
                 case .inputStickerSetDice(let emoticon):
-                return ("inputStickerSetDice", [("emoticon", String(describing: emoticon))])
+                return ("inputStickerSetDice", [("emoticon", emoticon as Any)])
                 case .inputStickerSetEmojiDefaultStatuses:
                 return ("inputStickerSetEmojiDefaultStatuses", [])
                 case .inputStickerSetEmojiDefaultTopicIcons:
@@ -94,11 +94,11 @@ public extension Api {
                 case .inputStickerSetEmpty:
                 return ("inputStickerSetEmpty", [])
                 case .inputStickerSetID(let id, let accessHash):
-                return ("inputStickerSetID", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputStickerSetID", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputStickerSetPremiumGifts:
                 return ("inputStickerSetPremiumGifts", [])
                 case .inputStickerSetShortName(let shortName):
-                return ("inputStickerSetShortName", [("shortName", String(describing: shortName))])
+                return ("inputStickerSetShortName", [("shortName", shortName as Any)])
     }
     }
     
@@ -183,7 +183,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputStickerSetItem(let flags, let document, let emoji, let maskCoords):
-                return ("inputStickerSetItem", [("flags", String(describing: flags)), ("document", String(describing: document)), ("emoji", String(describing: emoji)), ("maskCoords", String(describing: maskCoords))])
+                return ("inputStickerSetItem", [("flags", flags as Any), ("document", document as Any), ("emoji", emoji as Any), ("maskCoords", maskCoords as Any)])
     }
     }
     
@@ -239,9 +239,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputStickeredMediaDocument(let id):
-                return ("inputStickeredMediaDocument", [("id", String(describing: id))])
+                return ("inputStickeredMediaDocument", [("id", id as Any)])
                 case .inputStickeredMediaPhoto(let id):
-                return ("inputStickeredMediaPhoto", [("id", String(describing: id))])
+                return ("inputStickeredMediaPhoto", [("id", id as Any)])
     }
     }
     
@@ -301,9 +301,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputStorePaymentGiftPremium(let userId, let currency, let amount):
-                return ("inputStorePaymentGiftPremium", [("userId", String(describing: userId)), ("currency", String(describing: currency)), ("amount", String(describing: amount))])
+                return ("inputStorePaymentGiftPremium", [("userId", userId as Any), ("currency", currency as Any), ("amount", amount as Any)])
                 case .inputStorePaymentPremiumSubscription(let flags):
-                return ("inputStorePaymentPremiumSubscription", [("flags", String(describing: flags))])
+                return ("inputStorePaymentPremiumSubscription", [("flags", flags as Any)])
     }
     }
     
@@ -366,9 +366,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputTheme(let id, let accessHash):
-                return ("inputTheme", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputTheme", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputThemeSlug(let slug):
-                return ("inputThemeSlug", [("slug", String(describing: slug))])
+                return ("inputThemeSlug", [("slug", slug as Any)])
     }
     }
     
@@ -428,7 +428,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputThemeSettings(let flags, let baseTheme, let accentColor, let outboxAccentColor, let messageColors, let wallpaper, let wallpaperSettings):
-                return ("inputThemeSettings", [("flags", String(describing: flags)), ("baseTheme", String(describing: baseTheme)), ("accentColor", String(describing: accentColor)), ("outboxAccentColor", String(describing: outboxAccentColor)), ("messageColors", String(describing: messageColors)), ("wallpaper", String(describing: wallpaper)), ("wallpaperSettings", String(describing: wallpaperSettings))])
+                return ("inputThemeSettings", [("flags", flags as Any), ("baseTheme", baseTheme as Any), ("accentColor", accentColor as Any), ("outboxAccentColor", outboxAccentColor as Any), ("messageColors", messageColors as Any), ("wallpaper", wallpaper as Any), ("wallpaperSettings", wallpaperSettings as Any)])
     }
     }
     
@@ -514,11 +514,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputUser(let userId, let accessHash):
-                return ("inputUser", [("userId", String(describing: userId)), ("accessHash", String(describing: accessHash))])
+                return ("inputUser", [("userId", userId as Any), ("accessHash", accessHash as Any)])
                 case .inputUserEmpty:
                 return ("inputUserEmpty", [])
                 case .inputUserFromMessage(let peer, let msgId, let userId):
-                return ("inputUserFromMessage", [("peer", String(describing: peer)), ("msgId", String(describing: msgId)), ("userId", String(describing: userId))])
+                return ("inputUserFromMessage", [("peer", peer as Any), ("msgId", msgId as Any), ("userId", userId as Any)])
                 case .inputUserSelf:
                 return ("inputUserSelf", [])
     }
@@ -599,11 +599,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputWallPaper(let id, let accessHash):
-                return ("inputWallPaper", [("id", String(describing: id)), ("accessHash", String(describing: accessHash))])
+                return ("inputWallPaper", [("id", id as Any), ("accessHash", accessHash as Any)])
                 case .inputWallPaperNoFile(let id):
-                return ("inputWallPaperNoFile", [("id", String(describing: id))])
+                return ("inputWallPaperNoFile", [("id", id as Any)])
                 case .inputWallPaperSlug(let slug):
-                return ("inputWallPaperSlug", [("slug", String(describing: slug))])
+                return ("inputWallPaperSlug", [("slug", slug as Any)])
     }
     }
     
@@ -671,7 +671,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputWebDocument(let url, let size, let mimeType, let attributes):
-                return ("inputWebDocument", [("url", String(describing: url)), ("size", String(describing: size)), ("mimeType", String(describing: mimeType)), ("attributes", String(describing: attributes))])
+                return ("inputWebDocument", [("url", url as Any), ("size", size as Any), ("mimeType", mimeType as Any), ("attributes", attributes as Any)])
     }
     }
     
@@ -741,11 +741,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputWebFileAudioAlbumThumbLocation(let flags, let document, let title, let performer):
-                return ("inputWebFileAudioAlbumThumbLocation", [("flags", String(describing: flags)), ("document", String(describing: document)), ("title", String(describing: title)), ("performer", String(describing: performer))])
+                return ("inputWebFileAudioAlbumThumbLocation", [("flags", flags as Any), ("document", document as Any), ("title", title as Any), ("performer", performer as Any)])
                 case .inputWebFileGeoPointLocation(let geoPoint, let accessHash, let w, let h, let zoom, let scale):
-                return ("inputWebFileGeoPointLocation", [("geoPoint", String(describing: geoPoint)), ("accessHash", String(describing: accessHash)), ("w", String(describing: w)), ("h", String(describing: h)), ("zoom", String(describing: zoom)), ("scale", String(describing: scale))])
+                return ("inputWebFileGeoPointLocation", [("geoPoint", geoPoint as Any), ("accessHash", accessHash as Any), ("w", w as Any), ("h", h as Any), ("zoom", zoom as Any), ("scale", scale as Any)])
                 case .inputWebFileLocation(let url, let accessHash):
-                return ("inputWebFileLocation", [("url", String(describing: url)), ("accessHash", String(describing: accessHash))])
+                return ("inputWebFileLocation", [("url", url as Any), ("accessHash", accessHash as Any)])
     }
     }
     
@@ -847,7 +847,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .invoice(let flags, let currency, let prices, let maxTipAmount, let suggestedTipAmounts, let recurringTermsUrl):
-                return ("invoice", [("flags", String(describing: flags)), ("currency", String(describing: currency)), ("prices", String(describing: prices)), ("maxTipAmount", String(describing: maxTipAmount)), ("suggestedTipAmounts", String(describing: suggestedTipAmounts)), ("recurringTermsUrl", String(describing: recurringTermsUrl))])
+                return ("invoice", [("flags", flags as Any), ("currency", currency as Any), ("prices", prices as Any), ("maxTipAmount", maxTipAmount as Any), ("suggestedTipAmounts", suggestedTipAmounts as Any), ("recurringTermsUrl", recurringTermsUrl as Any)])
     }
     }
     
@@ -903,7 +903,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .jsonObjectValue(let key, let value):
-                return ("jsonObjectValue", [("key", String(describing: key)), ("value", String(describing: value))])
+                return ("jsonObjectValue", [("key", key as Any), ("value", value as Any)])
     }
     }
     
@@ -987,17 +987,17 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .jsonArray(let value):
-                return ("jsonArray", [("value", String(describing: value))])
+                return ("jsonArray", [("value", value as Any)])
                 case .jsonBool(let value):
-                return ("jsonBool", [("value", String(describing: value))])
+                return ("jsonBool", [("value", value as Any)])
                 case .jsonNull:
                 return ("jsonNull", [])
                 case .jsonNumber(let value):
-                return ("jsonNumber", [("value", String(describing: value))])
+                return ("jsonNumber", [("value", value as Any)])
                 case .jsonObject(let value):
-                return ("jsonObject", [("value", String(describing: value))])
+                return ("jsonObject", [("value", value as Any)])
                 case .jsonString(let value):
-                return ("jsonString", [("value", String(describing: value))])
+                return ("jsonString", [("value", value as Any)])
     }
     }
     

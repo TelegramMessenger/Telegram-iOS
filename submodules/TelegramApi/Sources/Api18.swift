@@ -19,7 +19,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .savedPhoneContact(let phone, let firstName, let lastName, let date):
-                return ("savedPhoneContact", [("phone", String(describing: phone)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("date", String(describing: date))])
+                return ("savedPhoneContact", [("phone", phone as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("date", date as Any)])
     }
     }
     
@@ -67,7 +67,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .searchResultsCalendarPeriod(let date, let minMsgId, let maxMsgId, let count):
-                return ("searchResultsCalendarPeriod", [("date", String(describing: date)), ("minMsgId", String(describing: minMsgId)), ("maxMsgId", String(describing: maxMsgId)), ("count", String(describing: count))])
+                return ("searchResultsCalendarPeriod", [("date", date as Any), ("minMsgId", minMsgId as Any), ("maxMsgId", maxMsgId as Any), ("count", count as Any)])
     }
     }
     
@@ -114,7 +114,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .searchResultPosition(let msgId, let date, let offset):
-                return ("searchResultPosition", [("msgId", String(describing: msgId)), ("date", String(describing: date)), ("offset", String(describing: offset))])
+                return ("searchResultPosition", [("msgId", msgId as Any), ("date", date as Any), ("offset", offset as Any)])
     }
     }
     
@@ -158,7 +158,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureCredentialsEncrypted(let data, let hash, let secret):
-                return ("secureCredentialsEncrypted", [("data", String(describing: data)), ("hash", String(describing: hash)), ("secret", String(describing: secret))])
+                return ("secureCredentialsEncrypted", [("data", data as Any), ("hash", hash as Any), ("secret", secret as Any)])
     }
     }
     
@@ -202,7 +202,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureData(let data, let dataHash, let secret):
-                return ("secureData", [("data", String(describing: data)), ("dataHash", String(describing: dataHash)), ("secret", String(describing: secret))])
+                return ("secureData", [("data", data as Any), ("dataHash", dataHash as Any), ("secret", secret as Any)])
     }
     }
     
@@ -257,7 +257,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureFile(let id, let accessHash, let size, let dcId, let date, let fileHash, let secret):
-                return ("secureFile", [("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("size", String(describing: size)), ("dcId", String(describing: dcId)), ("date", String(describing: date)), ("fileHash", String(describing: fileHash)), ("secret", String(describing: secret))])
+                return ("secureFile", [("id", id as Any), ("accessHash", accessHash as Any), ("size", size as Any), ("dcId", dcId as Any), ("date", date as Any), ("fileHash", fileHash as Any), ("secret", secret as Any)])
                 case .secureFileEmpty:
                 return ("secureFileEmpty", [])
     }
@@ -330,9 +330,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .securePasswordKdfAlgoPBKDF2HMACSHA512iter100000(let salt):
-                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", String(describing: salt))])
+                return ("securePasswordKdfAlgoPBKDF2HMACSHA512iter100000", [("salt", salt as Any)])
                 case .securePasswordKdfAlgoSHA512(let salt):
-                return ("securePasswordKdfAlgoSHA512", [("salt", String(describing: salt))])
+                return ("securePasswordKdfAlgoSHA512", [("salt", salt as Any)])
                 case .securePasswordKdfAlgoUnknown:
                 return ("securePasswordKdfAlgoUnknown", [])
     }
@@ -391,9 +391,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .securePlainEmail(let email):
-                return ("securePlainEmail", [("email", String(describing: email))])
+                return ("securePlainEmail", [("email", email as Any)])
                 case .securePlainPhone(let phone):
-                return ("securePlainPhone", [("phone", String(describing: phone))])
+                return ("securePlainPhone", [("phone", phone as Any)])
     }
     }
     
@@ -452,9 +452,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureRequiredType(let flags, let type):
-                return ("secureRequiredType", [("flags", String(describing: flags)), ("type", String(describing: type))])
+                return ("secureRequiredType", [("flags", flags as Any), ("type", type as Any)])
                 case .secureRequiredTypeOneOf(let types):
-                return ("secureRequiredTypeOneOf", [("types", String(describing: types))])
+                return ("secureRequiredTypeOneOf", [("types", types as Any)])
     }
     }
     
@@ -510,7 +510,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureSecretSettings(let secureAlgo, let secureSecret, let secureSecretId):
-                return ("secureSecretSettings", [("secureAlgo", String(describing: secureAlgo)), ("secureSecret", String(describing: secureSecret)), ("secureSecretId", String(describing: secureSecretId))])
+                return ("secureSecretSettings", [("secureAlgo", secureAlgo as Any), ("secureSecret", secureSecret as Any), ("secureSecretId", secureSecretId as Any)])
     }
     }
     
@@ -571,7 +571,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureValue(let flags, let type, let data, let frontSide, let reverseSide, let selfie, let translation, let files, let plainData, let hash):
-                return ("secureValue", [("flags", String(describing: flags)), ("type", String(describing: type)), ("data", String(describing: data)), ("frontSide", String(describing: frontSide)), ("reverseSide", String(describing: reverseSide)), ("selfie", String(describing: selfie)), ("translation", String(describing: translation)), ("files", String(describing: files)), ("plainData", String(describing: plainData)), ("hash", String(describing: hash))])
+                return ("secureValue", [("flags", flags as Any), ("type", type as Any), ("data", data as Any), ("frontSide", frontSide as Any), ("reverseSide", reverseSide as Any), ("selfie", selfie as Any), ("translation", translation as Any), ("files", files as Any), ("plainData", plainData as Any), ("hash", hash as Any)])
     }
     }
     
@@ -733,23 +733,23 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureValueError(let type, let hash, let text):
-                return ("secureValueError", [("type", String(describing: type)), ("hash", String(describing: hash)), ("text", String(describing: text))])
+                return ("secureValueError", [("type", type as Any), ("hash", hash as Any), ("text", text as Any)])
                 case .secureValueErrorData(let type, let dataHash, let field, let text):
-                return ("secureValueErrorData", [("type", String(describing: type)), ("dataHash", String(describing: dataHash)), ("field", String(describing: field)), ("text", String(describing: text))])
+                return ("secureValueErrorData", [("type", type as Any), ("dataHash", dataHash as Any), ("field", field as Any), ("text", text as Any)])
                 case .secureValueErrorFile(let type, let fileHash, let text):
-                return ("secureValueErrorFile", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorFile", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorFiles(let type, let fileHash, let text):
-                return ("secureValueErrorFiles", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorFiles", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorFrontSide(let type, let fileHash, let text):
-                return ("secureValueErrorFrontSide", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorFrontSide", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorReverseSide(let type, let fileHash, let text):
-                return ("secureValueErrorReverseSide", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorReverseSide", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorSelfie(let type, let fileHash, let text):
-                return ("secureValueErrorSelfie", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorSelfie", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorTranslationFile(let type, let fileHash, let text):
-                return ("secureValueErrorTranslationFile", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorTranslationFile", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
                 case .secureValueErrorTranslationFiles(let type, let fileHash, let text):
-                return ("secureValueErrorTranslationFiles", [("type", String(describing: type)), ("fileHash", String(describing: fileHash)), ("text", String(describing: text))])
+                return ("secureValueErrorTranslationFiles", [("type", type as Any), ("fileHash", fileHash as Any), ("text", text as Any)])
     }
     }
     
@@ -953,7 +953,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .secureValueHash(let type, let hash):
-                return ("secureValueHash", [("type", String(describing: type)), ("hash", String(describing: hash))])
+                return ("secureValueHash", [("type", type as Any), ("hash", hash as Any)])
     }
     }
     

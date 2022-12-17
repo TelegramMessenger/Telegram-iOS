@@ -22,7 +22,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webPageAttributeTheme(let flags, let documents, let settings):
-                return ("webPageAttributeTheme", [("flags", String(describing: flags)), ("documents", String(describing: documents)), ("settings", String(describing: settings))])
+                return ("webPageAttributeTheme", [("flags", flags as Any), ("documents", documents as Any), ("settings", settings as Any)])
     }
     }
     
@@ -69,7 +69,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webViewMessageSent(let flags, let msgId):
-                return ("webViewMessageSent", [("flags", String(describing: flags)), ("msgId", String(describing: msgId))])
+                return ("webViewMessageSent", [("flags", flags as Any), ("msgId", msgId as Any)])
     }
     }
     
@@ -111,7 +111,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webViewResultUrl(let queryId, let url):
-                return ("webViewResultUrl", [("queryId", String(describing: queryId)), ("url", String(describing: url))])
+                return ("webViewResultUrl", [("queryId", queryId as Any), ("url", url as Any)])
     }
     }
     
@@ -171,7 +171,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .authorizationForm(let flags, let requiredTypes, let values, let errors, let users, let privacyPolicyUrl):
-                return ("authorizationForm", [("flags", String(describing: flags)), ("requiredTypes", String(describing: requiredTypes)), ("values", String(describing: values)), ("errors", String(describing: errors)), ("users", String(describing: users)), ("privacyPolicyUrl", String(describing: privacyPolicyUrl))])
+                return ("authorizationForm", [("flags", flags as Any), ("requiredTypes", requiredTypes as Any), ("values", values as Any), ("errors", errors as Any), ("users", users as Any), ("privacyPolicyUrl", privacyPolicyUrl as Any)])
     }
     }
     
@@ -235,7 +235,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .authorizations(let authorizationTtlDays, let authorizations):
-                return ("authorizations", [("authorizationTtlDays", String(describing: authorizationTtlDays)), ("authorizations", String(describing: authorizations))])
+                return ("authorizations", [("authorizationTtlDays", authorizationTtlDays as Any), ("authorizations", authorizations as Any)])
     }
     }
     
@@ -278,7 +278,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .autoDownloadSettings(let low, let medium, let high):
-                return ("autoDownloadSettings", [("low", String(describing: low)), ("medium", String(describing: medium)), ("high", String(describing: high))])
+                return ("autoDownloadSettings", [("low", low as Any), ("medium", medium as Any), ("high", high as Any)])
     }
     }
     
@@ -326,7 +326,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .contentSettings(let flags):
-                return ("contentSettings", [("flags", String(describing: flags))])
+                return ("contentSettings", [("flags", flags as Any)])
     }
     }
     
@@ -370,9 +370,9 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emailVerified(let email):
-                return ("emailVerified", [("email", String(describing: email))])
+                return ("emailVerified", [("email", email as Any)])
                 case .emailVerifiedLogin(let email, let sentCode):
-                return ("emailVerifiedLogin", [("email", String(describing: email)), ("sentCode", String(describing: sentCode))])
+                return ("emailVerifiedLogin", [("email", email as Any), ("sentCode", sentCode as Any)])
     }
     }
     
@@ -436,7 +436,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .emojiStatuses(let hash, let statuses):
-                return ("emojiStatuses", [("hash", String(describing: hash)), ("statuses", String(describing: statuses))])
+                return ("emojiStatuses", [("hash", hash as Any), ("statuses", statuses as Any)])
                 case .emojiStatusesNotModified:
                 return ("emojiStatusesNotModified", [])
     }
@@ -492,7 +492,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .password(let flags, let currentAlgo, let srpB, let srpId, let hint, let emailUnconfirmedPattern, let newAlgo, let newSecureAlgo, let secureRandom, let pendingResetDate, let loginEmailPattern):
-                return ("password", [("flags", String(describing: flags)), ("currentAlgo", String(describing: currentAlgo)), ("srpB", String(describing: srpB)), ("srpId", String(describing: srpId)), ("hint", String(describing: hint)), ("emailUnconfirmedPattern", String(describing: emailUnconfirmedPattern)), ("newAlgo", String(describing: newAlgo)), ("newSecureAlgo", String(describing: newSecureAlgo)), ("secureRandom", String(describing: secureRandom)), ("pendingResetDate", String(describing: pendingResetDate)), ("loginEmailPattern", String(describing: loginEmailPattern))])
+                return ("password", [("flags", flags as Any), ("currentAlgo", currentAlgo as Any), ("srpB", srpB as Any), ("srpId", srpId as Any), ("hint", hint as Any), ("emailUnconfirmedPattern", emailUnconfirmedPattern as Any), ("newAlgo", newAlgo as Any), ("newSecureAlgo", newSecureAlgo as Any), ("secureRandom", secureRandom as Any), ("pendingResetDate", pendingResetDate as Any), ("loginEmailPattern", loginEmailPattern as Any)])
     }
     }
     
@@ -569,7 +569,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .passwordInputSettings(let flags, let newAlgo, let newPasswordHash, let hint, let email, let newSecureSettings):
-                return ("passwordInputSettings", [("flags", String(describing: flags)), ("newAlgo", String(describing: newAlgo)), ("newPasswordHash", String(describing: newPasswordHash)), ("hint", String(describing: hint)), ("email", String(describing: email)), ("newSecureSettings", String(describing: newSecureSettings))])
+                return ("passwordInputSettings", [("flags", flags as Any), ("newAlgo", newAlgo as Any), ("newPasswordHash", newPasswordHash as Any), ("hint", hint as Any), ("email", email as Any), ("newSecureSettings", newSecureSettings as Any)])
     }
     }
     
@@ -626,7 +626,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .passwordSettings(let flags, let email, let secureSettings):
-                return ("passwordSettings", [("flags", String(describing: flags)), ("email", String(describing: email)), ("secureSettings", String(describing: secureSettings))])
+                return ("passwordSettings", [("flags", flags as Any), ("email", email as Any), ("secureSettings", secureSettings as Any)])
     }
     }
     
@@ -684,7 +684,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .privacyRules(let rules, let chats, let users):
-                return ("privacyRules", [("rules", String(describing: rules)), ("chats", String(describing: chats)), ("users", String(describing: users))])
+                return ("privacyRules", [("rules", rules as Any), ("chats", chats as Any), ("users", users as Any)])
     }
     }
     
@@ -746,11 +746,11 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .resetPasswordFailedWait(let retryDate):
-                return ("resetPasswordFailedWait", [("retryDate", String(describing: retryDate))])
+                return ("resetPasswordFailedWait", [("retryDate", retryDate as Any)])
                 case .resetPasswordOk:
                 return ("resetPasswordOk", [])
                 case .resetPasswordRequestedWait(let untilDate):
-                return ("resetPasswordRequestedWait", [("untilDate", String(describing: untilDate))])
+                return ("resetPasswordRequestedWait", [("untilDate", untilDate as Any)])
     }
     }
     
@@ -809,7 +809,7 @@ public extension Api.account {
                 case .savedRingtone:
                 return ("savedRingtone", [])
                 case .savedRingtoneConverted(let document):
-                return ("savedRingtoneConverted", [("document", String(describing: document))])
+                return ("savedRingtoneConverted", [("document", document as Any)])
     }
     }
     
@@ -862,7 +862,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .savedRingtones(let hash, let ringtones):
-                return ("savedRingtones", [("hash", String(describing: hash)), ("ringtones", String(describing: ringtones))])
+                return ("savedRingtones", [("hash", hash as Any), ("ringtones", ringtones as Any)])
                 case .savedRingtonesNotModified:
                 return ("savedRingtonesNotModified", [])
     }
@@ -909,7 +909,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .sentEmailCode(let emailPattern, let length):
-                return ("sentEmailCode", [("emailPattern", String(describing: emailPattern)), ("length", String(describing: length))])
+                return ("sentEmailCode", [("emailPattern", emailPattern as Any), ("length", length as Any)])
     }
     }
     
@@ -948,7 +948,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .takeout(let id):
-                return ("takeout", [("id", String(describing: id))])
+                return ("takeout", [("id", id as Any)])
     }
     }
     
@@ -996,7 +996,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .themes(let hash, let themes):
-                return ("themes", [("hash", String(describing: hash)), ("themes", String(describing: themes))])
+                return ("themes", [("hash", hash as Any), ("themes", themes as Any)])
                 case .themesNotModified:
                 return ("themesNotModified", [])
     }
@@ -1043,7 +1043,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .tmpPassword(let tmpPassword, let validUntil):
-                return ("tmpPassword", [("tmpPassword", String(describing: tmpPassword)), ("validUntil", String(describing: validUntil))])
+                return ("tmpPassword", [("tmpPassword", tmpPassword as Any), ("validUntil", validUntil as Any)])
     }
     }
     
@@ -1094,7 +1094,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .wallPapers(let hash, let wallpapers):
-                return ("wallPapers", [("hash", String(describing: hash)), ("wallpapers", String(describing: wallpapers))])
+                return ("wallPapers", [("hash", hash as Any), ("wallpapers", wallpapers as Any)])
                 case .wallPapersNotModified:
                 return ("wallPapersNotModified", [])
     }
@@ -1149,7 +1149,7 @@ public extension Api.account {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webAuthorizations(let authorizations, let users):
-                return ("webAuthorizations", [("authorizations", String(describing: authorizations)), ("users", String(describing: users))])
+                return ("webAuthorizations", [("authorizations", authorizations as Any), ("users", users as Any)])
     }
     }
     
@@ -1203,9 +1203,9 @@ public extension Api.auth {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .authorization(let flags, let otherwiseReloginDays, let tmpSessions, let user):
-                return ("authorization", [("flags", String(describing: flags)), ("otherwiseReloginDays", String(describing: otherwiseReloginDays)), ("tmpSessions", String(describing: tmpSessions)), ("user", String(describing: user))])
+                return ("authorization", [("flags", flags as Any), ("otherwiseReloginDays", otherwiseReloginDays as Any), ("tmpSessions", tmpSessions as Any), ("user", user as Any)])
                 case .authorizationSignUpRequired(let flags, let termsOfService):
-                return ("authorizationSignUpRequired", [("flags", String(describing: flags)), ("termsOfService", String(describing: termsOfService))])
+                return ("authorizationSignUpRequired", [("flags", flags as Any), ("termsOfService", termsOfService as Any)])
     }
     }
     
