@@ -39,7 +39,7 @@ public enum UndoOverlayContent {
     case mediaSaved(text: String)
     case paymentSent(currencyValue: String, itemTitle: String)
     case inviteRequestSent(title: String, text: String)
-    case image(image: UIImage, title: String?, text: String, undo: Bool)
+    case image(image: UIImage, title: String?, text: String, round: Bool, undo: Bool)
     case notificationSoundAdded(title: String, text: String, action: (() -> Void)?)
     case universal(animation: String, scale: CGFloat, colors: [String: UIColor], title: String?, text: String, customUndoText: String?)
     case peers(context: AccountContext, peers: [EnginePeer], title: String?, text: String, customUndoText: String?)

@@ -15,6 +15,7 @@ import TelegramPresentationData
 import AccountContext
 import ShimmerEffect
 import SoftwareVideo
+import MultiplexedVideoNode
 
 final class HorizontalListContextResultsChatInputPanelItem: ListViewItem {
     let account: Account

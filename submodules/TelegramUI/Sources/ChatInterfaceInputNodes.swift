@@ -5,6 +5,9 @@ import TelegramCore
 import Postbox
 import AccountContext
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
+import ChatInputNode
+import ChatEntityKeyboardInputNode
 
 func inputNodeForChatPresentationIntefaceState(_ chatPresentationInterfaceState: ChatPresentationInterfaceState, context: AccountContext, currentNode: ChatInputNode?, interfaceInteraction: ChatPanelInterfaceInteraction?, inputMediaNode: ChatMediaInputNode?, controllerInteraction: ChatControllerInteraction, inputPanelNode: ChatInputPanelNode?, makeMediaInputNode: () -> ChatInputNode?) -> ChatInputNode? {
     if let inputPanelNode = inputPanelNode, !(inputPanelNode is ChatTextInputPanelNode) {

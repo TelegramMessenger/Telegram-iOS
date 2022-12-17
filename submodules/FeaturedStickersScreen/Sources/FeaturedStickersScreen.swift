@@ -17,6 +17,7 @@ import SearchBarNode
 import UndoUI
 import ContextUI
 import PremiumUI
+import ChatPresentationInterfaceState
 
 private final class FeaturedInteraction {
     let installPack: (ItemCollectionInfo, Bool) -> Void
@@ -787,7 +788,7 @@ private final class FeaturedStickersScreenNode: ViewControllerTracingNode {
     }
 }
 
-final class FeaturedStickersScreen: ViewController {
+public final class FeaturedStickersScreen: ViewController {
     private let context: AccountContext
     fileprivate let highlightedPackId: ItemCollectionId?
     private let sendSticker: ((FileMediaReference, UIView, CGRect) -> Bool)?
@@ -1490,5 +1491,19 @@ private final class FeaturedPaneSearchContentNode: ASDisplayNode {
                 itemNode.updateCanPlayMedia()
             }
         }
+    }
+}
+
+public final class StickerPaneSearchInteraction {
+    public let open: (StickerPackCollectionInfo) -> Void
+    public let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
+    public let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
+    public let getItemIsPreviewed: (StickerPackItem) -> Bool
+    
+    public init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
+        self.open = open
+        self.install = install
+        self.sendSticker = sendSticker
+        self.getItemIsPreviewed = getItemIsPreviewed
     }
 }

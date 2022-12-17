@@ -699,13 +699,6 @@ private func installedStickerPacksControllerEntries(presentationData: Presentati
     return entries
 }
 
-public enum InstalledStickerPacksControllerMode {
-    case general
-    case modal
-    case masks
-    case emoji
-}
-
 public func installedStickerPacksController(context: AccountContext, mode: InstalledStickerPacksControllerMode, archivedPacks: [ArchivedStickerPackItem]? = nil, updatedPacks: @escaping ([ArchivedStickerPackItem]?) -> Void = { _ in }, focusOnItemTag: InstalledStickerPacksEntryTag? = nil) -> ViewController {
     let initialState = InstalledStickerPacksControllerState().withUpdatedEditing(mode == .modal).withUpdatedSelectedPackIds(mode == .modal ? Set() : nil)
     let statePromise = ValuePromise(initialState, ignoreRepeated: true)

@@ -8478,11 +8478,13 @@ Sorry for the inconvenience.";
 "Conversation.SuggestedPhotoText" = "%@ suggests you to use this photo for your Telegram account.";
 "Conversation.SuggestedPhotoTextYou" = "You suggested %@ to use this photo for their Telegram account.";
 "Conversation.SuggestedPhotoView" = "View";
+"Conversation.SuggestedPhotoSuccess" = "You have updated your Telegram account photo.";
 
 "Conversation.SuggestedVideoTitle" = "Suggested Video";
 "Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
 "Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";
 "Conversation.SuggestedVideoView" = "View";
+"Conversation.SuggestedVideoSuccess" = "You have updated your Telegram account video.";
 
 "CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";
 "CacheEvictionMenu.CategoryExceptions_any" = "%@ Exceptions";
@@ -8493,9 +8495,6 @@ Sorry for the inconvenience.";
 "Notification.SuggestedProfilePhoto" = "Suggested Profile Photo";
 "Notification.SuggestedProfileVideo" = "Suggested Profile Video";
 
-"PhotoEditor.SetProfilePhoto" = "Set Profile Photo";
-"PhotoEditor.SetProfileVideo" = "Set Profile Video";
-
 "PhotoEditor.SetAsMyPhoto" = "Set as My Photo";
 "PhotoEditor.SetAsMyVideo" = "Set as My Video";
 
@@ -8504,11 +8503,16 @@ Sorry for the inconvenience.";
 "Privacy.ProfilePhoto.SetPublicPhoto" = "Set Public Photo";
 "Privacy.ProfilePhoto.UpdatePublicPhoto" = "Update Public Photo";
 "Privacy.ProfilePhoto.RemovePublicPhoto" = "Remove Public Photo";
+"Privacy.ProfilePhoto.RemovePublicVideo" = "Remove Public Video";
 "Privacy.ProfilePhoto.PublicPhotoInfo" = "You can upload a public photo for those who are restricted from viewing your real profile photo.";
+"Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo is now set for those who are restricted from viewing your main photo.";
+"Privacy.ProfilePhoto.PublicVideoSuccess" = "This video is now set for those who are restricted from viewing your main photo.";
 
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
 
 "Common.Paste" = "Paste";
+
+"PhotoEditor.SelectCoverFrameSuggestion" = "Choose a cover for profile video";
 
 "GroupInfo.TitleMembers_1" = "%@ Member";
 "GroupInfo.TitleMembers_any" = "%@ Members";

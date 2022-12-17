@@ -116,6 +116,10 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
             switch action.action {
             case let .photoUpdated(image), let .suggestedProfilePhoto(image):
                 if let peer = messageMainPeer(EngineMessage(message)), let image = image {
+                    var isSuggested = false
+                    if case .suggestedProfilePhoto = action.action {
+                        isSuggested = true
+                    }
                     let promise: Promise<[AvatarGalleryEntry]> = Promise([AvatarGalleryEntry.image(image.imageId, image.reference, image.representations.map({ ImageRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), image.videoRepresentations.map({ VideoRepresentationWithReference(representation: $0, reference: .media(media: .message(message: MessageReference(message), media: media), resource: $0.resource)) }), peer._asPeer(), message.timestamp, nil, message.id, image.immediateThumbnailData, "action", false)])
                     
                     let sourceCorners: AvatarGalleryController.SourceCorners
@@ -124,7 +128,7 @@ public func chatMessageGalleryControllerData(context: AccountContext, chatLocati
                     } else {
                         sourceCorners = .round
                     }
-                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: sourceCorners, remoteEntries: promise, skipInitial: true, replaceRootController: { controller, ready in
+                    let galleryController = AvatarGalleryController(context: context, peer: peer._asPeer(), sourceCorners: sourceCorners, remoteEntries: promise, isSuggested: isSuggested, skipInitial: true, replaceRootController: { controller, ready in
                         
                     })
                     return .chatAvatars(galleryController, image)

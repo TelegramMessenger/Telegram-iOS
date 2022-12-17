@@ -181,6 +181,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let topPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?
     public let externalTopPanelContainer: PagerExternalTopPanelContainer?
     public let bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?
+    public let externalBottomPanelContainer: PagerExternalTopPanelContainer?
     public let panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?
     public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
     public let isTopPanelHiddenUpdated: (Bool, Transition) -> Void
@@ -198,6 +199,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         topPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?,
         externalTopPanelContainer: PagerExternalTopPanelContainer?,
         bottomPanel: AnyComponent<PagerComponentPanelEnvironment<TopPanelEnvironment>>?,
+        externalBottomPanelContainer: PagerExternalTopPanelContainer?,
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
         isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
         isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
@@ -214,6 +216,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.topPanel = topPanel
         self.externalTopPanelContainer = externalTopPanelContainer
         self.bottomPanel = bottomPanel
+        self.externalBottomPanelContainer = externalBottomPanelContainer
         self.panelStateUpdated = panelStateUpdated
         self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
         self.isTopPanelHiddenUpdated = isTopPanelHiddenUpdated
@@ -246,6 +249,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             return false
         }
         if lhs.bottomPanel != rhs.bottomPanel {
+            return false
+        }
+        if lhs.externalBottomPanelContainer !== rhs.externalBottomPanelContainer {
             return false
         }
         if lhs.panelHideBehavior != rhs.panelHideBehavior {
@@ -546,8 +552,13 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     bottomPanelTransition = .immediate
                     bottomPanelView = ComponentHostView<PagerComponentPanelEnvironment<TopPanelEnvironment>>()
                     self.bottomPanelView = bottomPanelView
-                    self.addSubview(bottomPanelView)
                 }
+                
+                let bottomPanelSuperview = component.externalBottomPanelContainer ?? self
+                if bottomPanelView.superview !== bottomPanelSuperview {
+                    bottomPanelSuperview.addSubview(bottomPanelView)
+                }
+                
                 let bottomPanelSize = bottomPanelView.update(
                     transition: bottomPanelTransition,
                     component: bottomPanel,

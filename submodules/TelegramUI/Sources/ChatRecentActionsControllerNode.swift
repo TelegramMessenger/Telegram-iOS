@@ -26,6 +26,8 @@ import WallpaperBackgroundNode
 import BotPaymentsUI
 import ContextUI
 import Pasteboard
+import ChatControllerInteraction
+import ChatPresentationInterfaceState
 
 private final class ChatRecentActionsListOpaqueState {
     let entries: [ChatRecentActionsEntry]

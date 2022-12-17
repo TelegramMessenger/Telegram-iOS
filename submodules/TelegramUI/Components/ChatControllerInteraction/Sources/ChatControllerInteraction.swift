@@ -15,33 +15,28 @@ import UndoUI
 import TelegramPresentationData
 import ChatPresentationInterfaceState
 import TextFormat
+import WallpaperBackgroundNode
+import AnimationCache
+import MultiAnimationRenderer
 
-struct ChatInterfaceHighlightedState: Equatable {
-    let messageStableId: UInt32
+public struct ChatInterfaceHighlightedState: Equatable {
+    public let messageStableId: UInt32
     
-    static func ==(lhs: ChatInterfaceHighlightedState, rhs: ChatInterfaceHighlightedState) -> Bool {
+    public init(messageStableId: UInt32) {
+        self.messageStableId = messageStableId
+    }
+    
+    public static func ==(lhs: ChatInterfaceHighlightedState, rhs: ChatInterfaceHighlightedState) -> Bool {
         return lhs.messageStableId == rhs.messageStableId
     }
 }
 
-struct ChatInterfaceStickerSettings: Equatable {
-    let loopAnimatedStickers: Bool
+public struct ChatInterfacePollActionState: Equatable {
+    public var pollMessageIdsInProgress: [MessageId: [Data]] = [:]
     
-    public init(loopAnimatedStickers: Bool) {
-        self.loopAnimatedStickers = loopAnimatedStickers
+    public init(pollMessageIdsInProgress: [MessageId: [Data]] = [:]) {
+        self.pollMessageIdsInProgress = pollMessageIdsInProgress
     }
-    
-    public init(stickerSettings: StickerSettings) {
-        self.loopAnimatedStickers = stickerSettings.loopAnimatedStickers
-    }
-    
-    static func ==(lhs: ChatInterfaceStickerSettings, rhs: ChatInterfaceStickerSettings) -> Bool {
-        return lhs.loopAnimatedStickers == rhs.loopAnimatedStickers
-    }
-}
-
-struct ChatInterfacePollActionState: Equatable {
-    var pollMessageIdsInProgress: [MessageId: [Data]] = [:]
 }
 
 public enum ChatControllerInteractionSwipeAction {
@@ -54,128 +49,150 @@ public enum ChatControllerInteractionReaction {
     case reaction(MessageReaction.Reaction)
 }
 
-struct UnreadMessageRangeKey: Hashable {
-    var peerId: PeerId
-    var namespace: MessageId.Namespace
+public struct UnreadMessageRangeKey: Hashable {
+    public var peerId: PeerId
+    public var namespace: MessageId.Namespace
+    
+    public init(peerId: PeerId, namespace: MessageId.Namespace) {
+        self.peerId = peerId
+        self.namespace = namespace
+    }
+}
+
+public class ChatPresentationContext {
+    public weak var backgroundNode: WallpaperBackgroundNode?
+    public let animationCache: AnimationCache
+    public let animationRenderer: MultiAnimationRenderer
+
+    public init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
+        self.backgroundNode = backgroundNode
+        
+        self.animationCache = context.animationCache
+        self.animationRenderer = context.animationRenderer
+    }
+}
+
+public protocol ChatMessageTransitionProtocol: ASDisplayNode {
+    
 }
 
 public final class ChatControllerInteraction {
-    enum OpenPeerSource {
+    public enum OpenPeerSource {
         case `default`
         case reaction
         case groupParticipant
     }
     
-    let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
-    let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
-    let openPeerMention: (String) -> Void
-    let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
-    let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
-    let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
-    let activateMessagePinch: (PinchSourceContainerNode) -> Void
-    let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let navigateToMessage: (MessageId, MessageId) -> Void
-    let navigateToMessageStandalone: (MessageId) -> Void
-    let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
-    let tapMessage: ((Message) -> Void)?
-    let clickThroughMessage: () -> Void
-    let toggleMessagesSelection: ([MessageId], Bool) -> Void
-    let sendCurrentMessage: (Bool) -> Void
-    let sendMessage: (String) -> Void
-    let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
-    let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
-    let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
-    let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
-    let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
-    let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
-    let activateSwitchInline: (PeerId?, String) -> Void
-    let openUrl: (String, Bool, Bool?, Message?) -> Void
-    let shareCurrentLocation: () -> Void
-    let shareAccountContact: () -> Void
-    let sendBotCommand: (MessageId?, String) -> Void
-    let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
-    let openWallpaper: (Message) -> Void
-    let openTheme: (Message) -> Void
-    let openHashtag: (String?, String) -> Void
-    let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
-    let updateInputMode: ((ChatInputMode) -> ChatInputMode) -> Void
-    let openMessageShareMenu: (MessageId) -> Void
-    let presentController: (ViewController, Any?) -> Void
-    let presentControllerInCurrent: (ViewController, Any?) -> Void
-    let navigationController: () -> NavigationController?
-    let chatControllerNode: () -> ASDisplayNode?
-    let presentGlobalOverlayController: (ViewController, Any?) -> Void
-    let callPeer: (PeerId, Bool) -> Void
-    let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
-    let openCheckoutOrReceipt: (MessageId) -> Void
-    let openSearch: () -> Void
-    let setupReply: (MessageId) -> Void
-    let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
-    let navigateToFirstDateMessage: (Int32, Bool) -> Void
-    let requestRedeliveryOfFailedMessages: (MessageId) -> Void
-    let addContact: (String) -> Void
-    let rateCall: (Message, CallId, Bool) -> Void
-    let requestSelectMessagePollOptions: (MessageId, [Data]) -> Void
-    let requestOpenMessagePollResults: (MessageId, MediaId) -> Void
-    let openAppStorePage: () -> Void
-    let displayMessageTooltip: (MessageId, String, ASDisplayNode?, CGRect?) -> Void
-    let seekToTimecode: (Message, Double, Bool) -> Void
-    let scheduleCurrentMessage: () -> Void
-    let sendScheduledMessagesNow: ([MessageId]) -> Void
-    let editScheduledMessagesTime: ([MessageId]) -> Void
-    let performTextSelectionAction: (Bool, NSAttributedString, TextSelectionAction) -> Void
-    let displayImportedMessageTooltip: (ASDisplayNode) -> Void
-    let displaySwipeToReplyHint: () -> Void
-    let dismissReplyMarkupMessage: (Message) -> Void
-    let openMessagePollResults: (MessageId, Data) -> Void
-    let openPollCreation: (Bool?) -> Void
-    let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
-    let displayPsa: (String, ASDisplayNode) -> Void
-    let displayDiceTooltip: (TelegramMediaDice) -> Void
-    let animateDiceSuccess: (Bool, Bool) -> Void
-    let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
-    let displayEmojiPackTooltip: (TelegramMediaFile, Message) -> Void
-    let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
-    let openMessageReplies: (MessageId, Bool, Bool) -> Void
-    let openReplyThreadOriginalMessage: (Message) -> Void
-    let openMessageStats: (MessageId) -> Void
-    let editMessageMedia: (MessageId, Bool) -> Void
-    let copyText: (String) -> Void
-    let displayUndo: (UndoOverlayContent) -> Void
-    let isAnimatingMessage: (UInt32) -> Bool
-    let getMessageTransitionNode: () -> ChatMessageTransitionNode?
-    let updateChoosingSticker: (Bool) -> Void
-    let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
-    let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
-    let openJoinLink: (String) -> Void
-    let openWebView: (String, String, Bool, Bool) -> Void
-    let activateAdAction: (EngineMessage.Id) -> Void
+    public let openMessage: (Message, ChatControllerInteractionOpenMessageMode) -> Bool
+    public let openPeer: (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void
+    public let openPeerMention: (String) -> Void
+    public let openMessageContextMenu: (Message, Bool, ASDisplayNode, CGRect, UIGestureRecognizer?, CGPoint?) -> Void
+    public let updateMessageReaction: (Message, ChatControllerInteractionReaction) -> Void
+    public let openMessageReactionContextMenu: (Message, ContextExtractedContentContainingView, ContextGesture?, MessageReaction.Reaction) -> Void
+    public let activateMessagePinch: (PinchSourceContainerNode) -> Void
+    public let openMessageContextActions: (Message, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    public let navigateToMessage: (MessageId, MessageId) -> Void
+    public let navigateToMessageStandalone: (MessageId) -> Void
+    public let navigateToThreadMessage: (PeerId, Int64, MessageId?) -> Void
+    public let tapMessage: ((Message) -> Void)?
+    public let clickThroughMessage: () -> Void
+    public let toggleMessagesSelection: ([MessageId], Bool) -> Void
+    public let sendCurrentMessage: (Bool) -> Void
+    public let sendMessage: (String) -> Void
+    public let sendSticker: (FileMediaReference, Bool, Bool, String?, Bool, UIView, CGRect, CALayer?, [ItemCollectionId]) -> Bool
+    public let sendEmoji: (String, ChatTextInputTextCustomEmojiAttribute) -> Void
+    public let sendGif: (FileMediaReference, UIView, CGRect, Bool, Bool) -> Bool
+    public let sendBotContextResultAsGif: (ChatContextResultCollection, ChatContextResult, UIView, CGRect, Bool) -> Bool
+    public let requestMessageActionCallback: (MessageId, MemoryBuffer?, Bool, Bool) -> Void
+    public let requestMessageActionUrlAuth: (String, MessageActionUrlSubject) -> Void
+    public let activateSwitchInline: (PeerId?, String) -> Void
+    public let openUrl: (String, Bool, Bool?, Message?) -> Void
+    public let shareCurrentLocation: () -> Void
+    public let shareAccountContact: () -> Void
+    public let sendBotCommand: (MessageId?, String) -> Void
+    public let openInstantPage: (Message, ChatMessageItemAssociatedData?) -> Void
+    public let openWallpaper: (Message) -> Void
+    public let openTheme: (Message) -> Void
+    public let openHashtag: (String?, String) -> Void
+    public let updateInputState: ((ChatTextInputState) -> ChatTextInputState) -> Void
+    public let updateInputMode: ((ChatInputMode) -> ChatInputMode) -> Void
+    public let openMessageShareMenu: (MessageId) -> Void
+    public let presentController: (ViewController, Any?) -> Void
+    public let presentControllerInCurrent: (ViewController, Any?) -> Void
+    public let navigationController: () -> NavigationController?
+    public let chatControllerNode: () -> ASDisplayNode?
+    public let presentGlobalOverlayController: (ViewController, Any?) -> Void
+    public let callPeer: (PeerId, Bool) -> Void
+    public let longTap: (ChatControllerInteractionLongTapAction, Message?) -> Void
+    public let openCheckoutOrReceipt: (MessageId) -> Void
+    public let openSearch: () -> Void
+    public let setupReply: (MessageId) -> Void
+    public let canSetupReply: (Message) -> ChatControllerInteractionSwipeAction
+    public let navigateToFirstDateMessage: (Int32, Bool) -> Void
+    public let requestRedeliveryOfFailedMessages: (MessageId) -> Void
+    public let addContact: (String) -> Void
+    public let rateCall: (Message, CallId, Bool) -> Void
+    public let requestSelectMessagePollOptions: (MessageId, [Data]) -> Void
+    public let requestOpenMessagePollResults: (MessageId, MediaId) -> Void
+    public let openAppStorePage: () -> Void
+    public let displayMessageTooltip: (MessageId, String, ASDisplayNode?, CGRect?) -> Void
+    public let seekToTimecode: (Message, Double, Bool) -> Void
+    public let scheduleCurrentMessage: () -> Void
+    public let sendScheduledMessagesNow: ([MessageId]) -> Void
+    public let editScheduledMessagesTime: ([MessageId]) -> Void
+    public let performTextSelectionAction: (Bool, NSAttributedString, TextSelectionAction) -> Void
+    public let displayImportedMessageTooltip: (ASDisplayNode) -> Void
+    public let displaySwipeToReplyHint: () -> Void
+    public let dismissReplyMarkupMessage: (Message) -> Void
+    public let openMessagePollResults: (MessageId, Data) -> Void
+    public let openPollCreation: (Bool?) -> Void
+    public let displayPollSolution: (TelegramMediaPollResults.Solution, ASDisplayNode) -> Void
+    public let displayPsa: (String, ASDisplayNode) -> Void
+    public let displayDiceTooltip: (TelegramMediaDice) -> Void
+    public let animateDiceSuccess: (Bool, Bool) -> Void
+    public let displayPremiumStickerTooltip: (TelegramMediaFile, Message) -> Void
+    public let displayEmojiPackTooltip: (TelegramMediaFile, Message) -> Void
+    public let openPeerContextMenu: (Peer, MessageId?, ASDisplayNode, CGRect, ContextGesture?) -> Void
+    public let openMessageReplies: (MessageId, Bool, Bool) -> Void
+    public let openReplyThreadOriginalMessage: (Message) -> Void
+    public let openMessageStats: (MessageId) -> Void
+    public let editMessageMedia: (MessageId, Bool) -> Void
+    public let copyText: (String) -> Void
+    public let displayUndo: (UndoOverlayContent) -> Void
+    public let isAnimatingMessage: (UInt32) -> Bool
+    public let getMessageTransitionNode: () -> ChatMessageTransitionProtocol?
+    public let updateChoosingSticker: (Bool) -> Void
+    public let commitEmojiInteraction: (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void
+    public let openLargeEmojiInfo: (String, String?, TelegramMediaFile) -> Void
+    public let openJoinLink: (String) -> Void
+    public let openWebView: (String, String, Bool, Bool) -> Void
+    public let activateAdAction: (EngineMessage.Id) -> Void
     
-    let requestMessageUpdate: (MessageId, Bool) -> Void
-    let cancelInteractiveKeyboardGestures: () -> Void
-    let dismissTextInput: () -> Void
-    let scrollToMessageId: (MessageIndex) -> Void
+    public let requestMessageUpdate: (MessageId, Bool) -> Void
+    public let cancelInteractiveKeyboardGestures: () -> Void
+    public let dismissTextInput: () -> Void
+    public let scrollToMessageId: (MessageIndex) -> Void
     
-    var canPlayMedia: Bool = false
-    var hiddenMedia: [MessageId: [Media]] = [:]
-    var expandedTranslationMessageStableIds: Set<UInt32> = Set()
-    var selectionState: ChatInterfaceSelectionState?
-    var highlightedState: ChatInterfaceHighlightedState?
-    var contextHighlightedState: ChatInterfaceHighlightedState?
-    var automaticMediaDownloadSettings: MediaAutoDownloadSettings
-    var pollActionState: ChatInterfacePollActionState
-    var currentPollMessageWithTooltip: MessageId?
-    var currentPsaMessageWithTooltip: MessageId?
-    var stickerSettings: ChatInterfaceStickerSettings
-    var searchTextHighightState: (String, [MessageIndex])?
-    var unreadMessageRange: [UnreadMessageRangeKey: Range<MessageId.Id>] = [:]
-    var seenOneTimeAnimatedMedia = Set<MessageId>()
-    var currentMessageWithLoadingReplyThread: MessageId?
-    var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
-    let presentationContext: ChatPresentationContext
-    var playNextOutgoingGift: Bool = false
+    public var canPlayMedia: Bool = false
+    public var hiddenMedia: [MessageId: [Media]] = [:]
+    public var expandedTranslationMessageStableIds: Set<UInt32> = Set()
+    public var selectionState: ChatInterfaceSelectionState?
+    public var highlightedState: ChatInterfaceHighlightedState?
+    public var contextHighlightedState: ChatInterfaceHighlightedState?
+    public var automaticMediaDownloadSettings: MediaAutoDownloadSettings
+    public var pollActionState: ChatInterfacePollActionState
+    public var currentPollMessageWithTooltip: MessageId?
+    public var currentPsaMessageWithTooltip: MessageId?
+    public var stickerSettings: ChatInterfaceStickerSettings
+    public var searchTextHighightState: (String, [MessageIndex])?
+    public var unreadMessageRange: [UnreadMessageRangeKey: Range<MessageId.Id>] = [:]
+    public var seenOneTimeAnimatedMedia = Set<MessageId>()
+    public var currentMessageWithLoadingReplyThread: MessageId?
+    public var updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)?
+    public let presentationContext: ChatPresentationContext
+    public var playNextOutgoingGift: Bool = false
     
-    init(
+    public init(
         openMessage: @escaping (Message, ChatControllerInteractionOpenMessageMode) -> Bool,
         openPeer: @escaping (EnginePeer, ChatControllerInteractionNavigateToPeer, MessageReference?, OpenPeerSource) -> Void,
         openPeerMention: @escaping (String) -> Void,
@@ -253,7 +270,7 @@ public final class ChatControllerInteraction {
         copyText: @escaping (String) -> Void,
         displayUndo: @escaping (UndoOverlayContent) -> Void,
         isAnimatingMessage: @escaping (UInt32) -> Bool,
-        getMessageTransitionNode: @escaping () -> ChatMessageTransitionNode?,
+        getMessageTransitionNode: @escaping () -> ChatMessageTransitionProtocol?,
         updateChoosingSticker: @escaping (Bool) -> Void,
         commitEmojiInteraction: @escaping (MessageId, String, EmojiInteraction, TelegramMediaFile) -> Void,
         openLargeEmojiInfo: @escaping (String, String?, TelegramMediaFile) -> Void,

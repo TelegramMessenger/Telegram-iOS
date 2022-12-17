@@ -90,7 +90,6 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private var currentDrawingView: UIView
     private var currentDrawingLayer: DrawingRenderLayer?
     
-    private var selectionImage: UIImage?
     private var pannedSelectionView: UIView
     
     var lassoView: DrawingLassoView
@@ -155,6 +154,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.lassoView.isHidden = true
                 
         self.metalView = DrawingMetalView(size: size)!
+        self.metalView.isHidden = true
         
         self.brushSizePreviewLayer = SimpleShapeLayer()
         self.brushSizePreviewLayer.bounds = CGRect(origin: .zero, size: CGSize(width: 100.0, height: 100.0))
@@ -258,6 +258,11 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     guard let newElement = strongSelf.prepareNewElement() else {
                         return
                     }
+                    
+                    if newElement is MarkerTool || newElement is PencilTool {
+                        self?.metalView.isHidden = false
+                    }
+                    
                     if let renderLayer = newElement.setupRenderLayer() {
                         strongSelf.currentDrawingView.layer.addSublayer(renderLayer)
                         strongSelf.currentDrawingLayer = renderLayer
@@ -366,7 +371,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             if let strongSelf = self {
                 strongSelf.skipDrawing = Set(elements)
                 strongSelf.commit(reset: true)
-                strongSelf.updateSelectionImage()
+                strongSelf.updateSelectionContent()
             }
         }
         
@@ -386,12 +391,12 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     }
                 }
                 strongSelf.skipDrawing = Set()
-                strongSelf.commit(reset: true)
-                strongSelf.selectionImage = nil
-                strongSelf.pannedSelectionView.layer.contents = nil
-                
-                strongSelf.lassoView.bounds = CGRect(origin: .zero, size: strongSelf.lassoView.bounds.size)
-                strongSelf.lassoView.translate(offset)
+                strongSelf.commit(reset: true, completion: {
+                    strongSelf.pannedSelectionView.layer.contents = nil
+                    
+                    strongSelf.lassoView.bounds = CGRect(origin: .zero, size: strongSelf.lassoView.bounds.size)
+                    strongSelf.lassoView.translate(offset)
+                })
             }
         }
     }
@@ -468,46 +473,66 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         }
     }
         
+    private let queue = Queue()
     private var skipDrawing = Set<UUID>()
-    private func commit(reset: Bool = false) {
+    private func commit(reset: Bool = false, interactive: Bool = false, synchronous: Bool = false, completion: @escaping () -> Void = {}) {
         let currentImage = self.drawingImage
-        self.drawingImage = self.renderer.image { context in
-            if !reset {
-                context.cgContext.clear(CGRect(origin: .zero, size: self.imageSize))
-                if let image = currentImage {
-                    image.draw(at: .zero)
-                }
-                if let uncommitedElement = self.uncommitedElement {
-                    uncommitedElement.draw(in: context.cgContext, size: self.imageSize)
-                }
-            } else {
-                context.cgContext.clear(CGRect(origin: .zero, size: self.imageSize))
-                for element in self.elements {
-                    if !self.skipDrawing.contains(element.uuid) {
-                        element.draw(in: context.cgContext, size: self.imageSize)
+        let uncommitedElement = self.uncommitedElement
+        let imageSize = self.imageSize
+        let skipDrawing = self.skipDrawing
+        
+        let action = {
+            let updatedImage = self.renderer.image { context in
+                if !reset {
+                    context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
+                    if let image = currentImage {
+                        image.draw(at: .zero)
+                    }
+                    if let uncommitedElement = uncommitedElement {
+                        uncommitedElement.draw(in: context.cgContext, size: imageSize)
+                    }
+                } else {
+                    context.cgContext.clear(CGRect(origin: .zero, size: imageSize))
+                    for element in self.elements {
+                        if !skipDrawing.contains(element.uuid) {
+                            element.draw(in: context.cgContext, size: imageSize)
+                        }
                     }
                 }
             }
+            Queue.mainQueue().async {
+                self.drawingImage = updatedImage
+                self.layer.contents = updatedImage.cgImage
+                
+                if let currentDrawingLayer = self.currentDrawingLayer {
+                    self.currentDrawingLayer = nil
+                    currentDrawingLayer.removeFromSuperlayer()
+                }
+                
+                self.metalView.clear()
+                self.metalView.isHidden = true
+                
+                completion()
+            }
         }
-        self.layer.contents = self.drawingImage?.cgImage
-        
-        if let currentDrawingLayer = self.currentDrawingLayer {
-            self.currentDrawingLayer = nil
-            currentDrawingLayer.removeFromSuperlayer()
+        if synchronous {
+            action()
+        } else {
+            self.queue.async {
+                action()
+            }
         }
-        
-        self.metalView.clear()
     }
     
-    private func updateSelectionImage() {
-        self.selectionImage = self.renderer.image { context in
+    private func updateSelectionContent() {
+        let selectionImage = self.renderer.image { context in
             for element in self.elements {
                 if self.skipDrawing.contains(element.uuid) {
                     element.draw(in: context.cgContext, size: self.imageSize)
                 }
             }
         }
-        self.pannedSelectionView.layer.contents = self.selectionImage?.cgImage
+        self.pannedSelectionView.layer.contents = selectionImage.cgImage
     }
     
     fileprivate func cancelDrawing() {
@@ -520,15 +545,24 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     }
         
     fileprivate func finishDrawing() {
-        self.commit()
-        
-        self.redoElements.removeAll()
-        if let uncommitedElement = self.uncommitedElement {
-            self.elements.append(uncommitedElement)
-            self.uncommitedElement = nil
+        let complete: (Bool) -> Void = { synchronous in
+            self.commit(interactive: true, synchronous: synchronous)
+            
+            self.redoElements.removeAll()
+            if let uncommitedElement = self.uncommitedElement {
+                self.elements.append(uncommitedElement)
+                self.uncommitedElement = nil
+            }
+            
+            self.updateInternalState()
         }
-                
-        self.updateInternalState()
+        if let uncommitedElement = self.uncommitedElement as? PenTool, uncommitedElement.arrow {
+            uncommitedElement.finishArrow({
+                complete(true)
+            })
+        } else {
+            complete(false)
+        }
     }
     
     weak var entitiesView: DrawingEntitiesView?

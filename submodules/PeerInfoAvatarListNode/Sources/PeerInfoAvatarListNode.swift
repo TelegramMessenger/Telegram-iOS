@@ -532,7 +532,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     var highlightedSide: Bool?
     public let stripContainerNode: ASDisplayNode
     public let highlightContainerNode: ASDisplayNode
-    private let setByYouNode: ImmediateTextNode
+    public let setByYouNode: ImmediateTextNode
     private let setByYouImageNode: ImageNode
     private var setByYouTapRecognizer: UITapGestureRecognizer?
     
@@ -883,7 +883,7 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             self.currentIndexUpdated?()
         }
         if let size = self.validLayout {
-            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring))
+            self.updateItems(size: size, transition: .immediate, stripTransition: .animated(duration: 0.3, curve: .spring), synchronous: true)
         }
     }
     

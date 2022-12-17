@@ -3,8 +3,20 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingBubbleEntity: DrawingEntity {
-    public enum DrawType {
+final class DrawingBubbleEntity: DrawingEntity, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case drawType
+        case color
+        case lineWidth
+        case referenceDrawingSize
+        case position
+        case size
+        case rotation
+        case tailPosition
+    }
+    
+    public enum DrawType: Codable {
         case fill
         case stroke
     }
@@ -22,6 +34,10 @@ final class DrawingBubbleEntity: DrawingEntity {
     var rotation: CGFloat
     var tailPosition: CGPoint
     
+    var center: CGPoint {
+        return self.position
+    }
+    
     init(drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false
@@ -37,10 +53,33 @@ final class DrawingBubbleEntity: DrawingEntity {
         self.tailPosition = CGPoint(x: 0.16, y: 0.18)
     }
     
-    var center: CGPoint {
-        return self.position
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.isAnimated = false
+        self.drawType = try container.decode(DrawType.self, forKey: .drawType)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
+        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
+        self.position = try container.decode(CGPoint.self, forKey: .position)
+        self.size = try container.decode(CGSize.self, forKey: .size)
+        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        self.tailPosition = try container.decode(CGPoint.self, forKey: .tailPosition)
     }
     
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.drawType, forKey: .drawType)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.lineWidth, forKey: .lineWidth)
+        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
+        try container.encode(self.position, forKey: .position)
+        try container.encode(self.size, forKey: .size)
+        try container.encode(self.rotation, forKey: .rotation)
+        try container.encode(self.tailPosition, forKey: .tailPosition)
+    }
+        
     func duplicate() -> DrawingEntity {
         let newEntity = DrawingBubbleEntity(drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
@@ -137,9 +176,6 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         guard let selectionView = self.selectionView as? DrawingBubbleEntititySelectionView else {
             return
         }
-        
-//        let scale = self.superview?.superview?.layer.value(forKeyPath: "transform.scale.x") as? CGFloat ?? 1.0
-//        selectionView.scale = scale
         
         selectionView.transform = CGAffineTransformMakeRotation(self.bubbleEntity.rotation)
         selectionView.setNeedsLayout()

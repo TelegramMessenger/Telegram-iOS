@@ -14,6 +14,7 @@ import PhotoResources
 import GridMessageSelectionNode
 import ContextUI
 import ChatMessageInteractiveMediaBadge
+import ChatControllerInteraction
 
 private func mediaForMessage(_ message: Message) -> Media? {
     for media in message.media {

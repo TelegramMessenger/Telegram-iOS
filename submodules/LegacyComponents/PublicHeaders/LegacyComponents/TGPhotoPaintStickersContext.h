@@ -89,6 +89,8 @@
 - (void)handlePinch:(UIPinchGestureRecognizer *)gestureRecognizer;
 - (void)handleRotate:(UIRotationGestureRecognizer *)gestureRecognizer;
 
+- (void)setupWithEntitiesData:(NSData *)entitiesData;
+
 @end
 
 @protocol TGPhotoDrawingInterfaceController <NSObject>
@@ -134,6 +136,8 @@
 
 
 - (UIView<TGPhotoSolidRoundedButtonView> *)solidRoundedButton:(NSString *)title action:(void(^)(void))action;
-- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size;
+- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize;
+
+- (UIView<TGPhotoDrawingEntitiesView> *)drawingEntitiesViewWithSize:(CGSize)size;
 
 @end

@@ -23,6 +23,7 @@ import TelegramNotices
 import TelegramUIPreferences
 import CheckNode
 import AppBundle
+import ChatControllerInteraction
 
 private final class FrameSequenceThumbnailNode: ASDisplayNode {
     private let context: AccountContext

@@ -15,6 +15,7 @@ import OverlayStatusController
 import ListMessageItem
 import UndoUI
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
 
 final class PeerInfoListPaneNode: ASDisplayNode, PeerInfoPaneNode {
     private let context: AccountContext

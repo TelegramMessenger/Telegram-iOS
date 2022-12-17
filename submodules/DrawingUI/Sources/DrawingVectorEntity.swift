@@ -3,8 +3,20 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingVectorEntity: DrawingEntity {
-    public enum VectorType {
+final class DrawingVectorEntity: DrawingEntity, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case type
+        case color
+        case lineWidth
+        case drawingSize
+        case referenceDrawingSize
+        case start
+        case mid
+        case end
+    }
+    
+    public enum VectorType: Codable {
         case line
         case oneSidedArrow
         case twoSidedArrow
@@ -34,6 +46,10 @@ final class DrawingVectorEntity: DrawingEntity {
         }
     }
     
+    var center: CGPoint {
+        return self.start
+    }
+    
     init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false
@@ -49,8 +65,34 @@ final class DrawingVectorEntity: DrawingEntity {
         self.end = CGPoint()
     }
     
-    var center: CGPoint {
-        return self.start
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.isAnimated = false
+        self.type = try container.decode(VectorType.self, forKey: .type)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
+        self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
+        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
+        self.start = try container.decode(CGPoint.self, forKey: .start)
+        
+        let mid = try container.decode(CGPoint.self, forKey: .mid)
+        self.mid = (mid.x, mid.y)
+        
+        self.end = try container.decode(CGPoint.self, forKey: .end)
+    }
+    
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.type, forKey: .type)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.lineWidth, forKey: .lineWidth)
+        try container.encode(self.drawingSize, forKey: .drawingSize)
+        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
+        try container.encode(self.start, forKey: .start)
+        try container.encode(CGPoint(x: self.mid.0, y: self.mid.1), forKey: .mid)
+        try container.encode(self.end, forKey: .end)
     }
     
     func duplicate() -> DrawingEntity {

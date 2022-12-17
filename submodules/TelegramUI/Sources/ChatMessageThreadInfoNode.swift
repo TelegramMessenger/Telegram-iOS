@@ -18,6 +18,7 @@ import MultiAnimationRenderer
 import ComponentFlow
 import EmojiStatusComponent
 import WallpaperBackgroundNode
+import ChatControllerInteraction
 
 private func generateRectsImage(color: UIColor, rects: [CGRect], inset: CGFloat, outerRadius: CGFloat, innerRadius: CGFloat) -> (CGPoint, UIImage?) {
     enum CornerType {

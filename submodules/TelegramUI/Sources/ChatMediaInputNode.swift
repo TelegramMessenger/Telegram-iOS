@@ -22,6 +22,12 @@ import ChatInterfaceState
 import ChatPresentationInterfaceState
 import UndoUI
 import PremiumUI
+import ChatControllerInteraction
+import FeaturedStickersScreen
+import ChatInputNode
+import FeaturedStickersScreen
+import MultiplexedVideoNode
+import ChatEntityKeyboardInputNode
 
 struct PeerSpecificPackData {
     let peer: Peer
@@ -431,47 +437,6 @@ enum StickerPacksCollectionUpdate {
     case generic
     case scroll
     case navigate(ItemCollectionViewEntryIndex?, ItemCollectionId?)
-}
-
-enum ChatMediaInputGifMode: Equatable {
-    case recent
-    case trending
-    case emojiSearch(String)
-}
-
-final class ChatMediaInputNodeInteraction {
-    let navigateToCollectionId: (ItemCollectionId) -> Void
-    let navigateBackToStickers: () -> Void
-    let setGifMode: (ChatMediaInputGifMode) -> Void
-    let openSettings: () -> Void
-    let openTrending: (ItemCollectionId?) -> Void
-    let dismissTrendingPacks: ([ItemCollectionId]) -> Void
-    let toggleSearch: (Bool, ChatMediaInputSearchMode?, String) -> Void
-    let openPeerSpecificSettings: () -> Void
-    let dismissPeerSpecificSettings: () -> Void
-    let clearRecentlyUsedStickers: () -> Void
-    
-    var stickerSettings: ChatInterfaceStickerSettings?
-    var highlightedStickerItemCollectionId: ItemCollectionId?
-    var highlightedItemCollectionId: ItemCollectionId?
-    var highlightedGifMode: ChatMediaInputGifMode = .recent
-    var previewedStickerPackItem: StickerPreviewPeekItem?
-    var appearanceTransition: CGFloat = 1.0
-    var displayStickerPlaceholder = true
-    var displayStickerPackManageControls = true
-    
-    init(navigateToCollectionId: @escaping (ItemCollectionId) -> Void, navigateBackToStickers: @escaping () -> Void, setGifMode: @escaping (ChatMediaInputGifMode) -> Void, openSettings: @escaping () -> Void, openTrending: @escaping (ItemCollectionId?) -> Void, dismissTrendingPacks: @escaping ([ItemCollectionId]) -> Void, toggleSearch: @escaping (Bool, ChatMediaInputSearchMode?, String) -> Void, openPeerSpecificSettings: @escaping () -> Void, dismissPeerSpecificSettings: @escaping () -> Void, clearRecentlyUsedStickers: @escaping () -> Void) {
-        self.navigateToCollectionId = navigateToCollectionId
-        self.navigateBackToStickers = navigateBackToStickers
-        self.setGifMode = setGifMode
-        self.openSettings = openSettings
-        self.openTrending = openTrending
-        self.dismissTrendingPacks = dismissTrendingPacks
-        self.toggleSearch = toggleSearch
-        self.openPeerSpecificSettings = openPeerSpecificSettings
-        self.dismissPeerSpecificSettings = dismissPeerSpecificSettings
-        self.clearRecentlyUsedStickers = clearRecentlyUsedStickers
-    }
 }
 
 func clipScrollPosition(_ position: StickerPacksCollectionPosition) -> StickerPacksCollectionPosition {

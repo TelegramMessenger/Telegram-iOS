@@ -11,6 +11,8 @@ import AccountContext
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
 import ShimmerEffect
+import ChatControllerInteraction
+import ChatPresentationInterfaceState
 
 enum ChatMediaInputStickerGridSectionAccessory {
     case none

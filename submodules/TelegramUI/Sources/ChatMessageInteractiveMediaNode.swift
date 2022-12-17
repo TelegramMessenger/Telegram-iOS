@@ -23,6 +23,7 @@ import WallpaperResources
 import ChatMessageInteractiveMediaBadge
 import ContextUI
 import InvisibleInkDustNode
+import ChatControllerInteraction
 
 private struct FetchControls {
     let fetch: (Bool) -> Void

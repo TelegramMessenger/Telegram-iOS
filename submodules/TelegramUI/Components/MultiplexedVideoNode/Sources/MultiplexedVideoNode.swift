@@ -74,24 +74,24 @@ private final class VisibleVideoItem {
     }
 }
 
-final class MultiplexedVideoNodeFile {
-    let file: FileMediaReference
-    let contextResult: (ChatContextResultCollection, ChatContextResult)?
+public final class MultiplexedVideoNodeFile {
+    public let file: FileMediaReference
+    public let contextResult: (ChatContextResultCollection, ChatContextResult)?
     
-    init(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?) {
+    public init(file: FileMediaReference, contextResult: (ChatContextResultCollection, ChatContextResult)?) {
         self.file = file
         self.contextResult = contextResult
     }
 }
 
-final class MultiplexedVideoNodeFiles {
-    let saved: [MultiplexedVideoNodeFile]
-    let trending: [MultiplexedVideoNodeFile]
-    let isSearch: Bool
-    let canLoadMore: Bool
-    let isStale: Bool
+public final class MultiplexedVideoNodeFiles {
+    public let saved: [MultiplexedVideoNodeFile]
+    public let trending: [MultiplexedVideoNodeFile]
+    public let isSearch: Bool
+    public let canLoadMore: Bool
+    public let isStale: Bool
     
-    init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool, canLoadMore: Bool, isStale: Bool) {
+    public init(saved: [MultiplexedVideoNodeFile], trending: [MultiplexedVideoNodeFile], isSearch: Bool, canLoadMore: Bool, isStale: Bool) {
         self.saved = saved
         self.trending = trending
         self.isSearch = isSearch
@@ -100,36 +100,37 @@ final class MultiplexedVideoNodeFiles {
     }
 }
 
-final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
+public final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private let account: Account
     private var theme: PresentationTheme
     private var strings: PresentationStrings
     private let trackingNode: MultiplexedVideoTrackingNode
-    var didScroll: ((CGFloat, CGFloat) -> Void)?
-    var didEndScrolling: (() -> Void)?
-    var reactionSelected: ((String) -> Void)?
     
-    var topInset: CGFloat = 0.0 {
+    public var didScroll: ((CGFloat, CGFloat) -> Void)?
+    public var didEndScrolling: (() -> Void)?
+    public var reactionSelected: ((String) -> Void)?
+    
+    public var topInset: CGFloat = 0.0 {
         didSet {
             self.setNeedsLayout()
         }
     }
     
-    var bottomInset: CGFloat = 0.0 {
+    public var bottomInset: CGFloat = 0.0 {
         didSet {
             self.setNeedsLayout()
         }
     }
     
-    var idealHeight: CGFloat = 93.0 {
+    public var idealHeight: CGFloat = 93.0 {
         didSet {
             self.setNeedsLayout()
         }
     }
     
-    private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false, canLoadMore: false, isStale: false)
+    public private(set) var files: MultiplexedVideoNodeFiles = MultiplexedVideoNodeFiles(saved: [], trending: [], isSearch: false, canLoadMore: false, isStale: false)
     
-    func setFiles(files: MultiplexedVideoNodeFiles, synchronous: Bool, resetScrollingToOffset: CGFloat?) {
+    public func setFiles(files: MultiplexedVideoNodeFiles, synchronous: Bool, resetScrollingToOffset: CGFloat?) {
         self.files = files
         
         self.ignoreDidScroll = true
@@ -145,7 +146,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     private var visiblePlaceholderNodes: [Int: MultiplexedVideoPlaceholderNode] = [:]
 
     private let contextContainerNode: ContextControllerSourceNode
-    let scrollNode: ASScrollNode
+    public let scrollNode: ASScrollNode
     
     private var visibleLayers: [VisibleVideoItem.Id: (SoftwareVideoLayerFrameManager, SampleBufferLayer)] = [:]
     
@@ -157,14 +158,14 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     
     private let timebase: CMTimebase
     
-    var fileSelected: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect) -> Void)?
-    var fileContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
-    var enableVideoNodes = false
+    public var fileSelected: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect) -> Void)?
+    public var fileContextMenu: ((MultiplexedVideoNodeFile, ASDisplayNode, CGRect, ContextGesture, Bool) -> Void)?
+    public var enableVideoNodes = false
         
     private var currentActivatingId: VisibleVideoItem.Id?
     private var isFinishingActivation = false
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -343,7 +344,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     }
     
     private var validSize: CGSize?
-    func updateLayout(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, transition: ContainedViewLayoutTransition) {
+    public func updateLayout(theme: PresentationTheme, strings: PresentationStrings, size: CGSize, transition: ContainedViewLayoutTransition) {
         self.theme = theme
         self.strings = strings
         if self.validSize == nil || !self.validSize!.equalTo(size) {
@@ -359,18 +360,18 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
     
     private var ignoreDidScroll: Bool = false
     
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         if !self.ignoreDidScroll {
             self.updateImmediatelyVisibleItems()
             self.didScroll?(scrollView.contentOffset.y, scrollView.contentSize.height)
         }
     }
     
-    func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
+    public func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
         self.didEndScrolling?()
     }
     
-    func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
+    public func scrollViewDidEndDragging(_ scrollView: UIScrollView, willDecelerate decelerate: Bool) {
         if !decelerate {
             self.didEndScrolling?()
         }
@@ -738,7 +739,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         }
     }
     
-    func frameForItem(_ id: MediaId) -> CGRect? {
+    public func frameForItem(_ id: MediaId) -> CGRect? {
         for item in self.displayItems {
             if item.file.file.media.fileId == id {
                 return item.frame
@@ -747,7 +748,7 @@ final class MultiplexedVideoNode: ASDisplayNode, UIScrollViewDelegate {
         return nil
     }
     
-    func fileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
+    public func fileAt(point: CGPoint) -> (MultiplexedVideoNodeFile, CGRect, Bool)? {
         if let result = self.internalFileAt(point: point) {
             return (result.1, result.2, result.3)
         } else {

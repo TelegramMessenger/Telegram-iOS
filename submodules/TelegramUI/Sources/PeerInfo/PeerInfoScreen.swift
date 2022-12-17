@@ -83,6 +83,15 @@ import ChatTimerScreen
 import NotificationPeerExceptionController
 import StickerPackPreviewUI
 import ChatListHeaderComponent
+import ChatControllerInteraction
+
+enum PeerInfoAvatarEditingMode {
+    case generic
+    case accept
+    case suggest
+    case custom
+    case fallback
+}
 
 protocol PeerInfoScreenItem: AnyObject {
     var id: AnyHashable { get }
@@ -6740,7 +6749,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
     }
     
-    fileprivate func updateProfilePhoto(_ image: UIImage, mode: AvatarEditingMode) {
+    fileprivate func updateProfilePhoto(_ image: UIImage, mode: PeerInfoAvatarEditingMode) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
         }
@@ -6791,6 +6800,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 return mapResourceToAvatarSizes(postbox: postbox, resource: resource, representations: representations)
             })
         }
+        
+        var dismissStatus: (() -> Void)?
+        if [.suggest, .fallback].contains(mode) {
+            let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: { [weak self] in
+                self?.updateAvatarDisposable.set(nil)
+                dismissStatus?()
+            }))
+            dismissStatus = { [weak statusController] in
+                statusController?.dismiss()
+            }
+            self.controller?.presentInGlobalOverlay(statusController)
+        }
 
         self.updateAvatarDisposable.set((signal
         |> deliverOnMainQueue).start(next: { [weak self] result in
@@ -6807,18 +6828,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
             
-            if case .complete = result, case .custom = mode {
+            if case .complete = result {
+                dismissStatus?()
+                
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     if let strongSelf = self, let peer {
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        switch mode {
+                        case .fallback:
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicPhotoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .custom:
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessPhotoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .suggest:
+                            if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .default, completion: { _ in
+                                }))
+                            }
+                        case .accept:
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        default:
+                            break
+                        }
                     }
                 })
             }
         }))
     }
               
-    fileprivate func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?, mode: AvatarEditingMode) {
+    fileprivate func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?, mode: PeerInfoAvatarEditingMode) {
         guard let data = image.jpegData(compressionQuality: 0.6) else {
             return
         }
@@ -6930,6 +6967,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
         }
         
+        var dismissStatus: (() -> Void)?
+        if [.suggest, .fallback].contains(mode) {
+            let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: { [weak self] in
+                self?.updateAvatarDisposable.set(nil)
+                dismissStatus?()
+            }))
+            dismissStatus = { [weak statusController] in
+                statusController?.dismiss()
+            }
+            self.controller?.presentInGlobalOverlay(statusController)
+        }
+        
         let peerId = self.peerId
         let isSettings = self.isSettings
         self.updateAvatarDisposable.set((signal
@@ -6972,25 +7021,34 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 strongSelf.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate, additive: false)
             }
             
-            if case .complete = result, case .custom = mode {
+            if case .complete = result {
+                dismissStatus?()
+                
                 let _ = (strongSelf.context.engine.data.get(TelegramEngine.EngineData.Item.Peer.Peer(id: strongSelf.peerId))
                 |> deliverOnMainQueue).start(next: { [weak self] peer in
                     if let strongSelf = self, let peer {
-                        strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        switch mode {
+                        case .fallback:
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Privacy_ProfilePhoto_PublicVideoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .custom:
+                            strongSelf.controller?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .invitedToVoiceChat(context: strongSelf.context, peer: peer, text: strongSelf.presentationData.strings.UserInfo_SetCustomPhoto_SuccessVideoText(peer.compactDisplayTitle).string, action: nil, duration: 5), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        case .suggest:
+                            if let navigationController = (strongSelf.controller?.navigationController as? NavigationController) {
+                                strongSelf.context.sharedContext.navigateToChatController(NavigateToChatControllerParams(navigationController: navigationController, context: strongSelf.context, chatLocation: .peer(peer), keepStack: .default, completion: { _ in
+                                }))
+                            }
+                        case .accept:
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                        default:
+                            break
+                        }
                     }
                 })
             }
         }))
     }
-    
-    fileprivate enum AvatarEditingMode {
-        case generic
-        case suggest
-        case custom
-        case fallback
-    }
-    
-    fileprivate func openAvatarForEditing(mode: AvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
+        
+    fileprivate func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
         guard let peer = self.data?.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: self.data?.threadData) else {
             return
         }
@@ -7156,7 +7214,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    fileprivate func openAvatarRemoval(mode: AvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil) {
+    fileprivate func openAvatarRemoval(mode: PeerInfoAvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil) {
         let proceed = { [weak self] in
             guard let strongSelf = self else {
                 return
@@ -8962,6 +9020,8 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
     private let chatLocation: ChatLocation
     private let chatLocationContextHolder = Atomic<ChatLocationContextHolder?>(value: nil)
     
+    weak var parentController: TelegramRootController?
+    
     fileprivate var presentationData: PresentationData
     private var presentationDataDisposable: Disposable?
     private let cachedDataPromise = Promise<CachedPeerData?>()
@@ -9374,18 +9434,18 @@ public final class PeerInfoScreenImpl: ViewController, PeerInfoScreen, KeyShortc
         }
     }
     
-    func updateProfilePhoto(_ image: UIImage, fallback: Bool = false) {
+    func updateProfilePhoto(_ image: UIImage, mode: PeerInfoAvatarEditingMode) {
         if !self.isNodeLoaded {
             self.loadDisplayNode()
         }
-        self.controllerNode.updateProfilePhoto(image, mode: fallback ? .fallback : .generic)
+        self.controllerNode.updateProfilePhoto(image, mode: mode)
     }
     
-    func updateProfileVideo(_ image: UIImage, asset: Any?, adjustments: TGVideoEditAdjustments?, fallback: Bool = false) {
+    func updateProfileVideo(_ image: UIImage, mode: PeerInfoAvatarEditingMode, asset: Any?, adjustments: TGVideoEditAdjustments?, fallback: Bool = false) {
         if !self.isNodeLoaded {
             self.loadDisplayNode()
         }
-        self.controllerNode.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: fallback ? .fallback : .generic)
+        self.controllerNode.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
     }
     
     static func displayChatNavigationMenu(context: AccountContext, chatNavigationStack: [ChatNavigationStackItem], nextFolderId: Int32?, parentController: ViewController, backButtonView: UIView, navigationController: NavigationController, gesture: ContextGesture) {

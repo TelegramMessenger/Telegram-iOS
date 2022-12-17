@@ -3,14 +3,26 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingSimpleShapeEntity: DrawingEntity {
-    public enum ShapeType {
+final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
+    private enum CodingKeys: String, CodingKey {
+        case uuid
+        case shapeType
+        case drawType
+        case color
+        case lineWidth
+        case referenceDrawingSize
+        case position
+        case size
+        case rotation
+    }
+    
+    public enum ShapeType: Codable {
         case rectangle
         case ellipse
         case star
     }
     
-    public enum DrawType {
+    public enum DrawType: Codable {
         case fill
         case stroke
     }
@@ -28,6 +40,10 @@ final class DrawingSimpleShapeEntity: DrawingEntity {
     var size: CGSize
     var rotation: CGFloat
     
+    var center: CGPoint {
+        return self.position
+    }
+    
     init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
         self.isAnimated = false
@@ -43,10 +59,33 @@ final class DrawingSimpleShapeEntity: DrawingEntity {
         self.rotation = 0.0
     }
     
-    var center: CGPoint {
-        return self.position
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.uuid = try container.decode(UUID.self, forKey: .uuid)
+        self.isAnimated = false
+        self.shapeType = try container.decode(ShapeType.self, forKey: .shapeType)
+        self.drawType = try container.decode(DrawType.self, forKey: .drawType)
+        self.color = try container.decode(DrawingColor.self, forKey: .color)
+        self.lineWidth = try container.decode(CGFloat.self, forKey: .lineWidth)
+        self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
+        self.position = try container.decode(CGPoint.self, forKey: .position)
+        self.size = try container.decode(CGSize.self, forKey: .size)
+        self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
     }
     
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(self.uuid, forKey: .uuid)
+        try container.encode(self.shapeType, forKey: .shapeType)
+        try container.encode(self.drawType, forKey: .drawType)
+        try container.encode(self.color, forKey: .color)
+        try container.encode(self.lineWidth, forKey: .lineWidth)
+        try container.encode(self.referenceDrawingSize, forKey: .referenceDrawingSize)
+        try container.encode(self.position, forKey: .position)
+        try container.encode(self.size, forKey: .size)
+        try container.encode(self.rotation, forKey: .rotation)
+    }
+        
     func duplicate() -> DrawingEntity {
         let newEntity = DrawingSimpleShapeEntity(shapeType: self.shapeType, drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
         newEntity.referenceDrawingSize = self.referenceDrawingSize

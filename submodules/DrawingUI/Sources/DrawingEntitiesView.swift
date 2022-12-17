@@ -17,10 +17,102 @@ protocol DrawingEntity: AnyObject {
     func makeView(context: AccountContext) -> DrawingEntityView
 }
 
+enum CodableDrawingEntity {
+    case sticker(DrawingStickerEntity)
+    case text(DrawingTextEntity)
+    case simpleShape(DrawingSimpleShapeEntity)
+    case bubble(DrawingBubbleEntity)
+    case vector(DrawingVectorEntity)
+    
+    init?(entity: DrawingEntity) {
+        if let entity = entity as? DrawingStickerEntity {
+            self = .sticker(entity)
+        } else if let entity = entity as? DrawingTextEntity {
+            self = .text(entity)
+        } else if let entity = entity as? DrawingSimpleShapeEntity {
+            self = .simpleShape(entity)
+        } else if let entity = entity as? DrawingBubbleEntity {
+            self = .bubble(entity)
+        } else if let entity = entity as? DrawingVectorEntity {
+            self = .vector(entity)
+        } else {
+            return nil
+        }
+    }
+    
+    var entity: DrawingEntity {
+        switch self {
+        case let .sticker(entity):
+            return entity
+        case let .text(entity):
+            return entity
+        case let .simpleShape(entity):
+            return entity
+        case let .bubble(entity):
+            return entity
+        case let .vector(entity):
+            return entity
+        }
+    }
+}
+
+extension CodableDrawingEntity: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case type
+        case entity
+    }
+
+    private enum EntityType: Int, Codable {
+        case sticker
+        case text
+        case simpleShape
+        case bubble
+        case vector
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        let type = try container.decode(EntityType.self, forKey: .type)
+        switch type {
+        case .sticker:
+            self = .sticker(try container.decode(DrawingStickerEntity.self, forKey: .entity))
+        case .text:
+            self = .text(try container.decode(DrawingTextEntity.self, forKey: .entity))
+        case .simpleShape:
+            self = .simpleShape(try container.decode(DrawingSimpleShapeEntity.self, forKey: .entity))
+        case .bubble:
+            self = .bubble(try container.decode(DrawingBubbleEntity.self, forKey: .entity))
+        case .vector:
+            self = .vector(try container.decode(DrawingVectorEntity.self, forKey: .entity))
+        }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        switch self {
+        case let .sticker(payload):
+            try container.encode(EntityType.sticker, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .text(payload):
+            try container.encode(EntityType.text, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .simpleShape(payload):
+            try container.encode(EntityType.simpleShape, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .bubble(payload):
+            try container.encode(EntityType.bubble, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        case let .vector(payload):
+            try container.encode(EntityType.vector, forKey: .type)
+            try container.encode(payload, forKey: .entity)
+        }
+    }
+}
+
 public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     private let context: AccountContext
     private let size: CGSize
-        
+    
     weak var selectionContainerView: DrawingSelectionContainerView?
     
     private var tapGestureRecognizer: UITapGestureRecognizer!
@@ -30,16 +122,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     var selectionChanged: (DrawingEntity?) -> Void = { _ in }
     var requestedMenuForEntityView: (DrawingEntityView, Bool) -> Void = { _, _ in }
     
-    init(context: AccountContext, size: CGSize, entities: [DrawingEntity] = []) {
+    public init(context: AccountContext, size: CGSize) {
         self.context = context
         self.size = size
         
         super.init(frame: CGRect(origin: .zero, size: size))
                 
-        for entity in entities {
-            self.add(entity)
-        }
-        
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
         self.addGestureRecognizer(tapGestureRecognizer)
         self.tapGestureRecognizer = tapGestureRecognizer
@@ -48,13 +136,33 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
-        
+    
     var entities: [DrawingEntity] {
         var entities: [DrawingEntity] = []
         for case let view as DrawingEntityView in self.subviews {
             entities.append(view.entity)
         }
         return entities
+    }
+    
+    public func setup(withEntitiesData entitiesData: Data!) {
+        self.clear()
+        
+        if let entitiesData = entitiesData, let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: entitiesData) {
+            let entities = codableEntities.map { $0.entity }
+            for entity in entities {
+                self.add(entity)
+            }
+        }
+    }
+    
+    var entitiesData: Data? {
+        let entities = self.entities.compactMap({ CodableDrawingEntity(entity: $0) })
+        if let data = try? JSONEncoder().encode(entities) {
+            return data
+        } else {
+            return nil
+        }
     }
     
     private func startPosition(relativeTo entity: DrawingEntity?) -> CGPoint {
@@ -118,7 +226,11 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             sticker.position = center
             if setup {
                 sticker.referenceDrawingSize = self.size
-                sticker.scale = 1.0
+                if !sticker.file.isVideoSticker && sticker.file.mimeType.hasSuffix("webm") {
+                    sticker.scale = 4.0
+                } else {
+                    sticker.scale = 1.0
+                }
             }
         } else if let bubble = entity as? DrawingBubbleEntity {
             bubble.position = center
@@ -171,11 +283,15 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func removeAll() {
+        self.clear()
+        self.selectionChanged(nil)
+        self.hasSelectionChanged(false)
+    }
+    
+    private func clear() {
         for case let view as DrawingEntityView in self.subviews {
             view.removeFromSuperview()
         }
-        self.selectionChanged(nil)
-        self.hasSelectionChanged(false)
     }
     
     func bringToFront(uuid: UUID) {
@@ -222,7 +338,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             view.updateVisibility(visibility)
         }
     }
-        
+    
     @objc private func handleTap(_ gestureRecognzier: UITapGestureRecognizer) {
         let location = gestureRecognzier.location(in: self)
         
@@ -256,7 +372,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 }
             }
         }
-         
+        
         if let entity = entity, let entityView = self.getView(for: entity.uuid) {
             self.selectedEntityView = entityView
             
@@ -298,7 +414,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
         }
         return result
     }
-        
+    
     public func clearSelection() {
         self.selectEntity(nil)
     }
@@ -382,7 +498,7 @@ public class DrawingEntityView: UIView {
             return
         }
         self.pushIdentityTransformForMeasurement()
-     
+        
         selectionView.transform = .identity
         let bounds = self.selectionBounds
         let center = bounds.center

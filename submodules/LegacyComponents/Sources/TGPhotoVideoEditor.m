@@ -12,7 +12,7 @@
 
 @implementation TGPhotoVideoEditor
 
-+ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController image:(UIImage *)image video:(NSURL *)video stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext transitionView:(UIView *)transitionView didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo dismissed:(void (^)(void))dismissed
++ (void)presentWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController image:(UIImage *)image video:(NSURL *)video stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext transitionView:(UIView *)transitionView senderName:(NSString *)senderName didFinishWithImage:(void (^)(UIImage *image))didFinishWithImage didFinishWithVideo:(void (^)(UIImage *image, NSURL *url, TGVideoEditAdjustments *adjustments))didFinishWithVideo dismissed:(void (^)(void))dismissed
 {
     id<LegacyComponentsOverlayWindowManager> windowManager = [context makeOverlayWindowManager];
     
@@ -35,6 +35,7 @@
     
     void (^present)(UIImage *) = ^(UIImage *screenImage) {
         TGPhotoEditorController *controller = [[TGPhotoEditorController alloc] initWithContext:[windowManager context] item:editableItem intent:TGPhotoEditorControllerAvatarIntent | TGPhotoEditorControllerSuggestedAvatarIntent adjustments:nil caption:nil screenImage:screenImage availableTabs:[TGPhotoEditorController defaultTabsForAvatarIntent] selectedTab:TGPhotoEditorCropTab];
+        controller.senderName = senderName;
         controller.stickersContext = stickersContext;
         
         TGMediaAvatarEditorTransition *transition;

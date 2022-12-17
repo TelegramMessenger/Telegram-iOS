@@ -3,6 +3,7 @@ import UIKit
 import AsyncDisplayKit
 import Display
 import TelegramPresentationData
+import ChatPresentationInterfaceState
 
 struct ChatMediaInputPaneScrollState {
     let absoluteOffset: CGFloat?

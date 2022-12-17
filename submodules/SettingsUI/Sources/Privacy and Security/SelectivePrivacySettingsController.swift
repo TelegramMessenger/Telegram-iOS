@@ -11,6 +11,7 @@ import PresentationDataUtils
 import AccountContext
 import UndoUI
 import ItemListPeerActionItem
+import AvatarNode
 
 enum SelectivePrivacySettingsKind {
     case presence
@@ -414,8 +415,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPhotoIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
                     arguments.setPublicPhoto?()
                 })
-            case let .removePublicPhoto(theme, text, _, _):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.deleteIconImage(theme), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
+            case let .removePublicPhoto(_, text, peer, image):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: nil, iconSignal: peerAvatarCompleteImage(account: arguments.context.account, peer: peer, forceProvidedRepresentation: true, representation: image?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28)), size: CGSize(width: 28.0, height: 28.0)), title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
                     arguments.removePublicPhoto?()
                 })
             case let .publicPhotoInfo(_, text):
@@ -676,10 +677,10 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
     }
     
-    if case .profilePhoto = kind, let peer = peer {
+    if case .profilePhoto = kind, let peer = peer, state.setting != .everybody {
         if let publicPhoto = publicPhoto {
             entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_UpdatePublicPhoto))
-            entries.append(.removePublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_RemovePublicPhoto, peer, publicPhoto))
+            entries.append(.removePublicPhoto(presentationData.theme, !publicPhoto.videoRepresentations.isEmpty ? presentationData.strings.Privacy_ProfilePhoto_RemovePublicVideo : presentationData.strings.Privacy_ProfilePhoto_RemovePublicPhoto, peer, publicPhoto))
         } else {
             entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_SetPublicPhoto))
         }

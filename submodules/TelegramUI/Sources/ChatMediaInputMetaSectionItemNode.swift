@@ -8,6 +8,7 @@ import Postbox
 import TelegramPresentationData
 import AnimatedStickerNode
 import TelegramAnimatedStickerNode
+import ChatPresentationInterfaceState
 
 enum ChatMediaInputMetaSectionItemType: Equatable {
     case savedStickers

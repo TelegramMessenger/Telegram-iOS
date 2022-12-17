@@ -3,7 +3,6 @@
 @class PGPhotoEditor;
 @class PGPhotoTool;
 @class TGPhotoEditorPreviewView;
-@class TGPhotoEntitiesContainerView;
 @class PGPhotoEditorView;
 @class TGMediaPickerGalleryVideoScrubber;
 
@@ -23,12 +22,12 @@
 @property (nonatomic, weak) UIView *dotMarkerView;
 @property (nonatomic, weak) PGPhotoEditorView *fullPreviewView;
 @property (nonatomic, weak) UIImageView *fullPaintingView;
-@property (nonatomic, weak) TGPhotoEntitiesContainerView *fullEntitiesView;
+@property (nonatomic, weak) UIView<TGPhotoDrawingEntitiesView> *fullEntitiesView;
 @property (nonatomic, weak) TGMediaPickerGalleryVideoScrubber *scrubberView;
 
 @property (nonatomic, strong) id<TGPhotoPaintStickersContext> stickersContext;
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion senderName:(NSString *)senderName;
 
 - (void)setImage:(UIImage *)image;
 - (void)setSnapshotImage:(UIImage *)snapshotImage;

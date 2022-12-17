@@ -21,6 +21,7 @@ import ComponentFlow
 import ReactionSelectionNode
 import ChatPresentationInterfaceState
 import TelegramNotices
+import ChatControllerInteraction
 
 extension ChatReplyThreadMessage {
     var effectiveTopId: MessageId {

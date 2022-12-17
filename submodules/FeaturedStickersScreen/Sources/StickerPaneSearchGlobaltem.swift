@@ -69,30 +69,34 @@ private final class StickerPaneSearchGlobalSectionNode: ASDisplayNode {
     }
 }
 
-final class StickerPaneSearchGlobalItemContext {
-    var canPlayMedia: Bool = false
+public final class StickerPaneSearchGlobalItemContext {
+    public var canPlayMedia: Bool
+    
+    public init(canPlayMedia: Bool = false) {
+        self.canPlayMedia = canPlayMedia
+    }
 }
 
-final class StickerPaneSearchGlobalItem: GridItem {
-    let account: Account
-    let theme: PresentationTheme
-    let strings: PresentationStrings
-    let listAppearance: Bool
-    let fillsRow: Bool
-    let info: StickerPackCollectionInfo
-    let topItems: [StickerPackItem]
-    let topSeparator: Bool
-    let regularInsets: Bool
-    let installed: Bool
-    let installing: Bool
-    let unread: Bool
-    let open: () -> Void
-    let install: () -> Void
-    let getItemIsPreviewed: (StickerPackItem) -> Bool
-    let itemContext: StickerPaneSearchGlobalItemContext
+public final class StickerPaneSearchGlobalItem: GridItem {
+    public let account: Account
+    public let theme: PresentationTheme
+    public let strings: PresentationStrings
+    public let listAppearance: Bool
+    public let fillsRow: Bool
+    public let info: StickerPackCollectionInfo
+    public let topItems: [StickerPackItem]
+    public let topSeparator: Bool
+    public let regularInsets: Bool
+    public let installed: Bool
+    public let installing: Bool
+    public let unread: Bool
+    public let open: () -> Void
+    public let install: () -> Void
+    public let getItemIsPreviewed: (StickerPackItem) -> Bool
+    public let itemContext: StickerPaneSearchGlobalItemContext
     
-    let section: GridSection?
-    var fillsRowWithHeight: (CGFloat, Bool)? {
+    public let section: GridSection?
+    public var fillsRowWithHeight: (CGFloat, Bool)? {
         var additionalHeight: CGFloat = 0.0
         if self.regularInsets {
             additionalHeight = 12.0 + 12.0
@@ -106,7 +110,7 @@ final class StickerPaneSearchGlobalItem: GridItem {
         return (128.0 + additionalHeight, self.fillsRow)
     }
     
-    init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, fillsRow: Bool = true, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
+    public init(account: Account, theme: PresentationTheme, strings: PresentationStrings, listAppearance: Bool, fillsRow: Bool = true, info: StickerPackCollectionInfo, topItems: [StickerPackItem], topSeparator: Bool, regularInsets: Bool, installed: Bool, installing: Bool = false, unread: Bool, open: @escaping () -> Void, install: @escaping () -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool, itemContext: StickerPaneSearchGlobalItemContext, sectionTitle: String? = nil) {
         self.account = account
         self.theme = theme
         self.strings = strings
@@ -126,13 +130,13 @@ final class StickerPaneSearchGlobalItem: GridItem {
         self.section = StickerPaneSearchGlobalSection(title: sectionTitle, theme: theme)
     }
     
-    func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
+    public func node(layout: GridNodeLayout, synchronousLoad: Bool) -> GridItemNode {
         let node = StickerPaneSearchGlobalItemNode()
         node.setup(item: self)
         return node
     }
     
-    func update(node: GridItemNode) {
+    public func update(node: GridItemNode) {
         guard let node = node as? StickerPaneSearchGlobalItemNode else {
             assertionFailure()
             return
@@ -145,7 +149,7 @@ private let titleFont = Font.bold(16.0)
 private let statusFont = Font.regular(15.0)
 private let buttonFont = Font.semibold(13.0)
 
-class StickerPaneSearchGlobalItemNode: GridItemNode {
+public class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let titleNode: TextNode
     private let descriptionNode: TextNode
     private let unreadNode: ASImageNode
@@ -159,7 +163,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
     private let topSeparatorNode: ASDisplayNode
     private var highlightNode: ASDisplayNode?
     
-    var item: StickerPaneSearchGlobalItem?
+    public var item: StickerPaneSearchGlobalItem?
     private var appliedItem: StickerPaneSearchGlobalItem?
     private let preloadDisposable = MetaDisposable()
     private let preloadedStickerPackThumbnailDisposable = MetaDisposable()
@@ -175,7 +179,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
     }
     
-    override var isVisibleInGrid: Bool {
+    public override var isVisibleInGrid: Bool {
         didSet {
             if oldValue != self.isVisibleInGrid {
                 self.updatePlayback()
@@ -200,7 +204,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
     }
     
-    override init() {
+    public override init() {
         self.titleNode = TextNode()
         self.titleNode.isUserInteractionEnabled = false
         self.titleNode.contentMode = .left
@@ -298,14 +302,14 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.preloadedStickerPackThumbnailDisposable.dispose()
     }
     
-    override func didLoad() {
+    public override func didLoad() {
         super.didLoad()
         
         self.view.addGestureRecognizer(UITapGestureRecognizer(target: self, action: #selector(self.tapGesture(_:))))
     }
     
     private var absoluteLocation: (CGRect, CGSize)?
-    override public func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
+    public override func updateAbsoluteRect(_ rect: CGRect, within containerSize: CGSize) {
         self.absoluteLocation = (rect, containerSize)
         
         for node in self.itemNodes {
@@ -314,7 +318,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
     }
     
-    func setup(item: StickerPaneSearchGlobalItem) {
+    public func setup(item: StickerPaneSearchGlobalItem) {
         if item.topItems.count < Int(item.info.count) && item.topItems.count < 5 && self.item?.info.id != item.info.id {
             self.preloadDisposable.set(preloadedFeaturedStickerSet(network: item.account.network, postbox: item.account.postbox, id: item.info.id).start())
         }
@@ -325,7 +329,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.updatePreviewing(animated: false)
     }
     
-    func updateCanPlayMedia() {
+    public func updateCanPlayMedia() {
         guard let item = self.item else {
             return
         }
@@ -333,7 +337,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         self.canPlayMedia = item.itemContext.canPlayMedia
     }
     
-    func highlight() {
+    public func highlight() {
         guard self.highlightNode == nil else {
             return
         }
@@ -354,7 +358,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
     }
     
-    override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
+    public override func updateLayout(item: GridItem, size: CGSize, isVisible: Bool, synchronousLoads: Bool) {
         guard let item = self.item else {
             return
         }
@@ -521,7 +525,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         }
     }
     
-    func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
+    public func itemAt(point: CGPoint) -> (ASDisplayNode, StickerPackItem)? {
         guard let item = self.item else {
             return nil
         }
@@ -535,7 +539,7 @@ class StickerPaneSearchGlobalItemNode: GridItemNode {
         return nil
     }
     
-    func updatePreviewing(animated: Bool) {
+    public func updatePreviewing(animated: Bool) {
         guard let item = self.item else {
             return
         }

@@ -12,7 +12,6 @@ import MultiAnimationRenderer
 import Postbox
 import TelegramCore
 import ComponentDisplayAdapters
-import SettingsUI
 import TextFormat
 import PagerComponent
 import AppBundle
@@ -25,17 +24,37 @@ import AttachmentTextInputPanelNode
 import TelegramPresentationData
 import TelegramNotices
 import StickerPeekUI
+import ChatInputNode
+import TelegramUIPreferences
+import MultiplexedVideoNode
+import ChatControllerInteraction
+import FeaturedStickersScreen
 
-final class EntityKeyboardGifContent: Equatable {
-    let hasRecentGifs: Bool
-    let component: GifPagerContentComponent
+public struct ChatMediaInputPaneScrollState {
+    let absoluteOffset: CGFloat?
+    let relativeChange: CGFloat
+}
+
+public final class ChatMediaInputGifPaneTrendingState {
+    public let files: [MultiplexedVideoNodeFile]
+    public let nextOffset: String?
     
-    init(hasRecentGifs: Bool, component: GifPagerContentComponent) {
+    public init(files: [MultiplexedVideoNodeFile], nextOffset: String?) {
+        self.files = files
+        self.nextOffset = nextOffset
+    }
+}
+
+public final class EntityKeyboardGifContent: Equatable {
+    public let hasRecentGifs: Bool
+    public let component: GifPagerContentComponent
+    
+    public init(hasRecentGifs: Bool, component: GifPagerContentComponent) {
         self.hasRecentGifs = hasRecentGifs
         self.component = component
     }
     
-    static func ==(lhs: EntityKeyboardGifContent, rhs: EntityKeyboardGifContent) -> Bool {
+    public static func ==(lhs: EntityKeyboardGifContent, rhs: EntityKeyboardGifContent) -> Bool {
         if lhs.hasRecentGifs != rhs.hasRecentGifs {
             return false
         }
@@ -46,14 +65,14 @@ final class EntityKeyboardGifContent: Equatable {
     }
 }
 
-final class ChatEntityKeyboardInputNode: ChatInputNode {
-    struct InputData: Equatable {
-        var emoji: EmojiPagerContentComponent
-        var stickers: EmojiPagerContentComponent?
-        var gifs: EntityKeyboardGifContent?
-        var availableGifSearchEmojies: [EntityKeyboardComponent.GifSearchEmoji]
+public final class ChatEntityKeyboardInputNode: ChatInputNode {
+    public struct InputData: Equatable {
+        public var emoji: EmojiPagerContentComponent
+        public var stickers: EmojiPagerContentComponent?
+        public var gifs: EntityKeyboardGifContent?
+        public var availableGifSearchEmojies: [EntityKeyboardComponent.GifSearchEmoji]
         
-        init(
+        public init(
             emoji: EmojiPagerContentComponent,
             stickers: EmojiPagerContentComponent?,
             gifs: EntityKeyboardGifContent?,
@@ -66,7 +85,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    static func hasPremium(context: AccountContext, chatPeerId: EnginePeer.Id?, premiumIfSavedMessages: Bool) -> Signal<Bool, NoError> {
+    public static func hasPremium(context: AccountContext, chatPeerId: EnginePeer.Id?, premiumIfSavedMessages: Bool) -> Signal<Bool, NoError> {
         let hasPremium: Signal<Bool, NoError>
         if premiumIfSavedMessages, let chatPeerId = chatPeerId, chatPeerId == context.account.peerId {
             hasPremium = .single(true)
@@ -83,7 +102,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         return hasPremium
     }
     
-    static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction?, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool) -> Signal<InputData, NoError> {        
+    public static func inputData(context: AccountContext, interfaceInteraction: ChatPanelInterfaceInteraction, controllerInteraction: ChatControllerInteraction?, chatPeerId: PeerId?, areCustomEmojiEnabled: Bool) -> Signal<InputData, NoError> {
         let animationCache = context.animationCache
         let animationRenderer = context.animationRenderer
         
@@ -94,7 +113,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId)
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: true, hasTrending: true)
         
         let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { appConfiguration -> [String] in
@@ -153,7 +172,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 isLoading: false,
                 loadMoreToken: nil,
                 displaySearchWithPlaceholder: nil,
-                searchInitiallyHidden: false
+                searchInitiallyHidden: true
             )
         ))
         
@@ -238,11 +257,11 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     }
     
     var externalTopPanelContainerImpl: PagerExternalTopPanelContainer?
-    override var externalTopPanelContainer: UIView? {
+    public override var externalTopPanelContainer: UIView? {
         return self.externalTopPanelContainerImpl
     }
     
-    var switchToTextInput: (() -> Void)?
+    public var switchToTextInput: (() -> Void)?
     
     private var currentState: (width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool)?
     
@@ -257,7 +276,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    var canSwitchToTextInputAutomatically: Bool {
+    public var canSwitchToTextInputAutomatically: Bool {
         if let pagerView = self.entityKeyboardView.componentView as? EntityKeyboardComponent.View, let centralId = pagerView.centralId {
             if centralId == AnyHashable("emoji") {
                 return false
@@ -321,7 +340,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isLoading: false,
                             loadMoreToken: nil,
                             displaySearchWithPlaceholder: presentationData.strings.GifSearch_SearchGifPlaceholder,
-                            searchInitiallyHidden: false
+                            searchInitiallyHidden: true
                         )
                     )
                 }
@@ -352,7 +371,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isLoading: isLoading,
                             loadMoreToken: nil,
                             displaySearchWithPlaceholder: nil,
-                            searchInitiallyHidden: false
+                            searchInitiallyHidden: true
                         )
                     )
                 }
@@ -385,7 +404,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
                             displaySearchWithPlaceholder: nil,
-                            searchInitiallyHidden: false
+                            searchInitiallyHidden: true
                         )
                     )
                 }
@@ -466,7 +485,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                             isLoading: isLoading,
                             loadMoreToken: loadMoreToken,
                             displaySearchWithPlaceholder: nil,
-                            searchInitiallyHidden: false
+                            searchInitiallyHidden: true
                         )
                     )
                 }
@@ -492,8 +511,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
     
     private weak var currentUndoOverlayController: UndoOverlayController?
     
-    
-    init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
+    public init(context: AccountContext, currentInputData: InputData, updatedInputData: Signal<InputData, NoError>, defaultToEmojiTab: Bool, controllerInteraction: ChatControllerInteraction?, interfaceInteraction: ChatPanelInterfaceInteraction?, chatPeerId: PeerId?) {
         self.context = context
         self.currentInputData = currentInputData
         self.defaultToEmojiTab = defaultToEmojiTab
@@ -517,7 +535,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         self.emojiInputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self, weak interfaceInteraction, weak controllerInteraction] groupId, item, _, _, _, _ in
                 let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
-                    guard let strongSelf = self,  let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
+                    guard let strongSelf = self, let controllerInteraction = controllerInteraction, let interfaceInteraction = interfaceInteraction else {
                         return
                     }
                     
@@ -935,7 +953,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 guard let controllerInteraction = controllerInteraction else {
                     return
                 }
-                let controller = installedStickerPacksController(context: context, mode: .modal)
+                let controller = context.sharedContext.makeInstalledStickerPacksController(context: context, mode: .modal)
                 controller.navigationPresentation = .modal
                 controllerInteraction.navigationController()?.pushViewController(controller)
             },
@@ -1230,7 +1248,7 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         }
     }
     
-    func markInputCollapsed() {
+    public func markInputCollapsed() {
         self.isMarkInputCollapsed = true
     }
     
@@ -1242,14 +1260,14 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
         let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
-    func simulateUpdateLayout(isVisible: Bool) {
+    public func simulateUpdateLayout(isVisible: Bool) {
         guard let (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, _, isExpanded) = self.currentState else {
             return
         }
         let _ = self.updateLayout(width: width, leftInset: leftInset, rightInset: rightInset, bottomInset: bottomInset, standardInputHeight: standardInputHeight, inputHeight: inputHeight, maximumHeight: maximumHeight, inputPanelHeight: inputPanelHeight, transition: .immediate, interfaceState: interfaceState, deviceMetrics: deviceMetrics, isVisible: isVisible, isExpanded: isExpanded)
     }
     
-    override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
+    public override func updateLayout(width: CGFloat, leftInset: CGFloat, rightInset: CGFloat, bottomInset: CGFloat, standardInputHeight: CGFloat, inputHeight: CGFloat, maximumHeight: CGFloat, inputPanelHeight: CGFloat, transition: ContainedViewLayoutTransition, interfaceState: ChatPresentationInterfaceState, deviceMetrics: DeviceMetrics, isVisible: Bool, isExpanded: Bool) -> (CGFloat, CGFloat) {
         self.currentState = (width, leftInset, rightInset, bottomInset, standardInputHeight, inputHeight, maximumHeight, inputPanelHeight, interfaceState, deviceMetrics, isVisible, isExpanded)
         
         let innerTransition: Transition
@@ -1318,11 +1336,14 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
                 topPanelInsets: UIEdgeInsets(),
                 emojiContent: self.currentInputData.emoji,
                 stickerContent: stickerContent,
+                maskContent: nil,
                 gifContent: gifContent?.component,
                 hasRecentGifs: gifContent?.hasRecentGifs ?? false,
                 availableGifSearchEmojies: self.currentInputData.availableGifSearchEmojies,
                 defaultToEmojiTab: self.defaultToEmojiTab,
                 externalTopPanelContainer: self.externalTopPanelContainerImpl,
+                externalBottomPanelContainer: nil,
+                displayTopPanelBackground: false,
                 topPanelExtensionUpdated: { [weak self] topPanelExtension, transition in
                     guard let strongSelf = self else {
                         return
@@ -1502,6 +1523,8 @@ final class ChatEntityKeyboardInputNode: ChatInputNode {
             namespace = Namespaces.ItemCollection.CloudStickerPacks
         case .emoji:
             namespace = Namespaces.ItemCollection.CloudEmojiPacks
+        case .masks:
+            namespace = Namespaces.ItemCollection.CloudMaskPacks
         }
         
         self.stableReorderableGroupOrder.removeValue(forKey: category)
@@ -1685,7 +1708,7 @@ private final class ContextControllerContentSourceImpl: ContextControllerContent
     }
 }
 
-final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputViewAudioFeedback {
+public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputView, UIInputViewAudioFeedback {
     private let context: AccountContext
     
     public var insertText: ((NSAttributedString) -> Void)?
@@ -1698,7 +1721,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
     private let animationCache: AnimationCache
     private let animationRenderer: MultiAnimationRenderer
     
-    init(
+    public init(
         context: AccountContext,
         isDark: Bool,
         areCustomEmojiEnabled: Bool
@@ -1713,8 +1736,8 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             self.presentationData = self.presentationData.withUpdated(theme: defaultDarkPresentationTheme)
         }
         
-        //super.init(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)), inputViewStyle: .default)
-        super.init(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))
+        super.init(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)), inputViewStyle: .default)
+//        super.init(frame: CGRect(origin: CGPoint(), size: CGSize(width: 1.0, height: 1.0)))
         
         self.autoresizingMask = [.flexibleWidth, .flexibleHeight]
         self.clipsToBounds = true
@@ -1818,7 +1841,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
             navigationController: {
                 return nil
             },
-            requestUpdate: { _ in   
+            requestUpdate: { _ in
             },
             updateSearchQuery: { _, _ in
             },
@@ -1874,7 +1897,7 @@ final class EntityInputView: UIView, AttachmentTextInputPanelInputView, UIInputV
         fatalError("init(coder:) has not been implemented")
     }
     
-    override func layoutSubviews() {
+    public override func layoutSubviews() {
         super.layoutSubviews()
         
         guard let inputNode = self.inputNode else {
@@ -2134,5 +2157,114 @@ private final class EmojiContentPeekBehaviorImpl: EmojiContentPeekBehavior {
         } else {
             self.peekRecognizer?.isEnabled = isEnabled
         }
+    }
+}
+
+public class PaneGifSearchForQueryResult {
+    public let files: [MultiplexedVideoNodeFile]
+    public let nextOffset: String?
+    public let isComplete: Bool
+    public let isStale: Bool
+    
+    public init(files: [MultiplexedVideoNodeFile], nextOffset: String?, isComplete: Bool, isStale: Bool) {
+        self.files = files
+        self.nextOffset = nextOffset
+        self.isComplete = isComplete
+        self.isStale = isStale
+    }
+}
+
+public func paneGifSearchForQuery(context: AccountContext, query: String, offset: String?, incompleteResults: Bool = false, staleCachedResults: Bool = false, delayRequest: Bool = true, updateActivity: ((Bool) -> Void)?) -> Signal<PaneGifSearchForQueryResult?, NoError> {
+    let contextBot = context.engine.data.get(TelegramEngine.EngineData.Item.Configuration.SearchBots())
+    |> mapToSignal { searchBots -> Signal<EnginePeer?, NoError> in
+        let botName = searchBots.gifBotUsername ?? "gif"
+        return context.engine.peers.resolvePeerByName(name: botName)
+    }
+    |> mapToSignal { peer -> Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError> in
+        if case let .user(user) = peer, let botInfo = user.botInfo, let _ = botInfo.inlinePlaceholder {
+            let results = requestContextResults(engine: context.engine, botId: user.id, query: query, peerId: context.account.peerId, offset: offset ?? "", incompleteResults: incompleteResults, staleCachedResults: staleCachedResults, limit: 1)
+            |> map { results -> (ChatPresentationInputQueryResult?, Bool, Bool) in
+                return (.contextRequestResult(.user(user), results?.results), results != nil, results?.isStale ?? false)
+            }
+            
+            let maybeDelayedContextResults: Signal<(ChatPresentationInputQueryResult?, Bool, Bool), NoError>
+            if delayRequest {
+                maybeDelayedContextResults = results |> delay(0.4, queue: Queue.concurrentDefaultQueue())
+            } else {
+                maybeDelayedContextResults = results
+            }
+            
+            return maybeDelayedContextResults
+        } else {
+            return .single((nil, true, false))
+        }
+    }
+    return contextBot
+    |> mapToSignal { result -> Signal<PaneGifSearchForQueryResult?, NoError> in
+        if let r = result.0, case let .contextRequestResult(_, maybeCollection) = r, let collection = maybeCollection {
+            let results = collection.results
+            var references: [MultiplexedVideoNodeFile] = []
+            for result in results {
+                switch result {
+                case let .externalReference(externalReference):
+                    var imageResource: TelegramMediaResource?
+                    var thumbnailResource: TelegramMediaResource?
+                    var thumbnailIsVideo: Bool = false
+                    var uniqueId: Int64?
+                    if let content = externalReference.content {
+                        imageResource = content.resource
+                        if let resource = content.resource as? WebFileReferenceMediaResource {
+                            uniqueId = Int64(HashFunctions.murMurHash32(resource.url))
+                        }
+                    }
+                    if let thumbnail = externalReference.thumbnail {
+                        thumbnailResource = thumbnail.resource
+                        if thumbnail.mimeType.hasPrefix("video/") {
+                            thumbnailIsVideo = true
+                        }
+                    }
+                    
+                    if externalReference.type == "gif", let resource = imageResource, let content = externalReference.content, let dimensions = content.dimensions {
+                        var previews: [TelegramMediaImageRepresentation] = []
+                        var videoThumbnails: [TelegramMediaFile.VideoThumbnail] = []
+                        if let thumbnailResource = thumbnailResource {
+                            if thumbnailIsVideo {
+                                videoThumbnails.append(TelegramMediaFile.VideoThumbnail(
+                                    dimensions: dimensions,
+                                    resource: thumbnailResource
+                                ))
+                            } else {
+                                previews.append(TelegramMediaImageRepresentation(
+                                    dimensions: dimensions,
+                                    resource: thumbnailResource,
+                                    progressiveSizes: [],
+                                    immediateThumbnailData: nil,
+                                    hasVideo: false,
+                                    isPersonal: false
+                                ))
+                            }
+                        }
+                        let file = TelegramMediaFile(fileId: MediaId(namespace: Namespaces.Media.LocalFile, id: uniqueId ?? 0), partialReference: nil, resource: resource, previewRepresentations: previews, videoThumbnails: videoThumbnails, immediateThumbnailData: nil, mimeType: "video/mp4", size: nil, attributes: [.Animated, .Video(duration: 0, size: dimensions, flags: [])])
+                        references.append(MultiplexedVideoNodeFile(file: FileMediaReference.standalone(media: file), contextResult: (collection, result)))
+                    }
+                case let .internalReference(internalReference):
+                    if let file = internalReference.file {
+                        references.append(MultiplexedVideoNodeFile(file: FileMediaReference.standalone(media: file), contextResult: (collection, result)))
+                    }
+                }
+            }
+            return .single(PaneGifSearchForQueryResult(files: references, nextOffset: collection.nextOffset, isComplete: result.1, isStale: result.2))
+        } else if incompleteResults {
+            return .single(nil)
+        } else {
+            return .complete()
+        }
+    }
+    |> deliverOnMainQueue
+    |> beforeStarted {
+        updateActivity?(true)
+    }
+    |> afterCompleted {
+        updateActivity?(false)
     }
 }

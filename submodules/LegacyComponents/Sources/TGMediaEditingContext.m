@@ -715,7 +715,7 @@
         [_queue dispatch:block];
 }
 
-- (bool)setPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video
+- (bool)setPaintingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl entitiesDataUrl:(NSURL **)entitiesDataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video
 {
     NSString *itemId = [self _contextualIdForItemId:item.uniqueIdentifier];
     
@@ -725,6 +725,7 @@
     NSURL *imagesDirectory = video ? _videoPaintingImagesUrl : _paintingImagesUrl;
     NSURL *imageUrl = [imagesDirectory URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.png", [TGStringUtils md5:itemId]]];
     NSURL *dataUrl = [_paintingDatasUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@.dat", [TGStringUtils md5:itemId]]];
+    NSURL *entitiesDataUrl = [_paintingDatasUrl URLByAppendingPathComponent:[NSString stringWithFormat:@"%@_entities.dat", [TGStringUtils md5:itemId]]];
     
     [_paintingImageCache setImage:image forKey:itemId attributes:NULL];
     
@@ -733,12 +734,16 @@
     bool imageSuccess = [imageData writeToURL:imageUrl options:NSDataWritingAtomic error:nil];
     [[NSFileManager defaultManager] removeItemAtURL:dataUrl error:nil];
     bool dataSuccess = [data writeToURL:dataUrl options:NSDataWritingAtomic error:nil];
+    bool entitiesDataSuccess = [entitiesData writeToURL:entitiesDataUrl options:NSDataWritingAtomic error:nil];
     
     if (imageSuccess && imageOutUrl != NULL)
         *imageOutUrl = imageUrl;
     
     if (dataSuccess && dataOutUrl != NULL)
         *dataOutUrl = dataUrl;
+    
+    if (entitiesDataSuccess && entitiesDataOutUrl != NULL)
+        *entitiesDataOutUrl = entitiesDataUrl;
         
     if (video)
         [_storeVideoPaintingImages addObject:imageUrl];

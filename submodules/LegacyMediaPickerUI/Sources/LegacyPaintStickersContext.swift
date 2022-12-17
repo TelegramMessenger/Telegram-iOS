@@ -290,18 +290,18 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         self.originalSize = adjustments.originalSize
         self.cropRect = adjustments.cropRect.isEmpty ? nil : adjustments.cropRect
         
-        var entities: [LegacyPaintEntity] = []
-        if let paintingData = adjustments.paintingData, let paintingEntities = paintingData.entities {
-            for paintingEntity in paintingEntities {
-                if let sticker = paintingEntity as? TGPhotoPaintStickerEntity {
-                    if let account = account, let entity = LegacyPaintStickerEntity(account: account, entity: sticker) {
-                        entities.append(entity)
-                    }
-                } else if let text = paintingEntity as? TGPhotoPaintTextEntity {
-                    entities.append(LegacyPaintTextEntity(entity: text))
-                }
-            }
-        }
+        let entities: [LegacyPaintEntity] = []
+//        if let paintingData = adjustments.paintingData, let paintingEntities = paintingData.entities {
+//            for paintingEntity in paintingEntities {
+//                if let sticker = paintingEntity as? TGPhotoPaintStickerEntity {
+//                    if let account = account, let entity = LegacyPaintStickerEntity(account: account, entity: sticker) {
+//                        entities.append(entity)
+//                    }
+//                } else if let text = paintingEntity as? TGPhotoPaintTextEntity {
+//                    entities.append(LegacyPaintTextEntity(entity: text))
+//                }
+//            }
+//        }
         self.entities = entities
         
         super.init()
@@ -482,8 +482,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let contentWrapperView: UIView!
         let interfaceController: TGPhotoDrawingInterfaceController!
         
-        init(context: AccountContext, size: CGSize) {
-            let interfaceController = DrawingScreen(context: context, size: size)
+        init(context: AccountContext, size: CGSize, originalSize: CGSize) {
+            let interfaceController = DrawingScreen(context: context, size: size, originalSize: originalSize)
             self.interfaceController = interfaceController
             self.drawingView = interfaceController.drawingView
             self.drawingEntitiesView = interfaceController.entitiesView
@@ -494,8 +494,8 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         }
     }
     
-    public func drawingAdapter(_ size: CGSize) -> TGPhotoDrawingAdapter! {
-        return LegacyDrawingAdapter(context: self.context, size: size)
+    public func drawingAdapter(_ size: CGSize, originalSize: CGSize) -> TGPhotoDrawingAdapter! {
+        return LegacyDrawingAdapter(context: self.context, size: size, originalSize: originalSize)
     }
     
     public func solidRoundedButton(_ title: String!, action: (() -> Void)!) -> (UIView & TGPhotoSolidRoundedButtonView)! {
@@ -503,6 +503,11 @@ public final class LegacyPaintStickersContext: NSObject, TGPhotoPaintStickersCon
         let button = SolidRoundedButtonView(title: title, theme: theme, height: 50.0, cornerRadius: 10.0)
         button.pressed = action
         return button
+    }
+    
+    public func drawingEntitiesView(with size: CGSize) -> (UIView & TGPhotoDrawingEntitiesView)! {
+        let view = DrawingEntitiesView(context: self.context, size: size)
+        return view
     }
 }
 

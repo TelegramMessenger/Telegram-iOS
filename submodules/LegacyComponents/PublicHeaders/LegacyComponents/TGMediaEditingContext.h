@@ -94,7 +94,7 @@
 
 - (UIImage *)paintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
 - (UIImage *)stillPaintingImageForItem:(NSObject<TGMediaEditableItem> *)item;
-- (bool)setPaintingData:(NSData *)data image:(UIImage *)image stillImage:(UIImage *)image forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;
+- (bool)setPaintingData:(NSData *)data entitiesData:(NSData *)entitiesData image:(UIImage *)image stillImage:(UIImage *)stillImage forItem:(NSObject<TGMediaEditableItem> *)item dataUrl:(NSURL **)dataOutUrl entitiesDataUrl:(NSURL **)entitiesDataOutUrl imageUrl:(NSURL **)imageOutUrl forVideo:(bool)video;
 - (void)clearPaintingData;
 
 - (SSignal *)facesForItem:(NSObject<TGMediaEditableItem> *)item;

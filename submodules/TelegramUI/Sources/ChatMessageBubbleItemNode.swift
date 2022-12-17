@@ -28,6 +28,7 @@ import AnimationCache
 import MultiAnimationRenderer
 import ComponentFlow
 import EmojiStatusComponent
+import ChatControllerInteraction
 
 enum InternalBubbleTapAction {
     case action(() -> Void)
@@ -304,19 +305,6 @@ let chatMessagePeerIdColors: [UIColor] = [
 private enum ContentNodeOperation {
     case remove(index: Int)
     case insert(index: Int, node: ChatMessageBubbleContentNode)
-}
-
-class ChatPresentationContext {
-    weak var backgroundNode: WallpaperBackgroundNode?
-    let animationCache: AnimationCache
-    let animationRenderer: MultiAnimationRenderer
-
-    init(context: AccountContext, backgroundNode: WallpaperBackgroundNode?) {
-        self.backgroundNode = backgroundNode
-        
-        self.animationCache = context.animationCache
-        self.animationRenderer = context.animationRenderer
-    }
 }
 
 private func mapVisibility(_ visibility: ListViewItemNodeVisibility, boundsSize: CGSize, insets: UIEdgeInsets, to contentNode: ChatMessageBubbleContentNode) -> ListViewItemNodeVisibility {

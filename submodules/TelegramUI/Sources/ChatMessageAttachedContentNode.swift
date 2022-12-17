@@ -18,6 +18,7 @@ import GalleryData
 import TextNodeWithEntities
 import AnimationCache
 import MultiAnimationRenderer
+import ChatControllerInteraction
 
 private let buttonFont = Font.semibold(13.0)
 

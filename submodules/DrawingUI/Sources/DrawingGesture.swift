@@ -969,7 +969,7 @@ struct Polyline {
             self.azimuth = azimuth
             self.touchPoint = touchPoint
         }
-
+    
         init(touchPoint: TouchPath.Point) {
             self.location = touchPoint.event.location
             self.force = touchPoint.event.force
@@ -982,6 +982,17 @@ struct Polyline {
         func offsetBy(_ point: CGPoint) -> Polyline.Point {
             return Point(
                 location: self.location.offsetBy(dx: point.x, dy: point.y),
+                force: self.force,
+                altitudeAngle: self.altitudeAngle,
+                azimuth: self.azimuth,
+                velocity: self.velocity,
+                touchPoint: self.touchPoint
+            )
+        }
+        
+        func withLocation(_ point: CGPoint) -> Polyline.Point {
+            return Point(
+                location: point,
                 force: self.force,
                 altitudeAngle: self.altitudeAngle,
                 azimuth: self.azimuth,
@@ -1023,9 +1034,8 @@ struct Polyline {
     }
 
     init(points: [Point]) {
-        assert(!points.isEmpty)
         self.isComplete = true
-        self.touchIdentifier = points.first!.event.touchIdentifier
+        self.touchIdentifier = points.first?.event.touchIdentifier ?? ""
         self.points = points
     }
 
@@ -1063,7 +1073,6 @@ struct Polyline {
             }
         }
 
-        // Remove points from the end of the list toward the beginning
         for index in indexesToRemove.reversed() {
             guard index < points.count else {
                 print("Error: unknown polyline index \(index)")

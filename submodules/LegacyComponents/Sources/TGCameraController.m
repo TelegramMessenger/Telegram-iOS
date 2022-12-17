@@ -2969,14 +2969,7 @@ static CGPoint TGCameraControllerClampPointToScreenSize(__unused id self, __unus
                 if (adjustments.paintingData.stickers.count > 0)
                     dict[@"stickers"] = adjustments.paintingData.stickers;
                 
-                bool animated = false;
-                for (TGPhotoPaintEntity *entity in adjustments.paintingData.entities) {
-                    if (entity.animated) {
-                        animated = true;
-                        break;
-                    }
-                }
-                
+                bool animated = adjustments.paintingData.hasAnimation;
                 if (animated) {
                     dict[@"isAnimation"] = @true;
                     if ([adjustments isKindOfClass:[PGPhotoEditorValues class]]) {

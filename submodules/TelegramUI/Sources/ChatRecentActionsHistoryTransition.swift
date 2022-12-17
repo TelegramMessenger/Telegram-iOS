@@ -6,6 +6,7 @@ import Postbox
 import TelegramPresentationData
 import MergeLists
 import AccountContext
+import ChatControllerInteraction
 
 enum ChatRecentActionsEntryContentIndex: Int32 {
     case header = 0

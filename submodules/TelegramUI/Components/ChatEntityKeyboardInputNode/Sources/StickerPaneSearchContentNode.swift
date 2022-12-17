@@ -16,20 +16,10 @@ import Emoji
 import AppBundle
 import OverlayStatusController
 import UndoUI
-
-final class StickerPaneSearchInteraction {
-    let open: (StickerPackCollectionInfo) -> Void
-    let install: (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void
-    let sendSticker: (FileMediaReference, UIView, CGRect) -> Void
-    let getItemIsPreviewed: (StickerPackItem) -> Bool
-    
-    init(open: @escaping (StickerPackCollectionInfo) -> Void, install: @escaping (StickerPackCollectionInfo, [ItemCollectionItem], Bool) -> Void, sendSticker: @escaping (FileMediaReference, UIView, CGRect) -> Void, getItemIsPreviewed: @escaping (StickerPackItem) -> Bool) {
-        self.open = open
-        self.install = install
-        self.sendSticker = sendSticker
-        self.getItemIsPreviewed = getItemIsPreviewed
-    }
-}
+import ChatControllerInteraction
+import FeaturedStickersScreen
+import ChatPresentationInterfaceState
+import FeaturedStickersScreen
 
 private enum StickerSearchEntryId: Equatable, Hashable {
     case sticker(String?, Int64)

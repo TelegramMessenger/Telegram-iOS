@@ -13,7 +13,7 @@ private final class SoftwareVideoThumbnailLayerNullAction: NSObject, CAAction {
     }
 }
 
-final class SoftwareVideoThumbnailNode: ASDisplayNode {
+public final class SoftwareVideoThumbnailNode: ASDisplayNode {
     private let usePlaceholder: Bool
     private var placeholder: MultiplexedVideoPlaceholderNode?
     private var theme: PresentationTheme?
@@ -21,12 +21,16 @@ final class SoftwareVideoThumbnailNode: ASDisplayNode {
     
     var disposable = MetaDisposable()
     
-    var ready: (() -> Void)? {
+    public var ready: (() -> Void)? {
         didSet {
             if self.layer.contents != nil {
                 self.ready?()
             }
         }
+    }
+    
+    public convenience init(account: Account, fileReference: FileMediaReference, synchronousLoad: Bool, usePlaceholder: Bool = false) {
+        self.init(account: account, fileReference: fileReference, synchronousLoad: synchronousLoad, existingPlaceholder: nil)
     }
     
     init(account: Account, fileReference: FileMediaReference, synchronousLoad: Bool, usePlaceholder: Bool = false, existingPlaceholder: MultiplexedVideoPlaceholderNode? = nil) {
@@ -102,7 +106,7 @@ final class SoftwareVideoThumbnailNode: ASDisplayNode {
         self.disposable.dispose()
     }
     
-    func update(theme: PresentationTheme, size: CGSize) {
+    public func update(theme: PresentationTheme, size: CGSize) {
         if self.usePlaceholder {
             self.theme = theme
         }
@@ -112,7 +116,7 @@ final class SoftwareVideoThumbnailNode: ASDisplayNode {
         }
     }
     
-    func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
+    public func updateAbsoluteRect(_ absoluteRect: CGRect, within containerSize: CGSize) {
         self.asolutePosition = (absoluteRect, containerSize)
         if let placeholder = self.placeholder {
             placeholder.updateAbsoluteRect(absoluteRect, within: containerSize)

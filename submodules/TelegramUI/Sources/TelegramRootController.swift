@@ -131,8 +131,9 @@ public final class TelegramRootController: NavigationController {
             }
             strongSelf.pushViewController(debugController(sharedContext: strongSelf.context.sharedContext, context: strongSelf.context))
         }
+        accountSettingsController.parentController = self
         controllers.append(accountSettingsController)
-        
+                
         tabBarController.setControllers(controllers, selectedIndex: restoreSettignsController != nil ? (controllers.count - 1) : (controllers.count - 2))
         
         self.contactsController = contactsController

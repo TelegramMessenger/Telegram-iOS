@@ -2,9 +2,10 @@ import Foundation
 import UIKit
 import QuartzCore
 import MetalKit
+import Display
 import AppBundle
 
-public final class DrawingMetalView: MTKView {
+final class DrawingMetalView: MTKView {
     private let size: CGSize
     
     private let commandQueue: MTLCommandQueue
@@ -20,7 +21,7 @@ public final class DrawingMetalView: MTKView {
     private var markerBrush: Brush?
     private var pencilBrush: Brush?
     
-    public init?(size: CGSize) {
+    init?(size: CGSize) {
         var size = size
         if Int(size.width) % 16 != 0 {
             size.width = round(size.width / 16.0) * 16.0
@@ -74,12 +75,22 @@ public final class DrawingMetalView: MTKView {
     }
     
     func drawInContext(_ cgContext: CGContext) {
-        guard let texture = self.drawable?.texture, let ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: CGColorSpaceCreateDeviceRGB()])?.oriented(forExifOrientation: 1) else {
+//        guard let texture = self.drawable?.texture, let ciImage = CIImage(mtlTexture: texture, options: [.colorSpace: CGColorSpaceCreateDeviceRGB()])?.oriented(forExifOrientation: 1) else {
+//            return
+//        }
+//        let context = CIContext(cgContext: cgContext)
+//        let rect = CGRect(origin: .zero, size: ciImage.extent.size)
+//        context.draw(ciImage, in: rect, from: rect)
+        guard let texture = self.drawable?.texture, let image = texture.createCGImage() else {
             return
         }
-        let context = CIContext(cgContext: cgContext)
-        let rect = CGRect(origin: .zero, size: ciImage.extent.size)
-        context.draw(ciImage, in: rect, from: rect)
+        let rect = CGRect(origin: .zero, size: CGSize(width: image.width, height: image.height))
+        cgContext.saveGState()
+        cgContext.translateBy(x: rect.midX, y: rect.midY)
+        cgContext.scaleBy(x: 1.0, y: -1.0)
+        cgContext.translateBy(x: -rect.midX, y: -rect.midY)
+        cgContext.draw(image, in: rect)
+        cgContext.restoreGState()
     }
     
     private func setup() {
@@ -116,7 +127,7 @@ public final class DrawingMetalView: MTKView {
         self.penBrush = Brush(texture: nil, target: self, rotation: .ahead)
         
         if let url = getAppBundle().url(forResource: "marker", withExtension: "png"), let data = try? Data(contentsOf: url) {
-            self.markerBrush = Brush(texture: self.makeTexture(with: data), target: self, rotation: .fixed(0.0))
+            self.markerBrush = Brush(texture: self.makeTexture(with: data), target: self, rotation: .fixed(-0.55))
         }
         
         if let url = getAppBundle().url(forResource: "pencil", withExtension: "png"), let data = try? Data(contentsOf: url) {
@@ -124,10 +135,11 @@ public final class DrawingMetalView: MTKView {
         }
     }
     
-    override public func draw(_ rect: CGRect) {
+    var clearOnce = false
+    override func draw(_ rect: CGRect) {
         super.draw(rect)
         
-        guard let drawable = self.drawable, let texture = drawable.texture else {
+        guard let drawable = self.drawable, let texture = drawable.texture?.texture else {
             return
         }
 
@@ -137,6 +149,10 @@ public final class DrawingMetalView: MTKView {
         attachment?.texture = self.currentDrawable?.texture
         attachment?.loadAction = .clear
         attachment?.storeAction = .store
+        
+        guard let _ = attachment?.texture else {
+            return
+        }
         
         let commandBuffer = self.commandQueue.makeCommandBuffer()
         let commandEncoder = commandBuffer?.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
@@ -160,10 +176,11 @@ public final class DrawingMetalView: MTKView {
             return
         }
         
+        self.clearOnce = true
         drawable.updateBuffer(with: self.size)
         drawable.clear()
         
-        drawable.commit()
+        drawable.commit(wait: true)
     }
         
     enum BrushType {
@@ -182,10 +199,21 @@ public final class DrawingMetalView: MTKView {
             self.pencilBrush?.updated(point, color: color, state: state, size: size)
         }
     }
+    
+    func setup(_ points: [CGPoint], brush: BrushType, color: DrawingColor, size: CGFloat) {
+        switch brush {
+        case .pen:
+            self.penBrush?.setup(points, color: color, size: size)
+        case .marker:
+            self.markerBrush?.setup(points, color: color, size: size)
+        case .pencil:
+            self.pencilBrush?.setup(points, color: color, size: size)
+        }
+    }
 }
 
 private class Drawable {
-    public private(set) var texture: MTLTexture?
+    public private(set) var texture: Texture?
     
     internal var pixelFormat: MTLPixelFormat = .bgra8Unorm
     internal var size: CGSize
@@ -199,12 +227,12 @@ private class Drawable {
         self.size = size
         self.pixelFormat = pixelFormat
         self.device = device
-        self.texture = self.makeColorTexture(DrawingColor.clear)
+        self.texture = self.makeTexture()
         self.commandQueue = device?.makeCommandQueue()
         
         self.renderPassDescriptor = MTLRenderPassDescriptor()
         let attachment = self.renderPassDescriptor?.colorAttachments[0]
-        attachment?.texture = self.texture
+        attachment?.texture = self.texture?.texture
         attachment?.loadAction = .load
         attachment?.storeAction = .store
         
@@ -212,9 +240,8 @@ private class Drawable {
     }
     
     func clear() {
-        self.texture = self.makeColorTexture(DrawingColor.clear)
-        self.renderPassDescriptor?.colorAttachments[0].texture = self.texture
-        self.commit()
+        self.texture?.clear()
+        self.commit(wait: true)
     }
     
     internal func updateBuffer(with size: CGSize) {
@@ -226,47 +253,38 @@ private class Drawable {
     
     internal func prepareForDraw() {
         if self.commandBuffer == nil {
-            self.commandBuffer = commandQueue?.makeCommandBuffer()
+            self.commandBuffer = self.commandQueue?.makeCommandBuffer()
         }
     }
     
     internal func makeCommandEncoder() -> MTLRenderCommandEncoder? {
-        guard let commandBuffer = self.commandBuffer, let rpd = renderPassDescriptor else {
+        guard let commandBuffer = self.commandBuffer, let renderPassDescriptor = self.renderPassDescriptor else {
             return nil
         }
-        return commandBuffer.makeRenderCommandEncoder(descriptor: rpd)
+        return commandBuffer.makeRenderCommandEncoder(descriptor: renderPassDescriptor)
     }
     
-    internal func commit() {
+    internal func commit(wait: Bool = false) {
         self.commandBuffer?.commit()
+        if wait {
+            self.commandBuffer?.waitUntilCompleted()
+        }
         self.commandBuffer = nil
     }
     
-    internal func makeColorTexture(_ color: DrawingColor) -> MTLTexture? {
-        guard self.size.width * self.size.height > 0 else {
+    internal func makeTexture() -> Texture? {
+        guard self.size.width * self.size.height > 0, let device = self.device else {
             return nil
         }
-        let textureDescriptor = MTLTextureDescriptor.texture2DDescriptor(
-            pixelFormat: self.pixelFormat,
-            width: Int(self.size.width),
-            height: Int(self.size.height),
-            mipmapped: false
-        )
-        textureDescriptor.usage = [.renderTarget, .shaderRead]
-        guard let texture = device?.makeTexture(descriptor: textureDescriptor) else {
-            return nil
-        }
-        let region = MTLRegion(
-            origin: MTLOrigin(x: 0, y: 0, z: 0),
-            size: MTLSize(width: texture.width, height: texture.height, depth: 1)
-        )
-        let bytesPerRow = 4 * texture.width
-        let data = Data(capacity: Int(bytesPerRow * texture.height))
-        if let bytes = data.withUnsafeBytes({ $0.baseAddress }) {
-            texture.replace(region: region, mipmapLevel: 0, withBytes: bytes, bytesPerRow: bytesPerRow)
-        }
-        return texture
+        return Texture(device: device, width: Int(self.size.width), height: Int(self.size.height))
     }
+}
+
+private func alignUp(size: Int, align: Int) -> Int {
+    precondition(((align - 1) & align) == 0, "Align must be a power of two")
+
+    let alignmentMask = align - 1
+    return (size + alignmentMask) & ~alignmentMask
 }
 
 private class Brush {
@@ -356,7 +374,7 @@ private class Brush {
         switch state {
         case .began:
             self.bezier.begin(with: point)
-            self.pushPoint(point, color: color, size: size, isEnd: false)
+            let _ = self.pushPoint(point, color: color, size: size, isEnd: false)
         case .changed:
             if self.bezier.points.count > 0 && point != lastRenderedPoint {
                 self.pushPoint(point, color: color, size: size, isEnd: false)
@@ -367,6 +385,45 @@ private class Brush {
             }
             self.bezier.finish()
             self.lastRenderedPoint = nil
+        }
+    }
+    
+    func setup(_ inputPoints: [CGPoint], color: DrawingColor, size: CGFloat) {
+        guard inputPoints.count >= 2 else {
+            return
+        }
+        var pointStep: CGFloat
+        if case .random = self.rotation {
+            pointStep = size * 0.1
+        } else {
+            pointStep = 2.0
+        }
+        
+        var lines: [Line] = []
+        
+        var previousPoint = inputPoints[0]
+        
+        var points: [CGPoint] = []
+        self.bezier.begin(with: inputPoints.first!)
+        for point in inputPoints {
+            let smoothPoints = self.bezier.pushPoint(point)
+            points.append(contentsOf: smoothPoints)
+        }
+        self.bezier.finish()
+        
+        for i in 1 ..< points.count {
+            let p = points[i]
+            if (i == points.count - 1) || pointStep <= 1 || (pointStep > 1 && previousPoint.distance(to: p) >= pointStep) {
+                let line = Line(start: previousPoint, end: p, pointSize: size, pointStep: pointStep)
+                lines.append(line)
+                previousPoint = p
+            }
+        }
+        
+        if let drawable = self.target?.drawable {
+            let stroke = Stroke(color: color, lines: lines, target: drawable)
+            self.render(stroke: stroke, in: drawable)
+            drawable.commit(wait: true)
         }
     }
     
@@ -396,9 +453,7 @@ private class Brush {
         
         if let drawable = self.target?.drawable {
             let stroke = Stroke(color: color, lines: lines, target: drawable)
-            
             self.render(stroke: stroke, in: drawable)
-            
             drawable.commit()
         }
     }
@@ -489,8 +544,7 @@ class BezierGenerator {
             return []
         }
         step += 1
-        let result = genericPathPoints()
-        return result
+        return self.generateSmoothPathPoints()
     }
     
     func finish() {
@@ -501,7 +555,7 @@ class BezierGenerator {
     var points: [CGPoint] = []
     
     private var step = 0
-    private func genericPathPoints() -> [CGPoint] {
+    private func generateSmoothPathPoints() -> [CGPoint] {
         var begin: CGPoint
         var control: CGPoint
         let end = CGPoint.middle(p1: points[step], p2: points[step + 1])
@@ -550,5 +604,141 @@ private struct Line {
     
     var angle: CGFloat {
         return self.end.angle(to: self.start)
+    }
+}
+
+final class Texture {
+#if !targetEnvironment(simulator)
+    let buffer: MTLBuffer?
+#endif
+    
+    let width: Int
+    let height: Int
+    let bytesPerRow: Int
+    let texture: MTLTexture
+    
+    init?(device: MTLDevice, width: Int, height: Int) {
+        let bytesPerPixel = 4
+        let pixelRowAlignment = device.minimumLinearTextureAlignment(for: .bgra8Unorm)
+        let bytesPerRow = alignUp(size: width * bytesPerPixel, align: pixelRowAlignment)
+        
+        self.width = width
+        self.height = height
+        self.bytesPerRow = bytesPerRow
+        
+        if #available(iOS 12.0, *) {
+#if targetEnvironment(simulator)
+            let textureDescriptor = MTLTextureDescriptor()
+            textureDescriptor.textureType = .type2D
+            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.width = width
+            textureDescriptor.height = height
+            textureDescriptor.usage = [.renderTarget, .shaderRead]
+            textureDescriptor.storageMode = .shared
+            
+            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+                return nil
+            }
+#else
+            guard let buffer = device.makeBuffer(length: bytesPerRow * height, options: MTLResourceOptions.storageModeShared) else {
+                return nil
+            }
+            self.buffer = buffer
+            
+            let textureDescriptor = MTLTextureDescriptor()
+            textureDescriptor.textureType = .type2D
+            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.width = width
+            textureDescriptor.height = height
+            textureDescriptor.usage = [.renderTarget, .shaderRead]
+            textureDescriptor.storageMode = buffer.storageMode
+            
+            guard let texture = buffer.makeTexture(descriptor: textureDescriptor, offset: 0, bytesPerRow: bytesPerRow) else {
+                return nil
+            }
+#endif
+            self.texture = texture
+        } else {
+            self.buffer = nil
+            
+            let textureDescriptor = MTLTextureDescriptor()
+            textureDescriptor.textureType = .type2D
+            textureDescriptor.pixelFormat = .bgra8Unorm
+            textureDescriptor.width = width
+            textureDescriptor.height = height
+            textureDescriptor.usage = [.renderTarget, .shaderRead]
+            textureDescriptor.storageMode = .shared
+            
+            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+                return nil
+            }
+            
+            self.texture = texture
+        }
+        self.clear()
+    }
+    
+    func clear() {
+        let region = MTLRegion(
+            origin: MTLOrigin(x: 0, y: 0, z: 0),
+            size: MTLSize(width: self.width, height: self.height, depth: 1)
+        )
+        let data = Data(capacity: Int(self.bytesPerRow * self.height))
+        if let bytes = data.withUnsafeBytes({ $0.baseAddress }) {
+            self.texture.replace(region: region, mipmapLevel: 0, withBytes: bytes, bytesPerRow: self.bytesPerRow)
+        }
+    }
+    
+    func createCGImage() -> CGImage? {
+        let dataProvider: CGDataProvider
+        if #available(iOS 12.0, *) {
+#if targetEnvironment(simulator)
+            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
+                return nil
+            }
+            data.length = self.bytesPerRow * self.height
+            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
+            
+            guard let provider = CGDataProvider(data: data as CFData) else {
+                return nil
+            }
+            dataProvider = provider
+#else
+            guard let buffer = self.buffer, let provider = CGDataProvider(data: Data(bytesNoCopy: buffer.contents(), count: buffer.length, deallocator: .custom { _, _ in
+            }) as CFData) else {
+                return nil
+            }
+            dataProvider = provider
+#endif
+        } else {
+            guard let data = NSMutableData(capacity: self.bytesPerRow * self.height) else {
+                return nil
+            }
+            data.length = self.bytesPerRow * self.height
+            self.texture.getBytes(data.mutableBytes, bytesPerRow: self.bytesPerRow, bytesPerImage: self.bytesPerRow * self.height, from: MTLRegion(origin: MTLOrigin(), size: MTLSize(width: self.width, height: self.height, depth: 1)), mipmapLevel: 0, slice: 0)
+            
+            guard let provider = CGDataProvider(data: data as CFData) else {
+                return nil
+            }
+            dataProvider = provider
+        }
+
+        guard let image = CGImage(
+            width: Int(self.width),
+            height: Int(self.height),
+            bitsPerComponent: 8,
+            bitsPerPixel: 8 * 4,
+            bytesPerRow: self.bytesPerRow,
+            space: DeviceGraphicsContextSettings.shared.colorSpace,
+            bitmapInfo: DeviceGraphicsContextSettings.shared.transparentBitmapInfo,
+            provider: dataProvider,
+            decode: nil,
+            shouldInterpolate: true,
+            intent: .defaultIntent
+        ) else {
+            return nil
+        }
+        
+        return image
     }
 }

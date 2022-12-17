@@ -6,6 +6,8 @@ import Display
 import TelegramPresentationData
 import MergeLists
 import ChatPresentationInterfaceState
+import ChatControllerInteraction
+import FeaturedStickersScreen
 
 enum ChatMediaInputGridEntryStableId: Equatable, Hashable {
     case search
