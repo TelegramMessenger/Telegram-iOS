@@ -219,6 +219,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _cancelButton.titleLabel.font = TGSystemFontOfSize(17.0);
             [_cancelButton sizeToFit];
             [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
+            [_wrapperView addSubview:_cancelButton];
             
             if (_stickersContext != nil) {
                 _doneButton = [_stickersContext solidRoundedButton:self.item.isVideo ? TGLocalized(@"PhotoEditor.SetAsMyVideo") : TGLocalized(@"PhotoEditor.SetAsMyPhoto") action:^{
