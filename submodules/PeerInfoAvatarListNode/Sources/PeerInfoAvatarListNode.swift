@@ -782,10 +782,8 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.controlsContainerNode.addSubnode(self.stripContainerNode)
         self.controlsClippingNode.addSubnode(self.controlsContainerNode)
         self.controlsClippingOffsetNode.addSubnode(self.controlsClippingNode)
-        if self.isSettings {
-            self.stripContainerNode.addSubnode(self.setByYouNode)
-            self.stripContainerNode.addSubnode(self.setByYouImageNode)
-        }
+        self.stripContainerNode.addSubnode(self.setByYouNode)
+        self.stripContainerNode.addSubnode(self.setByYouImageNode)
         
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             guard let strongSelf = self else {
@@ -1316,9 +1314,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
             var fallbackImageSignal: Signal<UIImage?, NoError>?
             if let representation = currentItem.representations.first?.representation, representation.isPersonal {
                 photoTitle = representation.hasVideo ? presentationData.strings.UserInfo_CustomVideo : presentationData.strings.UserInfo_CustomPhoto
-            } else if currentItem.isFallback, let representation = currentItem.representations.first?.representation {
+            } else if currentItem.isFallback, let representation = currentItem.representations.first?.representation, self.isSettings {
                 photoTitle = representation.hasVideo ? presentationData.strings.UserInfo_PublicVideo : presentationData.strings.UserInfo_PublicPhoto
-            } else if self.currentIndex == 0, let lastItem = self.items.last, lastItem.isFallback, let representation = lastItem.representations.first?.representation {
+            } else if self.currentIndex == 0, let lastItem = self.items.last, lastItem.isFallback, let representation = lastItem.representations.first?.representation, self.isSettings {
                 photoTitle = representation.hasVideo ? presentationData.strings.UserInfo_PublicVideo : presentationData.strings.UserInfo_PublicPhoto
                 hasLink = true
                 if let peer = self.peer {
