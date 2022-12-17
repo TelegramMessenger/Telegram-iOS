@@ -608,9 +608,7 @@ private struct Line {
 }
 
 final class Texture {
-#if !targetEnvironment(simulator)
     let buffer: MTLBuffer?
-#endif
     
     let width: Int
     let height: Int
@@ -628,6 +626,7 @@ final class Texture {
         
         if #available(iOS 12.0, *) {
 #if targetEnvironment(simulator)
+            self.buffer = nil
             let textureDescriptor = MTLTextureDescriptor()
             textureDescriptor.textureType = .type2D
             textureDescriptor.pixelFormat = .bgra8Unorm

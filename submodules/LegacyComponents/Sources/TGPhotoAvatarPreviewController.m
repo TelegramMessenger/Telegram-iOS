@@ -57,6 +57,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
     
     bool _isForum;
     bool _isSuggestion;
+    bool _isSuggesting;
     NSString *_senderName;
 }
 
@@ -67,7 +68,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
 
 @implementation TGPhotoAvatarPreviewController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion senderName:(NSString *)senderName {
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView isForum:(bool)isForum isSuggestion:(bool)isSuggestion isSuggesting:(bool)isSuggesting senderName:(NSString *)senderName {
     self = [super initWithContext:context];
     if (self != nil)
     {
@@ -75,6 +76,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         self.previewView = previewView;
         _isForum = isForum;
         _isSuggestion = isSuggestion;
+        _isSuggesting = isSuggesting;
         _senderName = senderName;
     }
     return self;
@@ -184,7 +186,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _coverLabel.backgroundColor = [UIColor clearColor];
         _coverLabel.font = TGSystemFontOfSize(14.0f);
         _coverLabel.textColor = [UIColor whiteColor];
-        _coverLabel.text = _isSuggestion ? TGLocalized(@"PhotoEditor.SelectCoverFrameSuggestion") : TGLocalized(@"PhotoEditor.SelectCoverFrame");
+        _coverLabel.text = _isSuggesting ? TGLocalized(@"PhotoEditor.SelectCoverFrameSuggestion") : TGLocalized(@"PhotoEditor.SelectCoverFrame");
         [_coverLabel sizeToFit];
         [_portraitToolsWrapperView addSubview:_coverLabel];
         
@@ -207,7 +209,9 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         _subtitleLabel.numberOfLines = 2;
         _subtitleLabel.textAlignment = NSTextAlignmentCenter;
         _subtitleLabel.text = [NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoText") : TGLocalized(@"Conversation.SuggestedPhotoText"), _senderName];
-        [_wrapperView addSubview:_subtitleLabel];
+        if (!self.item.isVideo) {
+            [_wrapperView addSubview:_subtitleLabel];
+        }
         
         if (!self.item.isVideo) {
             _cancelButton = [[TGModernButton alloc] init];
@@ -215,7 +219,6 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _cancelButton.titleLabel.font = TGSystemFontOfSize(17.0);
             [_cancelButton sizeToFit];
             [_cancelButton addTarget:self action:@selector(cancelButtonPressed) forControlEvents:UIControlEventTouchUpInside];
-            [_wrapperView addSubview:_cancelButton];
             
             if (_stickersContext != nil) {
                 _doneButton = [_stickersContext solidRoundedButton:self.item.isVideo ? TGLocalized(@"PhotoEditor.SetAsMyVideo") : TGLocalized(@"PhotoEditor.SetAsMyPhoto") action:^{
@@ -887,7 +890,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
             _coverLabel.frame = CGRectMake(floor((_portraitToolsWrapperView.frame.size.width - _coverLabel.frame.size.width) / 2.0), CGRectGetMaxY(_scrubberView.frame) + 6.0, _coverLabel.frame.size.width, _coverLabel.frame.size.height);
             
             _titleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _titleLabel.frame.size.width) / 2.0), screenEdges.top + floor((44.0 - _titleLabel.frame.size.height) / 2.0), _titleLabel.frame.size.width, _titleLabel.frame.size.height);
-            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom - 56.0 - buttonSize.height - subtitleSize.height - 8.0, subtitleSize.width, subtitleSize.height);
+            _subtitleLabel.frame = CGRectMake(screenEdges.left + floor((referenceSize.width - _subtitleLabel.frame.size.width) / 2.0), screenEdges.bottom - 56.0 - buttonSize.height - subtitleSize.height - 16.0, subtitleSize.width, subtitleSize.height);
             
             _cancelButton.frame = CGRectMake(screenEdges.left + 16.0, screenEdges.top + floor((44.0 - _cancelButton.frame.size.height) / 2.0), _cancelButton.frame.size.width, _cancelButton.frame.size.height);
             

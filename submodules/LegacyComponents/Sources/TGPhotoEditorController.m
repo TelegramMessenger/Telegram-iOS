@@ -1145,6 +1145,11 @@
     return _intent & (TGPhotoEditorControllerSuggestedAvatarIntent);
 }
 
+- (bool)presentedForSuggestingAvatar
+{
+    return _intent & (TGPhotoEditorControllerSuggestingAvatarIntent);
+}
+
 #pragma mark - Transition
 
 - (void)transitionIn
@@ -1317,7 +1322,7 @@
     TGPhotoEditorBackButton backButtonType = TGPhotoEditorBackButtonCancel;
     TGPhotoEditorDoneButton doneButtonType = TGPhotoEditorDoneButtonCheck;
     
-    if ([self presentedForSuggestedAvatar]) {
+    if ([self presentedForSuggestedAvatar] && !_item.isVideo) {
         [_portraitToolbarView setCancelDoneButtonsHidden:tab == TGPhotoEditorCropTab animated:!isInitialAppearance];
     }
     
@@ -1336,7 +1341,7 @@
             {
                 bool skipInitialTransition = (![self presentedFromCamera] && self.navigationController != nil) || self.skipInitialTransition;
                 
-                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar] senderName:self.senderName];
+                TGPhotoAvatarPreviewController *cropController = [[TGPhotoAvatarPreviewController alloc] initWithContext:_context photoEditor:_photoEditor previewView:_previewView isForum:[self presentedForForumAvatarCreation] isSuggestion:[self presentedForSuggestedAvatar] isSuggesting:[self presentedForSuggestingAvatar] senderName:self.senderName];
                 cropController.stickersContext = _stickersContext;
                 cropController.scrubberView = _scrubberView;
                 cropController.dotImageView = _dotImageView;

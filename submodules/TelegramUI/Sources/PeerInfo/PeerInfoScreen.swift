@@ -2878,7 +2878,9 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             let galleryController = AvatarGalleryController(context: strongSelf.context, peer: peer, sourceCorners: .round, remoteEntries: entriesPromise, skipInitial: true, centralEntryIndex: centralEntry.flatMap { entries.firstIndex(of: $0) }, replaceRootController: { controller, ready in
             })
             galleryController.openAvatarSetup = { [weak self] completion in
-                self?.openAvatarForEditing(fromGallery: true, completion: completion)
+                self?.openAvatarForEditing(fromGallery: true, completion: { _ in
+                    completion()
+                })
             }
             galleryController.avatarPhotoEditCompletion = { [weak self] image in
                 self?.updateProfilePhoto(image, mode: .generic)
@@ -6810,7 +6812,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             dismissStatus = { [weak statusController] in
                 statusController?.dismiss()
             }
-            self.controller?.presentInGlobalOverlay(statusController)
+            if let topController = self.controller?.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else {
+                self.controller?.presentInGlobalOverlay(statusController)
+            }
         }
 
         self.updateAvatarDisposable.set((signal
@@ -6976,7 +6982,11 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             dismissStatus = { [weak statusController] in
                 statusController?.dismiss()
             }
-            self.controller?.presentInGlobalOverlay(statusController)
+            if let topController = self.controller?.navigationController?.topViewController as? ViewController {
+                topController.presentInGlobalOverlay(statusController)
+            } else {
+                self.controller?.presentInGlobalOverlay(statusController)
+            }
         }
         
         let peerId = self.peerId
@@ -7048,7 +7058,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }))
     }
         
-    fileprivate func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping () -> Void = {}) {
+    fileprivate func openAvatarForEditing(mode: PeerInfoAvatarEditingMode = .generic, fromGallery: Bool = false, completion: @escaping (UIImage?) -> Void = { _ in }) {
         guard let peer = self.data?.peer, mode != .generic || canEditPeerInfo(context: self.context, peer: peer, chatLocation: self.chatLocation, threadData: self.data?.threadData) else {
             return
         }
@@ -7141,7 +7151,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 confirmationAction = nil
             }
             
-            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title)!
+            let mixin = TGMediaAvatarMenuMixin(context: legacyController.context, parentController: emptyController, hasSearchButton: true, hasDeleteButton: hasDeleteButton, hasViewButton: false, personalPhoto: strongSelf.isSettings, isVideo: currentIsVideo, saveEditedPhotos: false, saveCapturedMedia: false, signup: false, forum: isForum, title: title, isSuggesting: mode == .suggest)!
             mixin.stickersContext = paintStickersContext
             let _ = strongSelf.currentAvatarMixin.swap(mixin)
             mixin.requestSearchController = { [weak self] assetsController in
@@ -7156,7 +7166,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 (strongSelf.controller?.navigationController?.topViewController as? ViewController)?.push(controller)
                 
                 if fromGallery {
-                    completion()
+                    completion(nil)
                 }
             }
             if let confirmationTextPhoto, let confirmationAction {
@@ -7181,13 +7191,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             }
             mixin.didFinishWithImage = { [weak self] image in
                 if let image = image {
-                    completion()
+                    completion(image)
                     self?.updateProfilePhoto(image, mode: mode)
                 }
             }
             mixin.didFinishWithVideo = { [weak self] image, asset, adjustments in
                 if let image = image, let asset = asset {
-                    completion()
+                    completion(image)
                     self?.updateProfileVideo(image, asset: asset, adjustments: adjustments, mode: mode)
                 }
             }
@@ -7214,11 +7224,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         })
     }
     
-    fileprivate func openAvatarRemoval(mode: PeerInfoAvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil) {
+    fileprivate func openAvatarRemoval(mode: PeerInfoAvatarEditingMode, peer: EnginePeer? = nil, item: PeerInfoAvatarListItem? = nil, completion: @escaping () -> Void = {}) {
         let proceed = { [weak self] in
             guard let strongSelf = self else {
                 return
             }
+            
+            completion()
             
             if let item = item {
                 strongSelf.deleteProfilePhoto(item)
@@ -7392,13 +7404,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                         }
                                     )
                                 }
-                            }, requestPublicPhotoSetup: { [weak self] in
+                            }, requestPublicPhotoSetup: { [weak self] completion in
                                 if let strongSelf = self {
-                                    strongSelf.openAvatarForEditing(mode: .fallback)
+                                    strongSelf.openAvatarForEditing(mode: .fallback, completion: completion)
                                 }
-                            }, requestPublicPhotoRemove: { [weak self] in
+                            }, requestPublicPhotoRemove: { [weak self] completion in
                                 if let strongSelf = self {
-                                    strongSelf.openAvatarRemoval(mode: .fallback)
+                                    strongSelf.openAvatarRemoval(mode: .fallback, completion: completion)
                                 }
                             }))
                         }

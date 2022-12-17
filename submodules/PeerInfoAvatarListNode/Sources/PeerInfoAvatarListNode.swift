@@ -518,6 +518,7 @@ private let fadeWidth: CGFloat = 70.0
 
 public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
     private let context: AccountContext
+    private let isSettings: Bool
     public var peer: Peer?
     
     public let controlsContainerNode: ASDisplayNode
@@ -648,8 +649,9 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.playerUpdateTimer = nil
     }
     
-    public init(context: AccountContext) {
+    public init(context: AccountContext, isSettings: Bool = false) {
         self.context = context
+        self.isSettings = isSettings
         
         self.contentNode = ASDisplayNode()
         
@@ -780,8 +782,10 @@ public final class PeerInfoAvatarListContainerNode: ASDisplayNode {
         self.controlsContainerNode.addSubnode(self.stripContainerNode)
         self.controlsClippingNode.addSubnode(self.controlsContainerNode)
         self.controlsClippingOffsetNode.addSubnode(self.controlsClippingNode)
-        self.stripContainerNode.addSubnode(self.setByYouNode)
-        self.stripContainerNode.addSubnode(self.setByYouImageNode)
+        if self.isSettings {
+            self.stripContainerNode.addSubnode(self.setByYouNode)
+            self.stripContainerNode.addSubnode(self.setByYouImageNode)
+        }
         
         self.view.disablesInteractiveTransitionGestureRecognizerNow = { [weak self] in
             guard let strongSelf = self else {

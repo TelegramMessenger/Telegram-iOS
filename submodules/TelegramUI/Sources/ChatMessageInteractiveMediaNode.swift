@@ -185,6 +185,9 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
     private var maskView: UIView?
     private var maskLayer: CAShapeLayer?
     
+    var isRevealed = false
+    var tapped: () -> Void = {}
+    
     override init() {
         self.blurredImageNode = TransformImageNode()
          
@@ -252,6 +255,12 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
         self.maskLayer = maskLayer
     }
     
+    func reveal() {
+        self.blurredImageNode.removeFromSupernode()
+        self.dustNode.removeFromSupernode()
+        self.isUserInteractionEnabled = false
+    }
+    
     func update(size: CGSize, text: String, imageSignal: (Signal<(TransformImageArguments) -> DrawingContext?, NoError>, CGSize, CGSize)?, imageFrame: CGRect, corners: ImageCorners?) {
         let spacing: CGFloat = 2.0
         let padding: CGFloat = 10.0
@@ -268,8 +277,12 @@ private class ExtendedMediaOverlayNode: ASDisplayNode {
             self.isUserInteractionEnabled = !self.dustNode.isRevealed
             
             self.dustNode.revealed = { [weak self] in
+                self?.isRevealed = true
                 self?.blurredImageNode.removeFromSupernode()
                 self?.isUserInteractionEnabled = false
+            }
+            self.dustNode.tapped = { [weak self] in
+                self?.tapped()
             }
         } else {
             self.blurredImageNode.isHidden = true
@@ -377,21 +390,28 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     var visibilityPromise = ValuePromise<Bool>(false, ignoreRepeated: true)
     var visibility: Bool = false {
         didSet {
-            if let videoNode = self.videoNode {
-                if self.visibility {
-                    if !videoNode.canAttachContent {
-                        videoNode.canAttachContent = true
-                        if videoNode.hasAttachedContext {
-                            videoNode.play()
-                        }
-                    }
-                } else {
-                    videoNode.canAttachContent = false
-                }
-            }
-            self.animatedStickerNode?.visibility = self.visibility
-            self.visibilityPromise.set(self.visibility)
+            self.updateVisibility()
         }
+    }
+    
+    private var internallyVisible = true
+    private func updateVisibility() {
+        let visibility = self.visibility && self.internallyVisible
+        
+        if let videoNode = self.videoNode {
+            if visibility {
+                if !videoNode.canAttachContent {
+                    videoNode.canAttachContent = true
+                    if videoNode.hasAttachedContext {
+                        videoNode.play()
+                    }
+                }
+            } else {
+                videoNode.canAttachContent = false
+            }
+        }
+        self.animatedStickerNode?.visibility = visibility
+        self.visibilityPromise.set(visibility)
     }
     
     var activateLocalContent: (InteractiveMediaNodeActivateContent) -> Void = { _ in }
@@ -1034,6 +1054,9 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                     updateImageSignal = { synchronousLoad, _ in
                                         return mediaGridMessageVideo(postbox: context.account.postbox, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file), onlyFullSize: currentMedia?.id?.namespace == Namespaces.Media.LocalFile, autoFetchFullSizeThumbnail: true)
                                     }
+                                    updateBlurredImageSignal = { synchronousLoad, _ in
+                                        return chatSecretMessageVideo(account: context.account, userLocation: .peer(message.id.peerId), videoReference: .message(message: MessageReference(message), media: file))
+                                    }
                                 }
                             }
                             
@@ -1319,6 +1342,11 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 }
                             }
                             
+                            
+                            if message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute }), strongSelf.extendedMediaOverlayNode == nil {
+                                strongSelf.internallyVisible = false
+                            }
+                            
                             if let videoNode = strongSelf.videoNode {
                                 if !(replaceVideoNode ?? false), let decoration = videoNode.decoration as? ChatBubbleVideoDecoration, decoration.corners != corners {
                                     decoration.updateCorners(corners)
@@ -1327,7 +1355,7 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
                                 videoNode.updateLayout(size: arguments.drawingSize, transition: .immediate)
                                 videoNode.frame = CGRect(origin: CGPoint(), size: imageFrame.size)
                                 
-                                if strongSelf.visibility {
+                                if strongSelf.visibility && strongSelf.internallyVisible {
                                     if !videoNode.canAttachContent {
                                         videoNode.canAttachContent = true
                                         if videoNode.hasAttachedContext {
@@ -1892,6 +1920,10 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
         if displaySpoiler {
             if self.extendedMediaOverlayNode == nil {
                 let extendedMediaOverlayNode = ExtendedMediaOverlayNode()
+                extendedMediaOverlayNode.tapped = { [weak self] in
+                    self?.internallyVisible = true
+                    self?.updateVisibility()
+                }
                 self.extendedMediaOverlayNode = extendedMediaOverlayNode
                 self.pinchContainerNode.contentNode.insertSubnode(extendedMediaOverlayNode, aboveSubnode: self.imageNode)
             }
@@ -1979,6 +2011,12 @@ final class ChatMessageInteractiveMediaNode: ASDisplayNode, GalleryItemTransitio
     }
     
     func updateIsHidden(_ isHidden: Bool) {
+        if isHidden && !self.internallyVisible {
+            self.internallyVisible = true
+            self.updateVisibility()
+            self.extendedMediaOverlayNode?.reveal()
+        }
+        
         if let badgeNode = self.badgeNode, badgeNode.isHidden != isHidden {
             if isHidden {
                 badgeNode.isHidden = true

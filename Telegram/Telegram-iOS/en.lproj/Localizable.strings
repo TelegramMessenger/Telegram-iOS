@@ -8512,7 +8512,7 @@ Sorry for the inconvenience.";
 
 "Common.Paste" = "Paste";
 
-"PhotoEditor.SelectCoverFrameSuggestion" = "Choose a cover for profile video";
+"PhotoEditor.SelectCoverFrameSuggestion" = "Choose a cover for this video";
 
 "GroupInfo.TitleMembers_1" = "%@ Member";
 "GroupInfo.TitleMembers_any" = "%@ Members";

@@ -28,6 +28,7 @@
     bool _isVideo;
     bool _forum;
     NSString *_title;
+    bool _isSuggesting;
 }
 @end
 
@@ -40,10 +41,10 @@
 
 - (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasDeleteButton:(bool)hasDeleteButton personalPhoto:(bool)personalPhoto saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia
 {
-    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false forum:false title:nil];
+    return [self initWithContext:context parentController:parentController hasSearchButton:false hasDeleteButton:hasDeleteButton hasViewButton:false personalPhoto:personalPhoto isVideo:false saveEditedPhotos:saveEditedPhotos saveCapturedMedia:saveCapturedMedia signup:false forum:false title:nil isSuggesting:false];
 }
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum title:(NSString *)title
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context parentController:(TGViewController *)parentController hasSearchButton:(bool)hasSearchButton hasDeleteButton:(bool)hasDeleteButton hasViewButton:(bool)hasViewButton personalPhoto:(bool)personalPhoto isVideo:(bool)isVideo saveEditedPhotos:(bool)saveEditedPhotos saveCapturedMedia:(bool)saveCapturedMedia signup:(bool)signup forum:(bool)forum title:(NSString *)title isSuggesting:(bool)isSuggesting
 {
     self = [super init];
     if (self != nil)
@@ -60,6 +61,7 @@
         _signup = signup;
         _forum = forum;
         _title = title;
+        _isSuggesting = isSuggesting;
     }
     return self;
 }
@@ -99,6 +101,7 @@
     }
     
     TGAttachmentCarouselItemView *carouselItem = [[TGAttachmentCarouselItemView alloc] initWithContext:_context camera:true selfPortrait:_personalPhoto forProfilePhoto:true assetType:_signup ? TGMediaAssetPhotoType : TGMediaAssetAnyType saveEditedPhotos:_saveEditedPhotos allowGrouping:false];
+    carouselItem.isSuggesting = _isSuggesting;
     carouselItem.forum = _forum;
     carouselItem.stickersContext = _stickersContext;
     carouselItem.parentController = _parentController;
@@ -456,6 +459,8 @@
             TGMediaAssetsController *controller = [TGMediaAssetsController controllerWithContext:context assetGroup:group intent:strongSelf->_signup ? TGMediaAssetsControllerSetSignupProfilePhotoIntent : TGMediaAssetsControllerSetProfilePhotoIntent recipientName:nil saveEditedPhotos:strongSelf->_saveEditedPhotos allowGrouping:false selectionLimit:10];
             __weak TGMediaAssetsController *weakController = controller;
             controller.stickersContext = _stickersContext;
+            controller.forum = _forum;
+            controller.isSuggesting = _isSuggesting;
             controller.avatarCompletionBlock = ^(UIImage *resultImage)
             {
                 __strong TGMediaAvatarMenuMixin *strongSelf = weakSelf;
