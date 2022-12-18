@@ -6804,7 +6804,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         var dismissStatus: (() -> Void)?
-        if [.suggest, .fallback].contains(mode) {
+        if [.suggest, .fallback, .accept].contains(mode) {
             let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: { [weak self] in
                 self?.updateAvatarDisposable.set(nil)
                 dismissStatus?()
@@ -6851,7 +6851,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }))
                             }
                         case .accept:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedPhotoSuccessText, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                                if case .info = action {
+                                    self?.controller?.parentController?.openSettings()
+                                }
+                                return false
+                            }), in: .current)
                         default:
                             break
                         }
@@ -6974,7 +6979,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
         
         var dismissStatus: (() -> Void)?
-        if [.suggest, .fallback].contains(mode) {
+        if [.suggest, .fallback, .accept].contains(mode) {
             let statusController = OverlayStatusController(theme: self.presentationData.theme, type: .loading(cancelled: { [weak self] in
                 self?.updateAvatarDisposable.set(nil)
                 dismissStatus?()
@@ -7048,7 +7053,12 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                                 }))
                             }
                         case .accept:
-                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: nil, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { _ in return false }), in: .current)
+                            (strongSelf.controller?.parentController?.topViewController as? ViewController)?.present(UndoOverlayController(presentationData: strongSelf.presentationData, content: .image(image: image, title: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccess, text: strongSelf.presentationData.strings.Conversation_SuggestedVideoSuccessText, round: true, undo: false), elevatedLayout: false, animateInAsReplacement: true, action: { [weak self] action in
+                                if case .info = action {
+                                    self?.controller?.parentController?.openSettings()
+                                }
+                                return false
+                            }), in: .current)
                         default:
                             break
                         }
@@ -7158,7 +7168,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 guard let strongSelf = self else {
                     return
                 }
-                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData,  peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder), completion: { [weak self] result in
+                let controller = WebSearchController(context: strongSelf.context, updatedPresentationData: strongSelf.controller?.updatedPresentationData,  peer: peer, chatLocation: nil, configuration: searchBotsConfiguration, mode: .avatar(initialQuery: strongSelf.isSettings ? nil : peer.compactDisplayTitle, completion: { [weak self] result in
                     assetsController?.dismiss()
                     self?.updateProfilePhoto(result, mode: mode)
                 }))

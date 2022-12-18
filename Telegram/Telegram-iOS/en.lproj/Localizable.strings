@@ -8479,14 +8479,16 @@ Sorry for the inconvenience.";
 "Conversation.SuggestedPhotoTextExpanded" = "%@ suggests you to use this profile photo for your Telegram account.";
 "Conversation.SuggestedPhotoTextYou" = "You suggested **%@** to use this profile photo.";
 "Conversation.SuggestedPhotoView" = "View Photo";
-"Conversation.SuggestedPhotoSuccess" = "You have updated your Telegram account photo.";
+"Conversation.SuggestedPhotoSuccess" = "Photo updated";
+"Conversation.SuggestedPhotoSuccessText" = "You can change it in [Settings]().";
 
 "Conversation.SuggestedVideoTitle" = "Suggested Video";
 "Conversation.SuggestedVideoText" = "**%@** suggests you to use this profile video.";
 "Conversation.SuggestedVideoTextExpanded" = "%@ suggests you to use this profile video for your Telegram account.";
 "Conversation.SuggestedVideoTextYou" = "You suggested **%@** to use this profile video.";
 "Conversation.SuggestedVideoView" = "View Video";
-"Conversation.SuggestedVideoSuccess" = "You have updated your Telegram account video.";
+"Conversation.SuggestedVideoSuccess" = "Video updated";
+"Conversation.SuggestedVideoSuccessText" = "You can change it in [Settings]().";
 
 "CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";
 "CacheEvictionMenu.CategoryExceptions_any" = "%@ Exceptions";
@@ -8525,3 +8527,11 @@ Sorry for the inconvenience.";
 "PeerInfo.HideMembersLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have their member list hidden.";
 "PeerInfo.HideMembersLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have their member list hidden.";
 "PeerInfo.HideMembersLimitedRights" = "You don't have permission to change this setting.";
+
+"Privacy.Exceptions" = "EXCEPTIONS";
+"Privacy.ExceptionsCount_1" = "%@ EXCEPTION";
+"Privacy.ExceptionsCount_any" = "%@ EXCEPTIONS";
+"Privacy.Exceptions.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Privacy.Exceptions.DeleteAll" = "Delete All";
+"Privacy.Exceptions.DeleteAllConfirmation" = "Are you sure you want to delete all exceptions?";
