@@ -946,42 +946,42 @@ func selectivePrivacySettingsController(
                         }
                     }
                     
-                    let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: updatedPeerIds, updated: { updatedPeerIds in
-                        updateState { state in
-                            if enable {
-                                switch target {
-                                    case .main:
-                                        var disableFor = state.disableFor
-                                        for (key, _) in updatedPeerIds {
-                                            disableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedEnableFor(updatedPeerIds).withUpdatedDisableFor(disableFor)
-                                    case .callP2P:
-                                        var callP2PDisableFor = state.callP2PDisableFor ?? [:]
-                                        for (key, _) in updatedPeerIds {
-                                            callP2PDisableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedCallP2PEnableFor(updatedPeerIds).withUpdatedCallP2PDisableFor(callP2PDisableFor)
-                                }
-                            } else {
-                                switch target {
-                                    case .main:
-                                        var enableFor = state.enableFor
-                                        for (key, _) in updatedPeerIds {
-                                            enableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedDisableFor(updatedPeerIds).withUpdatedEnableFor(enableFor)
-                                    case .callP2P:
-                                        var callP2PEnableFor = state.callP2PEnableFor ?? [:]
-                                        for (key, _) in updatedPeerIds {
-                                            callP2PEnableFor.removeValue(forKey: key)
-                                        }
-                                        return state.withUpdatedCallP2PDisableFor(updatedPeerIds).withUpdatedCallP2PEnableFor(callP2PEnableFor)
-                                }
-                            }
-                        }
-                    })
-                    pushControllerImpl?(controller, false)
+//                    let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: updatedPeerIds, updated: { updatedPeerIds in
+//                        updateState { state in
+//                            if enable {
+//                                switch target {
+//                                    case .main:
+//                                        var disableFor = state.disableFor
+//                                        for (key, _) in updatedPeerIds {
+//                                            disableFor.removeValue(forKey: key)
+//                                        }
+//                                        return state.withUpdatedEnableFor(updatedPeerIds).withUpdatedDisableFor(disableFor)
+//                                    case .callP2P:
+//                                        var callP2PDisableFor = state.callP2PDisableFor ?? [:]
+//                                        for (key, _) in updatedPeerIds {
+//                                            callP2PDisableFor.removeValue(forKey: key)
+//                                        }
+//                                        return state.withUpdatedCallP2PEnableFor(updatedPeerIds).withUpdatedCallP2PDisableFor(callP2PDisableFor)
+//                                }
+//                            } else {
+//                                switch target {
+//                                    case .main:
+//                                        var enableFor = state.enableFor
+//                                        for (key, _) in updatedPeerIds {
+//                                            enableFor.removeValue(forKey: key)
+//                                        }
+//                                        return state.withUpdatedDisableFor(updatedPeerIds).withUpdatedEnableFor(enableFor)
+//                                    case .callP2P:
+//                                        var callP2PEnableFor = state.callP2PEnableFor ?? [:]
+//                                        for (key, _) in updatedPeerIds {
+//                                            callP2PEnableFor.removeValue(forKey: key)
+//                                        }
+//                                        return state.withUpdatedCallP2PDisableFor(updatedPeerIds).withUpdatedCallP2PEnableFor(callP2PEnableFor)
+//                                }
+//                            }
+//                        }
+//                    })
+//                    pushControllerImpl?(controller, false)
                 })
             }))
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

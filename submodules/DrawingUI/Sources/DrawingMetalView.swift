@@ -411,6 +411,9 @@ private class Brush {
         }
         self.bezier.finish()
         
+        guard points.count >= 2 else {
+            return
+        }
         for i in 1 ..< points.count {
             let p = points[i]
             if (i == points.count - 1) || pointStep <= 1 || (pointStep > 1 && previousPoint.distance(to: p) >= pointStep) {
@@ -624,9 +627,42 @@ final class Texture {
         self.height = height
         self.bytesPerRow = bytesPerRow
         
-        if #available(iOS 12.0, *) {
-#if targetEnvironment(simulator)
+//        if #available(iOS 12.0, *) {
+//#if targetEnvironment(simulator)
+//            self.buffer = nil
+//            let textureDescriptor = MTLTextureDescriptor()
+//            textureDescriptor.textureType = .type2D
+//            textureDescriptor.pixelFormat = .bgra8Unorm
+//            textureDescriptor.width = width
+//            textureDescriptor.height = height
+//            textureDescriptor.usage = [.renderTarget, .shaderRead]
+//            textureDescriptor.storageMode = .shared
+//
+//            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
+//                return nil
+//            }
+//#else
+//            guard let buffer = device.makeBuffer(length: bytesPerRow * height, options: MTLResourceOptions.storageModeShared) else {
+//                return nil
+//            }
+//            self.buffer = buffer
+//
+//            let textureDescriptor = MTLTextureDescriptor()
+//            textureDescriptor.textureType = .type2D
+//            textureDescriptor.pixelFormat = .bgra8Unorm
+//            textureDescriptor.width = width
+//            textureDescriptor.height = height
+//            textureDescriptor.usage = [.renderTarget, .shaderRead]
+//            textureDescriptor.storageMode = buffer.storageMode
+//
+//            guard let texture = buffer.makeTexture(descriptor: textureDescriptor, offset: 0, bytesPerRow: bytesPerRow) else {
+//                return nil
+//            }
+//#endif
+//            self.texture = texture
+//        } else {
             self.buffer = nil
+            
             let textureDescriptor = MTLTextureDescriptor()
             textureDescriptor.textureType = .type2D
             textureDescriptor.pixelFormat = .bgra8Unorm
@@ -638,42 +674,9 @@ final class Texture {
             guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
                 return nil
             }
-#else
-            guard let buffer = device.makeBuffer(length: bytesPerRow * height, options: MTLResourceOptions.storageModeShared) else {
-                return nil
-            }
-            self.buffer = buffer
-            
-            let textureDescriptor = MTLTextureDescriptor()
-            textureDescriptor.textureType = .type2D
-            textureDescriptor.pixelFormat = .bgra8Unorm
-            textureDescriptor.width = width
-            textureDescriptor.height = height
-            textureDescriptor.usage = [.renderTarget, .shaderRead]
-            textureDescriptor.storageMode = buffer.storageMode
-            
-            guard let texture = buffer.makeTexture(descriptor: textureDescriptor, offset: 0, bytesPerRow: bytesPerRow) else {
-                return nil
-            }
-#endif
-            self.texture = texture
-        } else {
-            self.buffer = nil
-            
-            let textureDescriptor = MTLTextureDescriptor()
-            textureDescriptor.textureType = .type2D
-            textureDescriptor.pixelFormat = .bgra8Unorm
-            textureDescriptor.width = width
-            textureDescriptor.height = height
-            textureDescriptor.usage = [.renderTarget, .shaderRead]
-            textureDescriptor.storageMode = .shared
-            
-            guard let texture = device.makeTexture(descriptor: textureDescriptor) else {
-                return nil
-            }
             
             self.texture = texture
-        }
+//        }
         self.clear()
     }
     

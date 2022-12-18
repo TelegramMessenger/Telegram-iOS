@@ -475,7 +475,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         
     private let queue = Queue()
     private var skipDrawing = Set<UUID>()
-    private func commit(reset: Bool = false, interactive: Bool = false, synchronous: Bool = false, completion: @escaping () -> Void = {}) {
+    private func commit(reset: Bool = false, interactive: Bool = false, synchronous: Bool = true, completion: @escaping () -> Void = {}) {
         let currentImage = self.drawingImage
         let uncommitedElement = self.uncommitedElement
         let imageSize = self.imageSize

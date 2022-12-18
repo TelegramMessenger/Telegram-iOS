@@ -157,9 +157,22 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         return self.shapeLayer.lineWidth
     }
     
+    private var maxLineWidth: CGFloat {
+        return max(10.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let lineWidth = self.maxLineWidth * 0.5
+        let expandedBounds = self.bounds.insetBy(dx: -lineWidth, dy: -lineWidth)
+        if expandedBounds.contains(point) {
+            return true
+        }
+        return false
+    }
+    
     override func precisePoint(inside point: CGPoint) -> Bool {
         if case .stroke = self.bubbleEntity.drawType, var path = self.shapeLayer.path {
-            path = path.copy(strokingWithWidth: 20.0, lineCap: .square, lineJoin: .bevel, miterLimit: 0.0)
+            path = path.copy(strokingWithWidth: maxLineWidth * 0.8, lineCap: .square, lineJoin: .bevel, miterLimit: 0.0)
             if path.contains(point) {
                 return true
             } else {

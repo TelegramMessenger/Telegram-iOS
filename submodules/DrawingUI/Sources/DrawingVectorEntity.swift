@@ -134,6 +134,10 @@ final class DrawingVectorEntityView: DrawingEntityView {
         return self.shapeLayer.path?.boundingBox ?? self.bounds
     }
         
+    private var maxLineWidth: CGFloat {
+        return max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+    }
+    
     override func update(animated: Bool) {
         self.center = CGPoint(x: self.vectorEntity.drawingSize.width * 0.5, y: self.vectorEntity.drawingSize.height * 0.5)
         self.bounds = CGRect(origin: .zero, size: self.vectorEntity.drawingSize)
@@ -174,7 +178,15 @@ final class DrawingVectorEntityView: DrawingEntityView {
             if path.contains(point) {
                 return true
             } else {
-                return false
+                let expandedPath = CGPath.curve(
+                    start: self.vectorEntity.start,
+                    end: self.vectorEntity.end,
+                    mid: self.vectorEntity.midPoint,
+                    lineWidth: self.maxLineWidth * 0.8,
+                    arrowSize: nil,
+                    twoSided: false
+                )
+                return expandedPath.contains(point)
             }
         } else {
             return super.precisePoint(inside: point)
