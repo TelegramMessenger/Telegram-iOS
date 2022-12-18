@@ -6,7 +6,7 @@ import AccountContext
 import TextFormat
 import EmojiTextAttachmentView
 
-final class DrawingTextEntity: DrawingEntity, Codable {
+public final class DrawingTextEntity: DrawingEntity, Codable {
     final class CustomEmojiAttribute: Codable {
         private enum CodingKeys: String, CodingKey {
             case attribute
@@ -122,8 +122,8 @@ final class DrawingTextEntity: DrawingEntity, Codable {
         }
     }
     
-    var uuid: UUID
-    var isAnimated: Bool {
+    public var uuid: UUID
+    public var isAnimated: Bool {
         var isAnimated = false
         self.text.enumerateAttributes(in: NSMakeRange(0, self.text.length), options: [], using: { attributes, range, _ in
             if let _ = attributes[ChatTextInputAttributes.customEmoji] as? ChatTextInputTextCustomEmojiAttribute {
@@ -138,8 +138,8 @@ final class DrawingTextEntity: DrawingEntity, Codable {
     var font: Font
     var alignment: Alignment
     var fontSize: CGFloat
-    var color: DrawingColor
-    var lineWidth: CGFloat = 0.0
+    public var color: DrawingColor
+    public var lineWidth: CGFloat = 0.0
     
     var referenceDrawingSize: CGSize
     var position: CGPoint
@@ -147,9 +147,11 @@ final class DrawingTextEntity: DrawingEntity, Codable {
     var scale: CGFloat
     var rotation: CGFloat
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.position
     }
+    
+    public var renderImage: UIImage?
     
     init(text: NSAttributedString, style: Style, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
         self.uuid = UUID()
@@ -168,7 +170,7 @@ final class DrawingTextEntity: DrawingEntity, Codable {
         self.rotation = 0.0
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         let text = try container.decode(String.self, forKey: .text)
@@ -192,7 +194,7 @@ final class DrawingTextEntity: DrawingEntity, Codable {
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.text.string, forKey: .text)
@@ -217,7 +219,7 @@ final class DrawingTextEntity: DrawingEntity, Codable {
         try container.encode(self.rotation, forKey: .rotation)
     }
 
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingTextEntity(text: self.text, style: self.style, font: self.font, alignment: self.alignment, fontSize: self.fontSize, color: self.color)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
@@ -227,8 +229,8 @@ final class DrawingTextEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingTextEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
@@ -718,6 +720,9 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     }
     
     override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        if let entityView = self.entityView as? DrawingTextEntityView, entityView.isEditing {
+            return false
+        }
         return true
     }
     
@@ -726,6 +731,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
         guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
+        
         let location = gestureRecognizer.location(in: self)
         
         switch gestureRecognizer.state {
@@ -781,10 +787,10 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     }
     
     override func handlePinch(_ gestureRecognizer: UIPinchGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
+        guard let entityView = self.entityView as? DrawingTextEntityView, !entityView.isEditing, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
-
+        
         switch gestureRecognizer.state {
         case .began, .changed:
             let scale = gestureRecognizer.scale
@@ -798,7 +804,7 @@ final class DrawingTextEntititySelectionView: DrawingEntitySelectionView, UIGest
     }
     
     override func handleRotate(_ gestureRecognizer: UIRotationGestureRecognizer) {
-        guard let entityView = self.entityView, let entity = entityView.entity as? DrawingTextEntity else {
+        guard let entityView = self.entityView as? DrawingTextEntityView, !entityView.isEditing, let entity = entityView.entity as? DrawingTextEntity else {
             return
         }
         

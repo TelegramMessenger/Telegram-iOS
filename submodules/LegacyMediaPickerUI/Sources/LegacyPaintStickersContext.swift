@@ -63,7 +63,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     }
     
     var angle: CGFloat {
-        return self.entity.angle
+        return self.entity.rotation
     }
     
     var baseSize: CGSize? {
@@ -76,7 +76,7 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     let account: Account
     let file: TelegramMediaFile
-    let entity: TGPhotoPaintStickerEntity
+    let entity: DrawingStickerEntity
     let animated: Bool
     let durationPromise = Promise<Double>()
     
@@ -92,55 +92,50 @@ private class LegacyPaintStickerEntity: LegacyPaintEntity {
     
     let imagePromise = Promise<UIImage>()
     
-    init?(account: Account, entity: TGPhotoPaintStickerEntity) {
-        let decoder = PostboxDecoder(buffer: MemoryBuffer(data: entity.document))
-        if let file = decoder.decodeRootObject() as? TelegramMediaFile {
-            self.account = account
-            self.entity = entity
-            self.file = file
-            self.animated = file.isAnimatedSticker || file.isVideoSticker
-            
-            if file.isAnimatedSticker || file.isVideoSticker {
-                self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
-                if let source = self.source {
-                    let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
-                    let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
-                    self.disposables.add((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
-                        |> deliverOn(self.queue)).start(next: { [weak self] path, complete in
-                        if let strongSelf = self, complete {
-                            if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
-                                let queue = strongSelf.queue
-                                let frameSource = AnimatedStickerCachedFrameSource(queue: queue, data: data, complete: complete, notifyUpdated: {})!
-                                strongSelf.frameCount = frameSource.frameCount
-                                strongSelf.frameRate = frameSource.frameRate
-                                
-                                let duration = Double(frameSource.frameCount) / Double(frameSource.frameRate)
-                                strongSelf.totalDuration = duration
-                                
-                                strongSelf.durationPromise.set(.single(duration))
-                                
-                                let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
-                                    return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
-                                })
-                                strongSelf.frameQueue.set(.single(frameQueue))
-                            }
-                        }
-                    }))
-                }
-            } else {
-                self.disposables.add((chatMessageSticker(account: self.account, userLocation: .other, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
-                |> deliverOn(self.queue)).start(next: { [weak self] generator in
-                    if let strongSelf = self {
-                        let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: entity.baseSize, boundingSize: entity.baseSize, intrinsicInsets: UIEdgeInsets()))
-                        let image = context?.generateImage()
-                        if let image = image {
-                            strongSelf.imagePromise.set(.single(image))
+    init(account: Account, entity: DrawingStickerEntity) {
+        self.account = account
+        self.entity = entity
+        self.file = entity.file
+        self.animated = file.isAnimatedSticker || file.isVideoSticker
+        
+        if file.isAnimatedSticker || file.isVideoSticker {
+            self.source = AnimatedStickerResourceSource(account: account, resource: file.resource, isVideo: file.isVideoSticker)
+            if let source = self.source {
+                let dimensions = self.file.dimensions ?? PixelDimensions(width: 512, height: 512)
+                let fittedDimensions = dimensions.cgSize.aspectFitted(CGSize(width: 384, height: 384))
+                self.disposables.add((source.cachedDataPath(width: Int(fittedDimensions.width), height: Int(fittedDimensions.height))
+                    |> deliverOn(self.queue)).start(next: { [weak self] path, complete in
+                    if let strongSelf = self, complete {
+                        if let data = try? Data(contentsOf: URL(fileURLWithPath: path), options: [.mappedRead]) {
+                            let queue = strongSelf.queue
+                            let frameSource = AnimatedStickerCachedFrameSource(queue: queue, data: data, complete: complete, notifyUpdated: {})!
+                            strongSelf.frameCount = frameSource.frameCount
+                            strongSelf.frameRate = frameSource.frameRate
+                            
+                            let duration = Double(frameSource.frameCount) / Double(frameSource.frameRate)
+                            strongSelf.totalDuration = duration
+                            
+                            strongSelf.durationPromise.set(.single(duration))
+                            
+                            let frameQueue = QueueLocalObject<AnimatedStickerFrameQueue>(queue: queue, generate: {
+                                return AnimatedStickerFrameQueue(queue: queue, length: 1, source: frameSource)
+                            })
+                            strongSelf.frameQueue.set(.single(frameQueue))
                         }
                     }
                 }))
             }
         } else {
-            return nil
+            self.disposables.add((chatMessageSticker(account: self.account, userLocation: .other, file: self.file, small: false, fetched: true, onlyFullSize: true, thumbnail: false, synchronousLoad: false)
+            |> deliverOn(self.queue)).start(next: { [weak self] generator in
+                if let strongSelf = self {
+                    let context = generator(TransformImageArguments(corners: ImageCorners(), imageSize: entity.baseSize, boundingSize: entity.baseSize, intrinsicInsets: UIEdgeInsets()))
+                    let image = context?.generateImage()
+                    if let image = image {
+                        strongSelf.imagePromise.set(.single(image))
+                    }
+                }
+            }))
         }
     }
     
@@ -277,6 +272,126 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     }
 }
 
+private class LegacyPaintSimpleShapeEntity: LegacyPaintEntity {
+    var position: CGPoint {
+        return self.entity.position
+    }
+
+    var scale: CGFloat {
+        return 1.0
+    }
+
+    var angle: CGFloat {
+        return self.entity.rotation
+    }
+    
+    var baseSize: CGSize? {
+        return self.entity.size
+    }
+    
+    var mirrored: Bool {
+        return false
+    }
+
+    let entity: DrawingSimpleShapeEntity
+
+    init(entity: DrawingSimpleShapeEntity) {
+        self.entity = entity
+    }
+
+    var cachedCIImage: CIImage?
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
+        var image: CIImage?
+        if let cachedImage = self.cachedCIImage {
+            image = cachedImage
+        } else if let renderImage = entity.renderImage {
+            image = CIImage(image: renderImage)
+            self.cachedCIImage = image
+        }
+        completion(image)
+    }
+}
+
+private class LegacyPaintBubbleEntity: LegacyPaintEntity {
+    var position: CGPoint {
+        return self.entity.position
+    }
+
+    var scale: CGFloat {
+        return 1.0
+    }
+
+    var angle: CGFloat {
+        return self.entity.rotation
+    }
+    
+    var baseSize: CGSize? {
+        return self.entity.size
+    }
+    
+    var mirrored: Bool {
+        return false
+    }
+
+    let entity: DrawingBubbleEntity
+
+    init(entity: DrawingBubbleEntity) {
+        self.entity = entity
+    }
+
+    var cachedCIImage: CIImage?
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
+        var image: CIImage?
+        if let cachedImage = self.cachedCIImage {
+            image = cachedImage
+        } else if let renderImage = entity.renderImage {
+            image = CIImage(image: renderImage)
+            self.cachedCIImage = image
+        }
+        completion(image)
+    }
+}
+
+private class LegacyPaintVectorEntity: LegacyPaintEntity {
+    var position: CGPoint {
+        return CGPoint(x: self.entity.drawingSize.width * 0.5, y: self.entity.drawingSize.height * 0.5)
+    }
+
+    var scale: CGFloat {
+        return 1.0
+    }
+
+    var angle: CGFloat {
+        return 0.0
+    }
+    
+    var baseSize: CGSize? {
+        return self.entity.drawingSize
+    }
+    
+    var mirrored: Bool {
+        return false
+    }
+
+    let entity: DrawingVectorEntity
+
+    init(entity: DrawingVectorEntity) {
+        self.entity = entity
+    }
+
+    var cachedCIImage: CIImage?
+    func image(for time: CMTime, fps: Int, completion: @escaping (CIImage?) -> Void) {
+        var image: CIImage?
+        if let cachedImage = self.cachedCIImage {
+            image = cachedImage
+        } else if let renderImage = entity.renderImage {
+            image = CIImage(image: renderImage)
+            self.cachedCIImage = image
+        }
+        completion(image)
+    }
+}
+
 public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRenderer {
     private let account: Account?
     private let queue = Queue()
@@ -290,19 +405,24 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
         self.originalSize = adjustments.originalSize
         self.cropRect = adjustments.cropRect.isEmpty ? nil : adjustments.cropRect
         
-        let entities: [LegacyPaintEntity] = []
-//        if let paintingData = adjustments.paintingData, let paintingEntities = paintingData.entities {
-//            for paintingEntity in paintingEntities {
-//                if let sticker = paintingEntity as? TGPhotoPaintStickerEntity {
-//                    if let account = account, let entity = LegacyPaintStickerEntity(account: account, entity: sticker) {
-//                        entities.append(entity)
-//                    }
-//                } else if let text = paintingEntity as? TGPhotoPaintTextEntity {
-//                    entities.append(LegacyPaintTextEntity(entity: text))
-//                }
-//            }
-//        }
-        self.entities = entities
+        var renderEntities: [LegacyPaintEntity] = []
+        if let account = account, let paintingData = adjustments.paintingData, let entitiesData = paintingData.entitiesData {
+            let entities = decodeDrawingEntities(data: entitiesData)
+            for entity in entities {
+                if let sticker = entity as? DrawingStickerEntity {
+                    renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
+                } else if let _ = entity as? DrawingTextEntity {
+//                    renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
+                } else if let simpleShape = entity as? DrawingSimpleShapeEntity {
+                    renderEntities.append(LegacyPaintSimpleShapeEntity(entity: simpleShape))
+                } else if let bubble = entity as? DrawingBubbleEntity {
+                    renderEntities.append(LegacyPaintBubbleEntity(entity: bubble))
+                } else if let vector = entity as? DrawingVectorEntity {
+                    renderEntities.append(LegacyPaintVectorEntity(entity: vector))
+                }
+            }
+        }
+        self.entities = renderEntities
         
         super.init()
     }
@@ -360,7 +480,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
     public func entities(for time: CMTime, fps: Int, size: CGSize, completion: (([CIImage]?) -> Void)!) {
         let entities = self.entities
         let maxSide = max(size.width, size.height)
-        let paintingScale = maxSide / 1920.0
+        let paintingScale = maxSide / 2560.0
         
         self.queue.async {
             if entities.isEmpty {
@@ -394,7 +514,7 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
                             }
                         
                             transform = CGAffineTransform(translationX: entity.position.x * paintingScale, y: size.height - entity.position.y * paintingScale)
-                            transform = transform.rotated(by: CGFloat.pi * 2 - entity.angle)
+                            transform = transform.rotated(by: CGFloat.pi * 2.0 - entity.angle)
                             transform = transform.scaledBy(x: scale, y: scale)
                             if entity.mirrored {
                                 transform = transform.scaledBy(x: -1.0, y: 1.0)

@@ -16,6 +16,7 @@ import LottieAnimationComponent
 import ViewControllerComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
+import EntityKeyboard
 
 enum DrawingToolState: Equatable {
     enum Key: CaseIterable {
@@ -463,6 +464,8 @@ private final class DrawingScreenComponent: CombinedComponent {
         var selectedEntity: DrawingEntity?
         
         var lastFontSize: CGFloat = 0.5
+        
+        private let stickerPickerInputData = Promise<StickerPickerInputData>()
     
         init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updatePlayback: ActionSlot<Bool>, present: @escaping (ViewController) -> Void) {
             self.context = context
@@ -478,6 +481,56 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentColor = self.drawingState.tools.first?.color ?? DrawingColor(rgb: 0xffffff)
             
             self.updateToolState.invoke(self.drawingState.currentToolState)
+            
+            let stickerPickerInputData = self.stickerPickerInputData
+            Queue.concurrentDefaultQueue().after(0.5, {
+                let emojiItems = EmojiPagerContentComponent.emojiInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    isStandalone: false,
+                    isStatusSelection: false,
+                    isReactionSelection: false,
+                    isEmojiSelection: true,
+                    topReactionItems: [],
+                    areUnicodeEmojiEnabled: true,
+                    areCustomEmojiEnabled: true,
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false
+                )
+                
+                let stickerItems = EmojiPagerContentComponent.stickerInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+                    stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false,
+                    hasTrending: true
+                )
+                
+                let maskItems = EmojiPagerContentComponent.stickerInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
+                    stickerOrderedItemListCollectionIds: [],
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false,
+                    hasTrending: false
+                )
+                
+                let signal = combineLatest(queue: .mainQueue(),
+                    emojiItems,
+                    stickerItems,
+                    maskItems
+                ) |> map { emoji, stickers, masks -> StickerPickerInputData in
+                    return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: masks)
+                }
+                
+                stickerPickerInputData.set(signal)
+            })
         }
                 
         private var currentToolState: DrawingToolState {
@@ -717,7 +770,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentMode = .sticker
             
             self.updatePlayback.invoke(false)
-            let controller = StickerPickerScreen(context: self.context)
+            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
             controller.completion = { [weak self] file in
                 self?.updatePlayback.invoke(true)
                 
@@ -2363,13 +2416,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                     }
                     strongSelf.toggleInputMode()
                 }
-//                inputView?.presentController = { [weak self] c in
-//                    guard let strongSelf = self else {
-//                        return
-//                    }
-//                    strongSelf.presentController(c)
-//                }
-                
                 textView.inputView = inputView
             } else {
                 textView.inputView = nil

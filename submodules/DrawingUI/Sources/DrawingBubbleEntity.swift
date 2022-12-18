@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingBubbleEntity: DrawingEntity, Codable {
+public final class DrawingBubbleEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case drawType
@@ -16,27 +16,29 @@ final class DrawingBubbleEntity: DrawingEntity, Codable {
         case tailPosition
     }
     
-    public enum DrawType: Codable {
+    enum DrawType: Codable {
         case fill
         case stroke
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
+    public let uuid: UUID
+    public let isAnimated: Bool
     
     var drawType: DrawType
-    var color: DrawingColor
-    var lineWidth: CGFloat
+    public var color: DrawingColor
+    public var lineWidth: CGFloat
     
     var referenceDrawingSize: CGSize
-    var position: CGPoint
-    var size: CGSize
-    var rotation: CGFloat
+    public var position: CGPoint
+    public var size: CGSize
+    public var rotation: CGFloat
     var tailPosition: CGPoint
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.position
     }
+    
+    public var renderImage: UIImage?
     
     init(drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -53,7 +55,7 @@ final class DrawingBubbleEntity: DrawingEntity, Codable {
         self.tailPosition = CGPoint(x: 0.16, y: 0.18)
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = false
@@ -67,7 +69,7 @@ final class DrawingBubbleEntity: DrawingEntity, Codable {
         self.tailPosition = try container.decode(CGPoint.self, forKey: .tailPosition)
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.drawType, forKey: .drawType)
@@ -80,7 +82,7 @@ final class DrawingBubbleEntity: DrawingEntity, Codable {
         try container.encode(self.tailPosition, forKey: .tailPosition)
     }
         
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingBubbleEntity(drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
@@ -89,8 +91,8 @@ final class DrawingBubbleEntity: DrawingEntity, Codable {
         return newEntity
     }
      
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingBubbleEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView

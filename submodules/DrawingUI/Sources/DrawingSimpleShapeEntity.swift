@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
+public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case shapeType
@@ -27,22 +27,24 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         case stroke
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
+    public let uuid: UUID
+    public let isAnimated: Bool
     
     var shapeType: ShapeType
     var drawType: DrawType
-    var color: DrawingColor
-    var lineWidth: CGFloat
+    public var color: DrawingColor
+    public var lineWidth: CGFloat
     
     var referenceDrawingSize: CGSize
-    var position: CGPoint
-    var size: CGSize
-    var rotation: CGFloat
+    public var position: CGPoint
+    public var size: CGSize
+    public var rotation: CGFloat
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.position
     }
+    
+    public var renderImage: UIImage?
     
     init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -59,7 +61,7 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.rotation = 0.0
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = false
@@ -73,7 +75,7 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.shapeType, forKey: .shapeType)
@@ -86,7 +88,7 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         try container.encode(self.rotation, forKey: .rotation)
     }
         
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingSimpleShapeEntity(shapeType: self.shapeType, drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
@@ -95,8 +97,8 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingSimpleShapeEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView

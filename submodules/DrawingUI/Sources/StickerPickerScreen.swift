@@ -14,7 +14,7 @@ import PagerComponent
 import FeaturedStickersScreen
 import TelegramNotices
 
-struct InputData: Equatable {
+struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
     var stickers: EmojiPagerContentComponent?
     var masks: EmojiPagerContentComponent?
@@ -37,7 +37,7 @@ private final class StickerSelectionComponent: Component {
     let strings: PresentationStrings
     let deviceMetrics: DeviceMetrics
     let bottomInset: CGFloat
-    let content: InputData
+    let content: StickerPickerInputData
     let backgroundColor: UIColor
     let separatorColor: UIColor
     
@@ -46,7 +46,7 @@ private final class StickerSelectionComponent: Component {
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
         bottomInset: CGFloat,
-        content: InputData,
+        content: StickerPickerInputData,
         backgroundColor: UIColor,
         separatorColor: UIColor
     ) {
@@ -197,7 +197,7 @@ private final class StickerSelectionComponent: Component {
     }
 }
 
-public class StickerPickerScreen: ViewController {
+class StickerPickerScreen: ViewController {
     final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: StickerPickerScreen?
@@ -209,7 +209,7 @@ public class StickerPickerScreen: ViewController {
         let scrollView: UIScrollView
         let hostView: ComponentHostView<Empty>
         
-        private var content: InputData?
+        private var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
@@ -251,51 +251,9 @@ public class StickerPickerScreen: ViewController {
             self.containerView.addSubview(self.scrollView)
             self.scrollView.addSubview(self.hostView)
             
-            let emojiItems = EmojiPagerContentComponent.emojiInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                isStandalone: false,
-                isStatusSelection: false,
-                isReactionSelection: false,
-                isEmojiSelection: true,
-                topReactionItems: [],
-                areUnicodeEmojiEnabled: true,
-                areCustomEmojiEnabled: true,
-                chatPeerId: context.account.peerId,
-                hasSearch: false
-            )
-            
-            let stickerItems = EmojiPagerContentComponent.stickerInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
-                stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
-                chatPeerId: context.account.peerId,
-                hasSearch: false,
-                hasTrending: true
-            )
-            
-            let maskItems = EmojiPagerContentComponent.stickerInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
-                stickerOrderedItemListCollectionIds: [],
-                chatPeerId: context.account.peerId,
-                hasSearch: false,
-                hasTrending: false
-            )
-            
-            let signal = combineLatest(queue: .mainQueue(),
-                emojiItems,
-                stickerItems,
-                maskItems
-            )
-            self.contentDisposable.set(signal.start(next: { [weak self] emoji, stickers, masks in
+            self.contentDisposable.set(controller.inputData.start(next: { [weak self] inputData in
                 if let strongSelf = self {
-                    strongSelf.updateContent(InputData(emoji: emoji, stickers: stickers, masks: masks))
+                    strongSelf.updateContent(inputData)
                 }
             }))
         }
@@ -304,7 +262,7 @@ public class StickerPickerScreen: ViewController {
             self.contentDisposable.dispose()
         }
         
-        func updateContent(_ content: InputData) {
+        func updateContent(_ content: StickerPickerInputData) {
             self.content = content
             
             content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -999,6 +957,7 @@ public class StickerPickerScreen: ViewController {
     
     private let context: AccountContext
     private let theme: PresentationTheme
+    private let inputData: Signal<StickerPickerInputData, NoError>
     
     private var currentLayout: ContainerViewLayout?
     
@@ -1007,26 +966,28 @@ public class StickerPickerScreen: ViewController {
     
     var completion: (TelegramMediaFile?) -> Void = { _ in }
     
-    public init(context: AccountContext) {
+    init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
+        self.inputData = inputData
         
         super.init(navigationBarPresentationData: nil)
         
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = .Ignore
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override open func loadDisplayNode() {
+    override func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self, theme: self.theme)
         self.displayNodeDidLoad()
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
-    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         if flag {
             self.node.animateOut(completion: {
@@ -1039,19 +1000,19 @@ public class StickerPickerScreen: ViewController {
         }
     }
     
-    override open func viewDidAppear(_ animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.node.updateIsVisible(isVisible: true)
     }
     
-    override open func viewDidDisappear(_ animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.node.updateIsVisible(isVisible: false)
     }
         
-    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         

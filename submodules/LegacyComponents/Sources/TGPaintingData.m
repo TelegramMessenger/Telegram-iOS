@@ -31,10 +31,11 @@
     return paintingData;
 }
 
-+ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData {
++ (instancetype)dataWithPaintingImagePath:(NSString *)imagePath entitiesData:(NSData *)entitiesData hasAnimation:(bool)hasAnimation {
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_imagePath = imagePath;
     paintingData->_entitiesData = entitiesData;
+    paintingData->_hasAnimation = hasAnimation;
     return paintingData;
 }
 
@@ -49,6 +50,7 @@
 {
     TGPaintingData *paintingData = [[TGPaintingData alloc] init];
     paintingData->_entitiesData = _entitiesData;
+    paintingData->_hasAnimation = _hasAnimation;
     return paintingData;
 }
 

@@ -30,7 +30,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
     private var videoStartTimestamp: Double?
     
     private let buttonNode: HighlightTrackingButtonNode
-    private let buttonStarsNode: PremiumStarsNode
     private let buttonTitleNode: TextNode
     
     private var absoluteRect: (CGRect, CGSize)?
@@ -51,9 +50,7 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.buttonNode = HighlightTrackingButtonNode()
         self.buttonNode.clipsToBounds = true
         self.buttonNode.cornerRadius = 17.0
-                
-        self.buttonStarsNode = PremiumStarsNode()
-        
+                        
         self.buttonTitleNode = TextNode()
         self.buttonTitleNode.isUserInteractionEnabled = false
         self.buttonTitleNode.displaysAsynchronously = false
@@ -65,7 +62,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.addSubnode(self.imageNode)
     
         self.addSubnode(self.buttonNode)
-        self.buttonNode.addSubnode(self.buttonStarsNode)
         self.addSubnode(self.buttonTitleNode)
         
         self.buttonNode.highligthedChanged = { [weak self] highlighted in
@@ -273,7 +269,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                             
                             let buttonSize = CGSize(width: buttonTitleLayout.size.width + 38.0, height: 34.0)
                             strongSelf.buttonNode.frame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonSize.width) / 2.0), y: subtitleFrame.maxY + 10.0), size: buttonSize)
-                            strongSelf.buttonStarsNode.frame = CGRect(origin: .zero, size: buttonSize)
 
                             if item.controllerInteraction.presentationContext.backgroundNode?.hasExtraBubbleBackground() == true {
                                 if strongSelf.mediaBackgroundContent == nil, let backgroundContent = item.controllerInteraction.presentationContext.backgroundNode?.makeBubbleBackground(for: .free) {

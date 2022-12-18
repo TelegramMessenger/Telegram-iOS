@@ -3,7 +3,7 @@ import UIKit
 import LegacyComponents
 import AccountContext
 
-protocol DrawingEntity: AnyObject {
+public protocol DrawingEntity: AnyObject {
     var uuid: UUID { get }
     var isAnimated: Bool { get }
     var center: CGPoint { get }
@@ -54,6 +54,13 @@ enum CodableDrawingEntity {
             return entity
         }
     }
+}
+
+public func decodeDrawingEntities(data: Data) -> [DrawingEntity] {
+    if let codableEntities = try? JSONDecoder().decode([CodableDrawingEntity].self, from: data) {
+        return codableEntities.map { $0.entity }
+    }
+    return []
 }
 
 extension CodableDrawingEntity: Codable {
@@ -226,11 +233,7 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
             sticker.position = center
             if setup {
                 sticker.referenceDrawingSize = self.size
-                if !sticker.file.isVideoSticker && sticker.file.mimeType.hasSuffix("webm") {
-                    sticker.scale = 4.0
-                } else {
-                    sticker.scale = 1.0
-                }
+                sticker.scale = 1.0
             }
         } else if let bubble = entity as? DrawingBubbleEntity {
             bubble.position = center

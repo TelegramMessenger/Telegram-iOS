@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingVectorEntity: DrawingEntity, Codable {
+public final class DrawingVectorEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case type
@@ -22,14 +22,14 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         case twoSidedArrow
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
+    public let uuid: UUID
+    public let isAnimated: Bool
     
     var type: VectorType
-    var color: DrawingColor
-    var lineWidth: CGFloat
+    public var color: DrawingColor
+    public var lineWidth: CGFloat
     
-    var drawingSize: CGSize
+    public var drawingSize: CGSize
     var referenceDrawingSize: CGSize
     var start: CGPoint
     var mid: (CGFloat, CGFloat)
@@ -46,9 +46,11 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         }
     }
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.start
     }
+    
+    public var renderImage: UIImage?
     
     init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -65,7 +67,7 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         self.end = CGPoint()
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = false
@@ -82,7 +84,7 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         self.end = try container.decode(CGPoint.self, forKey: .end)
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.type, forKey: .type)
@@ -95,7 +97,7 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         try container.encode(self.end, forKey: .end)
     }
     
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingVectorEntity(type: self.type, color: self.color, lineWidth: self.lineWidth)
         newEntity.drawingSize = self.drawingSize
         newEntity.referenceDrawingSize = self.referenceDrawingSize
@@ -105,8 +107,8 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingVectorEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
