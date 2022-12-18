@@ -147,7 +147,7 @@ final class MediaStreamVideoComponent: Component {
         
         private var isFullscreen: Bool = false
         private let videoLoadingThrottler = Throttler<Bool>(duration: 1, queue: .main)
-        
+        private var wasFullscreen: Bool = false
         private weak var state: State?
         
         override init(frame: CGRect) {
@@ -205,7 +205,7 @@ final class MediaStreamVideoComponent: Component {
                     addSubview(loadingBlurView)
                     if needsFadeInAnimation {
                         let anim = CABasicAnimation(keyPath: "opacity")
-                        anim.duration = 0.4
+                        anim.duration = 0.5
                         anim.fromValue = 0
                         anim.toValue = 1
                         loadingBlurView.layer.opacity = 1
@@ -239,7 +239,7 @@ final class MediaStreamVideoComponent: Component {
             } else {
                 if hadVideo && !isAnimating && loadingBlurView.layer.opacity == 1 {
                     let anim = CABasicAnimation(keyPath: "opacity")
-                    anim.duration = 0.25
+                    anim.duration = 0.35
                     anim.fromValue = 1.0
                     anim.toValue = 0.0
                     self.loadingBlurView.layer.opacity = 0
@@ -476,17 +476,27 @@ final class MediaStreamVideoComponent: Component {
                 videoView.clipsToBounds = true
                 videoView.layer.cornerRadius = videoCornerRadius
                 
-                transition.withAnimation(.none).setFrame(view: videoView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize), completion: nil)
+                let videoFrameUpdateTransition: Transition
+                if self.wasFullscreen != component.isFullscreen {
+                    videoFrameUpdateTransition = transition
+                } else {
+                    videoFrameUpdateTransition = transition.withAnimation(.none)
+                }
+                self.wasFullscreen = component.isFullscreen
+                
+                videoFrameUpdateTransition.setFrame(view: videoView, frame: CGRect(origin: CGPoint(x: floor((availableSize.width - videoSize.width) / 2.0), y: floor((availableSize.height - videoSize.height) / 2.0)), size: videoSize), completion: nil)
                 
                 if let videoBlurView = self.videoBlurView {
+                    
                     videoBlurView.updateIsEnabled(component.isVisible)
                     if component.isFullscreen {
-                        transition.withAnimation(.none).setFrame(view: videoBlurView, frame: CGRect(
+                        videoFrameUpdateTransition.setFrame(view: videoBlurView, frame: CGRect(
                             origin: CGPoint(x: floor((availableSize.width - blurredVideoSize.width) / 2.0), y: floor((availableSize.height - blurredVideoSize.height) / 2.0)),
                             size: blurredVideoSize
                         ), completion: nil)
                     } else {
-                        videoBlurView.frame = videoView.frame.insetBy(dx: -69 * aspect, dy: -69)
+                        videoFrameUpdateTransition.setFrame(view: videoBlurView, frame: videoView.frame.insetBy(dx: -69 * aspect, dy: -69))
+//                        videoBlurView.frame = videoView.frame.insetBy(dx: -69 * aspect, dy: -69)
                     }
                     
                     if !component.isFullscreen {

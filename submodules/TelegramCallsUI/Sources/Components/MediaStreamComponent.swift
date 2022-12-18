@@ -850,6 +850,7 @@ public final class MediaStreamComponent: CombinedComponent {
 //                                guard let _ = state.videoSize else { return }
                                 state.isFullscreen.toggle()
                                 if state.isFullscreen {
+                                    state.dismissOffset = 0.0
 //                                    if size.width > size.height {
                                     let currentOrientation = state.prevFullscreenOrientation ?? UIDevice.current.orientation
                                     switch currentOrientation {
@@ -869,7 +870,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                     controller.updateOrientation(orientation: .portrait)
                                 }
                                 if !canEnforceOrientation {
-                                    state.updated()
+                                    state.updated(transition: .easeInOut(duration: 0.25))
                                 }
                             }
                         }
@@ -943,7 +944,7 @@ public final class MediaStreamComponent: CombinedComponent {
                                 if canEnforceOrientation {
                                     controller.updateOrientation(orientation: .portrait)
                                 } else {
-                                    state.updated() // updated(.easeInOut(duration: 0.3))
+                                    state.updated(transition: .easeInOut(duration: 0.25)) // updated(.easeInOut(duration: 0.3))
                                 }
                             }
                         }
@@ -1302,6 +1303,7 @@ final class StreamTitleComponent: Component {
         private let textView: ComponentHostView<Empty>
         private var indicatorView: UIImageView?
         let liveIndicatorView = LiveIndicatorView()
+        let titleLabel = UILabel()
         
         private let trackingLayer: HierarchyTrackingLayer
         
@@ -1312,7 +1314,8 @@ final class StreamTitleComponent: Component {
             
             super.init(frame: frame)
             
-            self.addSubview(self.textView)
+//            self.addSubview(self.textView)
+            self.addSubview(self.titleLabel)
             self.addSubview(self.liveIndicatorView)
             
             self.trackingLayer.didEnterHierarchy = { [weak self] in
@@ -1343,16 +1346,26 @@ final class StreamTitleComponent: Component {
         }
         
         func update(component: StreamTitleComponent, availableSize: CGSize, transition: Transition) -> CGSize {
-            let textSize = self.textView.update(
-                transition: .immediate,
-                component: AnyComponent(Text(
-                    text: component.text,
-                    font: Font.semibold(17.0),
-                    color: .white
-                )),
-                environment: {},
-                containerSize: availableSize
-            )
+            let liveIndicatorWidth: CGFloat = 40
+            self.titleLabel.text = component.text
+            self.titleLabel.font = Font.semibold(17.0)
+            self.titleLabel.textColor = .white
+            self.titleLabel.textAlignment = .center
+            self.titleLabel.numberOfLines = 1
+            self.titleLabel.invalidateIntrinsicContentSize()
+            
+            let textSize = CGSize(width: min(availableSize.width - 4 - liveIndicatorWidth, self.titleLabel.intrinsicContentSize.width), height: availableSize.height)
+            
+//            let textSize = self.textView.update(
+//                transition: .immediate,
+//                component: AnyComponent(Text(
+//                    text: component.text,
+//                    font: Font.semibold(17.0),
+//                    color: .white
+//                )),
+//                environment: {},
+//                containerSize: CGSize(width: availableSize.width - 4 - liveIndicatorWidth, height: availableSize.height)
+//            )
             
             if component.isRecording {
                 if self.indicatorView == nil {
@@ -1371,9 +1384,10 @@ final class StreamTitleComponent: Component {
             let sideInset: CGFloat = 20.0
             let size = CGSize(width: textSize.width + sideInset * 2.0, height: textSize.height)
             let textFrame = CGRect(origin: CGPoint(x: sideInset, y: floor((size.height - textSize.height) / 2.0)), size: textSize)
-            self.textView.frame = textFrame
+//            self.textView.frame = textFrame
+            self.titleLabel.frame = textFrame
             
-            liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: floorToScreenPixels((size.height - textSize.height) / 2.0 - 2) + 1.0), size: .init(width: 40, height: 22))
+            liveIndicatorView.frame = CGRect(origin: CGPoint(x: textFrame.maxX + 6.0, y: /*floorToScreenPixels((size.height - textSize.height) / 2.0 - 2) + 1.0*/textFrame.midY - 22 / 2), size: .init(width: 40, height: 22))
             self.liveIndicatorView.toggle(isLive: component.isActive)
             
             if let indicatorView = self.indicatorView, let image = indicatorView.image {
@@ -1471,7 +1485,7 @@ private final class NavigationBarComponent: CombinedComponent {
             let centerItem = context.component.centerItem.flatMap { centerItemComponent in
                 return centerItem.update(
                     component: centerItemComponent,
-                    availableSize: CGSize(width: availableWidth, height: contentHeight),
+                    availableSize: CGSize(width: availableWidth - 44 - 44, height: contentHeight),
                     transition: context.transition
                 )
             }
