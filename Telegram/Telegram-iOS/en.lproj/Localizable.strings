@@ -8510,6 +8510,9 @@ Sorry for the inconvenience.";
 "Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo is now set for those who are restricted from viewing your main photo.";
 "Privacy.ProfilePhoto.PublicVideoSuccess" = "This video is now set for those who are restricted from viewing your main photo.";
 
+"Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups which will not see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups which will still see your profile photo.";
+
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
 
 "Common.Paste" = "Paste";

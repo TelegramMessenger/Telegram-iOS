@@ -2103,7 +2103,7 @@ public final class EmojiPagerContentComponent: Component {
         public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void
         public let deleteBackwards: (() -> Void)?
         public let openStickerSettings: (() -> Void)?
-        public let openFeatured: () -> Void
+        public let openFeatured: (() -> Void)?
         public let openSearch: () -> Void
         public let addGroupAction: (AnyHashable, Bool) -> Void
         public let clearGroup: (AnyHashable) -> Void
@@ -2124,7 +2124,7 @@ public final class EmojiPagerContentComponent: Component {
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
             deleteBackwards: (() -> Void)?,
             openStickerSettings: (() -> Void)?,
-            openFeatured: @escaping () -> Void,
+            openFeatured: (() -> Void)?,
             openSearch: @escaping () -> Void,
             addGroupAction: @escaping (AnyHashable, Bool) -> Void,
             clearGroup: @escaping (AnyHashable) -> Void,

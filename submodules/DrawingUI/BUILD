@@ -90,6 +90,7 @@ swift_library(
         "//submodules/TelegramUI/Components/EmojiTextAttachmentView:EmojiTextAttachmentView",
         "//submodules/TelegramUI/Components/ChatEntityKeyboardInputNode:ChatEntityKeyboardInputNode",
         "//submodules/FeaturedStickersScreen:FeaturedStickersScreen",
+        "//submodules/TelegramNotices:TelegramNotices",
     ],
     visibility = [
         "//visibility:public",

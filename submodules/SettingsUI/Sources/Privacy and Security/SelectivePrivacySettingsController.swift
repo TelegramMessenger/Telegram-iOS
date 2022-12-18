@@ -698,7 +698,17 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         case .nobody:
             entries.append(.enableFor(presentationData.theme, enableForText, stringForUserCount(state.enableFor, strings: presentationData.strings)))
     }
-    entries.append(.peersInfo(presentationData.theme, presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp))
+    let exceptionsInfo: String
+    if case .profilePhoto = kind {
+        if case .nobody = state.setting {
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideAddInfo
+        } else {
+            exceptionsInfo = presentationData.strings.Privacy_ProfilePhoto_CustomOverrideInfo
+        }
+    } else {
+        exceptionsInfo = presentationData.strings.PrivacyLastSeenSettings_CustomShareSettingsHelp
+    }
+    entries.append(.peersInfo(presentationData.theme, exceptionsInfo))
     
     if case .voiceCalls = kind, let p2pMode = state.callP2PMode, let integrationAvailable = state.callIntegrationAvailable, let integrationEnabled = state.callIntegrationEnabled  {
         entries.append(.callsP2PHeader(presentationData.theme, presentationData.strings.Privacy_Calls_P2P.uppercased()))
@@ -945,43 +955,6 @@ func selectivePrivacySettingsController(
                             }
                         }
                     }
-                    
-//                    let controller = selectivePrivacyPeersController(context: context, title: title, initialPeers: updatedPeerIds, updated: { updatedPeerIds in
-//                        updateState { state in
-//                            if enable {
-//                                switch target {
-//                                    case .main:
-//                                        var disableFor = state.disableFor
-//                                        for (key, _) in updatedPeerIds {
-//                                            disableFor.removeValue(forKey: key)
-//                                        }
-//                                        return state.withUpdatedEnableFor(updatedPeerIds).withUpdatedDisableFor(disableFor)
-//                                    case .callP2P:
-//                                        var callP2PDisableFor = state.callP2PDisableFor ?? [:]
-//                                        for (key, _) in updatedPeerIds {
-//                                            callP2PDisableFor.removeValue(forKey: key)
-//                                        }
-//                                        return state.withUpdatedCallP2PEnableFor(updatedPeerIds).withUpdatedCallP2PDisableFor(callP2PDisableFor)
-//                                }
-//                            } else {
-//                                switch target {
-//                                    case .main:
-//                                        var enableFor = state.enableFor
-//                                        for (key, _) in updatedPeerIds {
-//                                            enableFor.removeValue(forKey: key)
-//                                        }
-//                                        return state.withUpdatedDisableFor(updatedPeerIds).withUpdatedEnableFor(enableFor)
-//                                    case .callP2P:
-//                                        var callP2PEnableFor = state.callP2PEnableFor ?? [:]
-//                                        for (key, _) in updatedPeerIds {
-//                                            callP2PEnableFor.removeValue(forKey: key)
-//                                        }
-//                                        return state.withUpdatedCallP2PDisableFor(updatedPeerIds).withUpdatedCallP2PEnableFor(callP2PEnableFor)
-//                                }
-//                            }
-//                        }
-//                    })
-//                    pushControllerImpl?(controller, false)
                 })
             }))
             presentControllerImpl?(controller, ViewControllerPresentationArguments(presentationAnimation: .modalSheet))

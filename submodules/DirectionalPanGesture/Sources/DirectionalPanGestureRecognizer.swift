@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-public class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
+open class DirectionalPanGestureRecognizer: UIPanGestureRecognizer {
     public enum Direction {
         case horizontal
         case vertical
