@@ -1744,7 +1744,7 @@ final class ColorSwatchComponent: Component {
             if case .pallete = component.type {
                 contentSize = availableSize
             } else {
-                contentSize = CGSize(width: 33.0, height: 33.0)
+                contentSize = CGSize(width: 24.0, height: 24.0)
             }
             self.contentView.frame = CGRect(origin: CGPoint(x: floor((availableSize.width - contentSize.width) / 2.0), y: floor((availableSize.height - contentSize.height) / 2.0)), size: contentSize)
             
@@ -1753,44 +1753,20 @@ final class ColorSwatchComponent: Component {
             case .main:
                 self.circleLayer.frame = bounds
                 if self.circleLayer.path == nil {
-                    self.circleLayer.path = UIBezierPath(ovalIn: bounds.insetBy(dx: 7.0, dy: 7.0)).cgPath
+                    self.circleLayer.path = UIBezierPath(ovalIn: bounds.insetBy(dx: 3.0, dy: 3.0)).cgPath
                 }
             
+                let ringFrame = bounds.insetBy(dx: -1.0, dy: -1.0)
                 if self.ringLayer == nil {
-                    if #available(iOS 12.0, *) {
-                        let ringLayer = SimpleGradientLayer()
-                        ringLayer.rasterizationScale = UIScreen.main.scale
-                        ringLayer.shouldRasterize = true
-                        ringLayer.type = .conic
-                        ringLayer.colors = [
-                            UIColor(rgb: 0xe1564c).cgColor,
-                            UIColor(rgb: 0xad4dc9).cgColor,
-                            UIColor(rgb: 0x579ff2).cgColor,
-                            UIColor(rgb: 0x4fcbd0).cgColor,
-                            UIColor(rgb: 0x80e655).cgColor,
-                            UIColor(rgb: 0xdad138).cgColor,
-                            UIColor(rgb: 0xe59645).cgColor,
-                            UIColor(rgb: 0xe1564c).cgColor
-                        ]
-                        ringLayer.locations = [0.0, 0.15, 0.3, 0.45, 0.6, 0.75, 0.9, 1.0]
-                        ringLayer.frame = bounds
-                        ringLayer.startPoint = CGPoint(x: 0.5, y: 0.5)
-                        ringLayer.endPoint = CGPoint(x: 1.0, y: 0.55)
-                        self.contentView.layer.addSublayer(ringLayer)
-                        
-                        self.ringLayer = ringLayer
-                        
-                    } else {
-                        let ringLayer = SimpleLayer()
-                        ringLayer.contents = UIImage(bundleImageName: "Media Editor/RoundSpectrum")?.cgImage
-                        ringLayer.frame = bounds
-                        self.contentView.layer.addSublayer(ringLayer)
-                        
-                        self.ringLayer = ringLayer
-                    }
+                    let ringLayer = SimpleLayer()
+                    ringLayer.contents = UIImage(bundleImageName: "Media Editor/RoundSpectrum")?.cgImage
+                    ringLayer.frame = ringFrame
+                    self.contentView.layer.addSublayer(ringLayer)
+                    
+                    self.ringLayer = ringLayer
                     
                     let ringMaskLayer = SimpleShapeLayer()
-                    ringMaskLayer.frame = bounds
+                    ringMaskLayer.frame = CGRect(origin: .zero, size: ringFrame.size)
                     ringMaskLayer.strokeColor = UIColor.white.cgColor
                     ringMaskLayer.fillColor = UIColor.clear.cgColor
                     self.ringMaskLayer = ringMaskLayer
@@ -1799,11 +1775,11 @@ final class ColorSwatchComponent: Component {
             
                 if let ringMaskLayer = self.ringMaskLayer {
                     if component.color == nil {
-                        transition.setShapeLayerPath(layer: ringMaskLayer, path: UIBezierPath(ovalIn: CGRect(origin: .zero, size: contentSize).insetBy(dx: 8.25, dy: 8.25)).cgPath)
-                        transition.setShapeLayerLineWidth(layer: ringMaskLayer, lineWidth: 16.5)
+                        transition.setShapeLayerPath(layer: ringMaskLayer, path: UIBezierPath(ovalIn: CGRect(origin: .zero, size: ringFrame.size).insetBy(dx: 7.0, dy: 7.0)).cgPath)
+                        transition.setShapeLayerLineWidth(layer: ringMaskLayer, lineWidth: 12.0)
                     } else {
-                        transition.setShapeLayerPath(layer: ringMaskLayer, path: UIBezierPath(ovalIn: CGRect(origin: .zero, size: contentSize).insetBy(dx: 1.5, dy: 1.5)).cgPath)
-                        transition.setShapeLayerLineWidth(layer: ringMaskLayer, lineWidth: 3.0)
+                        transition.setShapeLayerPath(layer: ringMaskLayer, path: UIBezierPath(ovalIn: CGRect(origin: .zero, size: ringFrame.size).insetBy(dx: 1.0, dy: 1.0)).cgPath)
+                        transition.setShapeLayerLineWidth(layer: ringMaskLayer, lineWidth: 2.0)
                     }
                 }
                 
@@ -1837,7 +1813,6 @@ final class ColorSwatchComponent: Component {
             if let color = component.color {
                 self.circleLayer.fillColor = color.toCGColor()
                 if case .pallete = component.type {
-                    
                     if color.toUIColor().rgb == 0x000000 {
                         self.circleLayer.strokeColor = UIColor(rgb: 0x1f1f1f).cgColor
                         self.circleLayer.lineWidth = 1.0

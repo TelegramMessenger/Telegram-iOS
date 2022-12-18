@@ -619,13 +619,16 @@ private func generateKnobImage() -> UIImage? {
 final class TextSizeSliderComponent: Component {
     let value: CGFloat
     let updated: (CGFloat) -> Void
+    let released: () -> Void
     
     public init(
         value: CGFloat,
-        updated: @escaping (CGFloat) -> Void
+        updated: @escaping (CGFloat) -> Void,
+        released: @escaping () -> Void
     ) {
         self.value = value
         self.updated = updated
+        self.released = released
     }
     
     public static func ==(lhs: TextSizeSliderComponent, rhs: TextSizeSliderComponent) -> Bool {
@@ -646,6 +649,7 @@ final class TextSizeSliderComponent: Component {
         private let knob = SimpleLayer()
     
         fileprivate var updated: (CGFloat) -> Void = { _ in }
+        fileprivate var released: () -> Void = { }
         
         init() {
             super.init(frame: CGRect())
@@ -684,7 +688,7 @@ final class TextSizeSliderComponent: Component {
                 if let size = self.validSize, let component = self.component {
                     let _ = self.updateLayout(size: size, component: component, transition: .easeInOut(duration: 0.2))
                 }
-                
+                self.released()
             default:
                 break
             }
@@ -741,8 +745,10 @@ final class TextSizeSliderComponent: Component {
                 transition.setSublayerTransform(layer: self.knobContainer, transform: isTracking ? CATransform3DIdentity : CATransform3DMakeTranslation(4.0, 0.0, 0.0))
             }
             
+            let knobTransition = self.isPanning ? transition.withAnimation(.none) : transition
             let knobSize = CGSize(width: 52.0, height: 52.0)
-            self.knob.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - knobSize.width) / 2.0), y: -12.0 + floorToScreenPixels((size.height + 24.0 - knobSize.height) * (1.0 - component.value))), size: knobSize)
+            let knobFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - knobSize.width) / 2.0), y: -12.0 + floorToScreenPixels((size.height + 24.0 - knobSize.height) * (1.0 - component.value))), size: knobSize)
+            knobTransition.setFrame(layer: self.knob, frame: knobFrame)
             
             transition.setFrame(view: self.backgroundNode.view, frame: CGRect(origin: CGPoint(), size: size))
             self.backgroundNode.update(size: size, transition: transition.containedViewLayoutTransition)
@@ -765,6 +771,7 @@ final class TextSizeSliderComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         view.updated = self.updated
+        view.released = self.released
         return view.updateLayout(size: availableSize, component: self, transition: transition)
     }
 }

@@ -615,41 +615,33 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             self.tool = .pen
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = brushState.mode == .arrow
+            self.toolHasArrow = false
+        case let .arrow(brushState):
+            self.drawingGesturePipeline?.mode = .location
+            self.tool = .pen
+            self.toolColor = brushState.color
+            self.toolBrushSize = brushState.size
+            self.toolHasArrow = true
         case let .marker(brushState):
             self.drawingGesturePipeline?.mode = .location
             self.tool = .marker
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = brushState.mode == .arrow
+            self.toolHasArrow = false
         case let .neon(brushState):
             self.drawingGesturePipeline?.mode = .smoothCurve
             self.tool = .neon
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
-            self.toolHasArrow = brushState.mode == .arrow
-        case let .pencil(brushState):
-            self.drawingGesturePipeline?.mode = .location
-            self.tool = .pencil
-            self.toolColor = brushState.color
-            self.toolBrushSize = brushState.size
-            self.toolHasArrow = brushState.mode == .arrow
-        case .lasso:
-            self.drawingGesturePipeline?.mode = .smoothCurve
-            self.tool = .lasso
+            self.toolHasArrow = false
         case let .eraser(eraserState):
-            switch eraserState.mode {
-            case .bitmap:
-                self.tool = .eraser
-                self.drawingGesturePipeline?.mode = .smoothCurve
-            case .vector:
-                self.tool = .objectRemover
-                self.drawingGesturePipeline?.mode = .location
-            case .blur:
-                self.tool = .blur
-                self.drawingGesturePipeline?.mode = .smoothCurve
-            }
+            self.tool = .eraser
+            self.drawingGesturePipeline?.mode = .smoothCurve
             self.toolBrushSize = eraserState.size
+        case let .blur(blurState):
+            self.tool = .blur
+            self.drawingGesturePipeline?.mode = .smoothCurve
+            self.toolBrushSize = blurState.size
         }
         
         if [.eraser, .blur].contains(self.tool) {
