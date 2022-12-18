@@ -76,7 +76,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 @implementation TGPhotoDrawingController
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext isAvatar:(bool)isAvatar
 {
     self = [super initWithContext:context];
     if (self != nil)
@@ -85,7 +85,7 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
         _stickersContext = stickersContext;
         
         CGSize size = TGScaleToSize(photoEditor.originalSize, [TGPhotoDrawingController maximumPaintingSize]);
-        _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize];
+        _drawingAdapter = [_stickersContext drawingAdapter:size originalSize:photoEditor.originalSize isAvatar:isAvatar];
         _interfaceController = (UIViewController<TGPhotoDrawingInterfaceController> *)_drawingAdapter.interfaceController;
         
         __weak TGPhotoDrawingController *weakSelf = self;
@@ -115,6 +115,10 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
         _keyboardWillChangeFrameProxy = [[TGObserverProxy alloc] initWithTarget:self targetSelector:@selector(keyboardWillChangeFrame:) name:UIKeyboardWillChangeFrameNotification];
     }
     return self;
+}
+
+- (void)dealloc {
+    NSLog(@"");
 }
 
 - (void)loadView
@@ -450,27 +454,10 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
 
 #pragma mark - Transitions
 
-- (void)transitionIn
-{
-//    _portraitSettingsView.layer.shouldRasterize = true;
-//    _landscapeSettingsView.layer.shouldRasterize = true;
-//
-//    [UIView animateWithDuration:0.3f animations:^
-//    {
-//        _portraitToolsWrapperView.alpha = 1.0f;
-//        _landscapeToolsWrapperView.alpha = 1.0f;
-//
-//        _portraitActionsView.alpha = 1.0f;
-//        _landscapeActionsView.alpha = 1.0f;
-//    } completion:^(__unused BOOL finished)
-//    {
-//        _portraitSettingsView.layer.shouldRasterize = false;
-//        _landscapeSettingsView.layer.shouldRasterize = false;
-//    }];
-    
-    if (self.presentedForAvatarCreation) {
-        _drawingView.hidden = true;
-    }
+- (void)transitionIn {
+//    if (self.presentedForAvatarCreation) {
+//        _drawingView.hidden = true;
+//    }
 }
 
 + (CGRect)photoContainerFrameForParentViewFrame:(CGRect)parentViewFrame toolbarLandscapeSize:(CGFloat)toolbarLandscapeSize orientation:(UIInterfaceOrientation)orientation panelSize:(CGFloat)panelSize hasOnScreenNavigation:(bool)hasOnScreenNavigation
@@ -558,7 +545,8 @@ const CGSize TGPhotoPaintingMaxSize = { 2560.0f, 2560.0f };
     previewView.interactionEnded = nil;
     
     [_interfaceController animateOut:^{
-        completion();
+        if (completion != nil)
+            completion();
     }];
 }
 

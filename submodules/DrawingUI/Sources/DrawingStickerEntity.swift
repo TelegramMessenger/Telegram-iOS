@@ -8,7 +8,7 @@ import TelegramAnimatedStickerNode
 import StickerResources
 import AccountContext
 
-final class DrawingStickerEntity: DrawingEntity, Codable {
+public final class DrawingStickerEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case isAnimated
@@ -20,21 +20,26 @@ final class DrawingStickerEntity: DrawingEntity, Codable {
         case mirrored
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
-    let file: TelegramMediaFile
+    public let uuid: UUID
+    public let isAnimated: Bool
+    public let file: TelegramMediaFile
     
-    var referenceDrawingSize: CGSize
-    var position: CGPoint
-    var scale: CGFloat
-    var rotation: CGFloat
-    var mirrored: Bool
+    public var referenceDrawingSize: CGSize
+    public var position: CGPoint
+    public var scale: CGFloat
+    public var rotation: CGFloat
+    public var mirrored: Bool
     
-    var color: DrawingColor = DrawingColor.clear
-    var lineWidth: CGFloat = 0.0
+    public var color: DrawingColor = DrawingColor.clear
+    public var lineWidth: CGFloat = 0.0
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.position
+    }
+    
+    public var baseSize: CGSize {
+        let size = max(10.0, min(self.referenceDrawingSize.width, self.referenceDrawingSize.height) * 0.4)
+        return CGSize(width: size, height: size)
     }
     
     init(file: TelegramMediaFile) {
@@ -50,7 +55,7 @@ final class DrawingStickerEntity: DrawingEntity, Codable {
         self.mirrored = false
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = try container.decode(Bool.self, forKey: .isAnimated)
@@ -62,7 +67,7 @@ final class DrawingStickerEntity: DrawingEntity, Codable {
         self.mirrored = try container.decode(Bool.self, forKey: .mirrored)
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.isAnimated, forKey: .isAnimated)
@@ -74,7 +79,7 @@ final class DrawingStickerEntity: DrawingEntity, Codable {
         try container.encode(self.mirrored, forKey: .mirrored)
     }
         
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingStickerEntity(file: self.file)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
@@ -84,11 +89,14 @@ final class DrawingStickerEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingStickerEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
+    }
+    
+    public func prepareForRender() {
     }
 }
 
@@ -256,9 +264,9 @@ final class DrawingStickerEntityView: DrawingEntityView {
         }
         self.center = self.stickerEntity.position
         
-        let size = max(10.0, min(self.stickerEntity.referenceDrawingSize.width, self.stickerEntity.referenceDrawingSize.height) * 0.45)
+        let size = self.stickerEntity.baseSize
         
-        self.bounds = CGRect(origin: .zero, size: dimensions.fitted(CGSize(width: size, height: size)))
+        self.bounds = CGRect(origin: .zero, size: dimensions.aspectFitted(size))
         self.transform = CGAffineTransformScale(CGAffineTransformMakeRotation(self.stickerEntity.rotation), self.stickerEntity.scale, self.stickerEntity.scale)
     
         var transform = CATransform3DIdentity

@@ -16,12 +16,10 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
     var isToolFocused = false
     var isVisible = false
     private var currentSize: CGFloat?
-    private var currentEraserMode: DrawingToolState.EraserState.Mode?
     
     private let tip: UIImageView
     private let background: SimpleLayer
     private let band: SimpleGradientLayer
-    private let eraserType: SimpleLayer
     
     var pressed: (DrawingToolState.Key) -> Void = { _ in }
     var swiped: (DrawingToolState.Key, CGFloat) -> Void = { _, _ in }
@@ -41,21 +39,19 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
         self.band.endPoint = CGPoint(x: 1.0, y: 0.5)
         self.band.masksToBounds = true
         
-        self.eraserType = SimpleLayer()
-        self.eraserType.opacity = 0.0
-        self.eraserType.transform = CATransform3DMakeScale(0.001, 0.001, 1.0)
-        
         let backgroundImage: UIImage?
         let tipImage: UIImage?
         
         var tipAbove = true
         var hasBand = true
-        var hasEraserType = false
                 
         switch type {
         case .pen:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolPen")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolPenTip")?.withRenderingMode(.alwaysTemplate)
+        case .arrow:
+            backgroundImage = UIImage(bundleImageName: "Media Editor/ToolArrow")
+            tipImage = UIImage(bundleImageName: "Media Editor/ToolArrowTip")?.withRenderingMode(.alwaysTemplate)
         case .marker:
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolMarker")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolMarkerTip")?.withRenderingMode(.alwaysTemplate)
@@ -64,19 +60,15 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolNeon")
             tipImage = UIImage(bundleImageName: "Media Editor/ToolNeonTip")?.withRenderingMode(.alwaysTemplate)
             tipAbove = false
-        case .pencil:
-            backgroundImage = UIImage(bundleImageName: "Media Editor/ToolPencil")
-            tipImage = UIImage(bundleImageName: "Media Editor/ToolPencilTip")?.withRenderingMode(.alwaysTemplate)
-        case .lasso:
-            backgroundImage = UIImage(bundleImageName: "Media Editor/ToolLasso")
-            tipImage = nil
-            hasBand = false
         case .eraser:
-            self.eraserType.contents = UIImage(bundleImageName: "Media Editor/EraserRemove")?.cgImage
             backgroundImage = UIImage(bundleImageName: "Media Editor/ToolEraser")
             tipImage = nil
             hasBand = false
-            hasEraserType = true
+        case .blur:
+            backgroundImage = UIImage(bundleImageName: "Media Editor/ToolBlur")
+            tipImage = UIImage(bundleImageName: "Media Editor/ToolBlurTip")
+            tipAbove = false
+            hasBand = false
         }
         
         self.tip.image = tipImage
@@ -90,9 +82,6 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
         self.band.frame = CGRect(origin: CGPoint(x: 3.0, y: 64.0), size: CGSize(width: toolSize.width - 6.0, height: toolSize.width - 16.0))
         self.band.anchorPoint = CGPoint(x: 0.5, y: 0.0)
         
-        self.eraserType.position = CGPoint(x: 20.0, y: 56.0)
-        self.eraserType.bounds = CGRect(origin: .zero, size: CGSize(width: 16.0, height: 16.0))
-        
         if tipAbove {
             self.layer.addSublayer(self.background)
             self.addSubview(self.tip)
@@ -103,10 +92,6 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
         
         if hasBand {
             self.layer.addSublayer(self.band)
-        }
-        
-        if hasEraserType {
-            self.layer.addSublayer(self.eraserType)
         }
         
         let tapGestureRecognizer = UITapGestureRecognizer(target: self, action: #selector(self.handleTap(_:)))
@@ -191,7 +176,7 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
             var locations: [NSNumber] = [0.0, 1.0]
             var colors: [CGColor] = []
             switch self.type {
-                case .pen:
+                case .pen, .arrow:
                     locations = [0.0, 0.15, 0.85, 1.0]
                     colors = [
                         color.withMultipliedBrightnessBy(0.7).cgColor,
@@ -215,16 +200,6 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
                         color.cgColor,
                         color.withMultipliedBrightnessBy(0.7).cgColor
                     ]
-                case .pencil:
-                    locations = [0.0, 0.25, 0.25, 0.75, 0.75, 1.0]
-                    colors = [
-                        color.withMultipliedBrightnessBy(0.85).cgColor,
-                        color.withMultipliedBrightnessBy(0.85).cgColor,
-                        color.withMultipliedBrightnessBy(1.15).cgColor,
-                        color.withMultipliedBrightnessBy(1.15).cgColor,
-                        color.withMultipliedBrightnessBy(0.85).cgColor,
-                        color.withMultipliedBrightnessBy(0.85).cgColor
-                    ]
                 default:
                     return
             }
@@ -233,37 +208,6 @@ private class ToolView: UIView, UIGestureRecognizerDelegate {
             
             self.band.locations = locations
             self.band.colors = colors
-        }
-        
-        if case .eraser = self.type {
-            let previousEraserMode = self.currentEraserMode
-            self.currentEraserMode = state.eraserMode
-            
-            let transition = Transition(animation: Transition.Animation.curve(duration: 0.2, curve: .easeInOut))
-            if [.vector, .blur].contains(state.eraserMode) {
-                if !self.eraserType.opacity.isZero && (previousEraserMode != self.currentEraserMode) {
-                    let snapshot = SimpleShapeLayer()
-                    snapshot.contents = self.eraserType.contents
-                    snapshot.frame = self.eraserType.frame
-                    self.layer.addSublayer(snapshot)
-                    
-                    snapshot.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, completion: { [weak snapshot] _ in
-                        snapshot?.removeFromSuperlayer()
-                    })
-                    snapshot.animateScale(from: 1.0, to: 0.001, duration: 0.2, removeOnCompletion: false)
-                    
-                    self.eraserType.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
-                    self.eraserType.animateScale(from: 0.001, to: 1.0, duration: 0.2)
-                } else {
-                    transition.setAlpha(layer: self.eraserType, alpha: 1.0)
-                    transition.setScale(layer: self.eraserType, scale: 1.0)
-                }
-                
-                self.eraserType.contents = UIImage(bundleImageName: state.eraserMode == .vector ? "Media Editor/EraserRemove" : "Media Editor/BrushBlur")?.cgImage
-            } else {
-                transition.setAlpha(layer: self.eraserType, alpha: 0.0)
-                transition.setScale(layer: self.eraserType, scale: 0.001)
-            }
         }
     }
 }
@@ -403,7 +347,7 @@ final class ToolsComponent: Component {
                 let view = self.toolViews[i]
                 
                 var scale = 0.5
-                var verticalOffset: CGFloat = 34.0
+                var verticalOffset: CGFloat = 30.0
                 if i == selectedIndex {
                     if isFocused {
                         scale = 1.0

@@ -451,19 +451,21 @@ public final class EntityKeyboardComponent: Component {
             if let stickerContent = component.stickerContent {
                 var topStickerItems: [EntityKeyboardTopPanelComponent.Item] = []
                 
-                topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
-                    id: "featuredTop",
-                    isReorderable: false,
-                    content: AnyComponent(EntityKeyboardIconTopPanelComponent(
-                        icon: .featured,
-                        theme: component.theme,
-                        useAccentColor: false,
-                        title: component.strings.Stickers_Trending,
-                        pressed: { [weak self] in
-                            self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured()
-                        }
+                if let _ = stickerContent.inputInteractionHolder.inputInteraction?.openFeatured {
+                    topStickerItems.append(EntityKeyboardTopPanelComponent.Item(
+                        id: "featuredTop",
+                        isReorderable: false,
+                        content: AnyComponent(EntityKeyboardIconTopPanelComponent(
+                            icon: .featured,
+                            theme: component.theme,
+                            useAccentColor: false,
+                            title: component.strings.Stickers_Trending,
+                            pressed: { [weak self] in
+                                self?.component?.stickerContent?.inputInteractionHolder.inputInteraction?.openFeatured?()
+                            }
+                        ))
                     ))
-                ))
+                }
                 
                 for itemGroup in stickerContent.itemGroups {
                     if let id = itemGroup.supergroupId.base as? String {
@@ -761,7 +763,7 @@ public final class EntityKeyboardComponent: Component {
             )
             transition.setFrame(view: self.pagerView, frame: CGRect(origin: CGPoint(), size: pagerSize))
             
-            let accountContext = component.emojiContent?.context ?? component.maskContent?.context
+            let accountContext = component.emojiContent?.context ?? component.stickerContent?.context
             if let searchComponent = self.searchComponent, let accountContext = accountContext {
                 var animateIn = false
                 let searchView: ComponentHostView<EntitySearchContentEnvironment>

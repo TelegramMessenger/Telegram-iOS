@@ -12,7 +12,7 @@
 @property (nonatomic, copy) void (^requestDismiss)(void);
 @property (nonatomic, copy) void (^requestApply)(void);
 
-- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext;
+- (instancetype)initWithContext:(id<LegacyComponentsContext>)context photoEditor:(PGPhotoEditor *)photoEditor previewView:(TGPhotoEditorPreviewView *)previewView entitiesView:(UIView<TGPhotoDrawingEntitiesView> *)entitiesView stickersContext:(id<TGPhotoPaintStickersContext>)stickersContext isAvatar:(bool)isAvatar;
 
 - (TGPaintingData *)paintingData;
 

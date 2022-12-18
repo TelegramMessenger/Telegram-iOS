@@ -561,6 +561,8 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
             self.playIcon.frame = CGRect(origin: CGPoint(x: floor((size.width - image.size.width) / 2.0), y: floor((size.height - image.size.height) / 2.0)), size: image.size)
         }
         
+        let hasSpoiler = self.message.attributes.contains(where: { $0 is MediaSpoilerMessageAttribute })
+        
         var isRound = false
         var dimensions = CGSize(width: 100.0, height: 100.0)
         if case let .image(image) = self.media {
@@ -569,7 +571,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = largest.dimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), synchronousLoad: synchronousLoads)
+                    let signal = mediaGridMessagePhoto(account: self.context.account, userLocation: .peer(self.message.id.peerId), photoReference: .message(message: MessageReference(self.message._asMessage()), media: image), fullRepresentationSize: CGSize(width: 36.0, height: 36.0), blurred: hasSpoiler, synchronousLoad: synchronousLoads)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }
@@ -597,7 +599,7 @@ private final class ChatListMediaPreviewNode: ASDisplayNode {
                 dimensions = mediaDimensions.cgSize
                 if !self.requestedImage {
                     self.requestedImage = true
-                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, userLocation: .peer(self.message.id.peerId), videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true)
+                    let signal = mediaGridMessageVideo(postbox: self.context.account.postbox, userLocation: .peer(self.message.id.peerId), videoReference: .message(message: MessageReference(self.message._asMessage()), media: file), synchronousLoad: synchronousLoads, autoFetchFullSizeThumbnail: true, useMiniThumbnailIfAvailable: true, blurred: hasSpoiler)
                     self.imageNode.setSignal(signal, attemptSynchronously: synchronousLoads)
                 }
             }

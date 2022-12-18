@@ -136,7 +136,7 @@
 
 
 - (UIView<TGPhotoSolidRoundedButtonView> *)solidRoundedButton:(NSString *)title action:(void(^)(void))action;
-- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize;
+- (id<TGPhotoDrawingAdapter>)drawingAdapter:(CGSize)size originalSize:(CGSize)originalSize isAvatar:(bool)isAvatar;
 
 - (UIView<TGPhotoDrawingEntitiesView> *)drawingEntitiesViewWithSize:(CGSize)size;
 

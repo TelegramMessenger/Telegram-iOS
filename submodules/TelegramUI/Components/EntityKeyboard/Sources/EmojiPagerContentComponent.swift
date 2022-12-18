@@ -2103,7 +2103,7 @@ public final class EmojiPagerContentComponent: Component {
         public let performItemAction: (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void
         public let deleteBackwards: (() -> Void)?
         public let openStickerSettings: (() -> Void)?
-        public let openFeatured: () -> Void
+        public let openFeatured: (() -> Void)?
         public let openSearch: () -> Void
         public let addGroupAction: (AnyHashable, Bool) -> Void
         public let clearGroup: (AnyHashable) -> Void
@@ -2119,12 +2119,13 @@ public final class EmojiPagerContentComponent: Component {
         public let externalBackground: ExternalBackground?
         public weak var externalExpansionView: UIView?
         public let useOpaqueTheme: Bool
+        public let hideBackground: Bool
         
         public init(
             performItemAction: @escaping (AnyHashable, Item, UIView, CGRect, CALayer, Bool) -> Void,
             deleteBackwards: (() -> Void)?,
             openStickerSettings: (() -> Void)?,
-            openFeatured: @escaping () -> Void,
+            openFeatured: (() -> Void)?,
             openSearch: @escaping () -> Void,
             addGroupAction: @escaping (AnyHashable, Bool) -> Void,
             clearGroup: @escaping (AnyHashable) -> Void,
@@ -2139,7 +2140,8 @@ public final class EmojiPagerContentComponent: Component {
             customLayout: CustomLayout?,
             externalBackground: ExternalBackground?,
             externalExpansionView: UIView?,
-            useOpaqueTheme: Bool
+            useOpaqueTheme: Bool,
+            hideBackground: Bool
         ) {
             self.performItemAction = performItemAction
             self.deleteBackwards = deleteBackwards
@@ -2160,6 +2162,7 @@ public final class EmojiPagerContentComponent: Component {
             self.externalBackground = externalBackground
             self.externalExpansionView = externalExpansionView
             self.useOpaqueTheme = useOpaqueTheme
+            self.hideBackground = hideBackground
         }
     }
     
@@ -5745,7 +5748,12 @@ public final class EmojiPagerContentComponent: Component {
                 self.backgroundView.isHidden = false
             }
             
-            self.backgroundView.updateColor(color: keyboardChildEnvironment.theme.chat.inputMediaPanel.backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
+            let hideBackground = component.inputInteractionHolder.inputInteraction?.hideBackground ?? false
+            var backgroundColor = keyboardChildEnvironment.theme.chat.inputMediaPanel.backgroundColor
+            if hideBackground {
+                backgroundColor = backgroundColor.withAlphaComponent(0.01)
+            }
+            self.backgroundView.updateColor(color: backgroundColor, enableBlur: true, forceKeepBlur: false, transition: transition.containedViewLayoutTransition)
             transition.setFrame(view: self.backgroundView, frame: backgroundFrame)
             self.backgroundView.update(size: backgroundFrame.size, transition: transition.containedViewLayoutTransition)
             
@@ -6311,7 +6319,8 @@ public final class EmojiPagerContentComponent: Component {
         topStatusTitle: String? = nil,
         topicTitle: String? = nil,
         topicColor: Int32? = nil,
-        hasSearch: Bool = true
+        hasSearch: Bool = true,
+        forceHasPremium: Bool = false
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -6363,7 +6372,7 @@ public final class EmojiPagerContentComponent: Component {
         
         let emojiItems: Signal<EmojiPagerContentComponent, NoError> = combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: orderedItemListCollectionIds, namespaces: [Namespaces.ItemCollection.CloudEmojiPacks], aroundIndex: nil, count: 10000000),
-            hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
+            forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: true),
             context.account.viewTracker.featuredEmojiPacks(),
             availableReactions,
             iconStatusEmoji
@@ -7165,7 +7174,8 @@ public final class EmojiPagerContentComponent: Component {
         stickerOrderedItemListCollectionIds: [Int32],
         chatPeerId: EnginePeer.Id?,
         hasSearch: Bool,
-        hasTrending: Bool
+        hasTrending: Bool,
+        forceHasPremium: Bool
     ) -> Signal<EmojiPagerContentComponent, NoError> {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: context.currentAppConfiguration.with { $0 })
         let isPremiumDisabled = premiumConfiguration.isPremiumDisabled
@@ -7216,7 +7226,7 @@ public final class EmojiPagerContentComponent: Component {
         
         return combineLatest(
             context.account.postbox.itemCollectionsView(orderedItemListCollectionIds: stickerOrderedItemListCollectionIds, namespaces: stickerNamespaces, aroundIndex: nil, count: 10000000),
-            hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
+            forceHasPremium ? .single(true) : hasPremium(context: context, chatPeerId: chatPeerId, premiumIfSavedMessages: false),
             hasTrending ? context.account.viewTracker.featuredStickerPacks() : .single([]),
             context.engine.data.get(TelegramEngine.EngineData.Item.ItemCache.Item(collectionId: Namespaces.CachedItemCollection.featuredStickersConfiguration, id: ValueBoxKey(length: 0))),
             ApplicationSpecificNotice.dismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager),

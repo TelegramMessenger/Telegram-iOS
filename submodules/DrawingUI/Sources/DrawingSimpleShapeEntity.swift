@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
+public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case shapeType
@@ -14,6 +14,7 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         case position
         case size
         case rotation
+        case renderImage
     }
     
     public enum ShapeType: Codable {
@@ -27,22 +28,24 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         case stroke
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
+    public let uuid: UUID
+    public let isAnimated: Bool
     
     var shapeType: ShapeType
     var drawType: DrawType
-    var color: DrawingColor
-    var lineWidth: CGFloat
+    public var color: DrawingColor
+    public var lineWidth: CGFloat
     
     var referenceDrawingSize: CGSize
-    var position: CGPoint
-    var size: CGSize
-    var rotation: CGFloat
+    public var position: CGPoint
+    public var size: CGSize
+    public var rotation: CGFloat
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.position
     }
+    
+    public var renderImage: UIImage?
     
     init(shapeType: ShapeType, drawType: DrawType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -59,7 +62,7 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.rotation = 0.0
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = false
@@ -71,9 +74,12 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.position = try container.decode(CGPoint.self, forKey: .position)
         self.size = try container.decode(CGSize.self, forKey: .size)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.shapeType, forKey: .shapeType)
@@ -84,9 +90,12 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         try container.encode(self.position, forKey: .position)
         try container.encode(self.size, forKey: .size)
         try container.encode(self.rotation, forKey: .rotation)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
         
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingSimpleShapeEntity(shapeType: self.shapeType, drawType: self.drawType, color: self.color, lineWidth: self.lineWidth)
         newEntity.referenceDrawingSize = self.referenceDrawingSize
         newEntity.position = self.position
@@ -95,11 +104,15 @@ final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingSimpleShapeEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
+    }
+    
+    public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingSimpleShapeEntityView)?.getRenderImage()
     }
 }
 
@@ -136,13 +149,14 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
             self.currentSize = size
             self.shapeLayer.frame = self.bounds
             
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: maxLineWidth * 0.5, dy: maxLineWidth * 0.5)
             switch shapeType {
             case .rectangle:
-                self.shapeLayer.path = CGPath(rect: CGRect(origin: .zero, size: size), transform: nil)
+                self.shapeLayer.path = CGPath(rect: rect, transform: nil)
             case .ellipse:
-                self.shapeLayer.path = CGPath(ellipseIn: CGRect(origin: .zero, size: size), transform: nil)
+                self.shapeLayer.path = CGPath(ellipseIn: rect, transform: nil)
             case .star:
-                self.shapeLayer.path = CGPath.star(in: CGRect(origin: .zero, size: size), extrusion: size.width * 0.2, points: 5)
+                self.shapeLayer.path = CGPath.star(in: rect, extrusion: size.width * 0.2, points: 5)
             }
         }
         
@@ -151,8 +165,8 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
             self.shapeLayer.fillColor = self.shapeEntity.color.toCGColor()
             self.shapeLayer.strokeColor = UIColor.clear.cgColor
         case .stroke:
-            let minLineWidth = max(10.0, min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.02)
-            let maxLineWidth = max(10.0, min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
+            let minLineWidth = max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.01)
+            let maxLineWidth = self.maxLineWidth
             let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.shapeEntity.lineWidth
             
             self.shapeLayer.fillColor = UIColor.clear.cgColor
@@ -167,9 +181,22 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         return self.shapeLayer.lineWidth
     }
     
+    fileprivate var maxLineWidth: CGFloat {
+        return max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.05)
+    }
+    
+    override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
+        let lineWidth = self.maxLineWidth * 0.5
+        let expandedBounds = self.bounds.insetBy(dx: -lineWidth, dy: -lineWidth)
+        if expandedBounds.contains(point) {
+            return true
+        }
+        return false
+    }
+    
     override func precisePoint(inside point: CGPoint) -> Bool {
         if case .stroke = self.shapeEntity.drawType, var path = self.shapeLayer.path {
-            path = path.copy(strokingWithWidth: 20.0, lineCap: .square, lineJoin: .bevel, miterLimit: 0.0)
+            path = path.copy(strokingWithWidth: self.maxLineWidth * 0.8, lineCap: .square, lineJoin: .bevel, miterLimit: 0.0)
             if path.contains(point) {
                 return true
             } else {
@@ -200,6 +227,19 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         let selectionView = DrawingSimpleShapeEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    override var selectionBounds: CGRect {
+        return self.bounds.insetBy(dx: self.maxLineWidth * 0.5, dy: self.maxLineWidth * 0.5)
     }
 }
 
@@ -429,11 +469,8 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
     }
     
     override func layoutSubviews() {
-        var inset = self.selectionInset
-        if let entityView = self.entityView as? DrawingSimpleShapeEntityView, let entity = entityView.entity as? DrawingSimpleShapeEntity, case .star = entity.shapeType {
-            inset -= entityView.visualLineWidth / 2.0
-        }
-        
+        let inset = self.selectionInset
+
         let bounds = CGRect(origin: .zero, size: CGSize(width: entitySelectionViewHandleSize.width / self.scale, height: entitySelectionViewHandleSize.height / self.scale))
         let handleSize = CGSize(width: 9.0 / self.scale, height: 9.0 / self.scale)
         let handlePath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: (bounds.width - handleSize.width) / 2.0, y: (bounds.height - handleSize.height) / 2.0), size: handleSize), transform: nil)

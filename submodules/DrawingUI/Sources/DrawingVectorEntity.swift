@@ -3,7 +3,7 @@ import UIKit
 import Display
 import AccountContext
 
-final class DrawingVectorEntity: DrawingEntity, Codable {
+public final class DrawingVectorEntity: DrawingEntity, Codable {
     private enum CodingKeys: String, CodingKey {
         case uuid
         case type
@@ -14,6 +14,7 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         case start
         case mid
         case end
+        case renderImage
     }
     
     public enum VectorType: Codable {
@@ -22,14 +23,14 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         case twoSidedArrow
     }
     
-    let uuid: UUID
-    let isAnimated: Bool
+    public let uuid: UUID
+    public let isAnimated: Bool
     
     var type: VectorType
-    var color: DrawingColor
-    var lineWidth: CGFloat
+    public var color: DrawingColor
+    public var lineWidth: CGFloat
     
-    var drawingSize: CGSize
+    public var drawingSize: CGSize
     var referenceDrawingSize: CGSize
     var start: CGPoint
     var mid: (CGFloat, CGFloat)
@@ -46,9 +47,11 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         }
     }
     
-    var center: CGPoint {
+    public var center: CGPoint {
         return self.start
     }
+    
+    public var renderImage: UIImage?
     
     init(type: VectorType, color: DrawingColor, lineWidth: CGFloat) {
         self.uuid = UUID()
@@ -65,7 +68,7 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         self.end = CGPoint()
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.uuid = try container.decode(UUID.self, forKey: .uuid)
         self.isAnimated = false
@@ -75,14 +78,15 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
         self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
         self.start = try container.decode(CGPoint.self, forKey: .start)
-        
         let mid = try container.decode(CGPoint.self, forKey: .mid)
         self.mid = (mid.x, mid.y)
-        
         self.end = try container.decode(CGPoint.self, forKey: .end)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
-    func encode(to encoder: Encoder) throws {
+    public func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(self.uuid, forKey: .uuid)
         try container.encode(self.type, forKey: .type)
@@ -93,9 +97,12 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         try container.encode(self.start, forKey: .start)
         try container.encode(CGPoint(x: self.mid.0, y: self.mid.1), forKey: .mid)
         try container.encode(self.end, forKey: .end)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
     
-    func duplicate() -> DrawingEntity {
+    public func duplicate() -> DrawingEntity {
         let newEntity = DrawingVectorEntity(type: self.type, color: self.color, lineWidth: self.lineWidth)
         newEntity.drawingSize = self.drawingSize
         newEntity.referenceDrawingSize = self.referenceDrawingSize
@@ -105,11 +112,15 @@ final class DrawingVectorEntity: DrawingEntity, Codable {
         return newEntity
     }
     
-    weak var currentEntityView: DrawingEntityView?
-    func makeView(context: AccountContext) -> DrawingEntityView {
+    public weak var currentEntityView: DrawingEntityView?
+    public func makeView(context: AccountContext) -> DrawingEntityView {
         let entityView = DrawingVectorEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
+    }
+    
+    public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingVectorEntityView)?.getRenderImage()
     }
 }
 
@@ -134,12 +145,16 @@ final class DrawingVectorEntityView: DrawingEntityView {
         return self.shapeLayer.path?.boundingBox ?? self.bounds
     }
         
+    private var maxLineWidth: CGFloat {
+        return max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+    }
+    
     override func update(animated: Bool) {
         self.center = CGPoint(x: self.vectorEntity.drawingSize.width * 0.5, y: self.vectorEntity.drawingSize.height * 0.5)
         self.bounds = CGRect(origin: .zero, size: self.vectorEntity.drawingSize)
     
-        let minLineWidth = max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.02)
-        let maxLineWidth = max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+        let minLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.01)
+        let maxLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.05)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.vectorEntity.lineWidth
         
         self.shapeLayer.path = CGPath.curve(
@@ -174,7 +189,15 @@ final class DrawingVectorEntityView: DrawingEntityView {
             if path.contains(point) {
                 return true
             } else {
-                return false
+                let expandedPath = CGPath.curve(
+                    start: self.vectorEntity.start,
+                    end: self.vectorEntity.end,
+                    mid: self.vectorEntity.midPoint,
+                    lineWidth: self.maxLineWidth * 0.8,
+                    arrowSize: nil,
+                    twoSided: false
+                )
+                return expandedPath.contains(point)
             }
         } else {
             return super.precisePoint(inside: point)
@@ -188,6 +211,15 @@ final class DrawingVectorEntityView: DrawingEntityView {
         let selectionView = DrawingVectorEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
     }
 }
 

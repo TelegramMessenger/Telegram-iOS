@@ -3,7 +3,7 @@ import UIKit
 import QuartzCore
 import simd
 
-struct DrawingColor: Equatable, Codable {
+public struct DrawingColor: Equatable, Codable {
     private enum CodingKeys: String, CodingKey {
         case red
         case green
@@ -57,7 +57,7 @@ struct DrawingColor: Equatable, Codable {
         self.init(color: UIColor(rgb: rgb))
     }
     
-    init(from decoder: Decoder) throws {
+    public init(from decoder: Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.red = try container.decode(CGFloat.self, forKey: .red)
         self.green = try container.decode(CGFloat.self, forKey: .green)

@@ -12,8 +12,9 @@ import ViewControllerComponent
 import EntityKeyboard
 import PagerComponent
 import FeaturedStickersScreen
+import TelegramNotices
 
-struct InputData: Equatable {
+struct StickerPickerInputData: Equatable {
     var emoji: EmojiPagerContentComponent
     var stickers: EmojiPagerContentComponent?
     var masks: EmojiPagerContentComponent?
@@ -36,7 +37,7 @@ private final class StickerSelectionComponent: Component {
     let strings: PresentationStrings
     let deviceMetrics: DeviceMetrics
     let bottomInset: CGFloat
-    let content: InputData
+    let content: StickerPickerInputData
     let backgroundColor: UIColor
     let separatorColor: UIColor
     
@@ -45,7 +46,7 @@ private final class StickerSelectionComponent: Component {
         strings: PresentationStrings,
         deviceMetrics: DeviceMetrics,
         bottomInset: CGFloat,
-        content: InputData,
+        content: StickerPickerInputData,
         backgroundColor: UIColor,
         separatorColor: UIColor
     ) {
@@ -127,7 +128,7 @@ private final class StickerSelectionComponent: Component {
             let topPanelHeight: CGFloat = 42.0
             
             let keyboardSize = self.keyboardView.update(
-                transition: transition,//.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
+                transition: transition.withUserData(EmojiPagerContentComponent.SynchronousLoadBehavior(isDisabled: true)),
                 component: AnyComponent(EntityKeyboardComponent(
                     theme: component.theme,
                     strings: component.strings,
@@ -196,7 +197,7 @@ private final class StickerSelectionComponent: Component {
     }
 }
 
-public class StickerPickerScreen: ViewController {
+class StickerPickerScreen: ViewController {
     final class Node: ViewControllerTracingNode, UIScrollViewDelegate, UIGestureRecognizerDelegate {
         private var presentationData: PresentationData
         private weak var controller: StickerPickerScreen?
@@ -208,13 +209,13 @@ public class StickerPickerScreen: ViewController {
         let scrollView: UIScrollView
         let hostView: ComponentHostView<Empty>
         
-        private var content: InputData?
+        private var content: StickerPickerInputData?
         private let contentDisposable = MetaDisposable()
         private var scheduledEmojiContentAnimationHint: EmojiPagerContentComponent.ContentAnimation?
         
         private(set) var isExpanded = false
         private var panGestureRecognizer: UIPanGestureRecognizer?
-        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?, listNode: ListView?)?
+        private var panGestureArguments: (topInset: CGFloat, offset: CGFloat, scrollView: UIScrollView?)?
         
         private var currentIsVisible: Bool = false
         private var currentLayout: (layout: ContainerViewLayout, navigationHeight: CGFloat)?
@@ -250,51 +251,9 @@ public class StickerPickerScreen: ViewController {
             self.containerView.addSubview(self.scrollView)
             self.scrollView.addSubview(self.hostView)
             
-            let emojiItems = EmojiPagerContentComponent.emojiInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                isStandalone: false,
-                isStatusSelection: false,
-                isReactionSelection: false,
-                isEmojiSelection: true,
-                topReactionItems: [],
-                areUnicodeEmojiEnabled: true,
-                areCustomEmojiEnabled: true,
-                chatPeerId: context.account.peerId,
-                hasSearch: false
-            )
-            
-            let stickerItems = EmojiPagerContentComponent.stickerInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
-                stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
-                chatPeerId: context.account.peerId,
-                hasSearch: false,
-                hasTrending: true
-            )
-            
-            let maskItems = EmojiPagerContentComponent.stickerInputData(
-                context: context,
-                animationCache: context.animationCache,
-                animationRenderer: context.animationRenderer,
-                stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
-                stickerOrderedItemListCollectionIds: [],
-                chatPeerId: context.account.peerId,
-                hasSearch: false,
-                hasTrending: false
-            )
-            
-            let signal = combineLatest(queue: .mainQueue(),
-                emojiItems,
-                stickerItems,
-                maskItems
-            )
-            self.contentDisposable.set(signal.start(next: { [weak self] emoji, stickers, masks in
+            self.contentDisposable.set(controller.inputData.start(next: { [weak self] inputData in
                 if let strongSelf = self {
-                    strongSelf.updateContent(InputData(emoji: emoji, stickers: stickers, masks: masks))
+                    strongSelf.updateContent(inputData)
                 }
             }))
         }
@@ -303,7 +262,7 @@ public class StickerPickerScreen: ViewController {
             self.contentDisposable.dispose()
         }
         
-        func updateContent(_ content: InputData) {
+        func updateContent(_ content: StickerPickerInputData) {
             self.content = content
             
             content.emoji.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -316,22 +275,14 @@ public class StickerPickerScreen: ViewController {
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,
-                openFeatured: {
+                openFeatured: nil,
+                openSearch: {
                 },
-                openSearch: {},
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -370,7 +321,7 @@ public class StickerPickerScreen: ViewController {
                         return
                     }
                     if groupId == AnyHashable("popular") {
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
                         let context = controller.context
@@ -392,20 +343,26 @@ public class StickerPickerScreen: ViewController {
                         context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
                     }
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             content.masks?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -418,22 +375,13 @@ public class StickerPickerScreen: ViewController {
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,
-                openFeatured: {
-                },
+                openFeatured: nil,
                 openSearch: {},
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -467,47 +415,28 @@ public class StickerPickerScreen: ViewController {
                         }
                     })
                 },
-                clearGroup: { [weak self] groupId in
-                    guard let strongSelf = self, let controller = strongSelf.controller else {
-                        return
-                    }
-                    if groupId == AnyHashable("popular") {
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
-                        let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
-                        var items: [ActionSheetItem] = []
-                        let context = controller.context
-                        items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
-                            actionSheet?.dismissAnimated()
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
-                            let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
-                        }))
-                        actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
-                            ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                                actionSheet?.dismissAnimated()
-                            })
-                        ])])
-                        context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
-                    }
+                clearGroup: { _ in
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -520,38 +449,14 @@ public class StickerPickerScreen: ViewController {
                 },
                 deleteBackwards: nil,
                 openStickerSettings: nil,
-                openFeatured: { [weak self] in
-                    guard let strongSelf = self, let controller = strongSelf.controller else {
-                        return
-                    }
-                    strongSelf.controller?.push(
-                        FeaturedStickersScreen(
-                            context: controller.context,
-                            highlightedPackId: nil,
-                            sendSticker: { _, _, _ in
-//                                guard let controllerInteraction = controllerInteraction else {
-//                                    return false
-//                                }
-                                return false
-//                                return controllerInteraction.sendSticker(fileReference, false, false, nil, false, sourceNode, sourceRect, nil, [])
-                            }
-                        )
-                    )
+                openFeatured: nil,
+                openSearch: {
                 },
-                openSearch: {},
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -589,20 +494,14 @@ public class StickerPickerScreen: ViewController {
                     guard let strongSelf = self, let controller = strongSelf.controller else {
                         return
                     }
-                    if groupId == AnyHashable("popular") {
-                        let presentationData = controller.context.sharedContext.currentPresentationData.with { $0 }
+                    let context = controller.context
+                    if groupId == AnyHashable("recent") {
+                        let presentationData = context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkColorPresentationTheme)
                         let actionSheet = ActionSheetController(theme: ActionSheetControllerTheme(presentationTheme: presentationData.theme, fontSize: presentationData.listsFontSize))
                         var items: [ActionSheetItem] = []
-                        let context = controller.context
-                        items.append(ActionSheetTextItem(title: presentationData.strings.Chat_ClearReactionsAlertText, parseMarkdown: true))
-                        items.append(ActionSheetButtonItem(title: presentationData.strings.Chat_ClearReactionsAlertAction, color: .destructive, action: { [weak actionSheet] in
+                        items.append(ActionSheetButtonItem(title: presentationData.strings.Stickers_ClearRecent, color: .destructive, action: { [weak actionSheet] in
                             actionSheet?.dismissAnimated()
-                            guard let strongSelf = self else {
-                                return
-                            }
-                            
-                            strongSelf.scheduledEmojiContentAnimationHint = EmojiPagerContentComponent.ContentAnimation(type: .groupRemoved(id: "popular"))
-                            let _ = context.engine.stickers.clearRecentlyUsedReactions().start()
+                            let _ = context.engine.stickers.clearRecentlyUsedStickers().start()
                         }))
                         actionSheet.setItemGroups([ActionSheetItemGroup(items: items), ActionSheetItemGroup(items: [
                             ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
@@ -610,22 +509,43 @@ public class StickerPickerScreen: ViewController {
                             })
                         ])])
                         context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
+                    } else if groupId == AnyHashable("featuredTop") {
+                        let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
+                        let _ = (context.account.postbox.combinedView(keys: [viewKey])
+                        |> take(1)
+                        |> deliverOnMainQueue).start(next: { views in
+                            guard let view = views.views[viewKey] as? OrderedItemListView else {
+                                return
+                            }
+                            var stickerPackIds: [Int64] = []
+                            for featuredStickerPack in view.items.lazy.map({ $0.contents.get(FeaturedStickerPackItem.self)! }) {
+                                stickerPackIds.append(featuredStickerPack.info.id.id)
+                            }
+                            let _ = ApplicationSpecificNotice.setDismissedTrendingStickerPacks(accountManager: context.sharedContext.accountManager, values: stickerPackIds).start()
+                        })
+                    } else if groupId == AnyHashable("peerSpecific") {
                     }
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             if let (layout, navigationHeight) = self.currentLayout {
@@ -671,6 +591,9 @@ public class StickerPickerScreen: ViewController {
         
         func gestureRecognizer(_ gestureRecognizer: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer) -> Bool {
             if gestureRecognizer is UIPanGestureRecognizer && otherGestureRecognizer is UIPanGestureRecognizer {
+                if otherGestureRecognizer is PagerPanGestureRecognizer {
+                    return false
+                }
                 return true
             }
             return false
@@ -719,7 +642,7 @@ public class StickerPickerScreen: ViewController {
             let isLandscape = layout.orientation == .landscape
             let edgeTopInset = isLandscape ? 0.0 : self.defaultTopInset
             let topInset: CGFloat
-            if let (panInitialTopInset, panOffset, _, _) = self.panGestureArguments {
+            if let (panInitialTopInset, panOffset, _) = self.panGestureArguments {
                 if effectiveExpanded {
                     topInset = min(edgeTopInset, panInitialTopInset + max(0.0, panOffset))
                 } else {
@@ -851,13 +774,10 @@ public class StickerPickerScreen: ViewController {
             }
         }
         
-        private func findScrollView(view: UIView?) -> (UIScrollView, ListView?)? {
+        private func findScrollView(view: UIView?) -> UIScrollView? {
             if let view = view {
-                if let view = view as? UIScrollView, view.contentSize.width < view.contentSize.height {
-                    return (view, nil)
-                }
-                if let node = view.asyncdisplaykit_node as? ListView {
-                    return (node.scroller, node)
+                if let view = view as? PagerExpandableScrollView {
+                    return view
                 }
                 return findScrollView(view: view.superview)
             } else {
@@ -879,11 +799,10 @@ public class StickerPickerScreen: ViewController {
                     let currentHitView = self.hitTest(point, with: nil)
                     
                     var scrollViewAndListNode = self.findScrollView(view: currentHitView)
-                    if scrollViewAndListNode?.0.frame.height == self.frame.width {
+                    if scrollViewAndListNode?.frame.height == self.frame.width {
                         scrollViewAndListNode = nil
                     }
-                    let scrollView = scrollViewAndListNode?.0
-                    let listNode = scrollViewAndListNode?.1
+                    let scrollView = scrollViewAndListNode
                                 
                     let topInset: CGFloat
                     if self.isExpanded {
@@ -892,12 +811,11 @@ public class StickerPickerScreen: ViewController {
                         topInset = edgeTopInset
                     }
                 
-                    self.panGestureArguments = (topInset, 0.0, scrollView, listNode)
+                    self.panGestureArguments = (topInset, 0.0, scrollView)
                 case .changed:
-                    guard let (topInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
+                    guard let (topInset, panOffset, scrollView) = self.panGestureArguments else {
                         return
                     }
-                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
                     var translation = recognizer.translation(in: self.view).y
@@ -905,12 +823,7 @@ public class StickerPickerScreen: ViewController {
                     var currentOffset = topInset + translation
                 
                     let epsilon = 1.0
-                    if case let .known(value) = visibleContentOffset, value <= epsilon {
-                        if let scrollView = scrollView {
-                            scrollView.bounces = false
-                            scrollView.setContentOffset(CGPoint(x: 0.0, y: 0.0), animated: false)
-                        }
-                    } else if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
+                    if let scrollView = scrollView, contentOffset <= -scrollView.contentInset.top + epsilon {
                         scrollView.bounces = false
                         scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                     } else if let scrollView = scrollView {
@@ -923,7 +836,7 @@ public class StickerPickerScreen: ViewController {
                         }
                     }
                     
-                    self.panGestureArguments = (topInset, translation, scrollView, listNode)
+                    self.panGestureArguments = (topInset, translation, scrollView)
                     
                     if !self.isExpanded {
                         if currentOffset > 0.0, let scrollView = scrollView {
@@ -942,23 +855,18 @@ public class StickerPickerScreen: ViewController {
                 
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: .immediate)
                 case .ended:
-                    guard let (currentTopInset, panOffset, scrollView, listNode) = self.panGestureArguments else {
+                    guard let (currentTopInset, panOffset, scrollView) = self.panGestureArguments else {
                         return
                     }
                     self.panGestureArguments = nil
                 
-                    let visibleContentOffset = listNode?.visibleContentOffset()
                     let contentOffset = scrollView?.contentOffset.y ?? 0.0
                 
                     let translation = recognizer.translation(in: self.view).y
                     var velocity = recognizer.velocity(in: self.view)
                     
                     if self.isExpanded {
-                        if case let .known(value) = visibleContentOffset, value > 0.1 {
-                            velocity = CGPoint()
-                        } else if case .unknown = visibleContentOffset {
-                            velocity = CGPoint()
-                        } else if contentOffset > 0.1 {
+                        if contentOffset > 0.1 {
                             velocity = CGPoint()
                         }
                     }
@@ -984,9 +892,7 @@ public class StickerPickerScreen: ViewController {
                     } else if self.isExpanded {
                         if velocity.y > 300.0 || offset > topInset / 2.0 {
                             self.isExpanded = false
-                            if let listNode = listNode {
-                                listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                            } else if let scrollView = scrollView {
+                            if let scrollView = scrollView {
                                 scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                             }
                             
@@ -1001,21 +907,13 @@ public class StickerPickerScreen: ViewController {
                             self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(.animated(duration: 0.3, curve: .easeInOut)))
                         }
                     } else if (velocity.y < -300.0 || offset < topInset / 2.0) {
-                        if velocity.y > -2200.0 && velocity.y < -300.0, let listNode = listNode {
-                            DispatchQueue.main.async {
-                                listNode.transaction(deleteIndices: [], insertIndicesAndItems: [], updateIndicesAndItems: [], options: [.Synchronous, .LowLatency], scrollToItem: ListViewScrollToItem(index: 0, position: .top(0.0), animated: true, curve: .Default(duration: nil), directionHint: .Up), updateSizeAndInsets: nil, stationaryItemRange: nil, updateOpaqueState: nil, completion: { _ in })
-                            }
-                        }
-                                                    
                         let initialVelocity: CGFloat = offset.isZero ? 0.0 : abs(velocity.y / offset)
                         let transition = ContainedViewLayoutTransition.animated(duration: 0.45, curve: .customSpring(damping: 124.0, initialVelocity: initialVelocity))
                         self.isExpanded = true
                        
                         self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: Transition(transition))
                     } else {
-                        if let listNode = listNode {
-                            listNode.scroller.setContentOffset(CGPoint(), animated: false)
-                        } else if let scrollView = scrollView {
+                        if let scrollView = scrollView {
                             scrollView.setContentOffset(CGPoint(x: 0.0, y: -scrollView.contentInset.top), animated: false)
                         }
                         
@@ -1057,6 +955,7 @@ public class StickerPickerScreen: ViewController {
     
     private let context: AccountContext
     private let theme: PresentationTheme
+    private let inputData: Signal<StickerPickerInputData, NoError>
     
     private var currentLayout: ContainerViewLayout?
     
@@ -1065,26 +964,28 @@ public class StickerPickerScreen: ViewController {
     
     var completion: (TelegramMediaFile?) -> Void = { _ in }
     
-    public init(context: AccountContext) {
+    init(context: AccountContext, inputData: Signal<StickerPickerInputData, NoError>) {
         self.context = context
         self.theme = defaultDarkColorPresentationTheme
+        self.inputData = inputData
         
         super.init(navigationBarPresentationData: nil)
         
-        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
         self.statusBar.statusBarStyle = .Ignore
     }
     
-    required public init(coder aDecoder: NSCoder) {
+    required init(coder aDecoder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
     }
     
-    override open func loadDisplayNode() {
+    override func loadDisplayNode() {
         self.displayNode = Node(context: self.context, controller: self, theme: self.theme)
         self.displayNodeDidLoad()
+        
+        self.supportedOrientations = ViewControllerSupportedOrientations(regularSize: .all, compactSize: .portrait)
     }
     
-    public override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
+    override func dismiss(animated flag: Bool, completion: (() -> Void)? = nil) {
         self.view.endEditing(true)
         if flag {
             self.node.animateOut(completion: {
@@ -1097,19 +998,19 @@ public class StickerPickerScreen: ViewController {
         }
     }
     
-    override open func viewDidAppear(_ animated: Bool) {
+    override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         
         self.node.updateIsVisible(isVisible: true)
     }
     
-    override open func viewDidDisappear(_ animated: Bool) {
+    override func viewDidDisappear(_ animated: Bool) {
         super.viewDidDisappear(animated)
         
         self.node.updateIsVisible(isVisible: false)
     }
         
-    override open func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
+    override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
         self.currentLayout = layout
         super.containerLayoutUpdated(layout, transition: transition)
         

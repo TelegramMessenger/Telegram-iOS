@@ -8475,16 +8475,20 @@ Sorry for the inconvenience.";
 "UserInfo.ResetToOriginalAlertReset" = "Reset";
 
 "Conversation.SuggestedPhotoTitle" = "Suggested Photo";
-"Conversation.SuggestedPhotoText" = "%@ suggests you to use this photo for your Telegram account.";
-"Conversation.SuggestedPhotoTextYou" = "You suggested %@ to use this photo for their Telegram account.";
-"Conversation.SuggestedPhotoView" = "View";
-"Conversation.SuggestedPhotoSuccess" = "You have updated your Telegram account photo.";
+"Conversation.SuggestedPhotoText" = "**%@** suggests you to use this profile photo.";
+"Conversation.SuggestedPhotoTextExpanded" = "%@ suggests you to use this profile photo for your Telegram account.";
+"Conversation.SuggestedPhotoTextYou" = "You suggested **%@** to use this profile photo.";
+"Conversation.SuggestedPhotoView" = "View Photo";
+"Conversation.SuggestedPhotoSuccess" = "Photo updated";
+"Conversation.SuggestedPhotoSuccessText" = "You can change it in [Settings]().";
 
 "Conversation.SuggestedVideoTitle" = "Suggested Video";
-"Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
-"Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";
-"Conversation.SuggestedVideoView" = "View";
-"Conversation.SuggestedVideoSuccess" = "You have updated your Telegram account video.";
+"Conversation.SuggestedVideoText" = "**%@** suggests you to use this profile video.";
+"Conversation.SuggestedVideoTextExpanded" = "%@ suggests you to use this profile video for your Telegram account.";
+"Conversation.SuggestedVideoTextYou" = "You suggested **%@** to use this profile video.";
+"Conversation.SuggestedVideoView" = "View Video";
+"Conversation.SuggestedVideoSuccess" = "Video updated";
+"Conversation.SuggestedVideoSuccessText" = "You can change it in [Settings]().";
 
 "CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";
 "CacheEvictionMenu.CategoryExceptions_any" = "%@ Exceptions";
@@ -8508,6 +8512,9 @@ Sorry for the inconvenience.";
 "Privacy.ProfilePhoto.PublicPhotoSuccess" = "This photo is now set for those who are restricted from viewing your main photo.";
 "Privacy.ProfilePhoto.PublicVideoSuccess" = "This video is now set for those who are restricted from viewing your main photo.";
 
+"Privacy.ProfilePhoto.CustomOverrideInfo" = "You can add users or entire groups which will not see your profile photo.";
+"Privacy.ProfilePhoto.CustomOverrideAddInfo" = "Add users or entire groups which will still see your profile photo.";
+
 "WebApp.AddToAttachmentAllowMessages" = "Allow **%@** to send me messages";
 
 "Common.Paste" = "Paste";
@@ -8520,3 +8527,11 @@ Sorry for the inconvenience.";
 "PeerInfo.HideMembersLimitedParticipantCountText_1" = "Only groups with more than **%d member** can have their member list hidden.";
 "PeerInfo.HideMembersLimitedParticipantCountText_any" = "Only groups with more than **%d members** can have their member list hidden.";
 "PeerInfo.HideMembersLimitedRights" = "You don't have permission to change this setting.";
+
+"Privacy.Exceptions" = "EXCEPTIONS";
+"Privacy.ExceptionsCount_1" = "%@ EXCEPTION";
+"Privacy.ExceptionsCount_any" = "%@ EXCEPTIONS";
+"Privacy.Exceptions.DeleteAllExceptions" = "Delete All Exceptions";
+
+"Privacy.Exceptions.DeleteAll" = "Delete All";
+"Privacy.Exceptions.DeleteAllConfirmation" = "Are you sure you want to delete all exceptions?";

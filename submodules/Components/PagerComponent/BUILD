@@ -12,6 +12,7 @@ swift_library(
     deps = [
         "//submodules/Display:Display",
         "//submodules/ComponentFlow:ComponentFlow",
+        "//submodules/DirectionalPanGesture:DirectionalPanGesture",
     ],
     visibility = [
         "//visibility:public",

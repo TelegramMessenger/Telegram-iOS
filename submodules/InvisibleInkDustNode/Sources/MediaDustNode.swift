@@ -6,6 +6,89 @@ import Display
 import AppBundle
 import LegacyComponents
 
+public class MediaDustLayer: CALayer {
+    private var emitter: CAEmitterCell?
+    private var emitterLayer: CAEmitterLayer?
+    
+    private var size: CGSize?
+    
+    override public init() {
+        super.init()
+    }
+    
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+    
+    private func setupEmitterLayerIfNeeded() {
+        guard self.emitterLayer == nil else {
+            return
+        }
+        
+        let emitter = CAEmitterCell()
+        emitter.color = UIColor(rgb: 0xffffff, alpha: 0.0).cgColor
+        emitter.contents = UIImage(bundleImageName: "Components/TextSpeckle")?.cgImage
+        emitter.contentsScale = 1.8
+        emitter.emissionRange = .pi * 2.0
+        emitter.lifetime = 8.0
+        emitter.scale = 0.5
+        emitter.velocityRange = 0.0
+        emitter.name = "dustCell"
+        emitter.alphaRange = 1.0
+        emitter.setValue("point", forKey: "particleType")
+        emitter.setValue(1.0, forKey: "mass")
+        emitter.setValue(0.01, forKey: "massRange")
+        self.emitter = emitter
+        
+        let alphaBehavior = createEmitterBehavior(type: "valueOverLife")
+        alphaBehavior.setValue("color.alpha", forKey: "keyPath")
+        alphaBehavior.setValue([0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1, 0, 0, 1, 0, -1], forKey: "values")
+        alphaBehavior.setValue(true, forKey: "additive")
+        
+        let scaleBehavior = createEmitterBehavior(type: "valueOverLife")
+        scaleBehavior.setValue("scale", forKey: "keyPath")
+        scaleBehavior.setValue([0.0, 0.5], forKey: "values")
+        scaleBehavior.setValue([0.0, 0.05], forKey: "locations")
+                
+        let behaviors = [alphaBehavior, scaleBehavior]
+    
+        let emitterLayer = CAEmitterLayer()
+        emitterLayer.masksToBounds = true
+        emitterLayer.allowsGroupOpacity = true
+        emitterLayer.lifetime = 1
+        emitterLayer.emitterCells = [emitter]
+        emitterLayer.seed = arc4random()
+        emitterLayer.emitterShape = .rectangle
+        emitterLayer.setValue(behaviors, forKey: "emitterBehaviors")
+        self.addSublayer(emitterLayer)
+                
+        self.emitterLayer = emitterLayer
+    }
+    
+    private func updateEmitter() {
+        guard let size = self.size else {
+            return
+        }
+        
+        self.setupEmitterLayerIfNeeded()
+        
+        self.emitterLayer?.frame = CGRect(origin: CGPoint(), size: size)
+        self.emitterLayer?.emitterSize = size
+        self.emitterLayer?.emitterPosition = CGPoint(x: size.width / 2.0, y: size.height / 2.0)
+        
+        let square = Float(size.width * size.height)
+        Queue.mainQueue().async {
+            self.emitter?.birthRate = min(100000.0, square * 0.02)
+        }
+    }
+    
+    public func updateLayout(size: CGSize) {
+        self.size = size
+        
+        self.updateEmitter()
+    }
+}
+
 public class MediaDustNode: ASDisplayNode {
     private var currentParams: (size: CGSize, color: UIColor)?
     private var animColor: CGColor?

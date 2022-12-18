@@ -188,4 +188,16 @@ public final class TelegramRootController: NavigationController {
         controller.view.endEditing(true)
         presentedLegacyShortcutCamera(context: self.context, saveCapturedMedia: false, saveEditedPhotos: false, mediaGrouping: true, parentController: controller)
     }
+    
+    public func openSettings() {
+        guard let rootTabController = self.rootTabController else {
+            return
+        }
+        
+        self.popToRoot(animated: false)
+    
+        if let index = rootTabController.controllers.firstIndex(where: { $0 is PeerInfoScreenImpl }) {
+            rootTabController.selectedIndex = index
+        }
+    }
 }

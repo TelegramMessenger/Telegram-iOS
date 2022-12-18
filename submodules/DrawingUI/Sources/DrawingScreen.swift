@@ -16,77 +16,57 @@ import LottieAnimationComponent
 import ViewControllerComponent
 import ContextUI
 import ChatEntityKeyboardInputNode
+import EntityKeyboard
 
 enum DrawingToolState: Equatable {
     enum Key: CaseIterable {
         case pen
+        case arrow
         case marker
         case neon
-        case pencil
-        case lasso
         case eraser
+        case blur
     }
     
     struct BrushState: Equatable {
-        enum Mode: Equatable {
-            case round
-            case arrow
-        }
-        
         let color: DrawingColor
         let size: CGFloat
-        let mode: Mode
         
         func withUpdatedColor(_ color: DrawingColor) -> BrushState {
-            return BrushState(color: color, size: self.size, mode: self.mode)
+            return BrushState(color: color, size: self.size)
         }
         
         func withUpdatedSize(_ size: CGFloat) -> BrushState {
-            return BrushState(color: self.color, size: size, mode: self.mode)
-        }
-        
-        func withUpdatedMode(_ mode: Mode) -> BrushState {
-            return BrushState(color: self.color, size: self.size, mode: mode)
+            return BrushState(color: self.color, size: size)
         }
     }
     
     struct EraserState: Equatable {
-        enum Mode: Equatable {
-            case bitmap
-            case vector
-            case blur
-        }
-        
         let size: CGFloat
-        let mode: Mode
         
         func withUpdatedSize(_ size: CGFloat) -> EraserState {
-            return EraserState(size: size, mode: self.mode)
-        }
-        
-        func withUpdatedMode(_ mode: Mode) -> EraserState {
-            return EraserState(size: self.size, mode: mode)
+            return EraserState(size: size)
         }
     }
     
     case pen(BrushState)
+    case arrow(BrushState)
     case marker(BrushState)
     case neon(BrushState)
-    case pencil(BrushState)
-    case lasso
     case eraser(EraserState)
+    case blur(EraserState)
     
     func withUpdatedColor(_ color: DrawingColor) -> DrawingToolState {
         switch self {
         case let .pen(state):
             return .pen(state.withUpdatedColor(color))
+        case let .arrow(state):
+            return .arrow(state.withUpdatedColor(color))
         case let .marker(state):
             return .marker(state.withUpdatedColor(color))
         case let .neon(state):
             return .neon(state.withUpdatedColor(color))
-        case let .pencil(state):
-            return .pencil(state.withUpdatedColor(color))
-        case .lasso, .eraser:
+        case .eraser, .blur:
             return self
         }
     }
@@ -95,54 +75,22 @@ enum DrawingToolState: Equatable {
         switch self {
         case let .pen(state):
             return .pen(state.withUpdatedSize(size))
+        case let .arrow(state):
+            return .arrow(state.withUpdatedSize(size))
         case let .marker(state):
             return .marker(state.withUpdatedSize(size))
         case let .neon(state):
             return .neon(state.withUpdatedSize(size))
-        case let .pencil(state):
-            return .pencil(state.withUpdatedSize(size))
-        case .lasso:
-            return self
         case let .eraser(state):
             return .eraser(state.withUpdatedSize(size))
-        }
-    }
-    
-    func withUpdatedBrushMode(_ mode: BrushState.Mode) -> DrawingToolState {
-        switch self {
-        case let .pen(state):
-            return .pen(state.withUpdatedMode(mode))
-        case let .marker(state):
-            return .marker(state.withUpdatedMode(mode))
-        case let .neon(state):
-            return .neon(state.withUpdatedMode(mode))
-        case let .pencil(state):
-            return .pencil(state.withUpdatedMode(mode))
-        case .lasso, .eraser:
-            return self
-        }
-    }
-    
-    func withUpdatedEraserMode(_ mode: EraserState.Mode) -> DrawingToolState {
-        switch self {
-        case .pen:
-            return self
-        case .marker:
-            return self
-        case .neon:
-            return self
-        case .pencil:
-            return self
-        case .lasso:
-            return self
-        case let .eraser(state):
-            return .eraser(state.withUpdatedMode(mode))
+        case let .blur(state):
+            return .blur(state.withUpdatedSize(size))
         }
     }
     
     var color: DrawingColor? {
         switch self {
-        case let .pen(state), let .marker(state), let .neon(state), let .pencil(state):
+        case let .pen(state), let .arrow(state), let .marker(state), let .neon(state):
             return state.color
         default:
             return nil
@@ -151,30 +99,10 @@ enum DrawingToolState: Equatable {
     
     var size: CGFloat? {
         switch self {
-        case let .pen(state), let .marker(state), let .neon(state), let .pencil(state):
+        case let .pen(state), let .arrow(state), let .marker(state), let .neon(state):
             return state.size
-        case let .eraser(state):
+        case let .eraser(state), let .blur(state):
             return state.size
-        default:
-            return nil
-        }
-    }
-    
-    var brushMode: DrawingToolState.BrushState.Mode? {
-        switch self {
-        case let .pen(state), let .marker(state), let .neon(state), let .pencil(state):
-            return state.mode
-        default:
-            return nil
-        }
-    }
-    
-    var eraserMode: DrawingToolState.EraserState.Mode? {
-        switch self {
-        case let .eraser(state):
-            return state.mode
-        default:
-            return nil
         }
     }
     
@@ -182,16 +110,16 @@ enum DrawingToolState: Equatable {
         switch self {
         case .pen:
             return .pen
+        case .arrow:
+            return .arrow
         case .marker:
             return .marker
         case .neon:
             return .neon
-        case .pencil:
-            return .pencil
-        case .lasso:
-            return .lasso
         case .eraser:
             return .eraser
+        case .blur:
+            return .blur
         }
     }
 }
@@ -210,7 +138,7 @@ struct DrawingState: Equatable {
                 return tool
             }
         }
-        return .lasso
+        return .eraser(DrawingToolState.EraserState(size: 0.5))
     }
     
     func withUpdatedSelectedTool(_ selectedTool: DrawingToolState.Key) -> DrawingState {
@@ -247,45 +175,17 @@ struct DrawingState: Equatable {
             tools: tools
         )
     }
-    
-    func withUpdatedBrushMode(_ mode: DrawingToolState.BrushState.Mode) -> DrawingState {
-        var tools = self.tools
-        if let index = tools.firstIndex(where: { $0.key == self.selectedTool }) {
-            let updated = tools[index].withUpdatedBrushMode(mode)
-            tools.remove(at: index)
-            tools.insert(updated, at: index)
-        }
-        
-        return DrawingState(
-            selectedTool: self.selectedTool,
-            tools: tools
-        )
-    }
-    
-    func withUpdatedEraserMode(_ mode: DrawingToolState.EraserState.Mode) -> DrawingState {
-        var tools = self.tools
-        if let index = tools.firstIndex(where: { $0.key == self.selectedTool }) {
-            let updated = tools[index].withUpdatedEraserMode(mode)
-            tools.remove(at: index)
-            tools.insert(updated, at: index)
-        }
-        
-        return DrawingState(
-            selectedTool: self.selectedTool,
-            tools: tools
-        )
-    }
-        
+            
     static var initial: DrawingState {
         return DrawingState(
             selectedTool: .pen,
             tools: [
-                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xe22400), size: 0.2, mode: .round)),
-                .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xfee21b), size: 0.75, mode: .round)),
-                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.4, mode: .round)),
-                .pencil(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x2570f0), size: 0.3, mode: .round)),
-                .lasso,
-                .eraser(DrawingToolState.EraserState(size: 0.5, mode: .bitmap))
+                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff453a), size: 0.2)),
+                .arrow(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff8a00), size: 0.2)),
+                .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffd60a), size: 0.75)),
+                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34c759), size: 0.4)),
+                .eraser(DrawingToolState.EraserState(size: 0.5)),
+                .blur(DrawingToolState.EraserState(size: 0.5))
             ]
         )
     }
@@ -315,12 +215,24 @@ private let colorButtonTag = GenericComponentViewTag()
 private let addButtonTag = GenericComponentViewTag()
 private let toolsTag = GenericComponentViewTag()
 private let modeTag = GenericComponentViewTag()
+private let flipButtonTag = GenericComponentViewTag()
+private let textSettingsTag = GenericComponentViewTag()
+private let sizeSliderTag = GenericComponentViewTag()
+private let color1Tag = GenericComponentViewTag()
+private let color2Tag = GenericComponentViewTag()
+private let color3Tag = GenericComponentViewTag()
+private let color4Tag = GenericComponentViewTag()
+private let color5Tag = GenericComponentViewTag()
+private let color6Tag = GenericComponentViewTag()
+private let color7Tag = GenericComponentViewTag()
+private let color8Tag = GenericComponentViewTag()
 private let doneButtonTag = GenericComponentViewTag()
 
 private final class DrawingScreenComponent: CombinedComponent {
     typealias EnvironmentType = ViewControllerComponentContainer.Environment
     
     let context: AccountContext
+    let isAvatar: Bool
     let present: (ViewController) -> Void
     let updateState: ActionSlot<DrawingView.NavigationState>
     let updateColor: ActionSlot<DrawingColor>
@@ -341,6 +253,7 @@ private final class DrawingScreenComponent: CombinedComponent {
     
     init(
         context: AccountContext,
+        isAvatar: Bool,
         present: @escaping (ViewController) -> Void,
         updateState: ActionSlot<DrawingView.NavigationState>,
         updateColor: ActionSlot<DrawingColor>,
@@ -359,6 +272,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         dismissFastColorPicker: @escaping () -> Void
     ) {
         self.context = context
+        self.isAvatar = isAvatar
         self.present = present
         self.updateState = updateState
         self.updateColor = updateColor
@@ -381,6 +295,9 @@ private final class DrawingScreenComponent: CombinedComponent {
         if lhs.context !== rhs.context {
             return false
         }
+        if lhs.isAvatar != rhs.isAvatar {
+            return false
+        }
         return true
     }
     
@@ -390,10 +307,6 @@ private final class DrawingScreenComponent: CombinedComponent {
             case redo
             case done
             case add
-            case round
-            case arrow
-            case remove
-            case blur
             case fill
             case stroke
             case flip
@@ -414,14 +327,6 @@ private final class DrawingScreenComponent: CombinedComponent {
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Done"), color: .white)!
                 case .add:
                     image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/Add"), color: .white)!
-                case .round:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushRound"), color: .white)!
-                case .arrow:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushArrow"), color: .white)!
-                case .remove:
-                    image = generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushRemove"), color: .white)!
-                case .blur:
-                    image = UIImage(bundleImageName: "Media Editor/BrushBlur")!
                 case .fill:
                     image = UIImage(bundleImageName: "Media Editor/Fill")!
                 case .stroke:
@@ -452,9 +357,12 @@ private final class DrawingScreenComponent: CombinedComponent {
         var currentMode: Mode
         var drawingState: DrawingState
         var drawingViewState: DrawingView.NavigationState
-        var toolIsFocused = false
         var currentColor: DrawingColor
         var selectedEntity: DrawingEntity?
+        
+        var lastSize: CGFloat = 0.5
+        
+        private let stickerPickerInputData = Promise<StickerPickerInputData>()
     
         init(context: AccountContext, updateToolState: ActionSlot<DrawingToolState>, insertEntity: ActionSlot<DrawingEntity>, deselectEntity: ActionSlot<Void>, updatePlayback: ActionSlot<Bool>, present: @escaping (ViewController) -> Void) {
             self.context = context
@@ -470,6 +378,59 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentColor = self.drawingState.tools.first?.color ?? DrawingColor(rgb: 0xffffff)
             
             self.updateToolState.invoke(self.drawingState.currentToolState)
+            
+            let stickerPickerInputData = self.stickerPickerInputData
+            Queue.concurrentDefaultQueue().after(0.5, {
+                let emojiItems = EmojiPagerContentComponent.emojiInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    isStandalone: false,
+                    isStatusSelection: false,
+                    isReactionSelection: false,
+                    isEmojiSelection: true,
+                    topReactionItems: [],
+                    areUnicodeEmojiEnabled: true,
+                    areCustomEmojiEnabled: true,
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false,
+                    forceHasPremium: true
+                )
+                
+                let stickerItems = EmojiPagerContentComponent.stickerInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    stickerNamespaces: [Namespaces.ItemCollection.CloudStickerPacks],
+                    stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false,
+                    hasTrending: true,
+                    forceHasPremium: true
+                )
+                
+                let maskItems = EmojiPagerContentComponent.stickerInputData(
+                    context: context,
+                    animationCache: context.animationCache,
+                    animationRenderer: context.animationRenderer,
+                    stickerNamespaces: [Namespaces.ItemCollection.CloudMaskPacks],
+                    stickerOrderedItemListCollectionIds: [],
+                    chatPeerId: context.account.peerId,
+                    hasSearch: false,
+                    hasTrending: false,
+                    forceHasPremium: true
+                )
+                
+                let signal = combineLatest(queue: .mainQueue(),
+                    emojiItems,
+                    stickerItems,
+                    maskItems
+                ) |> map { emoji, stickers, masks -> StickerPickerInputData in
+                    return StickerPickerInputData(emoji: emoji, stickers: stickers, masks: masks)
+                }
+                
+                stickerPickerInputData.set(signal)
+            })
         }
                 
         private var currentToolState: DrawingToolState {
@@ -489,6 +450,9 @@ private final class DrawingScreenComponent: CombinedComponent {
         }
         
         func updateSelectedTool(_ tool: DrawingToolState.Key) {
+            if self.selectedEntity != nil {
+                self.updateCurrentMode(.drawing)
+            }
             self.drawingState = self.drawingState.withUpdatedSelectedTool(tool)
             self.currentColor = self.drawingState.currentToolState.color ?? self.currentColor
             self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -509,24 +473,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
             self.updated(transition: .immediate)
         }
-        
-        func updateBrushMode(_ mode: DrawingToolState.BrushState.Mode) {
-            self.drawingState = self.drawingState.withUpdatedBrushMode(mode)
-            self.updateToolState.invoke(self.drawingState.currentToolState)
-            self.updated(transition: .easeInOut(duration: 0.2))
-        }
-        
-        func updateEraserMode(_ mode: DrawingToolState.EraserState.Mode) {
-            self.drawingState = self.drawingState.withUpdatedEraserMode(mode)
-            self.updateToolState.invoke(self.drawingState.currentToolState)
-            self.updated(transition: .easeInOut(duration: 0.2))
-        }
-        
-        func updateToolIsFocused(_ isFocused: Bool) {
-            self.toolIsFocused = isFocused
-            self.updated(transition: .easeInOut(duration: 0.2))
-        }
-        
+                
         func updateDrawingState(_ state: DrawingView.NavigationState) {
             self.drawingViewState = state
             self.updated(transition: .easeInOut(duration: 0.2))
@@ -620,84 +567,16 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.present(contextController)
         }
         
-        func presentBrushModePicker(_ sourceView: UIView) {
-            let items: [ContextMenuItem] = [
-                .action(
-                    ContextMenuActionItem(
-                        text: "Round",
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushRound"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            if let strongSelf = self {
-                                strongSelf.updateBrushMode(.round)
-                            }
-                        }
-                    )
-                ),
-                .action(
-                    ContextMenuActionItem(
-                        text: "Arrow",
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushArrow"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            if let strongSelf = self {
-                                strongSelf.updateBrushMode(.arrow)
-                            }
-                        }
-                    )
-                )
-            ]
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))))
-            self.present(contextController)
-        }
-        
-        func presentEraserModePicker(_ sourceView: UIView) {
-            let items: [ContextMenuItem] = [
-                .action(
-                    ContextMenuActionItem(
-                        text: "Eraser",
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushRound"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            self?.updateEraserMode(.bitmap)
-                        }
-                    )
-                ),
-                .action(
-                    ContextMenuActionItem(
-                        text: "Object Eraser",
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushRemove"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            self?.updateEraserMode(.vector)
-                        }
-                    )
-                ),
-                .action(
-                    ContextMenuActionItem(
-                        text: "Background Blur",
-                        icon: { theme in return generateTintedImage(image: UIImage(bundleImageName: "Media Editor/BrushBlur"), color: theme.contextMenu.primaryColor)},
-                        action: { [weak self] f in
-                            f.dismissWithResult(.default)
-                            self?.updateEraserMode(.blur)
-                        }
-                    )
-                )
-            ]
-            let presentationData = self.context.sharedContext.currentPresentationData.with { $0 }.withUpdated(theme: defaultDarkPresentationTheme)
-            let contextController = ContextController(account: self.context.account, presentationData: presentationData, source: .reference(ReferenceContentSource(sourceView: sourceView)), items: .single(ContextController.Items(content: .list(items))))
-            self.present(contextController)
-        }
-        
-        func updateCurrentMode(_ mode: Mode) {
+        func updateCurrentMode(_ mode: Mode, update: Bool = true) {
             self.currentMode = mode
             if let selectedEntity = self.selectedEntity {
                 if selectedEntity is DrawingStickerEntity || selectedEntity is DrawingTextEntity {
                     self.deselectEntity.invoke(Void())
                 }
             }
-            self.updated(transition: .easeInOut(duration: 0.2))
+            if update {
+                self.updated(transition: .easeInOut(duration: 0.2))
+            }
         }
         
         func addTextEntity() {
@@ -709,7 +588,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.currentMode = .sticker
             
             self.updatePlayback.invoke(false)
-            let controller = StickerPickerScreen(context: self.context)
+            let controller = StickerPickerScreen(context: self.context, inputData: self.stickerPickerInputData.get())
             controller.completion = { [weak self] file in
                 self?.updatePlayback.invoke(true)
                 
@@ -751,6 +630,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         let swatch5Button = Child(ColorSwatchComponent.self)
         let swatch6Button = Child(ColorSwatchComponent.self)
         let swatch7Button = Child(ColorSwatchComponent.self)
+        let swatch8Button = Child(ColorSwatchComponent.self)
         
         let addButton = Child(Button.self)
         
@@ -763,21 +643,19 @@ private final class DrawingScreenComponent: CombinedComponent {
         let backButton = Child(Button.self)
         let doneButton = Child(Button.self)
         
-        let brushModeButton = Child(Button.self)
-        let brushModeButtonTag = GenericComponentViewTag()
-        
         let textSize = Child(TextSizeSliderComponent.self)
         let textCancelButton = Child(Button.self)
         let textDoneButton = Child(Button.self)
         
         let presetColors: [DrawingColor] = [
-            DrawingColor(rgb: 0xffffff),
-            DrawingColor(rgb: 0x000000),
-            DrawingColor(rgb: 0x106bff),
-            DrawingColor(rgb: 0x2ecb46),
-            DrawingColor(rgb: 0xfd8d0e),
-            DrawingColor(rgb: 0xfc1a4d),
-            DrawingColor(rgb: 0xaf39ee)
+            DrawingColor(rgb: 0xff453a),
+            DrawingColor(rgb: 0xff8a00),
+            DrawingColor(rgb: 0xffd60a),
+            DrawingColor(rgb: 0x34c759),
+            DrawingColor(rgb: 0x63e6e2),
+            DrawingColor(rgb: 0x0a84ff),
+            DrawingColor(rgb: 0xbf5af2),
+            DrawingColor(rgb: 0xffffff)
         ]
         
         return { context in
@@ -870,213 +748,252 @@ private final class DrawingScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(textSettings
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 51.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0))
                     .appear(.default(scale: false, alpha: true))
                     .disappear(.default(scale: false, alpha: true))
                 )
-            } else if state.currentMode == .sticker {
-                
-            } else if state.selectedEntity != nil {
-                let rightButtonPosition = context.availableSize.width - environment.safeInsets.right - 44.0 / 2.0 - 3.0
-                var offsetX: CGFloat = environment.safeInsets.left + 44.0 / 2.0 + 3.0
-                let delta: CGFloat = (rightButtonPosition - offsetX) / 7.0
-                offsetX += delta
-                
-                var delay: Double = 0.0
-                let swatch1Button = swatch1Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[0]),
-                        color: presetColors[0],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[0], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch1Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch1Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                    })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                    })
-                )
-                offsetX += delta
+            }
             
-                let swatch2Button = swatch2Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[1]),
-                        color: presetColors[1],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[1], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch2Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch2Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.025)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.025)
+
+            let rightButtonPosition = context.availableSize.width - environment.safeInsets.right - 24.0
+            var offsetX: CGFloat = environment.safeInsets.left + 24.0
+            let delta: CGFloat = (rightButtonPosition - offsetX) / 7.0
+            
+            let applySwatchColor: (DrawingColor) -> Void = { [weak state] color in
+                if let state = state {
+                    if [.eraser, .blur].contains(state.drawingState.selectedTool) || state.selectedEntity is DrawingStickerEntity {
+                        state.updateSelectedTool(.pen)
+                    }
+                    state.updateColor(color, animated: true)
+                }
+            }
+            
+            var delay: Double = 0.0
+            let swatch1Button = swatch1Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[0]),
+                    color: presetColors[0],
+                    tag: color1Tag,
+                    action: {
+                        applySwatchColor(presetColors[0])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch1Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch1Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
+                })
+            )
+            offsetX += delta
+        
+            let swatch2Button = swatch2Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[1]),
+                    color: presetColors[1],
+                    tag: color2Tag,
+                    action: {
+                        applySwatchColor(presetColors[1])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch2Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch2Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.025)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.025)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                )
-                offsetX += delta
-                
-                let swatch3Button = swatch3Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[2]),
-                        color: presetColors[2],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[2], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch3Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch3Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.05)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.05)
+                })
+            )
+            offsetX += delta
+            
+            let swatch3Button = swatch3Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[2]),
+                    color: presetColors[2],
+                    tag: color3Tag,
+                    action: {
+                        applySwatchColor(presetColors[2])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch3Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch3Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.05)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.05)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
+                })
+            )
+            offsetX += delta
+            
+            let swatch4Button = swatch4Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[3]),
+                    color: presetColors[3],
+                    tag: color4Tag,
+                    action: {
+                        applySwatchColor(presetColors[3])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch4Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch4Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.075)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.075)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                )
-                offsetX += delta
-                
-                let swatch4Button = swatch4Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[3]),
-                        color: presetColors[3],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[3], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch4Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch4Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.075)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.075)
+                })
+            )
+            offsetX += delta
+            
+            let swatch5Button = swatch5Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[4]),
+                    color: presetColors[4],
+                    tag: color5Tag,
+                    action: {
+                        applySwatchColor(presetColors[4])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch5Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch5Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.1)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.1)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
+                })
+            )
+            offsetX += delta
+            delay += 0.025
+            
+            let swatch6Button = swatch6Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[5]),
+                    color: presetColors[5],
+                    tag: color6Tag,
+                    action: {
+                        applySwatchColor(presetColors[5])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch6Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch6Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.125)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.125)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                )
-                offsetX += delta
-                
-                let swatch5Button = swatch5Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[4]),
-                        color: presetColors[4],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[4], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch5Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch5Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.1)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.1)
+                })
+            )
+            offsetX += delta
+            
+            let swatch7Button = swatch7Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[6]),
+                    color: presetColors[6],
+                    tag: color7Tag,
+                    action: {
+                        applySwatchColor(presetColors[6])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch7Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.15)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.15)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
+                })
+            )
+            offsetX += delta
+            
+            let swatch8Button = swatch8Button.update(
+                component: ColorSwatchComponent(
+                    type: .pallete(state.currentColor == presetColors[7]),
+                    color: presetColors[7],
+                    tag: color8Tag,
+                    action: {
+                        applySwatchColor(presetColors[7])
+                    }
+                ),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(swatch8Button
+                .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.175)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.175)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                )
-                offsetX += delta
-                delay += 0.025
-                
-                let swatch6Button = swatch6Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[5]),
-                        color: presetColors[5],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[5], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch6Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch6Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.125)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.125)
-                    })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                    })
-                )
-                offsetX += delta
-                
-                let swatch7Button = swatch7Button.update(
-                    component: ColorSwatchComponent(
-                        type: .pallete(state.currentColor == presetColors[6]),
-                        color: presetColors[6],
-                        action: { [weak state] in
-                            state?.updateColor(presetColors[6], animated: true)
-                        }
-                    ),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: context.transition
-                )
-                context.add(swatch7Button
-                    .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.15)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.15)
-                    })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                    })
-                )
-            } else {
+                })
+            )
+         
+            if state.selectedEntity == nil {
                 let tools = tools.update(
                     component: ToolsComponent(
                         state: state.drawingState,
-                        isFocused: state.toolIsFocused,
+                        isFocused: false,
                         tag: toolsTag,
                         toolPressed: { [weak state] tool in
                             if let state = state {
-                                if state.drawingState.selectedTool == tool, tool != .lasso {
-                                    state.updateToolIsFocused(!state.toolIsFocused)
-                                } else {
-                                    state.updateSelectedTool(tool)
-                                }
+                                state.updateSelectedTool(tool)
                             }
                         },
                         toolResized: { [weak state] _, size in
@@ -1093,7 +1010,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(tools
-                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 41.0))
+                    .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - tools.size.height / 2.0 - 78.0))
                     .appear(Transition.Appear({ _, view, transition in
                         if let view = view as? ToolsComponent.View, !transition.animation.isImmediate {
                             view.animateIn(completion: {})
@@ -1109,131 +1026,18 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             }
             
-            if let textEntity = state.selectedEntity as? DrawingTextEntity, let entityView = textEntity.currentEntityView as? DrawingTextEntityView, entityView.isEditing {
-                let topInset = environment.safeInsets.top + 31.0
-                let textSize = textSize.update(
-                    component: TextSizeSliderComponent(
-                        value: textEntity.fontSize,
-                        updated: { [weak state] size in
-                            state?.updateBrushSize(size)
-                        }
-                    ),
-                    availableSize: CGSize(width: 30.0, height: 240.0),
-                    transition: context.transition
-                )
-                context.add(textSize
-                    .position(CGPoint(x: textSize.size.width / 2.0, y: topInset + (context.availableSize.height - topInset - environment.inputHeight) / 2.0))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                        
-                        transition.animatePosition(view: view, from: CGPoint(x: -33.0, y: 0.0), to: CGPoint(), additive: true)
-                    })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                        transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), additive: true)
-                    })
-                )
-                
-                let textCancelButton = textCancelButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Cancel", font: Font.regular(17.0), color: .white)
-                        ),
-                        action: { [weak state] in
-                            if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                                entityView.endEditing(reset: true)
-                            }
-                        }
-                    ),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(textCancelButton
-                    .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
-                let textDoneButton = textDoneButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Done", font: Font.semibold(17.0), color: .white)
-                        ),
-                        action: { [weak state] in
-                            if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
-                                entityView.endEditing()
-                            }
-                        }
-                    ),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(textDoneButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
+            var sizeSliderVisible = false
+            var isEditingText = false
+            var sizeValue: CGFloat?
+            if let textEntity = state.selectedEntity as? DrawingTextEntity, let entityView = textEntity.currentEntityView as? DrawingTextEntityView {
+                sizeSliderVisible = true
+                isEditingText = entityView.isEditing
+                sizeValue = textEntity.fontSize
             } else {
-                let undoButton = undoButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Image(image: state.image(.undo))
-                        ),
-                        isEnabled: state.drawingViewState.canUndo,
-                        action: {
-                            performAction.invoke(.undo)
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(undoButtonTag),
-                    availableSize: CGSize(width: 24.0, height: 24.0),
-                    transition: context.transition
-                )
-                context.add(undoButton
-                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
-                if state.drawingViewState.canRedo {
-                    let redoButton = redoButton.update(
-                        component: Button(
-                            content: AnyComponent(
-                                Image(image: state.image(.redo))
-                            ),
-                            action: {
-                                performAction.invoke(.redo)
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
-                        availableSize: CGSize(width: 24.0, height: 24.0),
-                        transition: context.transition
-                    )
-                    context.add(redoButton
-                        .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: environment.safeInsets.top + 31.0))
-                        .appear(.default(scale: true, alpha: true))
-                        .disappear(.default(scale: true, alpha: true))
-                    )
+                if state.selectedEntity == nil {
+                    sizeSliderVisible = true
+                    sizeValue = state.drawingState.currentToolState.size
                 }
-                
-                let clearAllButton = clearAllButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Text(text: "Clear All", font: Font.regular(17.0), color: .white)
-                        ),
-                        isEnabled: state.drawingViewState.canClear,
-                        action: {
-                            performAction.invoke(.clear)
-                        }
-                    ).tagged(clearAllButtonTag),
-                    availableSize: CGSize(width: 100.0, height: 30.0),
-                    transition: context.transition
-                )
-                context.add(clearAllButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
-                    .appear(.default(scale: true, alpha: true))
-                    .disappear(.default(scale: true, alpha: true))
-                )
-                
                 if state.drawingViewState.canZoomOut {
                     let zoomOutButton = zoomOutButton.update(
                         component: Button(
@@ -1257,26 +1061,220 @@ private final class DrawingScreenComponent: CombinedComponent {
                     )
                 }
             }
+            if let sizeValue {
+                state.lastSize = sizeValue
+            }
             
-            var isEditingSize = false
-            if state.toolIsFocused {
-                isEditingSize = true
-            } else if let entity = state.selectedEntity {
+            let topInset = environment.safeInsets.top + 31.0
+            let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
+            let textSize = textSize.update(
+                component: TextSizeSliderComponent(
+                    value: sizeValue ?? state.lastSize,
+                    tag: sizeSliderTag,
+                    updated: { [weak state] size in
+                        if let state = state {
+                            state.updateBrushSize(size)
+                            if state.selectedEntity == nil {
+                                previewBrushSize.invoke(size)
+                            }
+                        }
+                    }, released: {
+                        previewBrushSize.invoke(nil)
+                    }
+                ),
+                availableSize: CGSize(width: 30.0, height: 240.0),
+                transition: context.transition
+            )
+            context.add(textSize
+                .position(CGPoint(x: sizeSliderVisible ? textSize.size.width / 2.0 : textSize.size.width / 2.0 - 33.0, y: topInset + (context.availableSize.height - topInset - bottomInset) / 2.0))
+            )
+            
+            let undoButton = undoButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Image(image: state.image(.undo))
+                    ),
+                    isEnabled: state.drawingViewState.canUndo,
+                    action: {
+                        performAction.invoke(.undo)
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(undoButtonTag),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: context.transition
+            )
+            context.add(undoButton
+                .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: environment.safeInsets.top + 31.0))
+                .scale(isEditingText ? 0.01 : 1.0)
+                .opacity(isEditingText ? 0.0 : 1.0)
+            )
+            
+            if state.drawingViewState.canRedo && !isEditingText {
+                let redoButton = redoButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            Image(image: state.image(.redo))
+                        ),
+                        action: {
+                            performAction.invoke(.redo)
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(redoButtonTag),
+                    availableSize: CGSize(width: 24.0, height: 24.0),
+                    transition: context.transition
+                )
+                context.add(redoButton
+                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: environment.safeInsets.top + 31.0))
+                    .appear(.default(scale: true, alpha: true))
+                    .disappear(.default(scale: true, alpha: true))
+                )
+            }
+            
+            let clearAllButton = clearAllButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: "Clear All", font: Font.regular(17.0), color: .white)
+                    ),
+                    isEnabled: state.drawingViewState.canClear,
+                    action: {
+                        performAction.invoke(.clear)
+                    }
+                ).tagged(clearAllButtonTag),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(clearAllButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(isEditingText ? 0.01 : 1.0)
+                .opacity(isEditingText ? 0.0 : 1.0)
+            )
+            
+            let textCancelButton = textCancelButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: environment.strings.Common_Cancel, font: Font.regular(17.0), color: .white)
+                    ),
+                    action: { [weak state] in
+                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
+                            entityView.endEditing(reset: true)
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(textCancelButton
+                .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(isEditingText ? 1.0 : 0.01)
+                .opacity(isEditingText ? 1.0 : 0.0)
+            )
+            
+            let textDoneButton = textDoneButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Text(text: environment.strings.Common_Done, font: Font.semibold(17.0), color: .white)
+                    ),
+                    action: { [weak state] in
+                        if let entity = state?.selectedEntity as? DrawingTextEntity, let entityView = entity.currentEntityView as? DrawingTextEntityView {
+                            entityView.endEditing()
+                        }
+                    }
+                ),
+                availableSize: CGSize(width: 100.0, height: 30.0),
+                transition: context.transition
+            )
+            context.add(textDoneButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .scale(isEditingText ? 1.0 : 0.01)
+                .opacity(isEditingText ? 1.0 : 0.0)
+            )
+            
+            var isEditingShapeSize = false
+            if let entity = state.selectedEntity {
                 if entity is DrawingSimpleShapeEntity || entity is DrawingVectorEntity || entity is DrawingBubbleEntity {
-                    isEditingSize = true
+                    isEditingShapeSize = true
                 }
             }
             
-            if !state.toolIsFocused {
-                var color: DrawingColor?
-                if let entity = state.selectedEntity, !(entity is DrawingTextEntity) && presetColors.contains(entity.color) {
-                    color = nil
-                } else {
-                    color = state.currentColor
+            var color: DrawingColor?
+            if let entity = state.selectedEntity, presetColors.contains(entity.color) {
+                color = nil
+            } else if presetColors.contains(state.currentColor) {
+                color = nil
+            } else {
+                color = state.currentColor
+            }
+            
+            if let _ = state.selectedEntity as? DrawingStickerEntity {
+                let stickerFlipButton = stickerFlipButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            Image(image: state.image(.flip))
+                        ),
+                        action: { [weak state] in
+                            guard let state = state else {
+                                return
+                            }
+                            if let entity = state.selectedEntity as? DrawingStickerEntity {
+                                entity.mirrored = !entity.mirrored
+                                entity.currentEntityView?.update(animated: true)
+                            }
+                            state.updated(transition: .easeInOut(duration: 0.2))
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(flipButtonTag),
+                    availableSize: CGSize(width: 33.0, height: 33.0),
+                    transition: .immediate
+                )
+                context.add(stickerFlipButton
+                    .position(CGPoint(x: environment.safeInsets.left + stickerFlipButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - stickerFlipButton.size.height / 2.0 - 89.0))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
+                )
+            } else {
+                let colorButton = colorButton.update(
+                    component: ColorSwatchComponent(
+                        type: .main,
+                        color: color,
+                        tag: colorButtonTag,
+                        action: { [weak state] in
+                            if let state = state {
+                                presentColorPicker(state.currentColor)
+                            }
+                        },
+                        holdAction: {
+                            if let controller = controller() as? DrawingScreen, let buttonView = controller.node.componentHost.findTaggedView(tag: colorButtonTag) {
+                                presentFastColorPicker(buttonView)
+                            }
+                        },
+                        pan: { point in
+                            updateFastColorPickerPan(point)
+                        },
+                        release: {
+                            dismissFastColorPicker()
+                        }
+                    ),
+                    availableSize: CGSize(width: 44.0, height: 44.0),
+                    transition: context.transition
+                )
+                context.add(colorButton
+                    .position(CGPoint(x: environment.safeInsets.left + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
+                )
+            }
+            
+            var isModeControlEnabled = true
+            var modeRightInset: CGFloat = 57.0
+            if isEditingShapeSize {
+                var isFilled = false
+                if let entity = state.selectedEntity as? DrawingSimpleShapeEntity, case .fill = entity.drawType {
+                    isFilled = true
+                    isModeControlEnabled = false
+                } else if let entity = state.selectedEntity as? DrawingBubbleEntity, case .fill = entity.drawType {
+                    isFilled = true
+                    isModeControlEnabled = false
                 }
                 
-                if let _ = state.selectedEntity as? DrawingStickerEntity {
-                    let stickerFlipButton = stickerFlipButton.update(
+                if let _ = state.selectedEntity as? DrawingBubbleEntity {
+                    let flipButton = flipButton.update(
                         component: Button(
                             content: AnyComponent(
                                 Image(image: state.image(.flip))
@@ -1285,9 +1283,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 guard let state = state else {
                                     return
                                 }
-                                if let entity = state.selectedEntity as? DrawingStickerEntity {
-                                    entity.mirrored = !entity.mirrored
-                                    entity.currentEntityView?.update(animated: true)
+                                if let entity = state.selectedEntity as? DrawingBubbleEntity {
+                                    var updatedTailPosition = entity.tailPosition
+                                    updatedTailPosition.x = 1.0 - updatedTailPosition.x
+                                    entity.tailPosition = updatedTailPosition
+                                    entity.currentEntityView?.update()
                                 }
                                 state.updated(transition: .easeInOut(duration: 0.2))
                             }
@@ -1295,202 +1295,58 @@ private final class DrawingScreenComponent: CombinedComponent {
                         availableSize: CGSize(width: 33.0, height: 33.0),
                         transition: .immediate
                     )
-                    context.add(stickerFlipButton
-                        .position(CGPoint(x: environment.safeInsets.left + stickerFlipButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - stickerFlipButton.size.height / 2.0 - 51.0))
+                    context.add(flipButton
+                        .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - flipButton.size.width / 2.0 - 3.0 - flipButton.size.width, y: context.availableSize.height - environment.safeInsets.bottom - flipButton.size.height / 2.0 - 2.0 - UIScreenPixel))
                         .appear(.default(scale: true))
                         .disappear(.default(scale: true))
                     )
-                } else {
-                    if [.lasso, .eraser].contains(state.drawingState.selectedTool) {
-                        
-                    } else {
-                        let colorButton = colorButton.update(
-                            component: ColorSwatchComponent(
-                                type: .main,
-                                color: color,
-                                tag: colorButtonTag,
-                                action: { [weak state] in
-                                    if let state = state {
-                                        presentColorPicker(state.currentColor)
-                                    }
-                                },
-                                holdAction: {
-                                    if let controller = controller() as? DrawingScreen, let buttonView = controller.node.componentHost.findTaggedView(tag: colorButtonTag) {
-                                        presentFastColorPicker(buttonView)
-                                    }
-                                },
-                                pan: { point in
-                                    updateFastColorPickerPan(point)
-                                },
-                                release: {
-                                    dismissFastColorPicker()
-                                }
-                            ),
-                            availableSize: CGSize(width: 44.0, height: 44.0),
-                            transition: context.transition
-                        )
-                        context.add(colorButton
-                            .position(CGPoint(x: environment.safeInsets.left + colorButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 51.0))
-                            .appear(.default(scale: true))
-                            .disappear(.default(scale: true))
-                        )
-                    }
+                    modeRightInset += 35.0
                 }
-            }
-            
-            var isModeControlEnabled = true
-            var modeRightInset: CGFloat = 57.0
-            if isEditingSize {
-                if state.toolIsFocused {
-                    let title: String
-                    let image: UIImage?
-                    var isEraser = false
-                    if let mode = state.drawingState.toolState(for: state.drawingState.selectedTool).brushMode {
-                        switch mode {
-                        case .round:
-                            title = "Round"
-                            image = state.image(.round)
-                        case .arrow:
-                            title = "Arrow"
-                            image = state.image(.arrow)
-                        }
-                    } else if let mode = state.drawingState.toolState(for: state.drawingState.selectedTool).eraserMode {
-                        isEraser = true
-                        switch mode {
-                        case .bitmap:
-                            title = "Eraser"
-                            image = state.image(.round)
-                        case .vector:
-                            title = "Object"
-                            image = state.image(.remove)
-                        case .blur:
-                            title = "Blur"
-                            image = state.image(.blur)
-                        }
-                    } else {
-                        title = ""
-                        image = nil
-                    }
-                    
-                    if [.pen, .eraser].contains(state.drawingState.selectedTool) {
-                        let brushModeButton = brushModeButton.update(
-                            component: Button(
-                                content: AnyComponent(
-                                    BrushButtonContent(
-                                        title: title,
-                                        image: image ?? UIImage()
-                                    )
-                                ),
-                                action: { [weak state] in
-                                    guard let controller = controller() as? DrawingScreen else {
-                                        return
-                                    }
-                                    if let buttonView = controller.node.componentHost.findTaggedView(tag: brushModeButtonTag) as? Button.View {
-                                        if isEraser {
-                                            state?.presentEraserModePicker(buttonView)
-                                        } else {
-                                            state?.presentBrushModePicker(buttonView)
-                                        }
-                                    }
-                                }
-                            ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(brushModeButtonTag),
-                            availableSize: CGSize(width: 75.0, height: 33.0),
-                            transition: .immediate
-                        )
-                        context.add(brushModeButton
-                            .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - brushModeButton.size.width / 2.0 - 5.0, y: context.availableSize.height - environment.safeInsets.bottom - brushModeButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                            .appear(.default(alpha: true))
-                            .disappear(.default(alpha: true))
-                        )
-                        modeRightInset += 35.0
-                    } else {
-                        modeRightInset = 16.0
-                    }
-                } else {
-                    var isFilled = false
-                    if let entity = state.selectedEntity as? DrawingSimpleShapeEntity, case .fill = entity.drawType {
-                        isFilled = true
-                        isModeControlEnabled = false
-                    } else if let entity = state.selectedEntity as? DrawingBubbleEntity, case .fill = entity.drawType {
-                        isFilled = true
-                        isModeControlEnabled = false
-                    }
-                    
-                    if let _ = state.selectedEntity as? DrawingBubbleEntity {
-                        let flipButton = flipButton.update(
-                            component: Button(
-                                content: AnyComponent(
-                                    Image(image: state.image(.flip))
-                                ),
-                                action: { [weak state] in
-                                    guard let state = state else {
-                                        return
-                                    }
-                                    if let entity = state.selectedEntity as? DrawingBubbleEntity {
-                                        var updatedTailPosition = entity.tailPosition
-                                        updatedTailPosition.x = 1.0 - updatedTailPosition.x
-                                        entity.tailPosition = updatedTailPosition
-                                        entity.currentEntityView?.update()
-                                    }
-                                    state.updated(transition: .easeInOut(duration: 0.2))
-                                }
-                            ).minSize(CGSize(width: 44.0, height: 44.0)),
-                            availableSize: CGSize(width: 33.0, height: 33.0),
-                            transition: .immediate
-                        )
-                        context.add(flipButton
-                            .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - flipButton.size.width / 2.0 - 3.0 - flipButton.size.width, y: context.availableSize.height - environment.safeInsets.bottom - flipButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                            .appear(.default(scale: true))
-                            .disappear(.default(scale: true))
-                        )
-                        modeRightInset += 35.0
-                    }
-                    
-                    let fillButton = fillButton.update(
-                        component: Button(
-                            content: AnyComponent(
-                                Image(image: state.image(isFilled ? .fill : .stroke))
-                            ),
-                            action: { [weak state] in
-                                guard let state = state else {
-                                    return
-                                }
-                                if let entity = state.selectedEntity as? DrawingSimpleShapeEntity {
-                                    if case .fill = entity.drawType {
-                                        entity.drawType = .stroke
-                                    } else {
-                                        entity.drawType = .fill
-                                    }
-                                    entity.currentEntityView?.update()
-                                } else if let entity = state.selectedEntity as? DrawingBubbleEntity {
-                                    if case .fill = entity.drawType {
-                                        entity.drawType = .stroke
-                                    } else {
-                                        entity.drawType = .fill
-                                    }
-                                    entity.currentEntityView?.update()
-                                } else if let entity = state.selectedEntity as? DrawingVectorEntity {
-                                    if case .oneSidedArrow = entity.type {
-                                        entity.type = .twoSidedArrow
-                                    } else if case .twoSidedArrow = entity.type {
-                                        entity.type = .line
-                                    } else {
-                                        entity.type = .oneSidedArrow
-                                    }
-                                    entity.currentEntityView?.update()
-                                }
-                                state.updated(transition: .easeInOut(duration: 0.2))
+                
+                let fillButton = fillButton.update(
+                    component: Button(
+                        content: AnyComponent(
+                            Image(image: state.image(isFilled ? .fill : .stroke))
+                        ),
+                        action: { [weak state] in
+                            guard let state = state else {
+                                return
                             }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(fillButtonTag),
-                        availableSize: CGSize(width: 33.0, height: 33.0),
-                        transition: .immediate
-                    )
-                    context.add(fillButton
-                        .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - fillButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - fillButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                        .appear(.default(scale: true))
-                        .disappear(.default(scale: true))
-                    )
-                }
+                            if let entity = state.selectedEntity as? DrawingSimpleShapeEntity {
+                                if case .fill = entity.drawType {
+                                    entity.drawType = .stroke
+                                } else {
+                                    entity.drawType = .fill
+                                }
+                                entity.currentEntityView?.update()
+                            } else if let entity = state.selectedEntity as? DrawingBubbleEntity {
+                                if case .fill = entity.drawType {
+                                    entity.drawType = .stroke
+                                } else {
+                                    entity.drawType = .fill
+                                }
+                                entity.currentEntityView?.update()
+                            } else if let entity = state.selectedEntity as? DrawingVectorEntity {
+                                if case .oneSidedArrow = entity.type {
+                                    entity.type = .twoSidedArrow
+                                } else if case .twoSidedArrow = entity.type {
+                                    entity.type = .line
+                                } else {
+                                    entity.type = .oneSidedArrow
+                                }
+                                entity.currentEntityView?.update()
+                            }
+                            state.updated(transition: .easeInOut(duration: 0.2))
+                        }
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(fillButtonTag),
+                    availableSize: CGSize(width: 33.0, height: 33.0),
+                    transition: .immediate
+                )
+                context.add(fillButton
+                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - fillButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - fillButton.size.height / 2.0 - 2.0 - UIScreenPixel))
+                    .appear(.default(scale: true))
+                    .disappear(.default(scale: true))
+                )
             } else {
                 let addButton = addButton.update(
                     component: Button(
@@ -1500,7 +1356,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                                 component: AnyComponent(
                                     BlurredRectangle(
                                         color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                        radius: 16.5
+                                        radius: 12.0
                                     )
                                 )
                             ),
@@ -1527,11 +1383,11 @@ private final class DrawingScreenComponent: CombinedComponent {
                             }
                         }
                     ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(addButtonTag),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
+                    availableSize: CGSize(width: 24.0, height: 24.0),
                     transition: .immediate
                 )
                 context.add(addButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - addButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 51.0))
+                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
                     .appear(.default(scale: true))
                     .disappear(.default(scale: true))
                 )
@@ -1587,7 +1443,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ModeAndSizeComponent(
                     values: ["Draw", "Sticker", "Text"],
                     sizeValue: selectedSize,
-                    isEditing: isEditingSize,
+                    isEditing: isEditingShapeSize,
                     isEnabled: isModeControlEnabled,
                     rightInset: modeRightInset - 57.0,
                     tag: modeTag,
@@ -1638,7 +1494,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: "media_backToCancel",
                                 mode: .animating(loop: false),
-                                range: isEditingSize || animatingOut ? (0.5, 1.0) : (0.0, 0.5)
+                                range: isEditingShapeSize || animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
                             ),
                             colors: ["__allcolors__": .white],
                             size: CGSize(width: 33.0, height: 33.0)
@@ -1646,9 +1502,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     ),
                     action: { [weak state] in
                         if let state = state {
-                            if state.toolIsFocused {
-                                state.updateToolIsFocused(false)
-                            } else if let selectedEntity = state.selectedEntity, !(selectedEntity is DrawingStickerEntity || selectedEntity is DrawingTextEntity) {
+                            if let selectedEntity = state.selectedEntity, !(selectedEntity is DrawingStickerEntity || selectedEntity is DrawingTextEntity) {
                                 deselectEntity.invoke(Void())
                             } else {
                                 dismiss.invoke(Void())
@@ -1746,7 +1600,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 self.performAction.connect { [weak self] action in
                     if let strongSelf = self {
                         if action == .clear {
-                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                            let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme))
                             actionSheet.setItemGroups([
                                 ActionSheetItemGroup(items: [
                                     ActionSheetButtonItem(title: strongSelf.presentationData.strings.Paint_ClearConfirm, color: .destructive, action: { [weak actionSheet, weak self] in
@@ -1947,7 +1801,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             self.dismiss.connect { [weak self] _ in
                 if let strongSelf = self {
                     if !strongSelf.drawingView.isEmpty {
-                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData)
+                        let actionSheet = ActionSheetController(presentationData: strongSelf.presentationData.withUpdated(theme: defaultDarkColorPresentationTheme))
                         actionSheet.setItemGroups([
                             ActionSheetItemGroup(items: [
                                 ActionSheetButtonItem(title: strongSelf.presentationData.strings.PhotoEditor_DiscardChanges, color: .accent, action: { [weak actionSheet, weak self] in
@@ -2083,6 +1937,18 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3)
             }
+            var delay: Double = 0.0
+            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+            for tag in colorTags {
+                if let view = self.componentHost.findTaggedView(tag: tag) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: delay)
+                    view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: delay)
+                    delay += 0.025
+                }
+            }
+            if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
+                view.layer.animatePosition(from: CGPoint(x: -33.0, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
+            }
         }
         
         func animateOut(completion: @escaping () -> Void) {
@@ -2113,8 +1979,32 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
             }
+            if let buttonView = self.componentHost.findTaggedView(tag: flipButtonTag) {
+                buttonView.alpha = 0.0
+                buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+            }     
+            if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
+                view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            }
+            if let view = self.componentHost.findTaggedView(tag: textSettingsTag) {
+                view.alpha = 0.0
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            }
+            
+            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+            for tag in colorTags {
+                if let view = self.componentHost.findTaggedView(tag: tag) {
+                    view.alpha = 0.0
+                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+                }
+            }
+            
             if let view = self.componentHost.findTaggedView(tag: toolsTag) as? ToolsComponent.View {
-                view.animateOut(completion: {})
+                view.animateOut(completion: {
+                    completion()
+                })
             }
             if let view = self.componentHost.findTaggedView(tag: modeTag) as? ModeAndSizeComponent.View {
                 view.animateOut()
@@ -2134,6 +2024,9 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }
         
         func containerLayoutUpdated(layout: ContainerViewLayout, animateOut: Bool = false, transition: Transition) {
+            guard let controller = self.controller else {
+                return
+            }
             let isFirstTime = self.validLayout == nil
             self.validLayout = layout
             
@@ -2165,6 +2058,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 component: AnyComponent(
                     DrawingScreenComponent(
                         context: self.context,
+                        isAvatar: controller.isAvatar,
                         present: { [weak self] c in
                             self?.controller?.present(c, in: .window(.root))
                         },
@@ -2218,105 +2112,106 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 if let componentView = self.textEditAccessoryHost.view, componentView.superview != nil {
                     isFirstTime = false
                 }
-                let accessorySize = self.textEditAccessoryHost.update(
-                    transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
-                    component: AnyComponent(
-                        TextSettingsComponent(
-                            color: textEntity.color,
-                            style: DrawingTextStyle(style: textEntity.style),
-                            alignment: DrawingTextAlignment(alignment: textEntity.alignment),
-                            font: DrawingTextFont(font: textEntity.font),
-                            isEmojiKeyboard: entityView.textView.inputView != nil,
-                            presentColorPicker: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
+                UIView.performWithoutAnimation {
+                    let accessorySize = self.textEditAccessoryHost.update(
+                        transition: isFirstTime ? .immediate : .easeInOut(duration: 0.2),
+                        component: AnyComponent(
+                            TextSettingsComponent(
+                                color: textEntity.color,
+                                style: DrawingTextStyle(style: textEntity.style),
+                                alignment: DrawingTextAlignment(alignment: textEntity.alignment),
+                                font: DrawingTextFont(font: textEntity.font),
+                                isEmojiKeyboard: entityView.textView.inputView != nil,
+                                presentColorPicker: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    entityView.suspendEditing()
+                                    self?.presentColorPicker(initialColor: textEntity.color, dismissed: {
+                                        entityView.resumeEditing()
+                                    })
+                                },
+                                presentFastColorPicker: { [weak self] buttonTag in
+                                    if let buttonView = self?.textEditAccessoryHost.findTaggedView(tag: buttonTag) {
+                                        self?.presentFastColorPicker(sourceView: buttonView)
+                                    }
+                                },
+                                updateFastColorPickerPan: { [weak self] point in
+                                    self?.updateFastColorPickerPan(point)
+                                },
+                                dismissFastColorPicker: { [weak self] in
+                                    self?.dismissFastColorPicker()
+                                },
+                                toggleStyle: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextStyle: DrawingTextEntity.Style
+                                    switch textEntity.style {
+                                    case .regular:
+                                        nextStyle = .filled
+                                    case .filled:
+                                        nextStyle = .semi
+                                    case .semi:
+                                        nextStyle = .stroke
+                                    case .stroke:
+                                        nextStyle = .regular
+                                    }
+                                    textEntity.style = nextStyle
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                toggleAlignment: { [weak self] in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    var nextAlignment: DrawingTextEntity.Alignment
+                                    switch textEntity.alignment {
+                                    case .left:
+                                        nextAlignment = .center
+                                    case .center:
+                                        nextAlignment = .right
+                                    case .right:
+                                        nextAlignment = .left
+                                    }
+                                    textEntity.alignment = nextAlignment
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                updateFont: { [weak self] font in
+                                    guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
+                                        return
+                                    }
+                                    textEntity.font = font.font
+                                    entityView.update()
+                                    
+                                    if let layout = strongSelf.validLayout {
+                                        strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
+                                    }
+                                },
+                                toggleKeyboard: { [weak self] in
+                                    guard let strongSelf = self else {
+                                        return
+                                    }
+                                    strongSelf.toggleInputMode()
                                 }
-                                entityView.suspendEditing()
-                                self?.presentColorPicker(initialColor: textEntity.color, dismissed: {
-                                    entityView.resumeEditing()
-                                })
-                            },
-                            presentFastColorPicker: { [weak self] buttonTag in
-                                if let buttonView = self?.textEditAccessoryHost.findTaggedView(tag: buttonTag) {
-                                    self?.presentFastColorPicker(sourceView: buttonView)
-                                }
-                            },
-                            updateFastColorPickerPan: { [weak self] point in
-                                self?.updateFastColorPickerPan(point)
-                            },
-                            dismissFastColorPicker: { [weak self] in
-                                self?.dismissFastColorPicker()
-                            },
-                            toggleStyle: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                var nextStyle: DrawingTextEntity.Style
-                                switch textEntity.style {
-                                case .regular:
-                                    nextStyle = .filled
-                                case .filled:
-                                    nextStyle = .semi
-                                case .semi:
-                                    nextStyle = .stroke
-                                case .stroke:
-                                    nextStyle = .regular
-                                }
-                                textEntity.style = nextStyle
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            toggleAlignment: { [weak self] in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                var nextAlignment: DrawingTextEntity.Alignment
-                                switch textEntity.alignment {
-                                case .left:
-                                    nextAlignment = .center
-                                case .center:
-                                    nextAlignment = .right
-                                case .right:
-                                    nextAlignment = .left
-                                }
-                                textEntity.alignment = nextAlignment
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            updateFont: { [weak self] font in
-                                guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
-                                    return
-                                }
-                                textEntity.font = font.font
-                                entityView.update()
-                                
-                                if let layout = strongSelf.validLayout {
-                                    strongSelf.containerLayoutUpdated(layout: layout, transition: .immediate)
-                                }
-                            },
-                            toggleKeyboard: { [weak self] in
-                                guard let strongSelf = self else {
-                                    return
-                                }
-                                strongSelf.toggleInputMode()
-                            }
-                        )
-                    ),
-                    environment: {},
-                    forceUpdate: true,
-                    containerSize: CGSize(width: layout.size.width, height: 44.0)
-                )
-                if let componentView = self.textEditAccessoryHost.view {
-                    if componentView.superview == nil {
-                        self.textEditAccessoryView.addSubview(componentView)
-                    }
-                    UIView.performWithoutAnimation {
+                            )
+                        ),
+                        environment: {},
+                        forceUpdate: true,
+                        containerSize: CGSize(width: layout.size.width, height: 44.0)
+                    )
+                    if let componentView = self.textEditAccessoryHost.view {
+                        if componentView.superview == nil {
+                            self.textEditAccessoryView.addSubview(componentView)
+                        }
+                        
                         self.textEditAccessoryView.frame = CGRect(origin: .zero, size: accessorySize)
                         componentView.frame = CGRect(origin: .zero, size: accessorySize)
                     }
@@ -2340,7 +2235,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             
             if shouldHaveInputView {
-                let inputView = EntityInputView(context: self.context, isDark: true, areCustomEmojiEnabled: true)
+                let inputView = EntityInputView(
+                    context: self.context,
+                    isDark: true,
+                    areCustomEmojiEnabled: true,
+                    hideBackground: true,
+                    forceHasPremium: true
+                )
                 inputView.insertText = { [weak entityView] text in
                     entityView?.insertText(text)
                 }
@@ -2353,13 +2254,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                     }
                     strongSelf.toggleInputMode()
                 }
-//                inputView?.presentController = { [weak self] c in
-//                    guard let strongSelf = self else {
-//                        return
-//                    }
-//                    strongSelf.presentController(c)
-//                }
-                
                 textView.inputView = inputView
             } else {
                 textView.inputView = nil
@@ -2384,15 +2278,17 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     private let context: AccountContext
     private let size: CGSize
     private let originalSize: CGSize
+    private let isAvatar: Bool
     
     public var requestDismiss: (() -> Void)!
     public var requestApply: (() -> Void)!
     public var getCurrentImage: (() -> UIImage?)!
     
-    public init(context: AccountContext, size: CGSize, originalSize: CGSize) {
+    public init(context: AccountContext, size: CGSize, originalSize: CGSize, isAvatar: Bool) {
         self.context = context
         self.size = size
         self.originalSize = originalSize
+        self.isAvatar = isAvatar
         
         super.init(navigationBarPresentationData: nil)
         
@@ -2417,6 +2313,10 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
     
     required public init(coder: NSCoder) {
         preconditionFailure()
+    }
+    
+    deinit {
+        print()
     }
         
     override public func loadDisplayNode() {
@@ -2445,30 +2345,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 hasAnimatedEntities = true
                 break
             }
-//            if let entity = entity as? DrawingStickerEntity {
-//                let coder = PostboxEncoder()
-//                coder.encodeRootObject(entity.file)
-//
-//                let baseSize = max(10.0, min(entity.referenceDrawingSize.width, entity.referenceDrawingSize.height) * 0.38)
-//                if let stickerEntity = TGPhotoPaintStickerEntity(document: coder.makeData(), baseSize: CGSize(width: baseSize, height: baseSize), animated: entity.isAnimated) {
-//                    stickerEntity.position = entity.position
-//                    stickerEntity.scale = entity.scale
-//                    stickerEntity.angle = entity.rotation
-//                    legacyEntities.append(stickerEntity)
-//                }
-//            } else if let entity = entity as? DrawingTextEntity, let view = self.entitiesView.getView(for: entity.uuid) as? DrawingTextEntityView {
-//                let textEntity = TGPhotoPaintStaticEntity()
-//                textEntity.position = entity.position
-//                textEntity.angle = entity.rotation
-//                textEntity.renderImage = view.getRenderImage()
-//                legacyEntities.append(textEntity)
-//            } else if let _ = entity as? DrawingSimpleShapeEntity {
-//
-//            } else if let _ = entity as? DrawingBubbleEntity {
-//
-//            } else if let _ = entity as? DrawingVectorEntity {
-//
-//            }
         }
             
         let finalImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
@@ -2494,7 +2370,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }
         
         return TGPaintingData(drawing: nil, entitiesData: self.entitiesView.entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities)
-//        return TGPaintingData(painting: nil, image: image, stillImage: stillImage, entities: legacyEntities, undoManager: nil)
     }
     
     public func resultImage() -> UIImage! {

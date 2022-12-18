@@ -53,8 +53,8 @@ final class MarkerTool: DrawingElement {
         self.lineWidth = lineWidth
         self.arrow = arrow
                 
-        let minLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.01)
-        let maxLineWidth = max(20.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.01)
+        let maxLineWidth = max(20.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth
@@ -244,8 +244,8 @@ final class NeonTool: DrawingElement {
         let strokeWidth = min(drawingSize.width, drawingSize.height) * 0.008
         let shadowRadius = min(drawingSize.width, drawingSize.height) * 0.03
         
-        let minLineWidth = max(1.0, min(drawingSize.width, drawingSize.height) * 0.003)
-        let maxLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.003)
+        let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderStrokeWidth = strokeWidth
@@ -378,8 +378,8 @@ final class PencilTool: DrawingElement {
         self.lineWidth = lineWidth
         self.arrow = arrow
                 
-        let minLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.01)
-        let maxLineWidth = max(20.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.01)
+        let maxLineWidth = max(20.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth
@@ -599,8 +599,8 @@ final class BlurTool: DrawingElement {
         self.lineWidth = lineWidth
         self.arrow = arrow
             
-        let minLineWidth = max(1.0, min(drawingSize.width, drawingSize.height) * 0.003)
-        let maxLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.003)
+        let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth
@@ -764,8 +764,8 @@ final class EraserTool: DrawingElement {
         self.lineWidth = lineWidth
         self.arrow = arrow
             
-        let minLineWidth = max(1.0, min(drawingSize.width, drawingSize.height) * 0.003)
-        let maxLineWidth = max(10.0, min(drawingSize.width, drawingSize.height) * 0.09)
+        let minLineWidth = max(1.0, max(drawingSize.width, drawingSize.height) * 0.003)
+        let maxLineWidth = max(10.0, max(drawingSize.width, drawingSize.height) * 0.09)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * lineWidth
         
         self.renderLineWidth = lineWidth

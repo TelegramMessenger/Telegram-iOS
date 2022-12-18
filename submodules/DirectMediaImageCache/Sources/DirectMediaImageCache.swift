@@ -10,7 +10,47 @@ import MozjpegBinding
 import Accelerate
 import ManagedFile
 
-private func generateBlurredThumbnail(image: UIImage) -> UIImage? {
+private func adjustSaturationInContext(context: DrawingContext, saturation: CGFloat) {
+    var buffer = vImage_Buffer()
+    buffer.data = context.bytes
+    buffer.width = UInt(context.size.width * context.scale)
+    buffer.height = UInt(context.size.height * context.scale)
+    buffer.rowBytes = context.bytesPerRow
+
+    let divisor: Int32 = 0x1000
+
+    let rwgt: CGFloat = 0.3086
+    let gwgt: CGFloat = 0.6094
+    let bwgt: CGFloat = 0.0820
+
+    let adjustSaturation = saturation
+
+    let a = (1.0 - adjustSaturation) * rwgt + adjustSaturation
+    let b = (1.0 - adjustSaturation) * rwgt
+    let c = (1.0 - adjustSaturation) * rwgt
+    let d = (1.0 - adjustSaturation) * gwgt
+    let e = (1.0 - adjustSaturation) * gwgt + adjustSaturation
+    let f = (1.0 - adjustSaturation) * gwgt
+    let g = (1.0 - adjustSaturation) * bwgt
+    let h = (1.0 - adjustSaturation) * bwgt
+    let i = (1.0 - adjustSaturation) * bwgt + adjustSaturation
+
+    let satMatrix: [CGFloat] = [
+        a, b, c, 0,
+        d, e, f, 0,
+        g, h, i, 0,
+        0, 0, 0, 1
+    ]
+
+    var matrix: [Int16] = satMatrix.map { value in
+        return Int16(value * CGFloat(divisor))
+    }
+
+    vImageMatrixMultiply_ARGB8888(&buffer, &buffer, &matrix, divisor, nil, nil, vImage_Flags(kvImageDoNotTile))
+}
+
+
+private func generateBlurredThumbnail(image: UIImage, adjustSaturation: Bool = false) -> UIImage? {
     let thumbnailContextSize = CGSize(width: 32.0, height: 32.0)
     guard let thumbnailContext = DrawingContext(size: thumbnailContextSize, scale: 1.0) else {
         return nil
@@ -24,6 +64,10 @@ private func generateBlurredThumbnail(image: UIImage) -> UIImage? {
     }
     telegramFastBlurMore(Int32(thumbnailContextSize.width), Int32(thumbnailContextSize.height), Int32(thumbnailContext.bytesPerRow), thumbnailContext.bytes)
 
+    if adjustSaturation {
+        adjustSaturationInContext(context: thumbnailContext, saturation: 1.7)
+    }
+    
     return thumbnailContext.generateImage()
 }
 
@@ -158,10 +202,12 @@ private func loadImage(data: Data) -> UIImage? {
 public final class DirectMediaImageCache {
     public final class GetMediaResult {
         public let image: UIImage?
+        public let blurredImage: UIImage?
         public let loadSignal: Signal<UIImage?, NoError>?
 
-        init(image: UIImage?, loadSignal: Signal<UIImage?, NoError>?) {
+        init(image: UIImage?, blurredImage: UIImage? = nil, loadSignal: Signal<UIImage?, NoError>?) {
             self.image = image
+            self.blurredImage = blurredImage
             self.loadSignal = loadSignal
         }
     }
@@ -284,7 +330,7 @@ public final class DirectMediaImageCache {
         return self.getProgressiveSize(mediaReference: MediaReference.message(message: MessageReference(message), media: file).abstract, width: width, representations: file.previewRepresentations)
     }
 
-    private func getImageSynchronous(message: Message, userLocation: MediaResourceUserLocation, media: Media, width: Int, possibleWidths: [Int]) -> GetMediaResult? {
+    private func getImageSynchronous(message: Message, userLocation: MediaResourceUserLocation, media: Media, width: Int, possibleWidths: [Int], includeBlurred: Bool) -> GetMediaResult? {
         var immediateThumbnailData: Data?
         var resource: (resource: MediaResourceReference, size: Int64)?
         if let image = media as? TelegramMediaImage {
@@ -298,39 +344,50 @@ public final class DirectMediaImageCache {
         guard let resource = resource else {
             return nil
         }
-
+        
+        var resultImage: UIImage?
         var blurredImage: UIImage?
         for otherWidth in possibleWidths.reversed() {
             if otherWidth == width {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .square(width: otherWidth)))), let image = loadImage(data: data) {
-                    return GetMediaResult(image: image, loadSignal: nil)
+                    if blurredImage == nil, includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+                        blurredImage = blurredImageValue
+                    }
+                    return GetMediaResult(image: image, blurredImage: blurredImage, loadSignal: nil)
                 }
             } else {
                 if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .square(width: otherWidth)))), let image = loadImage(data: data) {
-                    blurredImage = image
+                    resultImage = image
                 }
             }
         }
 
-        if blurredImage == nil {
+        if resultImage == nil {
             if let data = try? Data(contentsOf: URL(fileURLWithPath: self.getCachePath(resourceId: resource.resource.resource.id, imageType: .blurredThumbnail))), let image = loadImage(data: data) {
-                blurredImage = image
+                resultImage = image
             } else if let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data) {
                 if let blurredImageValue = generateBlurredThumbnail(image: image) {
+                    resultImage = blurredImageValue
+                }
+                if includeBlurred, let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
                     blurredImage = blurredImageValue
                 }
             }
         }
+        
+        if blurredImage == nil, includeBlurred, let data = immediateThumbnailData.flatMap(decodeTinyThumbnail), let image = loadImage(data: data), let blurredImageValue = generateBlurredThumbnail(image: image, adjustSaturation: true) {
+            blurredImage = blurredImageValue
+        }
 
-        return GetMediaResult(image: blurredImage, loadSignal: self.getLoadSignal(width: width, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
+        return GetMediaResult(image: resultImage, blurredImage: blurredImage, loadSignal: self.getLoadSignal(width: width, userLocation: userLocation, userContentType: .image, resource: resource.resource, resourceSizeLimit: resource.size))
     }
 
-    public func getImage(message: Message, media: Media, width: Int, possibleWidths: [Int], synchronous: Bool) -> GetMediaResult? {
+    public func getImage(message: Message, media: Media, width: Int, possibleWidths: [Int], includeBlurred: Bool = false, synchronous: Bool) -> GetMediaResult? {
         if synchronous {
-            return self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths)
+            return self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
         } else {
-            return GetMediaResult(image: nil, loadSignal: Signal { subscriber in
-                let result = self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths)
+            return GetMediaResult(image: nil, blurredImage: nil, loadSignal: Signal { subscriber in
+                let result = self.getImageSynchronous(message: message, userLocation: .peer(message.id.peerId), media: media, width: width, possibleWidths: possibleWidths, includeBlurred: includeBlurred)
                 guard let result = result else {
                     subscriber.putNext(nil)
                     subscriber.putCompletion()

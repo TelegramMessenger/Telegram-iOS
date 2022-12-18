@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import Display
 import ComponentFlow
+import DirectionalPanGesture
 
 public protocol PagerExpandableScrollView: UIScrollView {
 }
@@ -274,7 +275,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             }
         }
         
-        private final class PagerPanGestureRecognizerImpl: UIPanGestureRecognizer, PagerPanGestureRecognizer {
+        private final class PagerPanGestureRecognizerImpl: DirectionalPanGestureRecognizer, PagerPanGestureRecognizer {
         }
         
         private struct PaneTransitionGestureState {
@@ -311,6 +312,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             self.disablesInteractiveTransitionGestureRecognizer = true
             
             let panRecognizer = PagerPanGestureRecognizerImpl(target: self, action: #selector(self.panGesture(_:)))
+            panRecognizer.direction = .horizontal
             self.panRecognizer = panRecognizer
             self.addGestureRecognizer(panRecognizer)
         }
@@ -681,7 +683,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         } else {
                             wasAdded = true
                             contentView = ContentView(view: ComponentHostView<(ChildEnvironmentType, PagerComponentChildEnvironment)>())
-                            contentTransition = .immediate
+                            contentTransition = transition.withAnimation(.none)
                             self.contentViews[content.id] = contentView
                             if let contentBackgroundView = self.contentBackgroundView {
                                 self.insertSubview(contentView.view, aboveSubview: contentBackgroundView)

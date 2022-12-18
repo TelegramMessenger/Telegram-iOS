@@ -261,7 +261,7 @@ final class TextFontComponent: Component {
         func update(component: TextFontComponent, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
             self.updated = component.updated
             
-            var contentWidth: CGFloat = 0.0
+            var contentWidth: CGFloat = 10.0
             
             let styleSize = self.styleButtonHost.update(
                 transition: transition,
@@ -273,7 +273,7 @@ final class TextFontComponent: Component {
                 if view.superview == nil {
                     self.scrollView.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: -7.0, y: -7.0), size: styleSize)
+                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: styleSize)
             }
             
             contentWidth += 44.0
@@ -288,10 +288,10 @@ final class TextFontComponent: Component {
                 if view.superview == nil {
                     self.scrollView.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: alignmentSize)
+                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -6.0 - UIScreenPixel), size: alignmentSize)
             }
             
-            contentWidth += 32.0
+            contentWidth += 36.0
             
             for value in component.values {
                 contentWidth += 12.0
@@ -464,8 +464,6 @@ final class TextSettingsComponent: CombinedComponent {
         let colorButton = Child(ColorSwatchComponent.self)
         let colorButtonTag = GenericComponentViewTag()
         
-//        let styleButton = Child(Button.self)
-//        let alignmentButton = Child(Button.self)
         let keyboardButton = Child(Button.self)
         let font = Child(TextFontComponent.self)
         
@@ -508,7 +506,7 @@ final class TextSettingsComponent: CombinedComponent {
                 context.add(colorButton
                     .position(CGPoint(x: colorButton.size.width / 2.0, y: context.availableSize.height / 2.0))
                 )
-                offset += 44.0
+                offset += 32.0
             }
                         
             let styleImage: UIImage
@@ -525,7 +523,7 @@ final class TextSettingsComponent: CombinedComponent {
             
             var fontAvailableWidth: CGFloat = context.availableSize.width
             if component.color != nil {
-                fontAvailableWidth -= 88.0
+                fontAvailableWidth -= 72.0
             }
                         
             let font = font.update(
@@ -618,14 +616,20 @@ private func generateKnobImage() -> UIImage? {
 
 final class TextSizeSliderComponent: Component {
     let value: CGFloat
+    let tag: AnyObject?
     let updated: (CGFloat) -> Void
+    let released: () -> Void
     
     public init(
         value: CGFloat,
-        updated: @escaping (CGFloat) -> Void
+        tag: AnyObject?,
+        updated: @escaping (CGFloat) -> Void,
+        released: @escaping () -> Void
     ) {
         self.value = value
+        self.tag = tag
         self.updated = updated
+        self.released = released
     }
     
     public static func ==(lhs: TextSizeSliderComponent, rhs: TextSizeSliderComponent) -> Bool {
@@ -635,9 +639,8 @@ final class TextSizeSliderComponent: Component {
         return true
     }
     
-    final class View: UIView, UIGestureRecognizerDelegate {
+    final class View: UIView, UIGestureRecognizerDelegate, ComponentTaggedView {
         private var validSize: CGSize?
-        private var component: TextSizeSliderComponent?
         
         private let backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x888888, alpha: 0.3))
         private let maskLayer = SimpleShapeLayer()
@@ -646,6 +649,18 @@ final class TextSizeSliderComponent: Component {
         private let knob = SimpleLayer()
     
         fileprivate var updated: (CGFloat) -> Void = { _ in }
+        fileprivate var released: () -> Void = { }
+        
+        private var component: TextSizeSliderComponent?
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
         
         init() {
             super.init(frame: CGRect())
@@ -684,7 +699,7 @@ final class TextSizeSliderComponent: Component {
                 if let size = self.validSize, let component = self.component {
                     let _ = self.updateLayout(size: size, component: component, transition: .easeInOut(duration: 0.2))
                 }
-                
+                self.released()
             default:
                 break
             }
@@ -741,8 +756,10 @@ final class TextSizeSliderComponent: Component {
                 transition.setSublayerTransform(layer: self.knobContainer, transform: isTracking ? CATransform3DIdentity : CATransform3DMakeTranslation(4.0, 0.0, 0.0))
             }
             
+            let knobTransition = self.isPanning ? transition.withAnimation(.none) : transition
             let knobSize = CGSize(width: 52.0, height: 52.0)
-            self.knob.frame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - knobSize.width) / 2.0), y: -12.0 + floorToScreenPixels((size.height + 24.0 - knobSize.height) * (1.0 - component.value))), size: knobSize)
+            let knobFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((size.width - knobSize.width) / 2.0), y: -12.0 + floorToScreenPixels((size.height + 24.0 - knobSize.height) * (1.0 - component.value))), size: knobSize)
+            knobTransition.setFrame(layer: self.knob, frame: knobFrame)
             
             transition.setFrame(view: self.backgroundNode.view, frame: CGRect(origin: CGPoint(), size: size))
             self.backgroundNode.update(size: size, transition: transition.containedViewLayoutTransition)
@@ -765,6 +782,7 @@ final class TextSizeSliderComponent: Component {
     
     func update(view: View, availableSize: CGSize, state: EmptyComponentState, environment: Environment<Empty>, transition: Transition) -> CGSize {
         view.updated = self.updated
+        view.released = self.released
         return view.updateLayout(size: availableSize, component: self, transition: transition)
     }
 }
