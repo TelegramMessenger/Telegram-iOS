@@ -215,6 +215,17 @@ private let colorButtonTag = GenericComponentViewTag()
 private let addButtonTag = GenericComponentViewTag()
 private let toolsTag = GenericComponentViewTag()
 private let modeTag = GenericComponentViewTag()
+private let flipButtonTag = GenericComponentViewTag()
+private let textSettingsTag = GenericComponentViewTag()
+private let sizeSliderTag = GenericComponentViewTag()
+private let color1Tag = GenericComponentViewTag()
+private let color2Tag = GenericComponentViewTag()
+private let color3Tag = GenericComponentViewTag()
+private let color4Tag = GenericComponentViewTag()
+private let color5Tag = GenericComponentViewTag()
+private let color6Tag = GenericComponentViewTag()
+private let color7Tag = GenericComponentViewTag()
+private let color8Tag = GenericComponentViewTag()
 private let doneButtonTag = GenericComponentViewTag()
 
 private final class DrawingScreenComponent: CombinedComponent {
@@ -759,6 +770,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[0]),
                     color: presetColors[0],
+                    tag: color1Tag,
                     action: {
                         applySwatchColor(presetColors[0])
                     }
@@ -785,6 +797,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[1]),
                     color: presetColors[1],
+                    tag: color2Tag,
                     action: {
                         applySwatchColor(presetColors[1])
                     }
@@ -811,6 +824,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[2]),
                     color: presetColors[2],
+                    tag: color3Tag,
                     action: {
                         applySwatchColor(presetColors[2])
                     }
@@ -837,6 +851,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[3]),
                     color: presetColors[3],
+                    tag: color4Tag,
                     action: {
                         applySwatchColor(presetColors[3])
                     }
@@ -863,6 +878,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[4]),
                     color: presetColors[4],
+                    tag: color5Tag,
                     action: {
                         applySwatchColor(presetColors[4])
                     }
@@ -890,6 +906,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[5]),
                     color: presetColors[5],
+                    tag: color6Tag,
                     action: {
                         applySwatchColor(presetColors[5])
                     }
@@ -916,6 +933,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[6]),
                     color: presetColors[6],
+                    tag: color7Tag,
                     action: {
                         applySwatchColor(presetColors[6])
                     }
@@ -942,6 +960,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ColorSwatchComponent(
                     type: .pallete(state.currentColor == presetColors[7]),
                     color: presetColors[7],
+                    tag: color8Tag,
                     action: {
                         applySwatchColor(presetColors[7])
                     }
@@ -952,8 +971,8 @@ private final class DrawingScreenComponent: CombinedComponent {
             context.add(swatch8Button
                 .position(CGPoint(x: offsetX, y: context.availableSize.height - environment.safeInsets.bottom - swatch7Button.size.height / 2.0 - 57.0))
                 .appear(Transition.Appear { _, view, transition in
-                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.15)
-                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.15)
+                    transition.animateScale(view: view, from: 0.1, to: 1.0, delay: 0.175)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0, delay: 0.175)
                 })
                 .disappear(Transition.Disappear { view, transition, completion in
                     transition.setScale(view: view, scale: 0.1)
@@ -1048,6 +1067,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             let textSize = textSize.update(
                 component: TextSizeSliderComponent(
                     value: sizeValue ?? state.lastSize,
+                    tag: sizeSliderTag,
                     updated: { [weak state] size in
                         if let state = state {
                             state.updateBrushSize(size)
@@ -1196,7 +1216,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             }
                             state.updated(transition: .easeInOut(duration: 0.2))
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)),
+                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(flipButtonTag),
                     availableSize: CGSize(width: 33.0, height: 33.0),
                     transition: .immediate
                 )
@@ -1914,6 +1934,18 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3)
             }
+            var delay: Double = 0.0
+            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+            for tag in colorTags {
+                if let view = self.componentHost.findTaggedView(tag: tag) {
+                    view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: delay)
+                    view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: delay)
+                    delay += 0.025
+                }
+            }
+            if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
+                view.layer.animatePosition(from: CGPoint(x: -33.0, y: 0.0), to: CGPoint(), duration: 0.3, additive: true)
+            }
         }
         
         func animateOut(completion: @escaping () -> Void) {
@@ -1944,6 +1976,28 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
             }
+            if let buttonView = self.componentHost.findTaggedView(tag: flipButtonTag) {
+                buttonView.alpha = 0.0
+                buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+            }     
+            if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
+                view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), duration: 0.3, removeOnCompletion: false, additive: true)
+            }
+            if let view = self.componentHost.findTaggedView(tag: textSettingsTag) {
+                view.alpha = 0.0
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+            }
+            
+            let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
+            for tag in colorTags {
+                if let view = self.componentHost.findTaggedView(tag: tag) {
+                    view.alpha = 0.0
+                    view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                    view.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+                }
+            }
+            
             if let view = self.componentHost.findTaggedView(tag: toolsTag) as? ToolsComponent.View {
                 view.animateOut(completion: {
                     completion()
@@ -2282,30 +2336,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 hasAnimatedEntities = true
                 break
             }
-//            if let entity = entity as? DrawingStickerEntity {
-//                let coder = PostboxEncoder()
-//                coder.encodeRootObject(entity.file)
-//
-//                let baseSize = max(10.0, min(entity.referenceDrawingSize.width, entity.referenceDrawingSize.height) * 0.38)
-//                if let stickerEntity = TGPhotoPaintStickerEntity(document: coder.makeData(), baseSize: CGSize(width: baseSize, height: baseSize), animated: entity.isAnimated) {
-//                    stickerEntity.position = entity.position
-//                    stickerEntity.scale = entity.scale
-//                    stickerEntity.angle = entity.rotation
-//                    legacyEntities.append(stickerEntity)
-//                }
-//            } else if let entity = entity as? DrawingTextEntity, let view = self.entitiesView.getView(for: entity.uuid) as? DrawingTextEntityView {
-//                let textEntity = TGPhotoPaintStaticEntity()
-//                textEntity.position = entity.position
-//                textEntity.angle = entity.rotation
-//                textEntity.renderImage = view.getRenderImage()
-//                legacyEntities.append(textEntity)
-//            } else if let _ = entity as? DrawingSimpleShapeEntity {
-//
-//            } else if let _ = entity as? DrawingBubbleEntity {
-//
-//            } else if let _ = entity as? DrawingVectorEntity {
-//
-//            }
         }
             
         let finalImage = generateImage(self.drawingView.imageSize, contextGenerator: { size, context in
@@ -2331,7 +2361,6 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
         }
         
         return TGPaintingData(drawing: nil, entitiesData: self.entitiesView.entitiesData, image: image, stillImage: stillImage, hasAnimation: hasAnimatedEntities)
-//        return TGPaintingData(painting: nil, image: image, stillImage: stillImage, entities: legacyEntities, undoManager: nil)
     }
     
     public func resultImage() -> UIImage! {

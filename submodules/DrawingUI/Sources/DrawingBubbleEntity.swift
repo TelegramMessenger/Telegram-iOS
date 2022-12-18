@@ -97,6 +97,9 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         self.currentEntityView = entityView
         return entityView
     }
+    
+    public func prepareForRender() {
+    }
 }
 
 final class DrawingBubbleEntityView: DrawingEntityView {
@@ -131,9 +134,9 @@ final class DrawingBubbleEntityView: DrawingEntityView {
             self.currentTailPosition = self.bubbleEntity.tailPosition
             self.shapeLayer.frame = self.bounds
             
-            let cornerRadius = max(10.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.066)
-            let smallCornerRadius = max(5.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.016)
-            let tailWidth = max(5.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
+            let cornerRadius = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.066)
+            let smallCornerRadius = max(5.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.016)
+            let tailWidth = max(5.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
             
             self.shapeLayer.path = CGPath.bubble(in: CGRect(origin: .zero, size: size), cornerRadius: cornerRadius, smallCornerRadius: smallCornerRadius, tailPosition: self.bubbleEntity.tailPosition, tailWidth: tailWidth)
         }
@@ -143,8 +146,8 @@ final class DrawingBubbleEntityView: DrawingEntityView {
             self.shapeLayer.fillColor = self.bubbleEntity.color.toCGColor()
             self.shapeLayer.strokeColor = UIColor.clear.cgColor
         case .stroke:
-            let minLineWidth = max(10.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.02)
-            let maxLineWidth = max(10.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
+            let minLineWidth = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.01)
+            let maxLineWidth = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
             let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.bubbleEntity.lineWidth
             
             self.shapeLayer.fillColor = UIColor.clear.cgColor
@@ -160,7 +163,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
     }
     
     private var maxLineWidth: CGFloat {
-        return max(10.0, min(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
+        return max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

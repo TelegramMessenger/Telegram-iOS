@@ -95,6 +95,9 @@ public final class DrawingStickerEntity: DrawingEntity, Codable {
         self.currentEntityView = entityView
         return entityView
     }
+    
+    public func prepareForRender() {
+    }
 }
 
 final class DrawingStickerEntityView: DrawingEntityView {

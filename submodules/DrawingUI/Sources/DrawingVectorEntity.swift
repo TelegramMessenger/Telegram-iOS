@@ -113,6 +113,9 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         self.currentEntityView = entityView
         return entityView
     }
+    
+    public func prepareForRender() {
+    }
 }
 
 final class DrawingVectorEntityView: DrawingEntityView {
@@ -137,15 +140,15 @@ final class DrawingVectorEntityView: DrawingEntityView {
     }
         
     private var maxLineWidth: CGFloat {
-        return max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+        return max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
     }
     
     override func update(animated: Bool) {
         self.center = CGPoint(x: self.vectorEntity.drawingSize.width * 0.5, y: self.vectorEntity.drawingSize.height * 0.5)
         self.bounds = CGRect(origin: .zero, size: self.vectorEntity.drawingSize)
     
-        let minLineWidth = max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.02)
-        let maxLineWidth = max(10.0, min(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+        let minLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.01)
+        let maxLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.vectorEntity.lineWidth
         
         self.shapeLayer.path = CGPath.curve(

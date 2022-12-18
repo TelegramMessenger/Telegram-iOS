@@ -618,15 +618,18 @@ private func generateKnobImage() -> UIImage? {
 
 final class TextSizeSliderComponent: Component {
     let value: CGFloat
+    let tag: AnyObject?
     let updated: (CGFloat) -> Void
     let released: () -> Void
     
     public init(
         value: CGFloat,
+        tag: AnyObject?,
         updated: @escaping (CGFloat) -> Void,
         released: @escaping () -> Void
     ) {
         self.value = value
+        self.tag = tag
         self.updated = updated
         self.released = released
     }
@@ -638,9 +641,8 @@ final class TextSizeSliderComponent: Component {
         return true
     }
     
-    final class View: UIView, UIGestureRecognizerDelegate {
+    final class View: UIView, UIGestureRecognizerDelegate, ComponentTaggedView {
         private var validSize: CGSize?
-        private var component: TextSizeSliderComponent?
         
         private let backgroundNode = NavigationBackgroundNode(color: UIColor(rgb: 0x888888, alpha: 0.3))
         private let maskLayer = SimpleShapeLayer()
@@ -650,6 +652,17 @@ final class TextSizeSliderComponent: Component {
     
         fileprivate var updated: (CGFloat) -> Void = { _ in }
         fileprivate var released: () -> Void = { }
+        
+        private var component: TextSizeSliderComponent?
+        public func matches(tag: Any) -> Bool {
+            if let component = self.component, let componentTag = component.tag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
         
         init() {
             super.init(frame: CGRect())

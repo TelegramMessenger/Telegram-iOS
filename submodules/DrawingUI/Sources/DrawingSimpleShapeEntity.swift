@@ -103,6 +103,9 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.currentEntityView = entityView
         return entityView
     }
+    
+    public func prepareForRender() {
+    }
 }
 
 final class DrawingSimpleShapeEntityView: DrawingEntityView {
@@ -153,8 +156,8 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
             self.shapeLayer.fillColor = self.shapeEntity.color.toCGColor()
             self.shapeLayer.strokeColor = UIColor.clear.cgColor
         case .stroke:
-            let minLineWidth = max(10.0, min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.02)
-            let maxLineWidth = max(10.0, min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
+            let minLineWidth = max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.01)
+            let maxLineWidth = max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
             let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.shapeEntity.lineWidth
             
             self.shapeLayer.fillColor = UIColor.clear.cgColor
@@ -170,7 +173,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
     }
     
     private var maxLineWidth: CGFloat {
-        return max(10.0, min(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
+        return max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {

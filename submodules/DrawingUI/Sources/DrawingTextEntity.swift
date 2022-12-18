@@ -142,16 +142,17 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
     public var lineWidth: CGFloat = 0.0
     
     var referenceDrawingSize: CGSize
-    var position: CGPoint
+    public var position: CGPoint
     var width: CGFloat
-    var scale: CGFloat
-    var rotation: CGFloat
+    public var scale: CGFloat
+    public var rotation: CGFloat
     
     public var center: CGPoint {
         return self.position
     }
     
     public var renderImage: UIImage?
+    public var renderSubEntities: [DrawingStickerEntity]?
     
     init(text: NSAttributedString, style: Style, font: Font, alignment: Alignment, fontSize: CGFloat, color: DrawingColor) {
         self.uuid = UUID()
@@ -234,6 +235,10 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         let entityView = DrawingTextEntityView(context: context, entity: self)
         self.currentEntityView = entityView
         return entityView
+    }
+    
+    public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingTextEntityView)?.getRenderImage()
     }
 }
 
@@ -521,8 +526,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     }
         
     private var displayFontSize: CGFloat {
-        let minFontSize = max(10.0, min(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.05)
-        let maxFontSize = max(10.0, min(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.45)
+        let minFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.05)
+        let maxFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.45)
         let fontSize = minFontSize + (maxFontSize - minFontSize) * self.textEntity.fontSize
         return fontSize
     }

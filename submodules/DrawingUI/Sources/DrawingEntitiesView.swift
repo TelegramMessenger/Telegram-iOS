@@ -12,9 +12,11 @@ public protocol DrawingEntity: AnyObject {
     var color: DrawingColor { get set }
     
     func duplicate() -> DrawingEntity
-    
+        
     var currentEntityView: DrawingEntityView? { get }
     func makeView(context: AccountContext) -> DrawingEntityView
+    
+    func prepareForRender()
 }
 
 enum CodableDrawingEntity {
@@ -164,8 +166,12 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     var entitiesData: Data? {
-        let entities = self.entities.compactMap({ CodableDrawingEntity(entity: $0) })
-        if let data = try? JSONEncoder().encode(entities) {
+        let entities = self.entities
+        for entity in entities {
+            entity.prepareForRender()
+        }
+        let codableEntities = entities.compactMap({ CodableDrawingEntity(entity: $0) })
+        if let data = try? JSONEncoder().encode(codableEntities) {
             return data
         } else {
             return nil

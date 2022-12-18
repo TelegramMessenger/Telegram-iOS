@@ -242,7 +242,7 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
     }
 
     var angle: CGFloat {
-        return self.entity.angle
+        return self.entity.rotation
     }
     
     var baseSize: CGSize? {
@@ -253,9 +253,9 @@ private class LegacyPaintTextEntity: LegacyPaintEntity {
         return false
     }
 
-    let entity: TGPhotoPaintTextEntity
+    let entity: DrawingTextEntity
 
-    init(entity: TGPhotoPaintTextEntity) {
+    init(entity: DrawingTextEntity) {
         self.entity = entity
     }
 
@@ -411,8 +411,13 @@ public final class LegacyPaintEntityRenderer: NSObject, TGPhotoPaintEntityRender
             for entity in entities {
                 if let sticker = entity as? DrawingStickerEntity {
                     renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
-                } else if let _ = entity as? DrawingTextEntity {
-//                    renderEntities.append(LegacyPaintStickerEntity(account: account, entity: sticker))
+                } else if let text = entity as? DrawingTextEntity {
+                    renderEntities.append(LegacyPaintTextEntity(entity: text))
+                    if let renderSubEntities = text.renderSubEntities {
+                        for entity in renderSubEntities {
+                            renderEntities.append(LegacyPaintStickerEntity(account: account, entity: entity))
+                        }
+                    }
                 } else if let simpleShape = entity as? DrawingSimpleShapeEntity {
                     renderEntities.append(LegacyPaintSimpleShapeEntity(entity: simpleShape))
                 } else if let bubble = entity as? DrawingBubbleEntity {
