@@ -968,7 +968,8 @@ private final class ForumCreateTopicScreenComponent: CombinedComponent {
                         customLayout: nil,
                         externalBackground: nil,
                         externalExpansionView: nil,
-                        useOpaqueTheme: true
+                        useOpaqueTheme: true,
+                        hideBackground: false
                     )
                 }
             }

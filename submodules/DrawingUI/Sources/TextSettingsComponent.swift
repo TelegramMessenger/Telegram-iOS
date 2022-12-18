@@ -288,7 +288,7 @@ final class TextFontComponent: Component {
                 if view.superview == nil {
                     self.scrollView.addSubview(view)
                 }
-                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -7.0), size: alignmentSize)
+                view.frame = CGRect(origin: CGPoint(x: contentWidth - 7.0, y: -6.0 - UIScreenPixel), size: alignmentSize)
             }
             
             contentWidth += 36.0
@@ -464,8 +464,6 @@ final class TextSettingsComponent: CombinedComponent {
         let colorButton = Child(ColorSwatchComponent.self)
         let colorButtonTag = GenericComponentViewTag()
         
-//        let styleButton = Child(Button.self)
-//        let alignmentButton = Child(Button.self)
         let keyboardButton = Child(Button.self)
         let font = Child(TextFontComponent.self)
         
@@ -508,7 +506,7 @@ final class TextSettingsComponent: CombinedComponent {
                 context.add(colorButton
                     .position(CGPoint(x: colorButton.size.width / 2.0, y: context.availableSize.height / 2.0))
                 )
-                offset += 44.0
+                offset += 32.0
             }
                         
             let styleImage: UIImage
@@ -525,7 +523,7 @@ final class TextSettingsComponent: CombinedComponent {
             
             var fontAvailableWidth: CGFloat = context.availableSize.width
             if component.color != nil {
-                fontAvailableWidth -= 88.0
+                fontAvailableWidth -= 72.0
             }
                         
             let font = font.update(

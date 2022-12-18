@@ -14,6 +14,7 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         case start
         case mid
         case end
+        case renderImage
     }
     
     public enum VectorType: Codable {
@@ -77,11 +78,12 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         self.drawingSize = try container.decode(CGSize.self, forKey: .drawingSize)
         self.referenceDrawingSize = try container.decode(CGSize.self, forKey: .referenceDrawingSize)
         self.start = try container.decode(CGPoint.self, forKey: .start)
-        
         let mid = try container.decode(CGPoint.self, forKey: .mid)
         self.mid = (mid.x, mid.y)
-        
         self.end = try container.decode(CGPoint.self, forKey: .end)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -95,6 +97,9 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
         try container.encode(self.start, forKey: .start)
         try container.encode(CGPoint(x: self.mid.0, y: self.mid.1), forKey: .mid)
         try container.encode(self.end, forKey: .end)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
     
     public func duplicate() -> DrawingEntity {
@@ -115,6 +120,7 @@ public final class DrawingVectorEntity: DrawingEntity, Codable {
     }
     
     public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingVectorEntityView)?.getRenderImage()
     }
 }
 
@@ -148,7 +154,7 @@ final class DrawingVectorEntityView: DrawingEntityView {
         self.bounds = CGRect(origin: .zero, size: self.vectorEntity.drawingSize)
     
         let minLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.01)
-        let maxLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.1)
+        let maxLineWidth = max(10.0, max(self.vectorEntity.referenceDrawingSize.width, self.vectorEntity.referenceDrawingSize.height) * 0.05)
         let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.vectorEntity.lineWidth
         
         self.shapeLayer.path = CGPath.curve(
@@ -205,6 +211,15 @@ final class DrawingVectorEntityView: DrawingEntityView {
         let selectionView = DrawingVectorEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
     }
 }
 

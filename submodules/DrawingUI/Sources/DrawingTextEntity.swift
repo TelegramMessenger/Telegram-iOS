@@ -52,6 +52,8 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         case width
         case scale
         case rotation
+        case renderImage
+        case renderSubEntities
     }
     
     enum Style: Codable {
@@ -193,6 +195,9 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         self.width = try container.decode(CGFloat.self, forKey: .width)
         self.scale = try container.decode(CGFloat.self, forKey: .scale)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -218,6 +223,9 @@ public final class DrawingTextEntity: DrawingEntity, Codable {
         try container.encode(self.width, forKey: .width)
         try container.encode(self.scale, forKey: .scale)
         try container.encode(self.rotation, forKey: .rotation)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
 
     public func duplicate() -> DrawingEntity {
@@ -526,8 +534,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     }
         
     private var displayFontSize: CGFloat {
-        let minFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.05)
-        let maxFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.45)
+        let minFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.025)
+        let maxFontSize = max(10.0, max(self.textEntity.referenceDrawingSize.width, self.textEntity.referenceDrawingSize.height) * 0.25)
         let fontSize = minFontSize + (maxFontSize - minFontSize) * self.textEntity.fontSize
         return fontSize
     }

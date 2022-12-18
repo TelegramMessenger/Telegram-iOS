@@ -113,7 +113,7 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
                 
         let strings = context.sharedContext.currentPresentationData.with({ $0 }).strings
         
-        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: true, hasTrending: true)
+        let stickerItems = EmojiPagerContentComponent.stickerInputData(context: context, animationCache: animationCache, animationRenderer: animationRenderer, stickerNamespaces: stickerNamespaces, stickerOrderedItemListCollectionIds: stickerOrderedItemListCollectionIds, chatPeerId: chatPeerId, hasSearch: true, hasTrending: true, forceHasPremium: false)
         
         let reactions: Signal<[String], NoError> = context.engine.data.subscribe(TelegramEngine.EngineData.Item.Configuration.App())
         |> map { appConfiguration -> [String] in
@@ -879,7 +879,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
-            useOpaqueTheme: false
+            useOpaqueTheme: false,
+            hideBackground: false
         )
         
         var stickerPeekBehavior: EmojiContentPeekBehaviorImpl?
@@ -1089,7 +1090,8 @@ public final class ChatEntityKeyboardInputNode: ChatInputNode {
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
-            useOpaqueTheme: false
+            useOpaqueTheme: false,
+            hideBackground: false
         )
         
         self.inputDataDisposable = (combineLatest(queue: .mainQueue(),
@@ -1724,7 +1726,9 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
     public init(
         context: AccountContext,
         isDark: Bool,
-        areCustomEmojiEnabled: Bool
+        areCustomEmojiEnabled: Bool,
+        hideBackground: Bool = false,
+        forceHasPremium: Bool = false
     ) {
         self.context = context
         
@@ -1744,7 +1748,13 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
         
         let inputInteraction = EmojiPagerContentComponent.InputInteraction(
             performItemAction: { [weak self] groupId, item, _, _, _, _ in
-                let _ = (ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: nil, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue).start(next: { hasPremium in
+                let hasPremium: Signal<Bool, NoError>
+                if forceHasPremium {
+                    hasPremium = .single(true)
+                } else {
+                    hasPremium = ChatEntityKeyboardInputNode.hasPremium(context: context, chatPeerId: nil, premiumIfSavedMessages: false) |> take(1) |> deliverOnMainQueue
+                }
+                let _ = hasPremium.start(next: { hasPremium in
                     guard let strongSelf = self else {
                         return
                     }
@@ -1850,12 +1860,13 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
             customLayout: nil,
             externalBackground: nil,
             externalExpansionView: nil,
-            useOpaqueTheme: false
+            useOpaqueTheme: false,
+            hideBackground: hideBackground
         )
         
         let semaphore = DispatchSemaphore(value: 0)
         var emojiComponent: EmojiPagerContentComponent?
-        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil).start(next: { value in
+        let _ = EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium).start(next: { value in
             emojiComponent = value
             semaphore.signal()
         })
@@ -1870,7 +1881,7 @@ public final class EntityInputView: UIInputView, AttachmentTextInputPanelInputVi
                     gifs: nil,
                     availableGifSearchEmojies: []
                 ),
-                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
+                updatedInputData: EmojiPagerContentComponent.emojiInputData(context: context, animationCache: self.animationCache, animationRenderer: self.animationRenderer, isStandalone: true, isStatusSelection: false, isReactionSelection: false, isEmojiSelection: false, topReactionItems: [], areUnicodeEmojiEnabled: true, areCustomEmojiEnabled: areCustomEmojiEnabled, chatPeerId: nil, forceHasPremium: forceHasPremium) |> map { emojiComponent -> ChatEntityKeyboardInputNode.InputData in
                     return ChatEntityKeyboardInputNode.InputData(
                         emoji: emojiComponent,
                         stickers: nil,

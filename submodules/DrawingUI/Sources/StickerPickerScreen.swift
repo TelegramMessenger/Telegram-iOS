@@ -276,20 +276,13 @@ class StickerPickerScreen: ViewController {
                 deleteBackwards: nil,
                 openStickerSettings: nil,
                 openFeatured: nil,
-                openSearch: {},
+                openSearch: {
+                },
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -350,20 +343,26 @@ class StickerPickerScreen: ViewController {
                         context.sharedContext.mainWindow?.presentInGlobalOverlay(actionSheet)
                     }
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             content.masks?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -383,13 +382,6 @@ class StickerPickerScreen: ViewController {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -425,20 +417,26 @@ class StickerPickerScreen: ViewController {
                 },
                 clearGroup: { _ in
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             content.stickers?.inputInteractionHolder.inputInteraction = EmojiPagerContentComponent.InputInteraction(
@@ -452,19 +450,13 @@ class StickerPickerScreen: ViewController {
                 deleteBackwards: nil,
                 openStickerSettings: nil,
                 openFeatured: nil,
-                openSearch: {},
+                openSearch: {
+                },
                 addGroupAction: { [weak self] groupId, isPremiumLocked in
                     guard let strongSelf = self, let controller = strongSelf.controller, let collectionId = groupId.base as? ItemCollectionId else {
                         return
                     }
                     let context = controller.context
-                    
-                    if isPremiumLocked {
-//                        let controller = PremiumIntroScreen(context: context, source: .stickers)
-//                        controllerInteraction.navigationController()?.pushViewController(controller)
-                        return
-                    }
-                    
                     let viewKey = PostboxViewKey.orderedItemList(id: Namespaces.OrderedItemList.CloudFeaturedStickerPacks)
                     let _ = (context.account.postbox.combinedView(keys: [viewKey])
                     |> take(1)
@@ -534,20 +526,26 @@ class StickerPickerScreen: ViewController {
                     } else if groupId == AnyHashable("peerSpecific") {
                     }
                 },
-                pushController: { c in },
-                presentController: { c in },
-                presentGlobalOverlayController: { c in },
+                pushController: { c in
+                },
+                presentController: { c in
+                },
+                presentGlobalOverlayController: { c in
+                },
                 navigationController: { [weak self] in
                     return self?.controller?.navigationController as? NavigationController
                 },
-                requestUpdate: { _ in },
-                updateSearchQuery: { _, _ in },
+                requestUpdate: { _ in
+                },
+                updateSearchQuery: { _, _ in
+                },
                 chatPeerId: nil,
                 peekBehavior: nil,
                 customLayout: nil,
                 externalBackground: nil,
                 externalExpansionView: nil,
-                useOpaqueTheme: false
+                useOpaqueTheme: false,
+                hideBackground: true
             )
             
             if let (layout, navigationHeight) = self.currentLayout {

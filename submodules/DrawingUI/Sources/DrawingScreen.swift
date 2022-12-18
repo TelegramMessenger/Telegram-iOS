@@ -183,7 +183,7 @@ struct DrawingState: Equatable {
                 .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff453a), size: 0.2)),
                 .arrow(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff8a00), size: 0.2)),
                 .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffd60a), size: 0.75)),
-                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34ffab), size: 0.4)),
+                .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34c759), size: 0.4)),
                 .eraser(DrawingToolState.EraserState(size: 0.5)),
                 .blur(DrawingToolState.EraserState(size: 0.5))
             ]
@@ -393,7 +393,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                     areUnicodeEmojiEnabled: true,
                     areCustomEmojiEnabled: true,
                     chatPeerId: context.account.peerId,
-                    hasSearch: false
+                    hasSearch: false,
+                    forceHasPremium: true
                 )
                 
                 let stickerItems = EmojiPagerContentComponent.stickerInputData(
@@ -404,7 +405,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                     stickerOrderedItemListCollectionIds: [Namespaces.OrderedItemList.CloudSavedStickers, Namespaces.OrderedItemList.CloudRecentStickers, Namespaces.OrderedItemList.CloudAllPremiumStickers],
                     chatPeerId: context.account.peerId,
                     hasSearch: false,
-                    hasTrending: true
+                    hasTrending: true,
+                    forceHasPremium: true
                 )
                 
                 let maskItems = EmojiPagerContentComponent.stickerInputData(
@@ -415,7 +417,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                     stickerOrderedItemListCollectionIds: [],
                     chatPeerId: context.account.peerId,
                     hasSearch: false,
-                    hasTrending: false
+                    hasTrending: false,
+                    forceHasPremium: true
                 )
                 
                 let signal = combineLatest(queue: .mainQueue(),
@@ -2232,7 +2235,13 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             }
             
             if shouldHaveInputView {
-                let inputView = EntityInputView(context: self.context, isDark: true, areCustomEmojiEnabled: true)
+                let inputView = EntityInputView(
+                    context: self.context,
+                    isDark: true,
+                    areCustomEmojiEnabled: true,
+                    hideBackground: true,
+                    forceHasPremium: true
+                )
                 inputView.insertText = { [weak entityView] text in
                     entityView?.insertText(text)
                 }

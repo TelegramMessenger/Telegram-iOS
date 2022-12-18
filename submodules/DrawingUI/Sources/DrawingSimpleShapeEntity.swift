@@ -14,6 +14,7 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         case position
         case size
         case rotation
+        case renderImage
     }
     
     public enum ShapeType: Codable {
@@ -73,6 +74,9 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         self.position = try container.decode(CGPoint.self, forKey: .position)
         self.size = try container.decode(CGSize.self, forKey: .size)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -86,6 +90,9 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
         try container.encode(self.position, forKey: .position)
         try container.encode(self.size, forKey: .size)
         try container.encode(self.rotation, forKey: .rotation)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
         
     public func duplicate() -> DrawingEntity {
@@ -105,6 +112,7 @@ public final class DrawingSimpleShapeEntity: DrawingEntity, Codable {
     }
     
     public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingSimpleShapeEntityView)?.getRenderImage()
     }
 }
 
@@ -141,13 +149,14 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
             self.currentSize = size
             self.shapeLayer.frame = self.bounds
             
+            let rect = CGRect(origin: .zero, size: size).insetBy(dx: maxLineWidth * 0.5, dy: maxLineWidth * 0.5)
             switch shapeType {
             case .rectangle:
-                self.shapeLayer.path = CGPath(rect: CGRect(origin: .zero, size: size), transform: nil)
+                self.shapeLayer.path = CGPath(rect: rect, transform: nil)
             case .ellipse:
-                self.shapeLayer.path = CGPath(ellipseIn: CGRect(origin: .zero, size: size), transform: nil)
+                self.shapeLayer.path = CGPath(ellipseIn: rect, transform: nil)
             case .star:
-                self.shapeLayer.path = CGPath.star(in: CGRect(origin: .zero, size: size), extrusion: size.width * 0.2, points: 5)
+                self.shapeLayer.path = CGPath.star(in: rect, extrusion: size.width * 0.2, points: 5)
             }
         }
         
@@ -157,7 +166,7 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
             self.shapeLayer.strokeColor = UIColor.clear.cgColor
         case .stroke:
             let minLineWidth = max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.01)
-            let maxLineWidth = max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
+            let maxLineWidth = self.maxLineWidth
             let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.shapeEntity.lineWidth
             
             self.shapeLayer.fillColor = UIColor.clear.cgColor
@@ -172,8 +181,8 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         return self.shapeLayer.lineWidth
     }
     
-    private var maxLineWidth: CGFloat {
-        return max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.1)
+    fileprivate var maxLineWidth: CGFloat {
+        return max(10.0, max(self.shapeEntity.referenceDrawingSize.width, self.shapeEntity.referenceDrawingSize.height) * 0.05)
     }
     
     override func point(inside point: CGPoint, with event: UIEvent?) -> Bool {
@@ -218,6 +227,19 @@ final class DrawingSimpleShapeEntityView: DrawingEntityView {
         let selectionView = DrawingSimpleShapeEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
+    }
+    
+    override var selectionBounds: CGRect {
+        return self.bounds.insetBy(dx: self.maxLineWidth * 0.5, dy: self.maxLineWidth * 0.5)
     }
 }
 
@@ -447,11 +469,8 @@ final class DrawingSimpleShapeEntititySelectionView: DrawingEntitySelectionView,
     }
     
     override func layoutSubviews() {
-        var inset = self.selectionInset
-        if let entityView = self.entityView as? DrawingSimpleShapeEntityView, let entity = entityView.entity as? DrawingSimpleShapeEntity, case .star = entity.shapeType {
-            inset -= entityView.visualLineWidth / 2.0
-        }
-        
+        let inset = self.selectionInset
+
         let bounds = CGRect(origin: .zero, size: CGSize(width: entitySelectionViewHandleSize.width / self.scale, height: entitySelectionViewHandleSize.height / self.scale))
         let handleSize = CGSize(width: 9.0 / self.scale, height: 9.0 / self.scale)
         let handlePath = CGPath(ellipseIn: CGRect(origin: CGPoint(x: (bounds.width - handleSize.width) / 2.0, y: (bounds.height - handleSize.height) / 2.0), size: handleSize), transform: nil)

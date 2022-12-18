@@ -14,6 +14,7 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         case size
         case rotation
         case tailPosition
+        case renderImage
     }
     
     enum DrawType: Codable {
@@ -67,6 +68,9 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         self.size = try container.decode(CGSize.self, forKey: .size)
         self.rotation = try container.decode(CGFloat.self, forKey: .rotation)
         self.tailPosition = try container.decode(CGPoint.self, forKey: .tailPosition)
+        if let renderImageData = try? container.decodeIfPresent(Data.self, forKey: .renderImage) {
+            self.renderImage = UIImage(data: renderImageData)
+        }
     }
     
     public func encode(to encoder: Encoder) throws {
@@ -80,6 +84,9 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
         try container.encode(self.size, forKey: .size)
         try container.encode(self.rotation, forKey: .rotation)
         try container.encode(self.tailPosition, forKey: .tailPosition)
+        if let renderImage, let data = renderImage.pngData() {
+            try container.encode(data, forKey: .renderImage)
+        }
     }
         
     public func duplicate() -> DrawingEntity {
@@ -99,6 +106,7 @@ public final class DrawingBubbleEntity: DrawingEntity, Codable {
     }
     
     public func prepareForRender() {
+        self.renderImage = (self.currentEntityView as? DrawingBubbleEntityView)?.getRenderImage()
     }
 }
 
@@ -134,8 +142,8 @@ final class DrawingBubbleEntityView: DrawingEntityView {
             self.currentTailPosition = self.bubbleEntity.tailPosition
             self.shapeLayer.frame = self.bounds
             
-            let cornerRadius = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.066)
-            let smallCornerRadius = max(5.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.016)
+            let cornerRadius = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.045)
+            let smallCornerRadius = max(5.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.01)
             let tailWidth = max(5.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
             
             self.shapeLayer.path = CGPath.bubble(in: CGRect(origin: .zero, size: size), cornerRadius: cornerRadius, smallCornerRadius: smallCornerRadius, tailPosition: self.bubbleEntity.tailPosition, tailWidth: tailWidth)
@@ -147,7 +155,7 @@ final class DrawingBubbleEntityView: DrawingEntityView {
             self.shapeLayer.strokeColor = UIColor.clear.cgColor
         case .stroke:
             let minLineWidth = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.01)
-            let maxLineWidth = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.1)
+            let maxLineWidth = max(10.0, max(self.bubbleEntity.referenceDrawingSize.width, self.bubbleEntity.referenceDrawingSize.height) * 0.05)
             let lineWidth = minLineWidth + (maxLineWidth - minLineWidth) * self.bubbleEntity.lineWidth
             
             self.shapeLayer.fillColor = UIColor.clear.cgColor
@@ -206,6 +214,15 @@ final class DrawingBubbleEntityView: DrawingEntityView {
         let selectionView = DrawingBubbleEntititySelectionView()
         selectionView.entityView = self
         return selectionView
+    }
+    
+    func getRenderImage() -> UIImage? {
+        let rect = self.bounds
+        UIGraphicsBeginImageContextWithOptions(rect.size, false, 1.0)
+        self.drawHierarchy(in: rect, afterScreenUpdates: false)
+        let image = UIGraphicsGetImageFromCurrentImageContext()
+        UIGraphicsEndImageContext()
+        return image
     }
 }
 
