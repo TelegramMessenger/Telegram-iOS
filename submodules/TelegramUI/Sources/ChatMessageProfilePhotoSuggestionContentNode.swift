@@ -17,11 +17,11 @@ import PhotoResources
 import UniversalMediaPlayer
 import TelegramUniversalVideoContent
 import GalleryUI
+import Markdown
 
 class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode {
     private var mediaBackgroundContent: WallpaperBubbleBackgroundNode?
     private let mediaBackgroundNode: NavigationBackgroundNode
-    private let titleNode: TextNode
     private let subtitleNode: TextNode
     private let imageNode: TransformImageNode
     
@@ -42,10 +42,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         self.mediaBackgroundNode.clipsToBounds = true
         self.mediaBackgroundNode.cornerRadius = 24.0
         
-        self.titleNode = TextNode()
-        self.titleNode.isUserInteractionEnabled = false
-        self.titleNode.displaysAsynchronously = false
-        
         self.subtitleNode = TextNode()
         self.subtitleNode.isUserInteractionEnabled = false
         self.subtitleNode.displaysAsynchronously = false
@@ -65,7 +61,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
         super.init()
 
         self.addSubnode(self.mediaBackgroundNode)
-        self.addSubnode(self.titleNode)
         self.addSubnode(self.subtitleNode)
         self.addSubnode(self.imageNode)
     
@@ -152,7 +147,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
     }
                 
     override func asyncLayoutContent() -> (_ item: ChatMessageBubbleContentItem, _ layoutConstants: ChatMessageItemLayoutConstants, _ preparePosition: ChatMessageBubblePreparePosition, _ messageSelection: Bool?, _ constrainedSize: CGSize, _ avatarInset: CGFloat) -> (ChatMessageBubbleContentProperties, unboundSize: CGSize?, maxWidth: CGFloat, layout: (CGSize, ChatMessageBubbleContentPosition) -> (CGFloat, (CGFloat) -> (CGSize, (ListViewItemUpdateAnimation, Bool, ListViewItemApply?) -> Void))) {
-        let makeTitleLayout = TextNode.asyncLayout(self.titleNode)
         let makeImageLayout = self.imageNode.asyncLayout()
         let makeSubtitleLayout = TextNode.asyncLayout(self.subtitleNode)
         let makeButtonTitleLayout = TextNode.asyncLayout(self.buttonTitleNode)
@@ -181,8 +175,6 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                 let isVideo = !(photo?.videoRepresentations.isEmpty ?? true)
                 let fromYou = item.message.author?.id == item.context.account.peerId
                 
-                let (titleLayout, titleApply) = makeTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: isVideo ? item.presentationData.strings.Conversation_SuggestedVideoTitle : item.presentationData.strings.Conversation_SuggestedPhotoTitle, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
-                
                 let peerName = item.message.peers[item.message.id.peerId].flatMap { EnginePeer($0).compactDisplayTitle } ?? ""
                 let text: String
                 if fromYou {
@@ -191,11 +183,18 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                     text = isVideo ? item.presentationData.strings.Conversation_SuggestedVideoText(peerName).string : item.presentationData.strings.Conversation_SuggestedPhotoText(peerName).string
                 }
                 
-                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: text, font: Font.regular(13.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
+                let body = MarkdownAttributeSet(font: Font.regular(13.0), textColor: primaryTextColor)
+                let bold = MarkdownAttributeSet(font: Font.semibold(13.0), textColor: primaryTextColor)
+                
+                let subtitle = parseMarkdownIntoAttributedString(text, attributes: MarkdownAttributes(body: body, bold: bold, link: body, linkAttribute: { _ in
+                    return nil
+                }), textAlignment: .center)
+                
+                let (subtitleLayout, subtitleApply) = makeSubtitleLayout(TextNodeLayoutArguments(attributedString: subtitle, backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
                 
                 let (buttonTitleLayout, buttonTitleApply) = makeButtonTitleLayout(TextNodeLayoutArguments(attributedString: NSAttributedString(string: isVideo ? item.presentationData.strings.Conversation_SuggestedVideoView : item.presentationData.strings.Conversation_SuggestedPhotoView, font: Font.semibold(15.0), textColor: primaryTextColor, paragraphAlignment: .center), backgroundColor: nil, maximumNumberOfLines: 0, truncationType: .end, constrainedSize: CGSize(width: width - 32.0, height: CGFloat.greatestFiniteMagnitude), alignment: .center, cutout: nil, insets: UIEdgeInsets()))
             
-                let backgroundSize = CGSize(width: width, height: titleLayout.size.height + subtitleLayout.size.height + 182.0)
+                let backgroundSize = CGSize(width: width, height: subtitleLayout.size.height + 182.0)
                 
                 return (backgroundSize.width, { boundingWidth in
                     return (backgroundSize, { [weak self] animation, synchronousLoads, _ in
@@ -256,22 +255,17 @@ class ChatMessageProfilePhotoSuggestionContentNode: ChatMessageBubbleContentNode
                                 videoNode.removeFromSupernode()
                             }
                             
-                            let backgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
-                            let mediaBackgroundFrame = backgroundFrame.insetBy(dx: -2.0, dy: -2.0)
+                            let mediaBackgroundFrame = CGRect(origin: CGPoint(x: floorToScreenPixels((backgroundSize.width - width) / 2.0), y: 0.0), size: backgroundSize)
                             strongSelf.mediaBackgroundNode.frame = mediaBackgroundFrame
                                                         
                             strongSelf.mediaBackgroundNode.updateColor(color: selectDateFillStaticColor(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), enableBlur: dateFillNeedsBlur(theme: item.presentationData.theme.theme, wallpaper: item.presentationData.theme.wallpaper), transition: .immediate)
                             strongSelf.mediaBackgroundNode.update(size: mediaBackgroundFrame.size, transition: .immediate)
                             strongSelf.buttonNode.backgroundColor = item.presentationData.theme.theme.overallDarkAppearance ? UIColor(rgb: 0xffffff, alpha: 0.12) : UIColor(rgb: 0x000000, alpha: 0.12)
                             
-                            let _ = titleApply()
                             let _ = subtitleApply()
                             let _ = buttonTitleApply()
                                                         
-                            let titleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - titleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 127.0), size: titleLayout.size)
-                            strongSelf.titleNode.frame = titleFrame
-                            
-                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: titleFrame.maxY + 2.0), size: subtitleLayout.size)
+                            let subtitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - subtitleLayout.size.width) / 2.0) , y: mediaBackgroundFrame.minY + 127.0), size: subtitleLayout.size)
                             strongSelf.subtitleNode.frame = subtitleFrame
                             
                             let buttonTitleFrame = CGRect(origin: CGPoint(x: mediaBackgroundFrame.minX + floorToScreenPixels((mediaBackgroundFrame.width - buttonTitleLayout.size.width) / 2.0), y: subtitleFrame.maxY + 18.0), size: buttonTitleLayout.size)

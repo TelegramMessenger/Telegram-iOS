@@ -8475,15 +8475,17 @@ Sorry for the inconvenience.";
 "UserInfo.ResetToOriginalAlertReset" = "Reset";
 
 "Conversation.SuggestedPhotoTitle" = "Suggested Photo";
-"Conversation.SuggestedPhotoText" = "%@ suggests you to use this photo for your Telegram account.";
-"Conversation.SuggestedPhotoTextYou" = "You suggested %@ to use this photo for their Telegram account.";
-"Conversation.SuggestedPhotoView" = "View";
+"Conversation.SuggestedPhotoText" = "**%@** suggests you to use this profile photo.";
+"Conversation.SuggestedPhotoTextExpanded" = "%@ suggests you to use this profile photo for your Telegram account.";
+"Conversation.SuggestedPhotoTextYou" = "You suggested **%@** to use this profile photo.";
+"Conversation.SuggestedPhotoView" = "View Photo";
 "Conversation.SuggestedPhotoSuccess" = "You have updated your Telegram account photo.";
 
 "Conversation.SuggestedVideoTitle" = "Suggested Video";
-"Conversation.SuggestedVideoText" = "%@ suggests you to use this video for your Telegram account.";
-"Conversation.SuggestedVideoTextYou" = "You suggested %@ to use this video for their Telegram account.";
-"Conversation.SuggestedVideoView" = "View";
+"Conversation.SuggestedVideoText" = "**%@** suggests you to use this profile video.";
+"Conversation.SuggestedVideoTextExpanded" = "%@ suggests you to use this profile video for your Telegram account.";
+"Conversation.SuggestedVideoTextYou" = "You suggested **%@** to use this profile video.";
+"Conversation.SuggestedVideoView" = "View Video";
 "Conversation.SuggestedVideoSuccess" = "You have updated your Telegram account video.";
 
 "CacheEvictionMenu.CategoryExceptions_1" = "%@ Exception";

@@ -77,12 +77,12 @@ private final class SelectivePrivacySettingsControllerArguments {
 private enum SelectivePrivacySettingsSection: Int32 {
     case forwards
     case setting
-    case photo
     case peers
     case callsP2P
     case callsP2PPeers
     case callsIntegrationEnabled
     case phoneDiscovery
+    case photo
 }
 
 private func stringForUserCount(_ peers: [PeerId: SelectivePrivacyPeer], strings: PresentationStrings) -> String {
@@ -105,9 +105,6 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case contacts(PresentationTheme, String, Bool)
     case nobody(PresentationTheme, String, Bool)
     case settingInfo(PresentationTheme, String, String)
-    case setPublicPhoto(PresentationTheme, String)
-    case removePublicPhoto(PresentationTheme, String, EnginePeer, TelegramMediaImage?, UIImage?)
-    case publicPhotoInfo(PresentationTheme, String)
     case exceptionsHeader(PresentationTheme, String)
     case disableFor(PresentationTheme, String, String)
     case enableFor(PresentationTheme, String, String)
@@ -126,6 +123,9 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
     case phoneDiscoveryEverybody(PresentationTheme, String, Bool)
     case phoneDiscoveryMyContacts(PresentationTheme, String, Bool)
     case phoneDiscoveryInfo(PresentationTheme, String, String)
+    case setPublicPhoto(PresentationTheme, String)
+    case removePublicPhoto(PresentationTheme, String, EnginePeer, TelegramMediaImage?, UIImage?)
+    case publicPhotoInfo(PresentationTheme, String)
     
     var section: ItemListSectionId {
         switch self {
@@ -133,8 +133,6 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.forwards.rawValue
             case .settingHeader, .everybody, .contacts, .nobody, .settingInfo:
                 return SelectivePrivacySettingsSection.setting.rawValue
-            case .setPublicPhoto, .removePublicPhoto, .publicPhotoInfo:
-                return SelectivePrivacySettingsSection.photo.rawValue
             case .exceptionsHeader, .disableFor, .enableFor, .peersInfo:
                 return SelectivePrivacySettingsSection.peers.rawValue
             case .callsP2PHeader, .callsP2PAlways, .callsP2PContacts, .callsP2PNever, .callsP2PInfo:
@@ -145,6 +143,8 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return SelectivePrivacySettingsSection.callsIntegrationEnabled.rawValue
             case .phoneDiscoveryHeader, .phoneDiscoveryEverybody, .phoneDiscoveryMyContacts, .phoneDiscoveryInfo:
                 return SelectivePrivacySettingsSection.phoneDiscovery.rawValue
+            case .setPublicPhoto, .removePublicPhoto, .publicPhotoInfo:
+                return SelectivePrivacySettingsSection.photo.rawValue
         }
     }
     
@@ -164,48 +164,48 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 return 5
             case .settingInfo:
                 return 6
-            case .setPublicPhoto:
-                return 7
-            case .removePublicPhoto:
-                return 8
-            case .publicPhotoInfo:
-                return 9
             case .phoneDiscoveryHeader:
-                return 10
+                return 7
             case .phoneDiscoveryEverybody:
-                return 11
+                return 8
             case .phoneDiscoveryMyContacts:
-                return 12
+                return 9
             case .phoneDiscoveryInfo:
-                return 13
+                return 10
             case .exceptionsHeader:
-                return 14
+                return 11
             case .disableFor:
-                return 15
+                return 12
             case .enableFor:
-                return 16
+                return 13
             case .peersInfo:
-                return 17
+                return 14
             case .callsP2PHeader:
-                return 18
+                return 15
             case .callsP2PAlways:
-                return 19
+                return 16
             case .callsP2PContacts:
-                return 20
+                return 17
             case .callsP2PNever:
-                return 21
+                return 18
             case .callsP2PInfo:
-                return 22
+                return 19
             case .callsP2PDisableFor:
-                return 23
+                return 20
             case .callsP2PEnableFor:
-                return 24
+                return 21
             case .callsP2PPeersInfo:
-                return 25
+                return 22
             case .callsIntegrationEnabled:
-                return 26
+                return 23
             case .callsIntegrationInfo:
-                return 27
+                return 24
+            case .setPublicPhoto:
+                return 24
+            case .removePublicPhoto:
+                return 25
+            case .publicPhotoInfo:
+                return 26
         }
     }
     
@@ -243,24 +243,6 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 }
             case let .nobody(lhsTheme, lhsText, lhsValue):
                 if case let .nobody(rhsTheme, rhsText, rhsValue) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsValue == rhsValue {
-                    return true
-                } else {
-                    return false
-                }
-            case let .setPublicPhoto(lhsTheme, lhsText):
-                if case let .setPublicPhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
-                    return true
-                } else {
-                    return false
-                }
-            case let .removePublicPhoto(lhsTheme, lhsText, lhsPeer, lhsRep, lhsImage):
-                if case let .removePublicPhoto(rhsTheme, rhsText, rhsPeer, rhsRep, rhsImage) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsPeer == rhsPeer, lhsRep == rhsRep, lhsImage === rhsImage {
-                    return true
-                } else {
-                    return false
-                }
-            case let .publicPhotoInfo(lhsTheme, lhsText):
-                if case let .publicPhotoInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
                     return true
                 } else {
                     return false
@@ -379,6 +361,24 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
                 } else {
                     return false
                 }
+            case let .setPublicPhoto(lhsTheme, lhsText):
+                if case let .setPublicPhoto(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
+            case let .removePublicPhoto(lhsTheme, lhsText, lhsPeer, lhsRep, lhsImage):
+                if case let .removePublicPhoto(rhsTheme, rhsText, rhsPeer, rhsRep, rhsImage) = rhs, lhsTheme === rhsTheme, lhsText == rhsText, lhsPeer == rhsPeer, lhsRep == rhsRep, lhsImage === rhsImage {
+                    return true
+                } else {
+                    return false
+                }
+            case let .publicPhotoInfo(lhsTheme, lhsText):
+                if case let .publicPhotoInfo(rhsTheme, rhsText) = rhs, lhsTheme === rhsTheme, lhsText == rhsText {
+                    return true
+                } else {
+                    return false
+                }
         }
     }
     
@@ -410,17 +410,6 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             case let .settingInfo(_, text, link):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.copyPhoneLink?(link)
-                })
-            case let .setPublicPhoto(theme, text):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPhotoIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
-                    arguments.setPublicPhoto?()
-                })
-            case let .removePublicPhoto(_, text, peer, image, completeImage):
-                return ItemListPeerActionItem(presentationData: presentationData, icon: completeImage, iconSignal: completeImage == nil ? peerAvatarCompleteImage(account: arguments.context.account, peer: peer, forceProvidedRepresentation: true, representation: image?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28)), size: CGSize(width: 28.0, height: 28.0)) : nil, title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
-                    arguments.removePublicPhoto?()
-                })
-            case let .publicPhotoInfo(_, text):
-                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                 })
             case let .exceptionsHeader(_, text):
                 return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
@@ -479,6 +468,17 @@ private enum SelectivePrivacySettingsEntry: ItemListNodeEntry {
             case let .phoneDiscoveryInfo(_, text, link):
                 return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                     arguments.copyPhoneLink?(link)
+                })
+            case let .setPublicPhoto(theme, text):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: PresentationResourcesItemList.addPhotoIcon(theme), title: text, sectionId: self.section, height: .generic, color: .accent, editing: false, action: {
+                    arguments.setPublicPhoto?()
+                })
+            case let .removePublicPhoto(_, text, peer, image, completeImage):
+                return ItemListPeerActionItem(presentationData: presentationData, icon: completeImage, iconSignal: completeImage == nil ? peerAvatarCompleteImage(account: arguments.context.account, peer: peer, forceProvidedRepresentation: true, representation: image?.representationForDisplayAtSize(PixelDimensions(width: 28, height: 28)), size: CGSize(width: 28.0, height: 28.0)) : nil, title: text, sectionId: self.section, height: .generic, color: .destructive, editing: false, action: {
+                    arguments.removePublicPhoto?()
+                })
+            case let .publicPhotoInfo(_, text):
+                return ItemListTextItem(presentationData: presentationData, text: .markdown(text), sectionId: self.section, linkAction: { _ in
                 })
         }
     }
@@ -670,9 +670,9 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
     entries.append(.everybody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenEverybody, state.setting == .everybody))
     entries.append(.contacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.setting == .contacts))
     switch kind {
-        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages:
+        case .presence, .voiceCalls, .forwards, .phoneNumber, .voiceMessages, .profilePhoto:
             entries.append(.nobody(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenNobody, state.setting == .nobody))
-        case .groupInvitations, .profilePhoto:
+        case .groupInvitations:
             break
     }
     let phoneLink = "https://t.me/+\(phoneNumber)"
@@ -686,17 +686,7 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
         entries.append(.phoneDiscoveryMyContacts(presentationData.theme, presentationData.strings.PrivacySettings_LastSeenContacts, state.phoneDiscoveryEnabled == false))
         entries.append(.phoneDiscoveryInfo(presentationData.theme, state.phoneDiscoveryEnabled != false ? presentationData.strings.PrivacyPhoneNumberSettings_CustomPublicLink("+\(phoneNumber)").string : presentationData.strings.PrivacyPhoneNumberSettings_CustomDisabledHelp, phoneLink))
     }
-    
-    if case .profilePhoto = kind, let peer = peer, state.setting != .everybody {
-        if let publicPhoto = publicPhoto {
-            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_UpdatePublicPhoto))
-            entries.append(.removePublicPhoto(presentationData.theme, !publicPhoto.videoRepresentations.isEmpty ? presentationData.strings.Privacy_ProfilePhoto_RemovePublicVideo : presentationData.strings.Privacy_ProfilePhoto_RemovePublicPhoto, peer, publicPhoto, state.uploadedPhoto))
-        } else {
-            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_SetPublicPhoto))
-        }
-        entries.append(.publicPhotoInfo(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_PublicPhotoInfo))
-    }
-    
+        
     entries.append(.exceptionsHeader(presentationData.theme, presentationData.strings.GroupInfo_Permissions_Exceptions))
     
     switch state.setting {
@@ -735,6 +725,16 @@ private func selectivePrivacySettingsControllerEntries(presentationData: Present
             entries.append(.callsIntegrationEnabled(presentationData.theme, presentationData.strings.Privacy_Calls_Integration, integrationEnabled))
             entries.append(.callsIntegrationInfo(presentationData.theme, presentationData.strings.Privacy_Calls_IntegrationHelp))
         }
+    }
+    
+    if case .profilePhoto = kind, let peer = peer, state.setting != .everybody || !state.disableFor.isEmpty {
+        if let publicPhoto = publicPhoto {
+            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_UpdatePublicPhoto))
+            entries.append(.removePublicPhoto(presentationData.theme, !publicPhoto.videoRepresentations.isEmpty ? presentationData.strings.Privacy_ProfilePhoto_RemovePublicVideo : presentationData.strings.Privacy_ProfilePhoto_RemovePublicPhoto, peer, publicPhoto, state.uploadedPhoto))
+        } else {
+            entries.append(.setPublicPhoto(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_SetPublicPhoto))
+        }
+        entries.append(.publicPhotoInfo(presentationData.theme, presentationData.strings.Privacy_ProfilePhoto_PublicPhotoInfo))
     }
     
     return entries

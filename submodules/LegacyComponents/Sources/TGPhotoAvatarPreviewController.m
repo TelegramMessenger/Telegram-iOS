@@ -202,7 +202,7 @@ const CGFloat TGPhotoAvatarPreviewLandscapePanelSize = TGPhotoAvatarPreviewPanel
         [_titleLabel sizeToFit];
         [_wrapperView addSubview:_titleLabel];
         
-        NSMutableAttributedString *subtitle = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoText") : TGLocalized(@"Conversation.SuggestedPhotoText"), _senderName]];
+        NSMutableAttributedString *subtitle = [[NSMutableAttributedString alloc] initWithString:[NSString stringWithFormat:self.item.isVideo ? TGLocalized(@"Conversation.SuggestedVideoTextExpanded") : TGLocalized(@"Conversation.SuggestedPhotoTextExpanded"), _senderName]];
         [subtitle addAttribute:NSForegroundColorAttributeName value:[UIColor whiteColor] range:NSMakeRange(0, subtitle.string.length)];
         [subtitle addAttribute:NSFontAttributeName value:TGSystemFontOfSize(15.0f) range:NSMakeRange(0, subtitle.string.length)];
         
