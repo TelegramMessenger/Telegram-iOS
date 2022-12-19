@@ -541,6 +541,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                         visibleTopPanelHeight = 0.0
                     }
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
+                    
+                    panelStateTransition.setFrame(view: self.contentClippingView, frame: CGRect(origin: .zero, size: contentSize))
+                    panelStateTransition.setBounds(view: self.contentClippingView, bounds: CGRect(origin: .zero, size: contentSize))
                 } else {
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelOffset), size: topPanelSize))
                     
