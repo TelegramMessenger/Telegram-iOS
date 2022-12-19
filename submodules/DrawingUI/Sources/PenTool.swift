@@ -123,7 +123,7 @@ final class PenTool: DrawingElement {
         
         self.renderLineWidth = lineWidth
         self.renderArrowLength = lineWidth * 3.0
-        self.renderArrowLineWidth = lineWidth
+        self.renderArrowLineWidth = lineWidth * 0.8
         
         self.renderLine = StrokeLine(color: color.toUIColor(), minLineWidth: minLineWidth + (lineWidth - minLineWidth) * 0.3, lineWidth: lineWidth)
     }
@@ -161,10 +161,6 @@ final class PenTool: DrawingElement {
         
         if let previousPoint, point.location.distance(to: previousPoint) < filterDistance, state == .changed, self.renderLine.ready {
             return
-        }
-        print("vel: \(point.velocity)")
-        if let previousPoint {
-            print("dist: \(point.location.distance(to: previousPoint))")
         }
         self.previousPoint = point.location
         

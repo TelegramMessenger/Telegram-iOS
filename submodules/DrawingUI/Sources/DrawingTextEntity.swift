@@ -697,6 +697,8 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
     func getRenderSubEntities() -> [DrawingStickerEntity] {
         let textSize = self.textView.bounds.size
         let textPosition = self.textEntity.position
+        let scale = self.textEntity.scale
+        let rotation = self.textEntity.rotation
         
         let itemSize: CGFloat = floor(24.0 * self.displayFontSize * 0.8 / 17.0)
         
@@ -709,10 +711,12 @@ final class DrawingTextEntityView: DrawingEntityView, UITextViewDelegate {
                         
             let entity = DrawingStickerEntity(file: file)
             entity.referenceDrawingSize = CGSize(width: itemSize * 2.5, height: itemSize * 2.5)
-            entity.scale = self.textEntity.scale
-            entity.position = textPosition.offsetBy(dx: emojiTextPosition.x, dy: emojiTextPosition.y)
-            entity.rotation = self.textEntity.rotation
-            
+            entity.scale = scale
+            entity.position = textPosition.offsetBy(
+                dx: (emojiTextPosition.x * cos(rotation) + emojiTextPosition.y * sin(rotation)) * scale,
+                dy: (emojiTextPosition.y * cos(rotation) + emojiTextPosition.x * sin(rotation)) * scale
+            )
+            entity.rotation = rotation
             entities.append(entity)
         }
         return entities
