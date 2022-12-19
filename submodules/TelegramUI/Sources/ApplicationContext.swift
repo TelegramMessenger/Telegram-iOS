@@ -809,6 +809,8 @@ final class AuthorizedApplicationContext {
         self.watchNavigateToMessageDisposable.dispose()
         self.permissionsDisposable.dispose()
         self.scheduledCallPeerDisposable.dispose()
+        self.appUpdateInfoDisposable.dispose()
+        self.showCallsTabDisposable?.dispose()
     }
     
     func openNotificationSettings() {

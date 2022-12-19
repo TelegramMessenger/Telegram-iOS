@@ -515,6 +515,7 @@ public final class ShareController: ViewController {
         self.peersDisposable.dispose()
         self.readyDisposable.dispose()
         self.accountActiveDisposable.dispose()
+        self.presentationDataDisposable?.dispose()
         
         if self.fromForeignApp {
             if let application = UIApplication.value(forKeyPath: #keyPath(UIApplication.shared)) as? UIApplication {

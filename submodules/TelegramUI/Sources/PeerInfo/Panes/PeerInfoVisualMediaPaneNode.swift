@@ -2139,6 +2139,7 @@ final class PeerInfoVisualMediaPaneNode: ASDisplayNode, PeerInfoPaneNode, UIScro
         self.hiddenMediaDisposable?.dispose()
         self.animationTimer?.invalidate()
         self.presentationDataDisposable?.dispose()
+        self.storedStateDisposable?.dispose()
     }
 
     func loadHole(anchor: SparseItemGrid.HoleAnchor, at location: SparseItemGrid.HoleLocation) -> Signal<Never, NoError> {

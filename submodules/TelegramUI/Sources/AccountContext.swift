@@ -306,6 +306,7 @@ public final class AccountContextImpl: AccountContext {
         self.appConfigurationDisposable?.dispose()
         self.experimentalUISettingsDisposable?.dispose()
         self.animatedEmojiStickersDisposable?.dispose()
+        self.userLimitsConfigurationDisposable?.dispose()
     }
     
     public func storeSecureIdPassword(password: String) {

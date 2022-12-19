@@ -1213,6 +1213,7 @@ public class Account {
         self.storageSettingsDisposable?.dispose()
         self.smallLogPostDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.becomeMasterDisposable.dispose()
     }
     
     private func restartConfigurationUpdates() {

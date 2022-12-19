@@ -859,6 +859,9 @@ public final class SharedAccountContextImpl: SharedAccountContext {
         self.callDisposable?.dispose()
         self.groupCallDisposable?.dispose()
         self.callStateDisposable?.dispose()
+        self.managedAccountDisposables.dispose()
+        self.hasOngoingCallDisposable?.dispose()
+        self.experimentalUISettingsDisposable?.dispose()
     }
     
     private func updateAccountBackupData(account: Account) -> Signal<Never, NoError> {

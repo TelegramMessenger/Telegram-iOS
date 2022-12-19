@@ -5157,6 +5157,9 @@ public final class ChatControllerImpl: TelegramBaseController, ChatController, G
         self.inviteRequestsDisposable.dispose()
         self.sendAsPeersDisposable?.dispose()
         self.preloadAttachBotIconsDisposables?.dispose()
+        self.choosingStickerActivityDisposable?.dispose()
+        self.automaticMediaDownloadSettingsDisposable?.dispose()
+        self.stickerSettingsDisposable?.dispose()
     }
     
     public func updatePresentationMode(_ mode: ChatControllerPresentationMode) {

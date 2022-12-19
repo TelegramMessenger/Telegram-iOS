@@ -97,6 +97,7 @@
     if (!_disposed)
     {
         disposable = _disposable;
+        _disposable = nil;
         _disposed = true;
     }
     OSSpinLockUnlock(&_lock);

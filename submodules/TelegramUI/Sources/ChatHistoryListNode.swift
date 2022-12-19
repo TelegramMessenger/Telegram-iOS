@@ -1573,6 +1573,7 @@ public final class ChatHistoryListNode: ListView, ChatHistoryNode {
         self.loadedMessagesFromCachedDataDisposable?.dispose()
         self.preloadAdPeerDisposable.dispose()
         self.refreshDisplayedItemRangeTimer?.invalidate()
+        self.presentationDataDisposable?.dispose()
     }
     
     public func setLoadStateUpdated(_ f: @escaping (ChatHistoryNodeLoadState, Bool) -> Void) {

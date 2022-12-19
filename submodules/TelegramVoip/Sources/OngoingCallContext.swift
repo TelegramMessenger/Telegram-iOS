@@ -1011,6 +1011,7 @@ public final class OngoingCallContext {
         
         self.audioSessionDisposable.dispose()
         self.networkTypeDisposable?.dispose()
+        self.signalingDataDisposable?.dispose()
     }
         
     private func withContext(_ f: @escaping (OngoingCallThreadLocalContextProtocol) -> Void) {

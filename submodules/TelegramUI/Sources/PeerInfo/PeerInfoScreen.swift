@@ -3193,6 +3193,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         self.shareStatusDisposable?.dispose()
         self.customStatusDisposable?.dispose()
         self.refreshMessageTagStatsDisposable?.dispose()
+        self.updateAvatarDisposable.dispose()
         
         self.copyProtectionTooltipController?.dismiss()
     }
@@ -4275,9 +4276,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                             generateTintedImage(image: UIImage(bundleImageName: "Chat/Context Menu/Report"), color: theme.contextMenu.primaryColor)
                         }, action: { [weak self] c, f in
                             self?.openReport(user: false, contextController: c, backAction: { c in
-                                if let mainItemsImpl = mainItemsImpl {
-                                    c.setItems(mainItemsImpl() |> map { ContextController.Items(content: .list($0)) }, minHeight: nil)
-                                }
+                                c.popItems()
                             })
                         })))
                     }

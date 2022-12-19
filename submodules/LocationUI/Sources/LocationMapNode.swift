@@ -235,6 +235,10 @@ final class LocationMapNode: ASDisplayNode, MKMapViewDelegate {
         })
     }
     
+    deinit {
+        self.pinDisposable.dispose()
+    }
+    
     override func didLoad() {
         super.didLoad()
         

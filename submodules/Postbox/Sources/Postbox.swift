@@ -1687,6 +1687,7 @@ final class PostboxImpl {
         if let tempDir = self.tempDir {
             TempBox.shared.dispose(tempDir)
         }
+        self.keychainOperationsDisposable.dispose()
     }
     
     private func takeNextViewId() -> Int {

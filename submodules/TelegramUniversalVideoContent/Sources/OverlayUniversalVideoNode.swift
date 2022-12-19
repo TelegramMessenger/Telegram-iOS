@@ -126,6 +126,10 @@ public final class OverlayUniversalVideoNode: OverlayMediaItemNode, AVPictureInP
         })
     }
     
+    deinit {
+        self.shouldBeDismissedDisposable?.dispose()
+    }
+    
     override public func didLoad() {
         super.didLoad()
     }

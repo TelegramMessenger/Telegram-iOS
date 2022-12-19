@@ -89,6 +89,7 @@ public final class SharedNotificationManager {
     deinit {
         self.inForegroundDisposable?.dispose()
         self.accountsAndKeysDisposable?.dispose()
+        self.notificationCallStateDisposable.dispose()
     }
     
     func isPollingState(accountId: AccountRecordId) -> Signal<Bool, NoError> {

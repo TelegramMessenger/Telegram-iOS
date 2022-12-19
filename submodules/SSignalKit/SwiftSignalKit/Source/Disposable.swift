@@ -141,6 +141,7 @@ public final class DisposableSet : Disposable {
         if self.disposed {
             disposeImmediately = true
         } else {
+            assert(!self.disposables.contains(where: { $0 === disposable }))
             self.disposables.append(disposable)
         }
         pthread_mutex_unlock(&self.lock)
@@ -154,6 +155,8 @@ public final class DisposableSet : Disposable {
         pthread_mutex_lock(&self.lock)
         if let index = self.disposables.firstIndex(where: { $0 === disposable }) {
             self.disposables.remove(at: index)
+        } else {
+            assertionFailure()
         }
         pthread_mutex_unlock(&self.lock)
     }
@@ -204,6 +207,8 @@ public final class DisposableDict<T: Hashable> : Disposable {
             disposePrevious = self.disposables[key]
             if let disposable = disposable {
                 self.disposables[key] = disposable
+            } else {
+                self.disposables.removeValue(forKey: key)
             }
         }
         pthread_mutex_unlock(&self.lock)

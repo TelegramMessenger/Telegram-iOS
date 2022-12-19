@@ -1544,6 +1544,7 @@ private final class NotificationServiceHandler {
     deinit {
         self.pollDisposable.dispose()
         self.stateManager?.network.shouldKeepConnection.set(.single(false))
+        self.notificationKeyDisposable.dispose()
     }
 }
 

@@ -1160,12 +1160,12 @@ private final class PremiumGiftScreenComponent: CombinedComponent {
             context.add(bottomPanel
                 .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - bottomPanel.size.height / 2.0))
                 .opacity(bottomPanelAlpha)
-                .disappear(Transition.Disappear { view, transition, completion in
+                .disappear(Transition.Disappear { [weak bottomPanel] view, transition, completion in
                     if case .none = transition.animation {
                         completion()
                         return
                     }
-                    view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: bottomPanel.size.height), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
+                    view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: 0.0, y: bottomPanel?.size.height ?? 0.0), duration: 0.2, removeOnCompletion: false, additive: true, completion: { _ in
                         completion()
                     })
                 })

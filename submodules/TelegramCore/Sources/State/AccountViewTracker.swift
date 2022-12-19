@@ -354,6 +354,17 @@ public final class AccountViewTracker {
         self.updatedViewCountDisposables.dispose()
         self.updatedReactionsDisposables.dispose()
         self.externallyUpdatedPeerIdDisposable.dispose()
+        for (_, disposable) in self.webpageDisposables {
+            disposable.dispose()
+        }
+        for (_, disposable) in self.pollDisposables {
+            disposable.dispose()
+        }
+        for (_, disposable) in self.visibleCallListHoleDisposables {
+            disposable.dispose()
+        }
+        self.seenLiveLocationDisposables.dispose()
+        self.updatedUnsupportedMediaDisposables.dispose()
     }
     
     func reset() {

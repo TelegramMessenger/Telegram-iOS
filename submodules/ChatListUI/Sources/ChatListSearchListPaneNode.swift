@@ -895,6 +895,9 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
     
     private var hiddenMediaDisposable: Disposable?
   
+    private var searchQueryDisposable: Disposable?
+    private var searchOptionsDisposable: Disposable?
+    
     init(context: AccountContext, updatedPresentationData: (initial: PresentationData, signal: Signal<PresentationData, NoError>)? = nil, interaction: ChatListSearchInteraction, key: ChatListSearchPaneKey, peersFilter: ChatListNodePeersFilter, groupId: EngineChatList.Group?, searchQuery: Signal<String?, NoError>, searchOptions: Signal<ChatListSearchOptions?, NoError>, navigationController: NavigationController?) {
         self.context = context
         self.interaction = interaction
@@ -1872,14 +1875,14 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         let previousSearchItems = Atomic<[ChatListSearchEntry]?>(value: nil)
         let previousSelectedMessages = Atomic<Set<EngineMessage.Id>?>(value: nil)
         
-        let _ = (searchQuery
+        self.searchQueryDisposable = (searchQuery
         |> deliverOnMainQueue).start(next: { [weak self, weak listInteraction, weak chatListInteraction] query in
             self?.searchQueryValue = query
             listInteraction?.searchTextHighightState = query
             chatListInteraction?.searchTextHighightState = query
         })
         
-        let _ = (searchOptions
+        self.searchOptionsDisposable = (searchOptions
         |> deliverOnMainQueue).start(next: { [weak self] options in
             self?.searchOptionsValue = options
         })
@@ -2234,6 +2237,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
         self.recentDisposable.dispose()
         self.updatedRecentPeersDisposable.dispose()
         self.deletedMessagesDisposable?.dispose()
+        self.searchQueryDisposable?.dispose()
+        self.searchOptionsDisposable?.dispose()
     }
     
     override func didLoad() {

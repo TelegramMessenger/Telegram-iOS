@@ -80,6 +80,7 @@ final class InstantPagePlayableVideoNode: ASDisplayNode, InstantPageNode, Galler
     
     deinit {
         self.fetchedDisposable.dispose()
+        self.statusDisposable.dispose()
     }
     
     func isAvailableForGalleryTransition() -> Bool {

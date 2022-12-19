@@ -2484,6 +2484,10 @@ public final class VoiceChatControllerImpl: ViewController, VoiceChatController 
             self.applicationStateDisposable?.dispose()
             self.myPeerVideoReadyDisposable.dispose()
             self.statsDisposable?.dispose()
+            self.actionButtonColorDisposable?.dispose()
+            for (_, disposable) in self.raisedHandDisplayDisposables {
+                disposable.dispose()
+            }
         }
         
         private func openSettingsMenu(sourceNode: ASDisplayNode, gesture: ContextGesture?) {

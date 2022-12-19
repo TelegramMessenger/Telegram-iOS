@@ -24,17 +24,30 @@ public func |> <T, U>(value: T, function: ((T) -> U)) -> U {
 }
 
 private final class SubscriberDisposable<T, E> : Disposable {
-    private let subscriber: Subscriber<T, E>
-    private let disposable: Disposable
+    private var lock = pthread_mutex_t()
+    private weak var subscriber: Subscriber<T, E>?
+    private var disposable: Disposable?
     
     init(subscriber: Subscriber<T, E>, disposable: Disposable) {
         self.subscriber = subscriber
         self.disposable = disposable
+        pthread_mutex_init(&self.lock, nil)
+    }
+    
+    deinit {
+        pthread_mutex_destroy(&self.lock)
     }
     
     func dispose() {
-        subscriber.markTerminatedWithoutDisposal()
-        disposable.dispose()
+        var disposable: Disposable?
+        
+        pthread_mutex_lock(&self.lock)
+        disposable = self.disposable
+        self.disposable = nil
+        pthread_mutex_unlock(&self.lock)
+        
+        self.subscriber?.markTerminatedWithoutDisposal()
+        disposable?.dispose()
     }
 }
 
