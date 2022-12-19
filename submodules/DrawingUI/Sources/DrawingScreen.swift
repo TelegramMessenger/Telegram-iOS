@@ -750,8 +750,18 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
                 context.add(textSettings
                     .position(CGPoint(x: context.availableSize.width / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - textSettings.size.height / 2.0 - 89.0))
-                    .appear(.default(scale: false, alpha: true))
-                    .disappear(.default(scale: false, alpha: true))
+                    .appear(Transition.Appear({ _, view, transition in
+                        if let view = findTaggedComponentViewImpl(view: view, tag: textSettingsTag) as? TextFontComponent.View, !transition.animation.isImmediate {
+                            view.animateIn()
+                        }
+                    }))
+                    .disappear(Transition.Disappear({ view, transition, completion in
+                        if let view = findTaggedComponentViewImpl(view: view, tag: textSettingsTag) as? TextFontComponent.View, !transition.animation.isImmediate {
+                            view.animateOut(completion: completion)
+                        } else {
+                            completion()
+                        }
+                    }))
                 )
             }
             
@@ -2000,11 +2010,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
                 view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), duration: 0.3, removeOnCompletion: false, additive: true)
             }
-            if let view = self.componentHost.findTaggedView(tag: textSettingsTag) {
-                view.alpha = 0.0
-                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
-            }
-            
+
             let colorTags = [color1Tag, color2Tag, color3Tag, color4Tag, color5Tag, color6Tag, color7Tag, color8Tag]
             for tag in colorTags {
                 if let view = self.componentHost.findTaggedView(tag: tag) {
@@ -2018,7 +2024,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 view.animateOut(completion: {
                     completion()
                 })
+            } else if let view = self.componentHost.findTaggedView(tag: textSettingsTag) as? TextFontComponent.View {
+                view.animateOut(completion: {
+                    completion()
+                })
             }
+            
             if let view = self.componentHost.findTaggedView(tag: modeTag) as? ModeAndSizeComponent.View {
                 view.animateOut()
             }

@@ -292,14 +292,30 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
     }
     
     func removeAll() {
-        self.clear()
+        self.clear(animated: true)
         self.selectionChanged(nil)
         self.hasSelectionChanged(false)
     }
     
-    private func clear() {
-        for case let view as DrawingEntityView in self.subviews {
-            view.removeFromSuperview()
+    private func clear(animated: Bool = false) {
+        if animated {
+            for case let view as DrawingEntityView in self.subviews {
+                if let selectionView = view.selectionView {
+                    selectionView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.1, removeOnCompletion: false, completion: { [weak selectionView] _ in
+                        selectionView?.removeFromSuperview()
+                    })
+                }
+                view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
+                    view?.removeFromSuperview()
+                })
+                view.layer.animateScale(from: 0.0, to: -0.99, duration: 0.2, removeOnCompletion: false, additive: true)
+            }
+            
+        } else {
+            for case let view as DrawingEntityView in self.subviews {
+                view.selectionView?.removeFromSuperview()
+                view.removeFromSuperview()
+            }
         }
     }
     

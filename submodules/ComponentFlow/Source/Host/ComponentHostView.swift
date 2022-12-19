@@ -1,7 +1,7 @@
 import Foundation
 import UIKit
 
-private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
+public func findTaggedComponentViewImpl(view: UIView, tag: Any) -> UIView? {
     if let view = view as? ComponentTaggedView {
         if view.matches(tag: tag) {
             return view
@@ -9,7 +9,7 @@ private func findTaggedViewImpl(view: UIView, tag: Any) -> UIView? {
     }
     
     for subview in view.subviews {
-        if let result = findTaggedViewImpl(view: subview, tag: tag) {
+        if let result = findTaggedComponentViewImpl(view: subview, tag: tag) {
             return result
         }
     }
@@ -131,7 +131,7 @@ public final class ComponentHostView<EnvironmentType>: UIView {
             return nil
         }
         
-        return findTaggedViewImpl(view: componentView, tag: tag)
+        return findTaggedComponentViewImpl(view: componentView, tag: tag)
     }
 }
 
@@ -217,7 +217,7 @@ public final class ComponentView<EnvironmentType> {
         guard let view = self.view else {
             return nil
         }
-        return findTaggedViewImpl(view: view, tag: tag)
+        return findTaggedComponentViewImpl(view: view, tag: tag)
     }
 }
 
