@@ -2,28 +2,34 @@ import Foundation
 import Postbox
 import TelegramCore
 
-private let foreignAgentNoticePattern = #"\s*(?:ДАННОЕ\s+)?СООБЩЕНИЕ\s*\(МАТЕРИАЛ\)\s*СОЗДАНО\s+И\s*\(ИЛИ\)\s*РАСПРОСТРАНЕНО\s+(?:ИНОСТРАННЫМ\s+)?СРЕДСТВОМ\s+МАССОВОЙ\s+ИНФОРМАЦИИ,\s*ВЫПОЛНЯЮЩИМ\s+ФУНКЦИИ\s+ИНОСТРАННОГО\s+АГЕНТА,\s*И\s*\(ИЛИ\)\s*РОССИЙСКИМ\s+ЮРИДИЧЕСКИМ\s+ЛИЦОМ,\s*ВЫПОЛНЯЮЩИМ\s+ФУНКЦИИ\s+ИНОСТРАННОГО\s+АГЕНТА\.?\s*"#
+private let foreignAgentNoticePatterns = [ #"\s*+\bДАННОЕ\s++СООБЩЕНИЕ\s*+\(МАТЕРИАЛ\)\s*+СОЗДАНО\s++И\s*+\(ИЛИ\)\s*+РАСПРОСТРАНЕНО\s++ИНОСТРАННЫМ\s++СРЕДСТВОМ\s++МАССОВОЙ\s++ИНФОРМАЦИИ,\s*+ВЫПОЛНЯЮЩИМ\s++ФУНКЦИИ\s++ИНОСТРАННОГО\s++АГЕНТА,\s*+И\s*+\(ИЛИ\)\s*+РОССИЙСКИМ\s++ЮРИДИЧЕСКИМ\s++ЛИЦОМ,\s*+ВЫПОЛНЯЮЩИМ\s++ФУНКЦИИ\s++ИНОСТРАННОГО\s++АГЕНТА\b\.?+\s*+"#,
+    
+    #"\s*+\bНАСТОЯЩИЙ\s++МАТЕРИАЛ\s*+\(ИНФОРМАЦИЯ\)\s*+.{9,50}?\s++ИНОСТРАННЫМ\s++АГЕНТОМ\s++.{3,100}?\s++ЛИБО\s++КАСАЕТСЯ\s++ДЕЯТЕЛЬНОСТИ\s++ИНОСТРАННОГО\s++АГЕНТА\s++.{3,100}+(?:\r?+\n\s*+|$)"#,
+    
+    #"\s*+\bНАСТОЯЩИЙ\s++МАТЕРИАЛ\s*+\(ИНФОРМАЦИЯ\)\s*+.{13,150}?,\s*+ЯВЛЯЮЩИМСЯ\s++.{8,150}?,\s*+ВКЛЮЧЕННОГО\s++В\s++РЕЕСТР\s++ИНОСТРАННЫХ\s++АГЕНТОВ\b\.?+\s*+"# ]
 
-public let foreignAgentNoticeRegEx = try! NSRegularExpression(pattern: foreignAgentNoticePattern, options: .caseInsensitive)
+public let foreignAgentNoticeRegExes = foreignAgentNoticePatterns.map { try! NSRegularExpression(pattern: $0, options: .caseInsensitive) }
 
 public func removeForeignAgentNotice(text: String, entities: [MessageTextEntity], mayRemoveWholeText: Bool) -> (text: String, entities: [MessageTextEntity]) {
     var newText = text
     var newEntities = entities
     let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
-    let matches = foreignAgentNoticeRegEx.matches(in: text, range: nsrange)
-    for match in matches.reversed() {
-        if let range = Range(match.range, in: text), range.lowerBound != text.startIndex || range.upperBound != text.endIndex || mayRemoveWholeText {
-            let replaceWith = (range.lowerBound == text.startIndex || range.upperBound == text.endIndex) ? "" : "\n\n"
-            newText.replaceSubrange(range, with: replaceWith)
-            for index in newEntities.indices.reversed() {
-                let entity = newEntities[index]
-                if entity.range.upperBound > match.range.lowerBound {
-                    let l = entity.range.lowerBound > match.range.lowerBound ? max(entity.range.lowerBound - match.range.length + replaceWith.count, match.range.lowerBound) : entity.range.lowerBound
-                    let u = max(entity.range.upperBound - match.range.length + replaceWith.count, match.range.lowerBound)
-                    if (l..<u).isEmpty {
-                        newEntities.remove(at: index)
-                    } else {
-                        newEntities[index] = MessageTextEntity(range: l..<u, type: entity.type)
+    for foreignAgentNoticeRegEx in foreignAgentNoticeRegExes {
+        let matches = foreignAgentNoticeRegEx.matches(in: text, range: nsrange)
+        for match in matches.reversed() {
+            if let range = Range(match.range, in: text), range.lowerBound != text.startIndex || range.upperBound != text.endIndex || mayRemoveWholeText {
+                let replaceWith = (range.lowerBound == text.startIndex || range.upperBound == text.endIndex) ? "" : "\n\n"
+                newText.replaceSubrange(range, with: replaceWith)
+                for index in newEntities.indices.reversed() {
+                    let entity = newEntities[index]
+                    if entity.range.upperBound > match.range.lowerBound {
+                        let l = entity.range.lowerBound > match.range.lowerBound ? max(entity.range.lowerBound - match.range.length + replaceWith.count, match.range.lowerBound) : entity.range.lowerBound
+                        let u = max(entity.range.upperBound - match.range.length + replaceWith.count, match.range.lowerBound)
+                        if (l..<u).isEmpty {
+                            newEntities.remove(at: index)
+                        } else {
+                            newEntities[index] = MessageTextEntity(range: l..<u, type: entity.type)
+                        }
                     }
                 }
             }
@@ -86,14 +92,16 @@ public func removeForeignAgentNotice(attrString string: NSAttributedString) -> N
     var updated: NSMutableAttributedString?
     let text = string.string
     let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
-    let matches = foreignAgentNoticeRegEx.matches(in: text, range: nsrange)
-    for match in matches.reversed() {
-        if let range = Range(match.range, in: text) {
-            let replaceWith = (range.lowerBound == text.startIndex || range.upperBound == text.endIndex) ? "" : "\n\n"
-            if updated == nil {
-                updated = string.mutableCopy() as? NSMutableAttributedString
+    for foreignAgentNoticeRegEx in foreignAgentNoticeRegExes {
+        let matches = foreignAgentNoticeRegEx.matches(in: text, range: nsrange)
+        for match in matches.reversed() {
+            if let range = Range(match.range, in: text) {
+                let replaceWith = (range.lowerBound == text.startIndex || range.upperBound == text.endIndex) ? "" : "\n\n"
+                if updated == nil {
+                    updated = string.mutableCopy() as? NSMutableAttributedString
+                }
+                updated!.replaceCharacters(in: match.range, with: replaceWith)
             }
-            updated!.replaceCharacters(in: match.range, with: replaceWith)
         }
     }
     return updated ?? string
@@ -103,47 +111,82 @@ private func mayRemoveWholeText(with media: [Media]) -> Bool {
     return media.contains { $0 is TelegramMediaImage || $0 is TelegramMediaFile }
 }
 
-// Should be called after regular removeForeignAgentNotice() have not found a match.
-// If constant foreignAgentNoticePattern changed, this function may need to be updated too.
-public func removeForeignAgentNoticePartialMatchAtEnd(text: String, mayRemoveWholeText: Bool) -> String {
-    let reStart = try! NSRegularExpression(pattern: #"\b(?:ДА|СО|(?i)данное\s+со|сообщение\s*\(ма)"#)
-    let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
-    let matches = reStart.matches(in: text, range: nsrange)
-    if !matches.isEmpty {
-        let flatPattern = foreignAgentNoticePattern
-            .replacingOccurrences(of: #"\s+"#, with: " ")
-            .replacingOccurrences(of: #"\s*"#, with: "")
-            .replacingOccurrences(of: #"\(\?:[^)]+\)\?"#, with: "", options: .regularExpression, range: nil)
-            .replacingOccurrences(of: #"\\\.\?$"#, with: "", options: .regularExpression, range: nil)
-            .replacingOccurrences(of: "\\", with: "")
-            .uppercased()
+private let foreignAgentNoticePartialMatchRegExes = foreignAgentNoticePatterns.map { try! NSRegularExpression(pattern: partialMatchPattern(for: #"(?:^|\n)"# + $0), options: .caseInsensitive) }
 
-        for match in matches {
-            if let range = Range(match.range, in: text) {
-                let flatPartialMatch = text[range.lowerBound...]
-                    .uppercased()
-                    .replacingOccurrences(of: #"\.{3}|…$"#, with: "", options: .regularExpression, range: nil)
-                    .replacingOccurrences(of: #"\s+"#, with: " ", options: .regularExpression, range: nil)
-                    .replacingOccurrences(of: " (", with: "(")
-                    .replacingOccurrences(of: ") ", with: ")")
-                    .replacingOccurrences(of: ", ", with: ",")
-                    .replacingOccurrences(of: #"\bД(А|$)(Н|$)(Н|$)(О|$)(Е|$)( |$)"#, with: "", options: .regularExpression, range: nil)
-                    .replacingOccurrences(of: #"\bИ(Н|$)(О|$)(С|$)(Т|$)(Р|$)(А|$)(Н|$)(Н|$)(Ы|$)(М|$)( |$)"#, with: "", options: .regularExpression, range: nil)
-                
-                if flatPattern.starts(with: flatPartialMatch) {
-                    let result = text[..<range.lowerBound]
-                        .trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !result.isEmpty {
-                        let endingEllipses = text.hasSuffix("…") ? "…" : (text.hasSuffix("...") ? "..." : "")
-                        return result + endingEllipses
-                    } else if mayRemoveWholeText {
-                        return result
-                    } else {
-                        return text
-                    }
-                }
+// Should be called after regular removeForeignAgentNotice() have not found a match.
+public func removeForeignAgentNoticePartialMatchAtEnd(text: String, mayRemoveWholeText: Bool) -> String {
+    let text = text.replacingOccurrences(of: #"\.{3}$|…$"#, with: "", options: .regularExpression, range: nil)
+    let nsrange = NSRange(text.startIndex..<text.endIndex, in: text)
+    for foreignAgentNoticeRegEx in foreignAgentNoticePartialMatchRegExes {
+        for match in foreignAgentNoticeRegEx.matches(in: text, range: nsrange) {
+            if let range = Range(match.range, in: text), range.lowerBound != text.startIndex || mayRemoveWholeText, text[range].trimmingCharacters(in: .whitespacesAndNewlines).count >= 2 {
+                return String(text[..<range.lowerBound])
             }
         }
     }
     return text
+}
+
+// based on https://stackoverflow.com/questions/22483214/regex-check-if-input-still-has-chances-to-become-matching/41580048#41580048
+private func partialMatchPattern(for regex: String) -> String {
+    var ind = regex.startIndex
+    
+    func process() -> String {
+        var result = ""
+        
+        func appendRaw(_ len: Int) {
+            let newInd = regex.index(ind, offsetBy: len, limitedBy: regex.endIndex) ?? regex.endIndex
+            result += regex[ind..<newInd]
+            ind = newInd
+        }
+        
+        func appendOptional(_ len: Int) {
+            let newInd = regex.index(ind, offsetBy: len, limitedBy: regex.endIndex) ?? regex.endIndex
+            result += "(?:\(regex[ind..<newInd])|$)"
+            ind = newInd
+        }
+        
+        while ind < regex.endIndex {
+            switch regex[ind] {
+            case "\\":
+                assert(!["c", "x", "u", "p", "P", "k"].contains(regex[regex.index(after: ind)]))
+                appendOptional(2)
+            case "|", "^", "$", "*", "+", "?":
+                appendRaw(1)
+            case "[":
+                if let range = regex.range(of: #"\[.*?\]"#, options: [.regularExpression], range: ind..<regex.endIndex, locale: nil) {
+                    appendRaw(regex.distance(from: range.lowerBound, to: range.upperBound))
+                } else {
+                    appendOptional(1)
+                }
+            case "{":
+                if let range = regex.range(of: #"\{\d+,?\d*\}"#, options: [.regularExpression], range: ind..<regex.endIndex, locale: nil) {
+                    appendRaw(regex.distance(from: range.lowerBound, to: range.upperBound))
+                } else {
+                    appendOptional(1)
+                }
+            case "(":
+                if regex[regex.index(after: ind)] == "?" {
+                    if regex[regex.index(after: regex.index(after: ind))] == ":" {
+                        appendRaw(3)
+                        result += process() + "|$)"
+                    } else {
+                        assertionFailure()
+                    }
+                } else {
+                    appendRaw(1)
+                    result += process() + "|$)"
+                }
+            case ")":
+                ind = regex.index(after: ind)
+                return result
+            default:
+                appendOptional(1)
+            }
+        }
+        
+        return result
+    }
+    
+    return process()
 }
