@@ -86,7 +86,7 @@
 "PtgSettings.EnableLiveText" = "Сканер текста";
 "PtgSettings.EnableLiveTextHelp" = "Автоматически выполнять распознавание текста и штрих-кодов (например, QR-кода) на каждом изображении, которое вы просматриваете в полноэкранном режиме. Отключите, чтобы сэкономить заряд батареи.";
 
-"Profile.Id" = "id";
+"Profile.Id" = "ID";
 "Conversation.IdCopied" = "ID скопирован.";
 "Settings.CopyId" = "Копировать ID";
 

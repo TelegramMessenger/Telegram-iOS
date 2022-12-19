@@ -924,7 +924,7 @@ private func infoItems(data: PeerInfoScreenData?, context: AccountContext, prese
     let maybeAppendIdItem: (PeerId) -> Void = { peerId in
         if data.showPeerId {
             let id = String(peerId.id._internalGetInt64Value())
-            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id, text: id, action: nil, longTapAction: { sourceNode in
+            items[.peerInfo]!.append(PeerInfoScreenLabeledValueItem(id: 100, label: presentationData.strings.Profile_Id.lowercased(), text: id, action: nil, longTapAction: { sourceNode in
                 interaction.openPeerInfoContextMenu(.id(id), sourceNode)
             }, requestLayout: {
                 interaction.requestLayout(false)
@@ -1782,7 +1782,6 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
 
         let versionText = self.presentationData.strings.Settings_Version(Bundle.main.appVersion, Bundle.main.appBuildNumber, Bundle.main.ptgVersion).string
         self.versionLabelNode.attributedText = NSAttributedString(string: versionText, font: Font.regular(14.0), textColor: presentationData.theme.list.freeTextColor, paragraphAlignment: .center)
-        self.versionLabelNode.isHidden = true
 
         super.init()
         
@@ -7666,36 +7665,18 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         if self.isSettings {
             contentHeight = max(contentHeight, layout.size.height + 140.0 - layout.intrinsicInsets.bottom)
 
-            let _ = (self.context.sharedContext.accountManager.sharedData(keys: [ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-            |> take(1)
-            |> deliverOnMainQueue).start(next: { [weak self] sharedData in
-                guard let strongSelf = self else {
-                    return
-                }
-
-                let fakePasscodeHolder = FakePasscodeSettingsHolder(sharedData.entries[ApplicationSpecificSharedDataKeys.fakePasscodeSettings])
-
-                if !fakePasscodeHolder.unlockedWithFakePasscode() {
-                    strongSelf.versionLabelNode.isHidden = false
-                    let horizontalPadding = 20.0
-                    var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
-                    let size = strongSelf.versionLabelNode.updateLayout(frame.size)
-                    frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
-                    frame.size = size
-                    transition.updateFrameAdditive(node: strongSelf.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
-                    let bottomPadding = horizontalPadding
-                    contentHeight += size.height + bottomPadding
-                } else {
-                    strongSelf.versionLabelNode.isHidden = true
-                }
-
-                strongSelf.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-                strongSelf.updateNavigation(transition: transition, additive: additive)
-            })
+            if !self.state.isEditing {
+                let horizontalPadding = 20.0
+                var frame = CGRect(origin: CGPoint(x: horizontalPadding, y: contentHeight), size: CGSize(width: layout.size.width - 2 * horizontalPadding, height: 100))
+                let size = self.versionLabelNode.updateLayout(frame.size)
+                frame.origin = CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y)
+                frame.size = size
+                transition.updateFrameAdditive(node: self.versionLabelNode, frame: CGRect(origin: CGPoint(x: (layout.size.width - size.width) / 2, y: frame.origin.y), size: size))
+                let bottomPadding = horizontalPadding
+                contentHeight += size.height + bottomPadding
+            }
         }
-        if !self.isSettings {
-            self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
-        }
+        self.scrollNode.view.contentSize = CGSize(width: layout.size.width, height: contentHeight)
         if self.isSettings {
             self.scrollNode.view.contentInset = UIEdgeInsets(top: 0.0, left: 0.0, bottom: layout.intrinsicInsets.bottom, right: 0.0)
         }
@@ -7710,9 +7691,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
         }
                 
         self.ignoreScrolling = false
-        if !self.isSettings {
-            self.updateNavigation(transition: transition, additive: additive)
-        }
+        self.updateNavigation(transition: transition, additive: additive)
         
         if !self.didSetReady && self.data != nil {
             self.didSetReady = true
@@ -7859,6 +7838,7 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
             
             let offsetY = self.scrollNode.view.contentOffset.y
             var shouldBeExpanded: Bool?
+            var shouldBeExpandedForPhoneAndId: Bool?
             
             var isLandscape = false
             if let (layout, _) = self.validLayout, layout.size.width > layout.size.height {
@@ -7885,9 +7865,13 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                         }
                     }
                 }
+                if let peer = self.data?.peer, peer.smallProfileImage == nil && self.state.updatingAvatar == nil && !isLandscape && self.isSettings {
+                    shouldBeExpandedForPhoneAndId = true
+                }
             } else if offsetY >= 1.0 {
                 shouldBeExpanded = false
                 self.canOpenAvatarByDragging = false
+                shouldBeExpandedForPhoneAndId = false
             }
             if let shouldBeExpanded = shouldBeExpanded, shouldBeExpanded != self.headerNode.isAvatarExpanded {
                 let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
@@ -7903,6 +7887,24 @@ final class PeerInfoScreenNode: ViewControllerTracingNode, UIScrollViewDelegate 
                 
                 self.headerNode.updateIsAvatarExpanded(shouldBeExpanded, transition: transition)
                 self.updateNavigationExpansionPresentation(isExpanded: shouldBeExpanded, animated: true)
+                
+                if let (layout, navigationHeight) = self.validLayout {
+                    self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
+                }
+            }
+            if let shouldBeExpandedForPhoneAndId = shouldBeExpandedForPhoneAndId, shouldBeExpandedForPhoneAndId != self.headerNode.isExpandedForPhoneAndId {
+                let transition: ContainedViewLayoutTransition = .animated(duration: 0.35, curve: .spring)
+                
+                if self.hapticFeedback == nil {
+                    self.hapticFeedback = HapticFeedback()
+                }
+                if shouldBeExpandedForPhoneAndId {
+                    self.hapticFeedback?.impact()
+                } else {
+                    self.hapticFeedback?.tap()
+                }
+                
+                self.headerNode.isExpandedForPhoneAndId = shouldBeExpandedForPhoneAndId
                 
                 if let (layout, navigationHeight) = self.validLayout {
                     self.containerLayoutUpdated(layout: layout, navigationHeight: navigationHeight, transition: transition, additive: true)
