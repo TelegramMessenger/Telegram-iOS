@@ -32,15 +32,20 @@ public func peerInfoProfilePhotos(context: AccountContext, peerId: EnginePeer.Id
     |> distinctUntilChanged
     |> mapToSignal { entries -> Signal<(Bool, [AvatarGalleryEntry])?, NoError> in
         if let entries = entries {
-            if let firstEntry = entries.first {
+            if var firstEntry = entries.first {
                 return context.account.postbox.peerView(id: peerId)
                 |> mapToSignal { peerView -> Signal<(Bool, [AvatarGalleryEntry])?, NoError>in
                     if let peer = peerViewMainPeer(peerView) {
                         var secondEntry: TelegramMediaImage?
                         var lastEntry: TelegramMediaImage?
                         if let cachedData = peerView.cachedData as? CachedUserData {
-                            if firstEntry.representations.first?.representation.isPersonal == true, case let .known(photo) = cachedData.photo {
-                                secondEntry = photo
+                            if let firstRepresentation = firstEntry.representations.first, firstRepresentation.representation.isPersonal {
+                                if firstRepresentation.representation.hasVideo, case let .known(photo) = cachedData.personalPhoto, let peerReference = PeerReference(peer) {
+                                    firstEntry = .topImage(firstEntry.representations, photo?.videoRepresentations.map { VideoRepresentationWithReference(representation: $0, reference: MediaResourceReference.avatar(peer: peerReference, resource: $0.resource)) } ?? [], firstEntry.peer, firstEntry.indexData, firstEntry.immediateThumbnailData, nil)
+                                }
+                                if case let .known(photo) = cachedData.photo {
+                                    secondEntry = photo
+                                }
                             }
                             if case let .known(photo) = cachedData.fallbackPhoto {
                                 lastEntry = photo

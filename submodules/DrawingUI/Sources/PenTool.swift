@@ -169,7 +169,6 @@ final class PenTool: DrawingElement {
             currentRenderLayer.draw(line: self.renderLine, color: self.color.toUIColor(), rect: rect)
         }
         
-       
         if state == .ended {
             if self.arrow {
                 let points = self.path?.points ?? []
