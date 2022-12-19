@@ -1009,7 +1009,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 })
             )
          
-            if state.selectedEntity is DrawingStickerEntity {
+            if state.selectedEntity is DrawingStickerEntity || state.selectedEntity is DrawingTextEntity {
             } else {
                 let tools = tools.update(
                     component: ToolsComponent(
