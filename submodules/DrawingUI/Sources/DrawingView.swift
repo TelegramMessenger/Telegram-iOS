@@ -268,6 +268,10 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     }
                     
                     if let renderLayer = newElement.setupRenderLayer() {
+                        if let currentDrawingLayer = strongSelf.currentDrawingLayer {
+                            strongSelf.currentDrawingLayer = nil
+                            currentDrawingLayer.removeFromSuperlayer()
+                        }
                         strongSelf.currentDrawingView.layer.addSublayer(renderLayer)
                         strongSelf.currentDrawingLayer = renderLayer
                     }

@@ -718,19 +718,9 @@ private func generateSpectrumImage(size: CGSize) -> UIImage? {
         if let image = UIImage(bundleImageName: "Media Editor/Spectrum") {
             context.draw(image.cgImage!, in: CGRect(origin: .zero, size: size))
         }
-        
-        let colorSpace = CGColorSpaceCreateDeviceRGB()
-        var colors = [UIColor(rgb: 0xffffff).cgColor, UIColor(rgb: 0xffffff, alpha: 0.0).cgColor,  UIColor(rgb: 0xffffff, alpha: 0.0).cgColor]
-        var locations: [CGFloat] = [0.0, 0.45, 1.0]
-       
-        var gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: size.width, y: 0.0), options: [.drawsAfterEndLocation])
-        
-        colors = [UIColor(rgb: 0x000000, alpha: 0.0).cgColor, UIColor(rgb: 0x000000, alpha: 0.0).cgColor,  UIColor(rgb: 0x000000).cgColor]
-        locations = [0.0, 0.5, 1.0]
-       
-        gradient = CGGradient(colorsSpace: colorSpace, colors: colors as CFArray, locations: &locations)!
-        context.drawLinearGradient(gradient, start: CGPoint(), end: CGPoint(x: size.width, y: 0.0), options: [.drawsAfterEndLocation])
+        if let image = UIImage(bundleImageName: "Media Editor/Grayscale") {
+            context.draw(image.cgImage!, in: CGRect(origin: .zero, size: size))
+        }
     })
 }
 

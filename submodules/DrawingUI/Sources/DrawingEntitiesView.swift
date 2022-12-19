@@ -308,7 +308,9 @@ public final class DrawingEntitiesView: UIView, TGPhotoDrawingEntitiesView {
                 view.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak view] _ in
                     view?.removeFromSuperview()
                 })
-                view.layer.animateScale(from: 0.0, to: -0.99, duration: 0.2, removeOnCompletion: false, additive: true)
+                if !(view.entity is DrawingVectorEntity) {
+                    view.layer.animateScale(from: 0.0, to: -0.99, duration: 0.2, removeOnCompletion: false, additive: true)
+                }
             }
             
         } else {
