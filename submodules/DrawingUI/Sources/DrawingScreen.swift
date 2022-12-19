@@ -216,6 +216,7 @@ private let addButtonTag = GenericComponentViewTag()
 private let toolsTag = GenericComponentViewTag()
 private let modeTag = GenericComponentViewTag()
 private let flipButtonTag = GenericComponentViewTag()
+private let fillButtonTag = GenericComponentViewTag()
 private let textSettingsTag = GenericComponentViewTag()
 private let sizeSliderTag = GenericComponentViewTag()
 private let color1Tag = GenericComponentViewTag()
@@ -449,14 +450,18 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.updated(transition: animated ? .easeInOut(duration: 0.2) : .immediate)
         }
         
-        func updateSelectedTool(_ tool: DrawingToolState.Key) {
+        func updateSelectedTool(_ tool: DrawingToolState.Key, update: Bool = true) {
             if self.selectedEntity != nil {
-                self.updateCurrentMode(.drawing)
+                self.skipSelectedEntityUpdate = true
+                self.updateCurrentMode(.drawing, update: false)
+                self.skipSelectedEntityUpdate = false
             }
             self.drawingState = self.drawingState.withUpdatedSelectedTool(tool)
             self.currentColor = self.drawingState.currentToolState.color ?? self.currentColor
             self.updateToolState.invoke(self.drawingState.currentToolState)
-            self.updated(transition: .easeInOut(duration: 0.2))
+            if update {
+                self.updated(transition: .easeInOut(duration: 0.2))
+            }
         }
         
         func updateBrushSize(_ size: CGFloat) {
@@ -479,6 +484,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             self.updated(transition: .easeInOut(duration: 0.2))
         }
         
+        var skipSelectedEntityUpdate = false
         func updateSelectedEntity(_ entity: DrawingEntity?) {
             self.selectedEntity = entity
             if let entity = entity {
@@ -496,7 +502,9 @@ private final class DrawingScreenComponent: CombinedComponent {
                 self.currentMode = .drawing
                 self.currentColor = self.drawingState.currentToolState.color ?? self.currentColor
             }
-            self.updated(transition: .easeInOut(duration: 0.2))
+            if !self.skipSelectedEntityUpdate {
+                self.updated(transition: .easeInOut(duration: 0.2))
+            }
         }
         
         func presentShapePicker(_ sourceView: UIView) {
@@ -636,9 +644,6 @@ private final class DrawingScreenComponent: CombinedComponent {
         
         let flipButton = Child(Button.self)
         let fillButton = Child(Button.self)
-        let fillButtonTag = GenericComponentViewTag()
-        
-        let stickerFlipButton = Child(Button.self)
         
         let backButton = Child(Button.self)
         let doneButton = Child(Button.self)
@@ -683,7 +688,10 @@ private final class DrawingScreenComponent: CombinedComponent {
             let presentFastColorPicker = component.presentFastColorPicker
             let updateFastColorPickerPan = component.updateFastColorPickerPan
             let dismissFastColorPicker = component.dismissFastColorPicker
-                        
+                 
+            let topInset = environment.safeInsets.top + 31.0
+            let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
+            
             if let textEntity = state.selectedEntity as? DrawingTextEntity {
                 let textSettings = textSettings.update(
                     component: TextSettingsComponent(
@@ -773,16 +781,21 @@ private final class DrawingScreenComponent: CombinedComponent {
             let applySwatchColor: (DrawingColor) -> Void = { [weak state] color in
                 if let state = state {
                     if [.eraser, .blur].contains(state.drawingState.selectedTool) || state.selectedEntity is DrawingStickerEntity {
-                        state.updateSelectedTool(.pen)
+                        state.updateSelectedTool(.pen, update: false)
                     }
                     state.updateColor(color, animated: true)
                 }
             }
             
+            var currentColor: DrawingColor? = state.currentColor
+            if [.eraser, .blur].contains(state.drawingState.selectedTool) || state.selectedEntity is DrawingStickerEntity {
+                currentColor = nil
+            }
+            
             var delay: Double = 0.0
             let swatch1Button = swatch1Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[0]),
+                    type: .pallete(currentColor == presetColors[0]),
                     color: presetColors[0],
                     tag: color1Tag,
                     action: {
@@ -809,7 +822,7 @@ private final class DrawingScreenComponent: CombinedComponent {
         
             let swatch2Button = swatch2Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[1]),
+                    type: .pallete(currentColor == presetColors[1]),
                     color: presetColors[1],
                     tag: color2Tag,
                     action: {
@@ -836,7 +849,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch3Button = swatch3Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[2]),
+                    type: .pallete(currentColor == presetColors[2]),
                     color: presetColors[2],
                     tag: color3Tag,
                     action: {
@@ -863,7 +876,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch4Button = swatch4Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[3]),
+                    type: .pallete(currentColor == presetColors[3]),
                     color: presetColors[3],
                     tag: color4Tag,
                     action: {
@@ -890,7 +903,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch5Button = swatch5Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[4]),
+                    type: .pallete(currentColor == presetColors[4]),
                     color: presetColors[4],
                     tag: color5Tag,
                     action: {
@@ -918,7 +931,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch6Button = swatch6Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[5]),
+                    type: .pallete(currentColor == presetColors[5]),
                     color: presetColors[5],
                     tag: color6Tag,
                     action: {
@@ -945,7 +958,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch7Button = swatch7Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[6]),
+                    type: .pallete(currentColor == presetColors[6]),
                     color: presetColors[6],
                     tag: color7Tag,
                     action: {
@@ -972,7 +985,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             let swatch8Button = swatch8Button.update(
                 component: ColorSwatchComponent(
-                    type: .pallete(state.currentColor == presetColors[7]),
+                    type: .pallete(currentColor == presetColors[7]),
                     color: presetColors[7],
                     tag: color8Tag,
                     action: {
@@ -996,7 +1009,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                 })
             )
          
-            if state.selectedEntity == nil {
+            if state.selectedEntity is DrawingStickerEntity {
+            } else {
                 let tools = tools.update(
                     component: ToolsComponent(
                         state: state.drawingState,
@@ -1037,6 +1051,104 @@ private final class DrawingScreenComponent: CombinedComponent {
                 )
             }
             
+            var hasTopButtons = false
+            if let entity = state.selectedEntity {
+                var isFilled: Bool?
+                if let entity = entity as? DrawingSimpleShapeEntity {
+                    isFilled = entity.drawType == .fill
+                } else if let entity = entity as? DrawingBubbleEntity {
+                    isFilled = entity.drawType == .fill
+                } else if let _ = entity as? DrawingVectorEntity {
+                    isFilled = false
+                }
+                
+                var hasFlip = false
+                if state.selectedEntity is DrawingBubbleEntity || state.selectedEntity is DrawingStickerEntity {
+                    hasFlip = true
+                }
+                
+                hasTopButtons = isFilled != nil || hasFlip
+                
+                if let isFilled = isFilled {
+                    let fillButton = fillButton.update(
+                        component: Button(
+                            content: AnyComponent(
+                                Image(image: state.image(isFilled ? .fill : .stroke))
+                            ),
+                            action: { [weak state] in
+                                guard let state = state else {
+                                    return
+                                }
+                                if let entity = state.selectedEntity as? DrawingSimpleShapeEntity {
+                                    if case .fill = entity.drawType {
+                                        entity.drawType = .stroke
+                                    } else {
+                                        entity.drawType = .fill
+                                    }
+                                    entity.currentEntityView?.update()
+                                } else if let entity = state.selectedEntity as? DrawingBubbleEntity {
+                                    if case .fill = entity.drawType {
+                                        entity.drawType = .stroke
+                                    } else {
+                                        entity.drawType = .fill
+                                    }
+                                    entity.currentEntityView?.update()
+                                } else if let entity = state.selectedEntity as? DrawingVectorEntity {
+                                    if case .oneSidedArrow = entity.type {
+                                        entity.type = .twoSidedArrow
+                                    } else if case .twoSidedArrow = entity.type {
+                                        entity.type = .line
+                                    } else {
+                                        entity.type = .oneSidedArrow
+                                    }
+                                    entity.currentEntityView?.update()
+                                }
+                                state.updated(transition: .easeInOut(duration: 0.2))
+                            }
+                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(fillButtonTag),
+                        availableSize: CGSize(width: 30.0, height: 30.0),
+                        transition: .immediate
+                    )
+                    context.add(fillButton
+                        .position(CGPoint(x: context.availableSize.width / 2.0 - (hasFlip ? 46.0 : 0.0), y: environment.safeInsets.top + 31.0))
+                        .appear(.default(scale: true))
+                        .disappear(.default(scale: true))
+                    )
+                }
+                
+                if hasFlip {
+                    let flipButton = flipButton.update(
+                        component: Button(
+                            content: AnyComponent(
+                                Image(image: state.image(.flip))
+                            ),
+                            action: { [weak state] in
+                                guard let state = state else {
+                                    return
+                                }
+                                if let entity = state.selectedEntity as? DrawingBubbleEntity {
+                                    var updatedTailPosition = entity.tailPosition
+                                    updatedTailPosition.x = 1.0 - updatedTailPosition.x
+                                    entity.tailPosition = updatedTailPosition
+                                    entity.currentEntityView?.update()
+                                } else if let entity = state.selectedEntity as? DrawingStickerEntity {
+                                    entity.mirrored = !entity.mirrored
+                                    entity.currentEntityView?.update(animated: true)
+                                }
+                                state.updated(transition: .easeInOut(duration: 0.2))
+                            }
+                        ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(flipButtonTag),
+                        availableSize: CGSize(width: 30.0, height: 30.0),
+                        transition: .immediate
+                    )
+                    context.add(flipButton
+                        .position(CGPoint(x: context.availableSize.width / 2.0 + (isFilled != nil ? 46.0 : 0.0), y: environment.safeInsets.top + 31.0))
+                        .appear(.default(scale: true))
+                        .disappear(.default(scale: true))
+                    )
+                }
+            }
+            
             var sizeSliderVisible = false
             var isEditingText = false
             var sizeValue: CGFloat?
@@ -1045,11 +1157,20 @@ private final class DrawingScreenComponent: CombinedComponent {
                 isEditingText = entityView.isEditing
                 sizeValue = textEntity.fontSize
             } else {
-                if state.selectedEntity == nil {
+                if state.selectedEntity == nil || !(state.selectedEntity is DrawingStickerEntity) {
                     sizeSliderVisible = true
-                    sizeValue = state.drawingState.currentToolState.size
+                    if state.selectedEntity == nil {
+                        sizeValue = state.drawingState.currentToolState.size
+                    } else if let entity = state.selectedEntity {
+                        if let entity = entity as? DrawingSimpleShapeEntity {
+                            sizeSliderVisible = entity.drawType == .stroke
+                        } else if let entity = entity as? DrawingBubbleEntity {
+                            sizeSliderVisible = entity.drawType == .stroke
+                        }
+                        sizeValue = entity.lineWidth
+                    }
                 }
-                if state.drawingViewState.canZoomOut {
+                if state.drawingViewState.canZoomOut && !hasTopButtons {
                     let zoomOutButton = zoomOutButton.update(
                         component: Button(
                             content: AnyComponent(
@@ -1079,8 +1200,6 @@ private final class DrawingScreenComponent: CombinedComponent {
                 sizeSliderVisible = false
             }
             
-            let topInset = environment.safeInsets.top + 31.0
-            let bottomInset: CGFloat = environment.inputHeight > 0.0 ? environment.inputHeight : 145.0
             let textSize = textSize.update(
                 component: TextSizeSliderComponent(
                     value: sizeValue ?? state.lastSize,
@@ -1117,7 +1236,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(undoButton
-                .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: environment.safeInsets.top + 31.0))
+                .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width / 2.0 + 2.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
                 .opacity(isEditingText ? 0.0 : 1.0)
             )
@@ -1136,7 +1255,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                     transition: context.transition
                 )
                 context.add(redoButton
-                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: environment.safeInsets.top + 31.0))
+                    .position(CGPoint(x: environment.safeInsets.left + undoButton.size.width + 2.0 + redoButton.size.width / 2.0, y: topInset))
                     .appear(.default(scale: true, alpha: true))
                     .disappear(.default(scale: true, alpha: true))
                 )
@@ -1156,7 +1275,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(clearAllButton
-                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - clearAllButton.size.width / 2.0 - 13.0, y: topInset))
                 .scale(isEditingText ? 0.01 : 1.0)
                 .opacity(isEditingText ? 0.0 : 1.0)
             )
@@ -1176,7 +1295,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textCancelButton
-                .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: environment.safeInsets.top + 31.0))
+                .position(CGPoint(x: environment.safeInsets.left + textCancelButton.size.width / 2.0 + 13.0, y: topInset))
                 .scale(isEditingText ? 1.0 : 0.01)
                 .opacity(isEditingText ? 1.0 : 0.0)
             )
@@ -1196,245 +1315,127 @@ private final class DrawingScreenComponent: CombinedComponent {
                 transition: context.transition
             )
             context.add(textDoneButton
-                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: environment.safeInsets.top + 31.0))
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - textDoneButton.size.width / 2.0 - 13.0, y: topInset))
                 .scale(isEditingText ? 1.0 : 0.01)
                 .opacity(isEditingText ? 1.0 : 0.0)
             )
-            
-            var isEditingShapeSize = false
-            if let entity = state.selectedEntity {
-                if entity is DrawingSimpleShapeEntity || entity is DrawingVectorEntity || entity is DrawingBubbleEntity {
-                    isEditingShapeSize = true
-                }
-            }
-            
+                        
             var color: DrawingColor?
             if let entity = state.selectedEntity, presetColors.contains(entity.color) {
                 color = nil
             } else if presetColors.contains(state.currentColor) {
                 color = nil
+            } else if state.selectedEntity is DrawingStickerEntity {
+                color = nil
             } else {
                 color = state.currentColor
             }
+                
+            let colorButton = colorButton.update(
+                component: ColorSwatchComponent(
+                    type: .main,
+                    color: color,
+                    tag: colorButtonTag,
+                    action: { [weak state] in
+                        if let state = state {
+                            presentColorPicker(state.currentColor)
+                        }
+                    },
+                    holdAction: {
+                        if let controller = controller() as? DrawingScreen, let buttonView = controller.node.componentHost.findTaggedView(tag: colorButtonTag) {
+                            presentFastColorPicker(buttonView)
+                        }
+                    },
+                    pan: { point in
+                        updateFastColorPickerPan(point)
+                    },
+                    release: {
+                        dismissFastColorPicker()
+                    }
+                ),
+                availableSize: CGSize(width: 44.0, height: 44.0),
+                transition: context.transition
+            )
+            context.add(colorButton
+                .position(CGPoint(x: environment.safeInsets.left + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
+                .appear(.default(scale: true))
+                .disappear(.default(scale: true))
+            )
+      
             
-            if let _ = state.selectedEntity as? DrawingStickerEntity {
-                let stickerFlipButton = stickerFlipButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Image(image: state.image(.flip))
+            let modeRightInset: CGFloat = 57.0
+            let addButton = addButton.update(
+                component: Button(
+                    content: AnyComponent(ZStack([
+                        AnyComponentWithIdentity(
+                            id: "background",
+                            component: AnyComponent(
+                                BlurredRectangle(
+                                    color:  UIColor(rgb: 0x888888, alpha: 0.3),
+                                    radius: 12.0
+                                )
+                            )
                         ),
-                        action: { [weak state] in
-                            guard let state = state else {
-                                return
-                            }
-                            if let entity = state.selectedEntity as? DrawingStickerEntity {
-                                entity.mirrored = !entity.mirrored
-                                entity.currentEntityView?.update(animated: true)
-                            }
-                            state.updated(transition: .easeInOut(duration: 0.2))
+                        AnyComponentWithIdentity(
+                            id: "icon",
+                            component: AnyComponent(
+                                Image(image: state.image(.add))
+                            )
+                        ),
+                    ])),
+                    action: { [weak state] in
+                        guard let controller = controller() as? DrawingScreen, let state = state else {
+                            return
                         }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(flipButtonTag),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: .immediate
-                )
-                context.add(stickerFlipButton
-                    .position(CGPoint(x: environment.safeInsets.left + stickerFlipButton.size.width / 2.0 + 3.0, y: context.availableSize.height - environment.safeInsets.bottom - stickerFlipButton.size.height / 2.0 - 89.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-            } else {
-                let colorButton = colorButton.update(
-                    component: ColorSwatchComponent(
-                        type: .main,
-                        color: color,
-                        tag: colorButtonTag,
-                        action: { [weak state] in
-                            if let state = state {
-                                presentColorPicker(state.currentColor)
+                        switch state.currentMode {
+                        case .drawing:
+                            if let buttonView = controller.node.componentHost.findTaggedView(tag: addButtonTag) as? Button.View {
+                                state.presentShapePicker(buttonView)
                             }
-                        },
-                        holdAction: {
-                            if let controller = controller() as? DrawingScreen, let buttonView = controller.node.componentHost.findTaggedView(tag: colorButtonTag) {
-                                presentFastColorPicker(buttonView)
-                            }
-                        },
-                        pan: { point in
-                            updateFastColorPickerPan(point)
-                        },
-                        release: {
-                            dismissFastColorPicker()
+                        case .sticker:
+                            state.presentStickerPicker()
+                        case .text:
+                            state.addTextEntity()
                         }
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(addButtonTag),
+                availableSize: CGSize(width: 24.0, height: 24.0),
+                transition: .immediate
+            )
+            context.add(addButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
+                .appear(.default(scale: true))
+                .disappear(.default(scale: true))
+            )
+            
+            let doneButton = doneButton.update(
+                component: Button(
+                    content: AnyComponent(
+                        Image(image: state.image(.done))
                     ),
-                    availableSize: CGSize(width: 44.0, height: 44.0),
-                    transition: context.transition
-                )
-                context.add(colorButton
-                    .position(CGPoint(x: environment.safeInsets.left + colorButton.size.width / 2.0 + 2.0, y: context.availableSize.height - environment.safeInsets.bottom - colorButton.size.height / 2.0 - 89.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-            }
-            
-            var isModeControlEnabled = true
-            var modeRightInset: CGFloat = 57.0
-            if isEditingShapeSize {
-                var isFilled = false
-                if let entity = state.selectedEntity as? DrawingSimpleShapeEntity, case .fill = entity.drawType {
-                    isFilled = true
-                    isModeControlEnabled = false
-                } else if let entity = state.selectedEntity as? DrawingBubbleEntity, case .fill = entity.drawType {
-                    isFilled = true
-                    isModeControlEnabled = false
-                }
-                
-                if let _ = state.selectedEntity as? DrawingBubbleEntity {
-                    let flipButton = flipButton.update(
-                        component: Button(
-                            content: AnyComponent(
-                                Image(image: state.image(.flip))
-                            ),
-                            action: { [weak state] in
-                                guard let state = state else {
-                                    return
-                                }
-                                if let entity = state.selectedEntity as? DrawingBubbleEntity {
-                                    var updatedTailPosition = entity.tailPosition
-                                    updatedTailPosition.x = 1.0 - updatedTailPosition.x
-                                    entity.tailPosition = updatedTailPosition
-                                    entity.currentEntityView?.update()
-                                }
-                                state.updated(transition: .easeInOut(duration: 0.2))
-                            }
-                        ).minSize(CGSize(width: 44.0, height: 44.0)),
-                        availableSize: CGSize(width: 33.0, height: 33.0),
-                        transition: .immediate
-                    )
-                    context.add(flipButton
-                        .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - flipButton.size.width / 2.0 - 3.0 - flipButton.size.width, y: context.availableSize.height - environment.safeInsets.bottom - flipButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                        .appear(.default(scale: true))
-                        .disappear(.default(scale: true))
-                    )
-                    modeRightInset += 35.0
-                }
-                
-                let fillButton = fillButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Image(image: state.image(isFilled ? .fill : .stroke))
-                        ),
-                        action: { [weak state] in
-                            guard let state = state else {
-                                return
-                            }
-                            if let entity = state.selectedEntity as? DrawingSimpleShapeEntity {
-                                if case .fill = entity.drawType {
-                                    entity.drawType = .stroke
-                                } else {
-                                    entity.drawType = .fill
-                                }
-                                entity.currentEntityView?.update()
-                            } else if let entity = state.selectedEntity as? DrawingBubbleEntity {
-                                if case .fill = entity.drawType {
-                                    entity.drawType = .stroke
-                                } else {
-                                    entity.drawType = .fill
-                                }
-                                entity.currentEntityView?.update()
-                            } else if let entity = state.selectedEntity as? DrawingVectorEntity {
-                                if case .oneSidedArrow = entity.type {
-                                    entity.type = .twoSidedArrow
-                                } else if case .twoSidedArrow = entity.type {
-                                    entity.type = .line
-                                } else {
-                                    entity.type = .oneSidedArrow
-                                }
-                                entity.currentEntityView?.update()
-                            }
-                            state.updated(transition: .easeInOut(duration: 0.2))
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(fillButtonTag),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: .immediate
-                )
-                context.add(fillButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - fillButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - fillButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-            } else {
-                let addButton = addButton.update(
-                    component: Button(
-                        content: AnyComponent(ZStack([
-                            AnyComponentWithIdentity(
-                                id: "background",
-                                component: AnyComponent(
-                                    BlurredRectangle(
-                                        color:  UIColor(rgb: 0x888888, alpha: 0.3),
-                                        radius: 12.0
-                                    )
-                                )
-                            ),
-                            AnyComponentWithIdentity(
-                                id: "icon",
-                                component: AnyComponent(
-                                    Image(image: state.image(.add))
-                                )
-                            ),
-                        ])),
-                        action: { [weak state] in
-                            guard let controller = controller() as? DrawingScreen, let state = state else {
-                                return
-                            }
-                            switch state.currentMode {
-                            case .drawing:
-                                if let buttonView = controller.node.componentHost.findTaggedView(tag: addButtonTag) as? Button.View {
-                                    state.presentShapePicker(buttonView)
-                                }
-                            case .sticker:
-                                state.presentStickerPicker()
-                            case .text:
-                                state.addTextEntity()
-                            }
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(addButtonTag),
-                    availableSize: CGSize(width: 24.0, height: 24.0),
-                    transition: .immediate
-                )
-                context.add(addButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - addButton.size.width / 2.0 - 2.0, y: context.availableSize.height - environment.safeInsets.bottom - addButton.size.height / 2.0 - 89.0))
-                    .appear(.default(scale: true))
-                    .disappear(.default(scale: true))
-                )
-                
-                let doneButton = doneButton.update(
-                    component: Button(
-                        content: AnyComponent(
-                            Image(image: state.image(.done))
-                        ),
-                        action: {
-                            apply.invoke(Void())
-                        }
-                    ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(doneButtonTag),
-                    availableSize: CGSize(width: 33.0, height: 33.0),
-                    transition: .immediate
-                )
-                context.add(doneButton
-                    .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - doneButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel))
-                    .appear(Transition.Appear { _, view, transition in
-                        transition.animateScale(view: view, from: 0.1, to: 1.0)
-                        transition.animateAlpha(view: view, from: 0.0, to: 1.0)
-                        
-                        transition.animatePosition(view: view, from: CGPoint(x: 12.0, y: 0.0), to: CGPoint(), additive: true)
+                    action: {
+                        apply.invoke(Void())
+                    }
+                ).minSize(CGSize(width: 44.0, height: 44.0)).tagged(doneButtonTag),
+                availableSize: CGSize(width: 33.0, height: 33.0),
+                transition: .immediate
+            )
+            context.add(doneButton
+                .position(CGPoint(x: context.availableSize.width - environment.safeInsets.right - doneButton.size.width / 2.0 - 3.0, y: context.availableSize.height - environment.safeInsets.bottom - doneButton.size.height / 2.0 - 2.0 - UIScreenPixel))
+                .appear(Transition.Appear { _, view, transition in
+                    transition.animateScale(view: view, from: 0.1, to: 1.0)
+                    transition.animateAlpha(view: view, from: 0.0, to: 1.0)
+                    
+                    transition.animatePosition(view: view, from: CGPoint(x: 12.0, y: 0.0), to: CGPoint(), additive: true)
+                })
+                .disappear(Transition.Disappear { view, transition, completion in
+                    transition.setScale(view: view, scale: 0.1)
+                    transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
+                        completion()
                     })
-                    .disappear(Transition.Disappear { view, transition, completion in
-                        transition.setScale(view: view, scale: 0.1)
-                        transition.setAlpha(view: view, alpha: 0.0, completion: { _ in
-                            completion()
-                        })
-                        transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: 12.0, y: 0.0), additive: true)
-                    })
-                )
-            }
+                    transition.animatePosition(view: view, from: CGPoint(), to: CGPoint(x: 12.0, y: 0.0), additive: true)
+                })
+            )
             
             let selectedIndex: Int
             switch state.currentMode {
@@ -1457,8 +1458,8 @@ private final class DrawingScreenComponent: CombinedComponent {
                 component: ModeAndSizeComponent(
                     values: ["Draw", "Sticker", "Text"],
                     sizeValue: selectedSize,
-                    isEditing: isEditingShapeSize,
-                    isEnabled: isModeControlEnabled,
+                    isEditing: false,
+                    isEnabled: true,
                     rightInset: modeRightInset - 57.0,
                     tag: modeTag,
                     selectedIndex: selectedIndex,
@@ -1492,7 +1493,6 @@ private final class DrawingScreenComponent: CombinedComponent {
             )
             context.add(modeAndSize
                 .position(CGPoint(x: context.availableSize.width / 2.0 - (modeRightInset - 57.0) / 2.0, y: context.availableSize.height - environment.safeInsets.bottom - modeAndSize.size.height / 2.0 - 9.0))
-                .opacity(isModeControlEnabled ? 1.0 : 0.4)
             )
             
             var animatingOut = false
@@ -1508,7 +1508,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                             animation: LottieAnimationComponent.AnimationItem(
                                 name: "media_backToCancel",
                                 mode: .animating(loop: false),
-                                range: isEditingShapeSize || animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
+                                range: animatingOut || component.isAvatar ? (0.5, 1.0) : (0.0, 0.5)
                             ),
                             colors: ["__allcolors__": .white],
                             size: CGSize(width: 33.0, height: 33.0)
@@ -2006,7 +2006,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 buttonView.alpha = 0.0
                 buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
                 buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
-            }     
+            }
+            if let buttonView = self.componentHost.findTaggedView(tag: fillButtonTag) {
+                buttonView.alpha = 0.0
+                buttonView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.3)
+                buttonView.layer.animateScale(from: 1.0, to: 0.01, duration: 0.3)
+            }
             if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
                 view.layer.animatePosition(from: CGPoint(), to: CGPoint(x: -33.0, y: 0.0), duration: 0.3, removeOnCompletion: false, additive: true)
             }
@@ -2057,7 +2062,12 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
             let environment = ViewControllerComponentContainer.Environment(
                 statusBarHeight: layout.statusBarHeight ?? 0.0,
                 navigationHeight: 0.0,
-                safeInsets: UIEdgeInsets(top: layout.intrinsicInsets.top + layout.safeInsets.top, left: layout.safeInsets.left, bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom, right: layout.safeInsets.right),
+                safeInsets: UIEdgeInsets(
+                    top: layout.intrinsicInsets.top + layout.safeInsets.top,
+                    left: layout.safeInsets.left,
+                    bottom: layout.intrinsicInsets.bottom + layout.safeInsets.bottom,
+                    right: layout.safeInsets.right
+                ),
                 inputHeight: layout.inputHeight ?? 0.0,
                 metrics: layout.metrics,
                 deviceMetrics: layout.deviceMetrics,
