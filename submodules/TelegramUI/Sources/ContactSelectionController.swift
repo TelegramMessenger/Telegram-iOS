@@ -49,6 +49,7 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     var result: Signal<([ContactListPeer], ContactListAction, Bool, Int32?, NSAttributedString?)?, NoError> {
         return self._result.get()
     }
+    private var resultIsSet = false
     
     private let confirmation: (ContactListPeer) -> Signal<Bool, NoError>
     var dismissed: (() -> Void)?
@@ -172,7 +173,9 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
     }
     
     @objc func cancelPressed() {
+        assert(!self.resultIsSet)
         self._result.set(.single(nil))
+        self.resultIsSet = true
         
         self.dismiss()
     }
@@ -232,7 +235,9 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.contactsNode.requestMultipleAction = { [weak self] silent, scheduleTime in
             if let strongSelf = self {
                 let selectedPeers = strongSelf.contactsNode.contactListNode.selectedPeers
+                assert(!strongSelf.resultIsSet)
                 strongSelf._result.set(.single((selectedPeers, .generic, silent, scheduleTime, strongSelf.caption)))
+                strongSelf.resultIsSet = true
                 if strongSelf.autoDismiss {
                     strongSelf.dismiss()
                 }
@@ -280,6 +285,11 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         super.viewDidDisappear(animated)
         
         self.contactsNode.contactListNode.enableUpdates = false
+        
+        if !self.resultIsSet {
+            self._result.set(.single(nil))
+            self.resultIsSet = true
+        }
     }
     
     override func containerLayoutUpdated(_ layout: ContainerViewLayout, transition: ContainedViewLayoutTransition) {
@@ -331,7 +341,9 @@ class ContactSelectionControllerImpl: ViewController, ContactSelectionController
         self.confirmationDisposable.set((self.confirmation(peer) |> deliverOnMainQueue).start(next: { [weak self] value in
             if let strongSelf = self {
                 if value {
+                    assert(!strongSelf.resultIsSet)
                     strongSelf._result.set(.single(([peer], action, false, nil, nil)))
+                    strongSelf.resultIsSet = true
                     if strongSelf.autoDismiss {
                         strongSelf.dismiss()
                     }

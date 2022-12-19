@@ -51,6 +51,7 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     var result: Signal<ContactMultiselectionResult, NoError> {
         return self._result.get()
     }
+    private var resultIsSet = false
     
     private var rightNavigationButton: UIBarButtonItem?
     
@@ -528,6 +529,11 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
         case .chats:
             break
         }
+        
+        if !self.resultIsSet {
+            self._result.set(.single(.none))
+            self.resultIsSet = true
+        }
     }
 
     private var suspendNavigationBarLayout: Bool = false
@@ -557,7 +563,9 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
     }
     
     @objc func cancelPressed() {
+        assert(!self.resultIsSet)
         self._result.set(.single(.none))
+        self.resultIsSet = true
         self.dismiss()
     }
     
@@ -581,6 +589,8 @@ class ContactMultiselectionControllerImpl: ViewController, ContactMultiselection
             }
             additionalOptionIds.sort()
         }
+        assert(!self.resultIsSet)
         self._result.set(.single(.result(peerIds: peerIds, additionalOptionIds: additionalOptionIds)))
+        self.resultIsSet = true
     }
 }
