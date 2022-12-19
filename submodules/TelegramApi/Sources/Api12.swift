@@ -182,47 +182,47 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .inputMessageEntityMentionName(let offset, let length, let userId):
-                return ("inputMessageEntityMentionName", [("offset", String(describing: offset)), ("length", String(describing: length)), ("userId", String(describing: userId))])
+                return ("inputMessageEntityMentionName", [("offset", offset as Any), ("length", length as Any), ("userId", userId as Any)])
                 case .messageEntityBankCard(let offset, let length):
-                return ("messageEntityBankCard", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityBankCard", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityBlockquote(let offset, let length):
-                return ("messageEntityBlockquote", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityBlockquote", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityBold(let offset, let length):
-                return ("messageEntityBold", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityBold", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityBotCommand(let offset, let length):
-                return ("messageEntityBotCommand", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityBotCommand", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityCashtag(let offset, let length):
-                return ("messageEntityCashtag", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityCashtag", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityCode(let offset, let length):
-                return ("messageEntityCode", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityCode", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityCustomEmoji(let offset, let length, let documentId):
-                return ("messageEntityCustomEmoji", [("offset", String(describing: offset)), ("length", String(describing: length)), ("documentId", String(describing: documentId))])
+                return ("messageEntityCustomEmoji", [("offset", offset as Any), ("length", length as Any), ("documentId", documentId as Any)])
                 case .messageEntityEmail(let offset, let length):
-                return ("messageEntityEmail", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityEmail", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityHashtag(let offset, let length):
-                return ("messageEntityHashtag", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityHashtag", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityItalic(let offset, let length):
-                return ("messageEntityItalic", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityItalic", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityMention(let offset, let length):
-                return ("messageEntityMention", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityMention", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityMentionName(let offset, let length, let userId):
-                return ("messageEntityMentionName", [("offset", String(describing: offset)), ("length", String(describing: length)), ("userId", String(describing: userId))])
+                return ("messageEntityMentionName", [("offset", offset as Any), ("length", length as Any), ("userId", userId as Any)])
                 case .messageEntityPhone(let offset, let length):
-                return ("messageEntityPhone", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityPhone", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityPre(let offset, let length, let language):
-                return ("messageEntityPre", [("offset", String(describing: offset)), ("length", String(describing: length)), ("language", String(describing: language))])
+                return ("messageEntityPre", [("offset", offset as Any), ("length", length as Any), ("language", language as Any)])
                 case .messageEntitySpoiler(let offset, let length):
-                return ("messageEntitySpoiler", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntitySpoiler", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityStrike(let offset, let length):
-                return ("messageEntityStrike", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityStrike", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityTextUrl(let offset, let length, let url):
-                return ("messageEntityTextUrl", [("offset", String(describing: offset)), ("length", String(describing: length)), ("url", String(describing: url))])
+                return ("messageEntityTextUrl", [("offset", offset as Any), ("length", length as Any), ("url", url as Any)])
                 case .messageEntityUnderline(let offset, let length):
-                return ("messageEntityUnderline", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityUnderline", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityUnknown(let offset, let length):
-                return ("messageEntityUnknown", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityUnknown", [("offset", offset as Any), ("length", length as Any)])
                 case .messageEntityUrl(let offset, let length):
-                return ("messageEntityUrl", [("offset", String(describing: offset)), ("length", String(describing: length))])
+                return ("messageEntityUrl", [("offset", offset as Any), ("length", length as Any)])
     }
     }
     
@@ -569,9 +569,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .messageExtendedMedia(let media):
-                return ("messageExtendedMedia", [("media", String(describing: media))])
+                return ("messageExtendedMedia", [("media", media as Any)])
                 case .messageExtendedMediaPreview(let flags, let w, let h, let thumb, let videoDuration):
-                return ("messageExtendedMediaPreview", [("flags", String(describing: flags)), ("w", String(describing: w)), ("h", String(describing: h)), ("thumb", String(describing: thumb)), ("videoDuration", String(describing: videoDuration))])
+                return ("messageExtendedMediaPreview", [("flags", flags as Any), ("w", w as Any), ("h", h as Any), ("thumb", thumb as Any), ("videoDuration", videoDuration as Any)])
     }
     }
     
@@ -642,7 +642,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .messageFwdHeader(let flags, let fromId, let fromName, let date, let channelPost, let postAuthor, let savedFromPeer, let savedFromMsgId, let psaType):
-                return ("messageFwdHeader", [("flags", String(describing: flags)), ("fromId", String(describing: fromId)), ("fromName", String(describing: fromName)), ("date", String(describing: date)), ("channelPost", String(describing: channelPost)), ("postAuthor", String(describing: postAuthor)), ("savedFromPeer", String(describing: savedFromPeer)), ("savedFromMsgId", String(describing: savedFromMsgId)), ("psaType", String(describing: psaType))])
+                return ("messageFwdHeader", [("flags", flags as Any), ("fromId", fromId as Any), ("fromName", fromName as Any), ("date", date as Any), ("channelPost", channelPost as Any), ("postAuthor", postAuthor as Any), ("savedFromPeer", savedFromPeer as Any), ("savedFromMsgId", savedFromMsgId as Any), ("psaType", psaType as Any)])
     }
     }
     
@@ -708,7 +708,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .messageInteractionCounters(let msgId, let views, let forwards):
-                return ("messageInteractionCounters", [("msgId", String(describing: msgId)), ("views", String(describing: views)), ("forwards", String(describing: forwards))])
+                return ("messageInteractionCounters", [("msgId", msgId as Any), ("views", views as Any), ("forwards", forwards as Any)])
     }
     }
     
@@ -861,31 +861,31 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .messageMediaContact(let phoneNumber, let firstName, let lastName, let vcard, let userId):
-                return ("messageMediaContact", [("phoneNumber", String(describing: phoneNumber)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("vcard", String(describing: vcard)), ("userId", String(describing: userId))])
+                return ("messageMediaContact", [("phoneNumber", phoneNumber as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("vcard", vcard as Any), ("userId", userId as Any)])
                 case .messageMediaDice(let value, let emoticon):
-                return ("messageMediaDice", [("value", String(describing: value)), ("emoticon", String(describing: emoticon))])
+                return ("messageMediaDice", [("value", value as Any), ("emoticon", emoticon as Any)])
                 case .messageMediaDocument(let flags, let document, let ttlSeconds):
-                return ("messageMediaDocument", [("flags", String(describing: flags)), ("document", String(describing: document)), ("ttlSeconds", String(describing: ttlSeconds))])
+                return ("messageMediaDocument", [("flags", flags as Any), ("document", document as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .messageMediaEmpty:
                 return ("messageMediaEmpty", [])
                 case .messageMediaGame(let game):
-                return ("messageMediaGame", [("game", String(describing: game))])
+                return ("messageMediaGame", [("game", game as Any)])
                 case .messageMediaGeo(let geo):
-                return ("messageMediaGeo", [("geo", String(describing: geo))])
+                return ("messageMediaGeo", [("geo", geo as Any)])
                 case .messageMediaGeoLive(let flags, let geo, let heading, let period, let proximityNotificationRadius):
-                return ("messageMediaGeoLive", [("flags", String(describing: flags)), ("geo", String(describing: geo)), ("heading", String(describing: heading)), ("period", String(describing: period)), ("proximityNotificationRadius", String(describing: proximityNotificationRadius))])
+                return ("messageMediaGeoLive", [("flags", flags as Any), ("geo", geo as Any), ("heading", heading as Any), ("period", period as Any), ("proximityNotificationRadius", proximityNotificationRadius as Any)])
                 case .messageMediaInvoice(let flags, let title, let description, let photo, let receiptMsgId, let currency, let totalAmount, let startParam, let extendedMedia):
-                return ("messageMediaInvoice", [("flags", String(describing: flags)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("receiptMsgId", String(describing: receiptMsgId)), ("currency", String(describing: currency)), ("totalAmount", String(describing: totalAmount)), ("startParam", String(describing: startParam)), ("extendedMedia", String(describing: extendedMedia))])
+                return ("messageMediaInvoice", [("flags", flags as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("receiptMsgId", receiptMsgId as Any), ("currency", currency as Any), ("totalAmount", totalAmount as Any), ("startParam", startParam as Any), ("extendedMedia", extendedMedia as Any)])
                 case .messageMediaPhoto(let flags, let photo, let ttlSeconds):
-                return ("messageMediaPhoto", [("flags", String(describing: flags)), ("photo", String(describing: photo)), ("ttlSeconds", String(describing: ttlSeconds))])
+                return ("messageMediaPhoto", [("flags", flags as Any), ("photo", photo as Any), ("ttlSeconds", ttlSeconds as Any)])
                 case .messageMediaPoll(let poll, let results):
-                return ("messageMediaPoll", [("poll", String(describing: poll)), ("results", String(describing: results))])
+                return ("messageMediaPoll", [("poll", poll as Any), ("results", results as Any)])
                 case .messageMediaUnsupported:
                 return ("messageMediaUnsupported", [])
                 case .messageMediaVenue(let geo, let title, let address, let provider, let venueId, let venueType):
-                return ("messageMediaVenue", [("geo", String(describing: geo)), ("title", String(describing: title)), ("address", String(describing: address)), ("provider", String(describing: provider)), ("venueId", String(describing: venueId)), ("venueType", String(describing: venueType))])
+                return ("messageMediaVenue", [("geo", geo as Any), ("title", title as Any), ("address", address as Any), ("provider", provider as Any), ("venueId", venueId as Any), ("venueType", venueType as Any)])
                 case .messageMediaWebPage(let webpage):
-                return ("messageMediaWebPage", [("webpage", String(describing: webpage))])
+                return ("messageMediaWebPage", [("webpage", webpage as Any)])
     }
     }
     

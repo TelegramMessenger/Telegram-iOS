@@ -134,17 +134,17 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .updateShort(let update, let date):
-                return ("updateShort", [("update", String(describing: update)), ("date", String(describing: date))])
+                return ("updateShort", [("update", update as Any), ("date", date as Any)])
                 case .updateShortChatMessage(let flags, let id, let fromId, let chatId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities, let ttlPeriod):
-                return ("updateShortChatMessage", [("flags", String(describing: flags)), ("id", String(describing: id)), ("fromId", String(describing: fromId)), ("chatId", String(describing: chatId)), ("message", String(describing: message)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount)), ("date", String(describing: date)), ("fwdFrom", String(describing: fwdFrom)), ("viaBotId", String(describing: viaBotId)), ("replyTo", String(describing: replyTo)), ("entities", String(describing: entities)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("updateShortChatMessage", [("flags", flags as Any), ("id", id as Any), ("fromId", fromId as Any), ("chatId", chatId as Any), ("message", message as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any), ("fwdFrom", fwdFrom as Any), ("viaBotId", viaBotId as Any), ("replyTo", replyTo as Any), ("entities", entities as Any), ("ttlPeriod", ttlPeriod as Any)])
                 case .updateShortMessage(let flags, let id, let userId, let message, let pts, let ptsCount, let date, let fwdFrom, let viaBotId, let replyTo, let entities, let ttlPeriod):
-                return ("updateShortMessage", [("flags", String(describing: flags)), ("id", String(describing: id)), ("userId", String(describing: userId)), ("message", String(describing: message)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount)), ("date", String(describing: date)), ("fwdFrom", String(describing: fwdFrom)), ("viaBotId", String(describing: viaBotId)), ("replyTo", String(describing: replyTo)), ("entities", String(describing: entities)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("updateShortMessage", [("flags", flags as Any), ("id", id as Any), ("userId", userId as Any), ("message", message as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any), ("fwdFrom", fwdFrom as Any), ("viaBotId", viaBotId as Any), ("replyTo", replyTo as Any), ("entities", entities as Any), ("ttlPeriod", ttlPeriod as Any)])
                 case .updateShortSentMessage(let flags, let id, let pts, let ptsCount, let date, let media, let entities, let ttlPeriod):
-                return ("updateShortSentMessage", [("flags", String(describing: flags)), ("id", String(describing: id)), ("pts", String(describing: pts)), ("ptsCount", String(describing: ptsCount)), ("date", String(describing: date)), ("media", String(describing: media)), ("entities", String(describing: entities)), ("ttlPeriod", String(describing: ttlPeriod))])
+                return ("updateShortSentMessage", [("flags", flags as Any), ("id", id as Any), ("pts", pts as Any), ("ptsCount", ptsCount as Any), ("date", date as Any), ("media", media as Any), ("entities", entities as Any), ("ttlPeriod", ttlPeriod as Any)])
                 case .updates(let updates, let users, let chats, let date, let seq):
-                return ("updates", [("updates", String(describing: updates)), ("users", String(describing: users)), ("chats", String(describing: chats)), ("date", String(describing: date)), ("seq", String(describing: seq))])
+                return ("updates", [("updates", updates as Any), ("users", users as Any), ("chats", chats as Any), ("date", date as Any), ("seq", seq as Any)])
                 case .updatesCombined(let updates, let users, let chats, let date, let seqStart, let seq):
-                return ("updatesCombined", [("updates", String(describing: updates)), ("users", String(describing: users)), ("chats", String(describing: chats)), ("date", String(describing: date)), ("seqStart", String(describing: seqStart)), ("seq", String(describing: seq))])
+                return ("updatesCombined", [("updates", updates as Any), ("users", users as Any), ("chats", chats as Any), ("date", date as Any), ("seqStart", seqStart as Any), ("seq", seq as Any)])
                 case .updatesTooLong:
                 return ("updatesTooLong", [])
     }
@@ -406,11 +406,11 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .urlAuthResultAccepted(let url):
-                return ("urlAuthResultAccepted", [("url", String(describing: url))])
+                return ("urlAuthResultAccepted", [("url", url as Any)])
                 case .urlAuthResultDefault:
                 return ("urlAuthResultDefault", [])
                 case .urlAuthResultRequest(let flags, let bot, let domain):
-                return ("urlAuthResultRequest", [("flags", String(describing: flags)), ("bot", String(describing: bot)), ("domain", String(describing: domain))])
+                return ("urlAuthResultRequest", [("flags", flags as Any), ("bot", bot as Any), ("domain", domain as Any)])
     }
     }
     
@@ -498,9 +498,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .user(let flags, let flags2, let id, let accessHash, let firstName, let lastName, let username, let phone, let photo, let status, let botInfoVersion, let restrictionReason, let botInlinePlaceholder, let langCode, let emojiStatus, let usernames):
-                return ("user", [("flags", String(describing: flags)), ("flags2", String(describing: flags2)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("firstName", String(describing: firstName)), ("lastName", String(describing: lastName)), ("username", String(describing: username)), ("phone", String(describing: phone)), ("photo", String(describing: photo)), ("status", String(describing: status)), ("botInfoVersion", String(describing: botInfoVersion)), ("restrictionReason", String(describing: restrictionReason)), ("botInlinePlaceholder", String(describing: botInlinePlaceholder)), ("langCode", String(describing: langCode)), ("emojiStatus", String(describing: emojiStatus)), ("usernames", String(describing: usernames))])
+                return ("user", [("flags", flags as Any), ("flags2", flags2 as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("firstName", firstName as Any), ("lastName", lastName as Any), ("username", username as Any), ("phone", phone as Any), ("photo", photo as Any), ("status", status as Any), ("botInfoVersion", botInfoVersion as Any), ("restrictionReason", restrictionReason as Any), ("botInlinePlaceholder", botInlinePlaceholder as Any), ("langCode", langCode as Any), ("emojiStatus", emojiStatus as Any), ("usernames", usernames as Any)])
                 case .userEmpty(let id):
-                return ("userEmpty", [("id", String(describing: id))])
+                return ("userEmpty", [("id", id as Any)])
     }
     }
     
@@ -623,7 +623,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .userFull(let flags, let id, let about, let settings, let personalPhoto, let profilePhoto, let fallbackPhoto, let notifySettings, let botInfo, let pinnedMsgId, let commonChatsCount, let folderId, let ttlPeriod, let themeEmoticon, let privateForwardName, let botGroupAdminRights, let botBroadcastAdminRights, let premiumGifts):
-                return ("userFull", [("flags", String(describing: flags)), ("id", String(describing: id)), ("about", String(describing: about)), ("settings", String(describing: settings)), ("personalPhoto", String(describing: personalPhoto)), ("profilePhoto", String(describing: profilePhoto)), ("fallbackPhoto", String(describing: fallbackPhoto)), ("notifySettings", String(describing: notifySettings)), ("botInfo", String(describing: botInfo)), ("pinnedMsgId", String(describing: pinnedMsgId)), ("commonChatsCount", String(describing: commonChatsCount)), ("folderId", String(describing: folderId)), ("ttlPeriod", String(describing: ttlPeriod)), ("themeEmoticon", String(describing: themeEmoticon)), ("privateForwardName", String(describing: privateForwardName)), ("botGroupAdminRights", String(describing: botGroupAdminRights)), ("botBroadcastAdminRights", String(describing: botBroadcastAdminRights)), ("premiumGifts", String(describing: premiumGifts))])
+                return ("userFull", [("flags", flags as Any), ("id", id as Any), ("about", about as Any), ("settings", settings as Any), ("personalPhoto", personalPhoto as Any), ("profilePhoto", profilePhoto as Any), ("fallbackPhoto", fallbackPhoto as Any), ("notifySettings", notifySettings as Any), ("botInfo", botInfo as Any), ("pinnedMsgId", pinnedMsgId as Any), ("commonChatsCount", commonChatsCount as Any), ("folderId", folderId as Any), ("ttlPeriod", ttlPeriod as Any), ("themeEmoticon", themeEmoticon as Any), ("privateForwardName", privateForwardName as Any), ("botGroupAdminRights", botGroupAdminRights as Any), ("botBroadcastAdminRights", botBroadcastAdminRights as Any), ("premiumGifts", premiumGifts as Any)])
     }
     }
     
@@ -738,7 +738,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .userProfilePhoto(let flags, let photoId, let strippedThumb, let dcId):
-                return ("userProfilePhoto", [("flags", String(describing: flags)), ("photoId", String(describing: photoId)), ("strippedThumb", String(describing: strippedThumb)), ("dcId", String(describing: dcId))])
+                return ("userProfilePhoto", [("flags", flags as Any), ("photoId", photoId as Any), ("strippedThumb", strippedThumb as Any), ("dcId", dcId as Any)])
                 case .userProfilePhotoEmpty:
                 return ("userProfilePhotoEmpty", [])
     }
@@ -829,9 +829,9 @@ public extension Api {
                 case .userStatusLastWeek:
                 return ("userStatusLastWeek", [])
                 case .userStatusOffline(let wasOnline):
-                return ("userStatusOffline", [("wasOnline", String(describing: wasOnline))])
+                return ("userStatusOffline", [("wasOnline", wasOnline as Any)])
                 case .userStatusOnline(let expires):
-                return ("userStatusOnline", [("expires", String(describing: expires))])
+                return ("userStatusOnline", [("expires", expires as Any)])
                 case .userStatusRecently:
                 return ("userStatusRecently", [])
     }
@@ -893,7 +893,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .username(let flags, let username):
-                return ("username", [("flags", String(describing: flags)), ("username", String(describing: username))])
+                return ("username", [("flags", flags as Any), ("username", username as Any)])
     }
     }
     
@@ -937,7 +937,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .videoSize(let flags, let type, let w, let h, let size, let videoStartTs):
-                return ("videoSize", [("flags", String(describing: flags)), ("type", String(describing: type)), ("w", String(describing: w)), ("h", String(describing: h)), ("size", String(describing: size)), ("videoStartTs", String(describing: videoStartTs))])
+                return ("videoSize", [("flags", flags as Any), ("type", type as Any), ("w", w as Any), ("h", h as Any), ("size", size as Any), ("videoStartTs", videoStartTs as Any)])
     }
     }
     
@@ -1002,9 +1002,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .wallPaper(let id, let flags, let accessHash, let slug, let document, let settings):
-                return ("wallPaper", [("id", String(describing: id)), ("flags", String(describing: flags)), ("accessHash", String(describing: accessHash)), ("slug", String(describing: slug)), ("document", String(describing: document)), ("settings", String(describing: settings))])
+                return ("wallPaper", [("id", id as Any), ("flags", flags as Any), ("accessHash", accessHash as Any), ("slug", slug as Any), ("document", document as Any), ("settings", settings as Any)])
                 case .wallPaperNoFile(let id, let flags, let settings):
-                return ("wallPaperNoFile", [("id", String(describing: id)), ("flags", String(describing: flags)), ("settings", String(describing: settings))])
+                return ("wallPaperNoFile", [("id", id as Any), ("flags", flags as Any), ("settings", settings as Any)])
     }
     }
     
@@ -1084,7 +1084,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .wallPaperSettings(let flags, let backgroundColor, let secondBackgroundColor, let thirdBackgroundColor, let fourthBackgroundColor, let intensity, let rotation):
-                return ("wallPaperSettings", [("flags", String(describing: flags)), ("backgroundColor", String(describing: backgroundColor)), ("secondBackgroundColor", String(describing: secondBackgroundColor)), ("thirdBackgroundColor", String(describing: thirdBackgroundColor)), ("fourthBackgroundColor", String(describing: fourthBackgroundColor)), ("intensity", String(describing: intensity)), ("rotation", String(describing: rotation))])
+                return ("wallPaperSettings", [("flags", flags as Any), ("backgroundColor", backgroundColor as Any), ("secondBackgroundColor", secondBackgroundColor as Any), ("thirdBackgroundColor", thirdBackgroundColor as Any), ("fourthBackgroundColor", fourthBackgroundColor as Any), ("intensity", intensity as Any), ("rotation", rotation as Any)])
     }
     }
     
@@ -1146,7 +1146,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webAuthorization(let hash, let botId, let domain, let browser, let platform, let dateCreated, let dateActive, let ip, let region):
-                return ("webAuthorization", [("hash", String(describing: hash)), ("botId", String(describing: botId)), ("domain", String(describing: domain)), ("browser", String(describing: browser)), ("platform", String(describing: platform)), ("dateCreated", String(describing: dateCreated)), ("dateActive", String(describing: dateActive)), ("ip", String(describing: ip)), ("region", String(describing: region))])
+                return ("webAuthorization", [("hash", hash as Any), ("botId", botId as Any), ("domain", domain as Any), ("browser", browser as Any), ("platform", platform as Any), ("dateCreated", dateCreated as Any), ("dateActive", dateActive as Any), ("ip", ip as Any), ("region", region as Any)])
     }
     }
     
@@ -1228,9 +1228,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webDocument(let url, let accessHash, let size, let mimeType, let attributes):
-                return ("webDocument", [("url", String(describing: url)), ("accessHash", String(describing: accessHash)), ("size", String(describing: size)), ("mimeType", String(describing: mimeType)), ("attributes", String(describing: attributes))])
+                return ("webDocument", [("url", url as Any), ("accessHash", accessHash as Any), ("size", size as Any), ("mimeType", mimeType as Any), ("attributes", attributes as Any)])
                 case .webDocumentNoProxy(let url, let size, let mimeType, let attributes):
-                return ("webDocumentNoProxy", [("url", String(describing: url)), ("size", String(describing: size)), ("mimeType", String(describing: mimeType)), ("attributes", String(describing: attributes))])
+                return ("webDocumentNoProxy", [("url", url as Any), ("size", size as Any), ("mimeType", mimeType as Any), ("attributes", attributes as Any)])
     }
     }
     
@@ -1347,13 +1347,13 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .webPage(let flags, let id, let url, let displayUrl, let hash, let type, let siteName, let title, let description, let photo, let embedUrl, let embedType, let embedWidth, let embedHeight, let duration, let author, let document, let cachedPage, let attributes):
-                return ("webPage", [("flags", String(describing: flags)), ("id", String(describing: id)), ("url", String(describing: url)), ("displayUrl", String(describing: displayUrl)), ("hash", String(describing: hash)), ("type", String(describing: type)), ("siteName", String(describing: siteName)), ("title", String(describing: title)), ("description", String(describing: description)), ("photo", String(describing: photo)), ("embedUrl", String(describing: embedUrl)), ("embedType", String(describing: embedType)), ("embedWidth", String(describing: embedWidth)), ("embedHeight", String(describing: embedHeight)), ("duration", String(describing: duration)), ("author", String(describing: author)), ("document", String(describing: document)), ("cachedPage", String(describing: cachedPage)), ("attributes", String(describing: attributes))])
+                return ("webPage", [("flags", flags as Any), ("id", id as Any), ("url", url as Any), ("displayUrl", displayUrl as Any), ("hash", hash as Any), ("type", type as Any), ("siteName", siteName as Any), ("title", title as Any), ("description", description as Any), ("photo", photo as Any), ("embedUrl", embedUrl as Any), ("embedType", embedType as Any), ("embedWidth", embedWidth as Any), ("embedHeight", embedHeight as Any), ("duration", duration as Any), ("author", author as Any), ("document", document as Any), ("cachedPage", cachedPage as Any), ("attributes", attributes as Any)])
                 case .webPageEmpty(let id):
-                return ("webPageEmpty", [("id", String(describing: id))])
+                return ("webPageEmpty", [("id", id as Any)])
                 case .webPageNotModified(let flags, let cachedPageViews):
-                return ("webPageNotModified", [("flags", String(describing: flags)), ("cachedPageViews", String(describing: cachedPageViews))])
+                return ("webPageNotModified", [("flags", flags as Any), ("cachedPageViews", cachedPageViews as Any)])
                 case .webPagePending(let id, let date):
-                return ("webPagePending", [("id", String(describing: id)), ("date", String(describing: date))])
+                return ("webPagePending", [("id", id as Any), ("date", date as Any)])
     }
     }
     

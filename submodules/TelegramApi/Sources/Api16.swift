@@ -38,9 +38,9 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .photo(let flags, let id, let accessHash, let fileReference, let date, let sizes, let videoSizes, let dcId):
-                return ("photo", [("flags", String(describing: flags)), ("id", String(describing: id)), ("accessHash", String(describing: accessHash)), ("fileReference", String(describing: fileReference)), ("date", String(describing: date)), ("sizes", String(describing: sizes)), ("videoSizes", String(describing: videoSizes)), ("dcId", String(describing: dcId))])
+                return ("photo", [("flags", flags as Any), ("id", id as Any), ("accessHash", accessHash as Any), ("fileReference", fileReference as Any), ("date", date as Any), ("sizes", sizes as Any), ("videoSizes", videoSizes as Any), ("dcId", dcId as Any)])
                 case .photoEmpty(let id):
-                return ("photoEmpty", [("id", String(describing: id))])
+                return ("photoEmpty", [("id", id as Any)])
     }
     }
     
@@ -162,17 +162,17 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .photoCachedSize(let type, let w, let h, let bytes):
-                return ("photoCachedSize", [("type", String(describing: type)), ("w", String(describing: w)), ("h", String(describing: h)), ("bytes", String(describing: bytes))])
+                return ("photoCachedSize", [("type", type as Any), ("w", w as Any), ("h", h as Any), ("bytes", bytes as Any)])
                 case .photoPathSize(let type, let bytes):
-                return ("photoPathSize", [("type", String(describing: type)), ("bytes", String(describing: bytes))])
+                return ("photoPathSize", [("type", type as Any), ("bytes", bytes as Any)])
                 case .photoSize(let type, let w, let h, let size):
-                return ("photoSize", [("type", String(describing: type)), ("w", String(describing: w)), ("h", String(describing: h)), ("size", String(describing: size))])
+                return ("photoSize", [("type", type as Any), ("w", w as Any), ("h", h as Any), ("size", size as Any)])
                 case .photoSizeEmpty(let type):
-                return ("photoSizeEmpty", [("type", String(describing: type))])
+                return ("photoSizeEmpty", [("type", type as Any)])
                 case .photoSizeProgressive(let type, let w, let h, let sizes):
-                return ("photoSizeProgressive", [("type", String(describing: type)), ("w", String(describing: w)), ("h", String(describing: h)), ("sizes", String(describing: sizes))])
+                return ("photoSizeProgressive", [("type", type as Any), ("w", w as Any), ("h", h as Any), ("sizes", sizes as Any)])
                 case .photoStrippedSize(let type, let bytes):
-                return ("photoStrippedSize", [("type", String(describing: type)), ("bytes", String(describing: bytes))])
+                return ("photoStrippedSize", [("type", type as Any), ("bytes", bytes as Any)])
     }
     }
     
@@ -307,7 +307,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .poll(let id, let flags, let question, let answers, let closePeriod, let closeDate):
-                return ("poll", [("id", String(describing: id)), ("flags", String(describing: flags)), ("question", String(describing: question)), ("answers", String(describing: answers)), ("closePeriod", String(describing: closePeriod)), ("closeDate", String(describing: closeDate))])
+                return ("poll", [("id", id as Any), ("flags", flags as Any), ("question", question as Any), ("answers", answers as Any), ("closePeriod", closePeriod as Any), ("closeDate", closeDate as Any)])
     }
     }
     
@@ -361,7 +361,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pollAnswer(let text, let option):
-                return ("pollAnswer", [("text", String(describing: text)), ("option", String(describing: option))])
+                return ("pollAnswer", [("text", text as Any), ("option", option as Any)])
     }
     }
     
@@ -402,7 +402,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pollAnswerVoters(let flags, let option, let voters):
-                return ("pollAnswerVoters", [("flags", String(describing: flags)), ("option", String(describing: option)), ("voters", String(describing: voters))])
+                return ("pollAnswerVoters", [("flags", flags as Any), ("option", option as Any), ("voters", voters as Any)])
     }
     }
     
@@ -461,7 +461,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .pollResults(let flags, let results, let totalVoters, let recentVoters, let solution, let solutionEntities):
-                return ("pollResults", [("flags", String(describing: flags)), ("results", String(describing: results)), ("totalVoters", String(describing: totalVoters)), ("recentVoters", String(describing: recentVoters)), ("solution", String(describing: solution)), ("solutionEntities", String(describing: solutionEntities))])
+                return ("pollResults", [("flags", flags as Any), ("results", results as Any), ("totalVoters", totalVoters as Any), ("recentVoters", recentVoters as Any), ("solution", solution as Any), ("solutionEntities", solutionEntities as Any)])
     }
     }
     
@@ -519,7 +519,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .popularContact(let clientId, let importers):
-                return ("popularContact", [("clientId", String(describing: clientId)), ("importers", String(describing: importers))])
+                return ("popularContact", [("clientId", clientId as Any), ("importers", importers as Any)])
     }
     }
     
@@ -563,7 +563,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .postAddress(let streetLine1, let streetLine2, let city, let state, let countryIso2, let postCode):
-                return ("postAddress", [("streetLine1", String(describing: streetLine1)), ("streetLine2", String(describing: streetLine2)), ("city", String(describing: city)), ("state", String(describing: state)), ("countryIso2", String(describing: countryIso2)), ("postCode", String(describing: postCode))])
+                return ("postAddress", [("streetLine1", streetLine1 as Any), ("streetLine2", streetLine2 as Any), ("city", city as Any), ("state", state as Any), ("countryIso2", countryIso2 as Any), ("postCode", postCode as Any)])
     }
     }
     
@@ -619,7 +619,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .premiumGiftOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
-                return ("premiumGiftOption", [("flags", String(describing: flags)), ("months", String(describing: months)), ("currency", String(describing: currency)), ("amount", String(describing: amount)), ("botUrl", String(describing: botUrl)), ("storeProduct", String(describing: storeProduct))])
+                return ("premiumGiftOption", [("flags", flags as Any), ("months", months as Any), ("currency", currency as Any), ("amount", amount as Any), ("botUrl", botUrl as Any), ("storeProduct", storeProduct as Any)])
     }
     }
     
@@ -675,7 +675,7 @@ public extension Api {
     public func descriptionFields() -> (String, [(String, Any)]) {
         switch self {
                 case .premiumSubscriptionOption(let flags, let months, let currency, let amount, let botUrl, let storeProduct):
-                return ("premiumSubscriptionOption", [("flags", String(describing: flags)), ("months", String(describing: months)), ("currency", String(describing: currency)), ("amount", String(describing: amount)), ("botUrl", String(describing: botUrl)), ("storeProduct", String(describing: storeProduct))])
+                return ("premiumSubscriptionOption", [("flags", flags as Any), ("months", months as Any), ("currency", currency as Any), ("amount", amount as Any), ("botUrl", botUrl as Any), ("storeProduct", storeProduct as Any)])
     }
     }
     
@@ -917,19 +917,19 @@ public extension Api {
                 case .privacyValueAllowAll:
                 return ("privacyValueAllowAll", [])
                 case .privacyValueAllowChatParticipants(let chats):
-                return ("privacyValueAllowChatParticipants", [("chats", String(describing: chats))])
+                return ("privacyValueAllowChatParticipants", [("chats", chats as Any)])
                 case .privacyValueAllowContacts:
                 return ("privacyValueAllowContacts", [])
                 case .privacyValueAllowUsers(let users):
-                return ("privacyValueAllowUsers", [("users", String(describing: users))])
+                return ("privacyValueAllowUsers", [("users", users as Any)])
                 case .privacyValueDisallowAll:
                 return ("privacyValueDisallowAll", [])
                 case .privacyValueDisallowChatParticipants(let chats):
-                return ("privacyValueDisallowChatParticipants", [("chats", String(describing: chats))])
+                return ("privacyValueDisallowChatParticipants", [("chats", chats as Any)])
                 case .privacyValueDisallowContacts:
                 return ("privacyValueDisallowContacts", [])
                 case .privacyValueDisallowUsers(let users):
-                return ("privacyValueDisallowUsers", [("users", String(describing: users))])
+                return ("privacyValueDisallowUsers", [("users", users as Any)])
     }
     }
     
