@@ -180,8 +180,8 @@ struct DrawingState: Equatable {
         return DrawingState(
             selectedTool: .pen,
             tools: [
-                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff453a), size: 0.2)),
-                .arrow(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff8a00), size: 0.2)),
+                .pen(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff453a), size: 0.23)),
+                .arrow(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xff8a00), size: 0.23)),
                 .marker(DrawingToolState.BrushState(color: DrawingColor(rgb: 0xffd60a), size: 0.75)),
                 .neon(DrawingToolState.BrushState(color: DrawingColor(rgb: 0x34c759), size: 0.4)),
                 .eraser(DrawingToolState.EraserState(size: 0.5)),
@@ -374,7 +374,7 @@ private final class DrawingScreenComponent: CombinedComponent {
             
             self.currentMode = .drawing
             self.drawingState = .initial
-            self.drawingViewState = DrawingView.NavigationState(canUndo: false, canRedo: false, canClear: false, canZoomOut: false)
+            self.drawingViewState = DrawingView.NavigationState(canUndo: false, canRedo: false, canClear: false, canZoomOut: false, isDrawing: false)
             self.currentColor = self.drawingState.tools.first?.color ?? DrawingColor(rgb: 0xffffff)
             
             self.updateToolState.invoke(self.drawingState.currentToolState)
@@ -692,6 +692,7 @@ private final class DrawingScreenComponent: CombinedComponent {
                         alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                         font: DrawingTextFont(font: textEntity.font),
                         isEmojiKeyboard: false,
+                        tag: textSettingsTag,
                         toggleStyle: { [weak state, weak textEntity] in
                             guard let textEntity = textEntity else {
                                 return
@@ -1063,6 +1064,9 @@ private final class DrawingScreenComponent: CombinedComponent {
             }
             if let sizeValue {
                 state.lastSize = sizeValue
+            }
+            if state.drawingViewState.isDrawing {
+                sizeSliderVisible = false
             }
             
             let topInset = environment.safeInsets.top + 31.0
@@ -1730,8 +1734,17 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                         entitiesView.add(entity)
                         entitiesView.selectEntity(entity)
                         
-                        if let entityView = entitiesView.getView(for: entity.uuid) as? DrawingTextEntityView {
-                            entityView.beginEditing(accessoryView: strongSelf.textEditAccessoryView)
+                        if let entityView = entitiesView.getView(for: entity.uuid) {
+                            if let textEntityView = entityView as? DrawingTextEntityView {
+                                textEntityView.beginEditing(accessoryView: strongSelf.textEditAccessoryView)
+                            } else {
+                                entityView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2)
+                                entityView.layer.animateScale(from: 0.1, to: 1.0, duration: 0.2)
+                                
+                                if let selectionView = entityView.selectionView {
+                                    selectionView.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.2, delay: 0.2)
+                                }
+                            }
                         }
                     }
                 }
@@ -1943,7 +1956,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                 if let view = self.componentHost.findTaggedView(tag: tag) {
                     view.layer.animateAlpha(from: 0.0, to: 1.0, duration: 0.3, delay: delay)
                     view.layer.animateScale(from: 0.01, to: 1.0, duration: 0.3, delay: delay)
-                    delay += 0.025
+                    delay += 0.02
                 }
             }
             if let view = self.componentHost.findTaggedView(tag: sizeSliderTag) {
@@ -2122,6 +2135,7 @@ public class DrawingScreen: ViewController, TGPhotoDrawingInterfaceController {
                                 alignment: DrawingTextAlignment(alignment: textEntity.alignment),
                                 font: DrawingTextFont(font: textEntity.font),
                                 isEmojiKeyboard: entityView.textView.inputView != nil,
+                                tag: nil,
                                 presentColorPicker: { [weak self] in
                                     guard let strongSelf = self, let entityView = strongSelf.entitiesView.selectedEntityView as? DrawingTextEntityView, let textEntity = entityView.entity as? DrawingTextEntity else {
                                         return

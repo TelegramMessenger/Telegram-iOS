@@ -490,8 +490,6 @@ class DrawingGesturePipeline {
             return gf
         }
 
-        /// Calculates the Gram Polynomial ( s = 0 ), or its s'th
-        /// derivative evaluated at i, order k, over 2m + 1 points
         private static func gramPoly(_ index: Int, _ window: Int, _ order: Int, _ derivative: Int) -> CGFloat {
             var gp_val: CGFloat
 
@@ -513,8 +511,6 @@ class DrawingGesturePipeline {
             return gp_val
         }
 
-        /// calculates the weight of the i'th data point for the t'th Least-square
-        /// point of the s'th derivative, over 2m + 1 points, order n
         private static func calcWeight(_ index: Int, _ windowLoc: Int, _ windowSize: Int, _ order: Int, _ derivative: Int) -> CGFloat {
             var sum: CGFloat = 0.0
 
@@ -1002,10 +998,10 @@ struct Polyline {
         }
     }
     
-    public internal(set) var isComplete: Bool
-    public let touchIdentifier: String
-    public var points: [Point]
-    public var bounds: CGRect {
+    var isComplete: Bool
+    let touchIdentifier: String
+    var points: [Point]
+    var bounds: CGRect {
         return self.points.reduce(.null) { partialResult, point -> CGRect in
             return CGRect(x: min(partialResult.origin.x, point.x),
                           y: min(partialResult.origin.y, point.y),
@@ -1144,7 +1140,7 @@ private class BezierBuilder {
 private class Smoother {
     let smoothFactor: CGFloat
 
-    init(smoothFactor: CGFloat = 0.7) {
+    init(smoothFactor: CGFloat = 1.0) {
         self.smoothFactor = smoothFactor
     }
 

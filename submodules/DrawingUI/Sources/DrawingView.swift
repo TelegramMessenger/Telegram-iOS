@@ -49,6 +49,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         let canRedo: Bool
         let canClear: Bool
         let canZoomOut: Bool
+        let isDrawing: Bool
     }
     
     enum Action {
@@ -106,6 +107,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     private var loadedTemplates: [UnistrokeTemplate] = []
     private var previousStrokePoint: CGPoint?
     private var strokeRecognitionTimer: SwiftSignalKit.Timer?
+    
+    private var isDrawing = false
     
     private func loadTemplates() {
         func load(_ name: String) {
@@ -249,6 +252,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             } else {
                 switch state {
                 case .began:
+                    strongSelf.isDrawing = true
                     strongSelf.previousStrokePoint = nil
                     
                     if strongSelf.uncommitedElement != nil {
@@ -269,6 +273,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     }
                     newElement.updatePath(path, state: state)
                     strongSelf.uncommitedElement = newElement
+                    strongSelf.updateInternalState()
                 case .changed:
                     strongSelf.uncommitedElement?.updatePath(path, state: state)
                     
@@ -339,16 +344,20 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
                     }
                     
                 case .ended:
+                    strongSelf.isDrawing = false
                     strongSelf.strokeRecognitionTimer?.invalidate()
                     strongSelf.strokeRecognitionTimer = nil
                     strongSelf.uncommitedElement?.updatePath(path, state: state)
                     Queue.mainQueue().after(0.05) {
                         strongSelf.finishDrawing()
                     }
+                    strongSelf.updateInternalState()
                 case .cancelled:
+                    strongSelf.isDrawing = false
                     strongSelf.strokeRecognitionTimer?.invalidate()
                     strongSelf.strokeRecognitionTimer = nil
                     strongSelf.cancelDrawing()
+                    strongSelf.updateInternalState()
                 }
             }
         }
@@ -572,8 +581,19 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.uncommitedElement = nil
         self.elements.removeAll()
         self.redoElements.removeAll()
+        
+        let snapshotView = UIImageView(image: self.drawingImage)
+        snapshotView.frame = self.bounds
+        self.addSubview(snapshotView)
+        
         self.drawingImage = nil
         self.commit(reset: true)
+        
+        Queue.mainQueue().justDispatch {
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+        }
         
         self.updateInternalState()
         
@@ -587,8 +607,18 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.uncommitedElement = nil
         self.redoElements.append(lastElement)
         self.elements.removeLast()
+        
+        let snapshotView = UIImageView(image: self.drawingImage)
+        snapshotView.frame = self.bounds
+        self.addSubview(snapshotView)
         self.commit(reset: true)
         
+        Queue.mainQueue().justDispatch {
+            snapshotView.layer.animateAlpha(from: 1.0, to: 0.0, duration: 0.2, removeOnCompletion: false, completion: { [weak snapshotView] _ in
+                snapshotView?.removeFromSuperview()
+            })
+        }
+
         self.updateInternalState()
     }
     
@@ -600,6 +630,7 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
         self.elements.append(lastElement)
         self.redoElements.removeLast()
         self.uncommitedElement = lastElement
+               
         self.commit(reset: false)
         self.uncommitedElement = nil
         
@@ -611,13 +642,13 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
     func updateToolState(_ state: DrawingToolState) {
         switch state {
         case let .pen(brushState):
-            self.drawingGesturePipeline?.mode = .location
+            self.drawingGesturePipeline?.mode = .polyline
             self.tool = .pen
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
             self.toolHasArrow = false
         case let .arrow(brushState):
-            self.drawingGesturePipeline?.mode = .location
+            self.drawingGesturePipeline?.mode = .polyline
             self.tool = .pen
             self.toolColor = brushState.color
             self.toolBrushSize = brushState.size
@@ -691,7 +722,8 @@ public final class DrawingView: UIView, UIGestureRecognizerDelegate, TGPhotoDraw
             canUndo: !self.elements.isEmpty,
             canRedo: !self.redoElements.isEmpty,
             canClear: !self.elements.isEmpty,
-            canZoomOut: self.zoomScale > 1.0 + .ulpOfOne
+            canZoomOut: self.zoomScale > 1.0 + .ulpOfOne,
+            isDrawing: self.isDrawing
         ))
     }
     

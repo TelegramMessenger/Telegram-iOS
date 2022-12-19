@@ -362,6 +362,7 @@ final class TextSettingsComponent: CombinedComponent {
     let alignment: DrawingTextAlignment
     let font: DrawingTextFont
     let isEmojiKeyboard: Bool
+    let tag: AnyObject?
 
     let presentColorPicker: () -> Void
     let presentFastColorPicker: (GenericComponentViewTag) -> Void
@@ -378,6 +379,7 @@ final class TextSettingsComponent: CombinedComponent {
         alignment: DrawingTextAlignment,
         font: DrawingTextFont,
         isEmojiKeyboard: Bool,
+        tag: AnyObject?,
         presentColorPicker: @escaping () -> Void = {},
         presentFastColorPicker: @escaping (GenericComponentViewTag) -> Void = { _ in },
         updateFastColorPickerPan: @escaping (CGPoint) -> Void = { _ in },
@@ -392,6 +394,7 @@ final class TextSettingsComponent: CombinedComponent {
         self.alignment = alignment
         self.font = font
         self.isEmojiKeyboard = isEmojiKeyboard
+        self.tag = tag
         self.presentColorPicker = presentColorPicker
         self.presentFastColorPicker = presentFastColorPicker
         self.updateFastColorPickerPan = updateFastColorPickerPan
@@ -458,6 +461,25 @@ final class TextSettingsComponent: CombinedComponent {
     
     func makeState() -> State {
         State()
+    }
+    
+    final class View: UIView, ComponentTaggedView {
+        var componentTag: AnyObject?
+        public func matches(tag: Any) -> Bool {
+            if let componentTag = self.componentTag {
+                let tag = tag as AnyObject
+                if componentTag === tag {
+                    return true
+                }
+            }
+            return false
+        }
+    }
+    
+    func makeView() -> View {
+        let view = View()
+        view.componentTag = self.tag
+        return view
     }
     
     static var body: Body {
@@ -723,6 +745,7 @@ final class TextSizeSliderComponent: Component {
                 if let size = self.validSize, let component = self.component {
                     let _ = self.updateLayout(size: size, component: component, transition: .easeInOut(duration: 0.2))
                 }
+                self.released()
             default:
                 break
             }
