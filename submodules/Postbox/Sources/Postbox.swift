@@ -1043,9 +1043,9 @@ public final class Transaction {
         self.postbox?.scanTopMessages(peerId: peerId, namespace: namespace, limit: limit, f)
     }
     
-    public func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, limit: Int, _ f: (Message) -> Bool) {
+    public func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, includeFrom: Bool = false, limit: Int, _ f: (Message) -> Bool) {
         assert(!self.disposed)
-        self.postbox?.scanMessages(peerId: peerId, namespace: namespace, fromId: fromId, limit: limit, f)
+        self.postbox?.scanMessages(peerId: peerId, namespace: namespace, fromId: fromId, includeFrom: includeFrom, limit: limit, f)
     }
 
     public func scanMessageAttributes(peerId: PeerId, namespace: MessageId.Namespace, limit: Int, _ f: (MessageId, [MessageAttribute]) -> Bool) {
@@ -3518,7 +3518,7 @@ final class PostboxImpl {
         }
     }
     
-    fileprivate func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, limit: Int, _ f: (Message) -> Bool) {
+    fileprivate func scanMessages(peerId: PeerId, namespace: MessageId.Namespace, fromId: MessageId, includeFrom: Bool = false, limit: Int, _ f: (Message) -> Bool) {
         guard let fromIndex = self.messageHistoryIndexTable.getIndex(fromId) else {
             return
         }
@@ -3526,7 +3526,7 @@ final class PostboxImpl {
         var index = fromIndex
         var remainingLimit = limit
         while remainingLimit > 0 {
-            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: nil, from: index, includeFrom: false, to: lowerBound, ignoreMessagesInTimestampRange: nil, limit: min(10, remainingLimit))
+            let messages = self.messageHistoryTable.fetch(peerId: peerId, namespace: namespace, tag: nil, threadId: nil, from: index, includeFrom: includeFrom, to: lowerBound, ignoreMessagesInTimestampRange: nil, limit: min(10, remainingLimit))
             for message in messages {
                 if !f(self.renderIntermediateMessage(message)) {
                     return

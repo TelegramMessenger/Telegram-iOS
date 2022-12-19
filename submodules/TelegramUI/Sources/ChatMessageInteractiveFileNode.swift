@@ -381,12 +381,29 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var nonAuthorStrings: [String] = []
                 var nonAuthorTextLength = 0
                 
-                transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, limit: 50) { message in
-                    if !message.text.isEmpty {
+                transaction.scanMessages(peerId: messageId.peerId, namespace: messageId.namespace, fromId: messageId, includeFrom: true, limit: 50) { message in
+                    var messageText = message.text
+                    if let textEntities = message.textEntitiesAttribute?.entities, !textEntities.isEmpty {
+                        var lowerBound = messageText.count
+                        for entity in textEntities.sorted(by: { $0.range.upperBound > $1.range.upperBound }) {
+                            switch entity.type {
+                            case .Mention, .Hashtag, .BotCommand, .Url, .Email, .Code, .PhoneNumber, .BankCard, .CustomEmoji:
+                                let l = min(entity.range.lowerBound, lowerBound)
+                                let u = min(entity.range.upperBound, lowerBound)
+                                if l < u, let range = Range(NSMakeRange(l, u - l), in: messageText) {
+                                    messageText.removeSubrange(range)
+                                    lowerBound = l
+                                }
+                            default:
+                                break
+                            }
+                        }
+                    }
+                    if !messageText.isEmpty {
                         if let voiceAuthor = author, let msgAuthor = message.forwardInfo?.author?.id ?? message.author?.id, voiceAuthor == msgAuthor {
                             if authorProcessedTextLength < 200 {
-                                recognizer.processString(message.text)
-                                authorProcessedTextLength += message.text.count
+                                recognizer.processString(messageText)
+                                authorProcessedTextLength += messageText.count
                                 let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
                                 if let dominant = hypotheses.first, dominant.value >= 0.9 {
                                     return false
@@ -394,8 +411,8 @@ final class ChatMessageInteractiveFileNode: ASDisplayNode {
                             }
                         } else if message.forwardInfo == nil { // ignore forwarded messages
                             if nonAuthorTextLength < 200 {
-                                nonAuthorStrings.append(message.text)
-                                nonAuthorTextLength += message.text.count
+                                nonAuthorStrings.append(messageText)
+                                nonAuthorTextLength += messageText.count
                             }
                         }
                         if authorProcessedTextLength >= 200 && nonAuthorTextLength >= 200 {
