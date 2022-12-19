@@ -280,7 +280,7 @@ private final class ContextControllerActionsListActionItemNode: HighlightTrackin
         } else if let animationName = self.item.animationName {
             if self.animationNode == nil {
                 let animationNode = AnimationNode(animation: animationName, colors: ["__allcolors__": titleColor], scale: 1.0)
-                animationNode.loop()
+                animationNode.loop(count: 3)
                 self.addSubnode(animationNode)
                 self.animationNode = animationNode
             }

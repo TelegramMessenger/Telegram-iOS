@@ -1567,7 +1567,7 @@ public final class MediaPickerScreen: ViewController, AttachmentContainable {
                     if !items.isEmpty {
                         items.append(.separator)
                     }
-                    items.append(.action(ContextMenuActionItem(text: hasSpoilers ? "Disable Spoiler Effect" : "Spoiler Effect", icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
+                    items.append(.action(ContextMenuActionItem(text: hasSpoilers ? strings.Attachment_DisableSpoiler : strings.Attachment_EnableSpoiler, icon: { _ in return nil }, animationName: "anim_spoiler", action: { [weak self]  _, f in
                         f(.default)
                         guard let strongSelf = self else {
                             return

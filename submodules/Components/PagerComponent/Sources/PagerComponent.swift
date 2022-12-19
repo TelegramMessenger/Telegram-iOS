@@ -187,6 +187,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
     public let isTopPanelExpandedUpdated: (Bool, Transition) -> Void
     public let isTopPanelHiddenUpdated: (Bool, Transition) -> Void
     public let panelHideBehavior: PagerComponentPanelHideBehavior
+    public let clipContentToTopPanel: Bool
     
     public init(
         contentInsets: UIEdgeInsets,
@@ -204,7 +205,8 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         panelStateUpdated: ((PagerComponentPanelState, Transition) -> Void)?,
         isTopPanelExpandedUpdated: @escaping (Bool, Transition) -> Void,
         isTopPanelHiddenUpdated: @escaping (Bool, Transition) -> Void,
-        panelHideBehavior: PagerComponentPanelHideBehavior
+        panelHideBehavior: PagerComponentPanelHideBehavior,
+        clipContentToTopPanel: Bool
     ) {
         self.contentInsets = contentInsets
         self.contents = contents
@@ -222,6 +224,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         self.isTopPanelExpandedUpdated = isTopPanelExpandedUpdated
         self.isTopPanelHiddenUpdated = isTopPanelHiddenUpdated
         self.panelHideBehavior = panelHideBehavior
+        self.clipContentToTopPanel = clipContentToTopPanel
     }
     
     public static func ==(lhs: PagerComponent, rhs: PagerComponent) -> Bool {
@@ -258,6 +261,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         if lhs.panelHideBehavior != rhs.panelHideBehavior {
             return false
         }
+        if lhs.clipContentToTopPanel != rhs.clipContentToTopPanel {
+            return false
+        }
         
         return true
     }
@@ -282,6 +288,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
             var fraction: CGFloat = 0.0
         }
         
+        private var contentClippingView: UIView
         private var contentViews: [AnyHashable: ContentView] = [:]
         private var contentBackgroundView: ComponentHostView<Empty>?
         private let topPanelVisibilityFractionUpdated = ActionSlot<(CGFloat, Transition)>()
@@ -307,7 +314,12 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
         }
         
         override init(frame: CGRect) {
+            self.contentClippingView = UIView()
+            self.contentClippingView.clipsToBounds = true
+            
             super.init(frame: frame)
+            
+            self.addSubview(self.contentClippingView)
             
             self.disablesInteractiveTransitionGestureRecognizer = true
             
@@ -444,6 +456,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                 self.centralId = centralId
             }
             
+            let contentSize = CGSize(width: availableSize.width, height: availableSize.height)
             var contentInsets = component.contentInsets
             contentInsets.bottom = 0.0
             var contentInsetTopPanelValue: CGFloat = 0.0
@@ -530,6 +543,10 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(), size: CGSize(width: topPanelSize.width, height: visibleTopPanelHeight)))
                 } else {
                     panelStateTransition.setFrame(view: topPanelView, frame: CGRect(origin: CGPoint(x: 0.0, y: -topPanelOffset), size: topPanelSize))
+                    
+                    let clippingOffset: CGFloat = component.clipContentToTopPanel ? topPanelSize.height - topPanelOffset : 0.0
+                    panelStateTransition.setFrame(view: self.contentClippingView, frame: CGRect(origin: CGPoint(x: 0.0, y: clippingOffset), size: contentSize))
+                    panelStateTransition.setBounds(view: self.contentClippingView, bounds: CGRect(origin: CGPoint(x: 0.0, y: clippingOffset), size: contentSize))
                 }
                 
                 contentInsetTopPanelValue = topPanelSize.height
@@ -623,7 +640,7 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     contentBackgroundTransition = .immediate
                     contentBackgroundView = ComponentHostView<Empty>()
                     self.contentBackgroundView = contentBackgroundView
-                    self.insertSubview(contentBackgroundView, at: 0)
+                    self.contentClippingView.insertSubview(contentBackgroundView, at: 0)
                 }
                 let _ = contentBackgroundView.update(
                     transition: contentBackgroundTransition,
@@ -638,11 +655,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                     contentBackgroundView.removeFromSuperview()
                 }
             }
-            
+
             var validIds: [AnyHashable] = []
             if let centralId = self.centralId, let centralIndex = component.contents.firstIndex(where: { $0.id == centralId }) {
-                let contentSize = CGSize(width: availableSize.width, height: availableSize.height)
-                
                 var referenceFrames: [AnyHashable: CGRect] = [:]
                 if case .none = transition.animation {
                 } else {
@@ -686,9 +701,9 @@ public final class PagerComponent<ChildEnvironmentType: Equatable, TopPanelEnvir
                             contentTransition = transition.withAnimation(.none)
                             self.contentViews[content.id] = contentView
                             if let contentBackgroundView = self.contentBackgroundView {
-                                self.insertSubview(contentView.view, aboveSubview: contentBackgroundView)
+                                self.contentClippingView.insertSubview(contentView.view, aboveSubview: contentBackgroundView)
                             } else {
-                                self.insertSubview(contentView.view, at: 0)
+                                self.contentClippingView.insertSubview(contentView.view, at: 0)
                             }
                         }
                         
